@@ -3,6 +3,13 @@
 - Only one task should be in_progress at a time
 - Compact context proactively when working on long tasks (before hitting limits)
 
+## Compaction
+
+When compacting, always preserve:
+- List of modified files and their purpose
+- Architectural decisions made during the session
+- Current task progress and remaining steps
+
 ## Plan Mode
 
 - Start every complex task in plan mode — pour energy into the plan so implementation can be done in one shot

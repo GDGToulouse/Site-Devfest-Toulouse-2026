@@ -3,6 +3,8 @@
 ## Commits
 - Conventional Commits: `feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`
 - Subject line under 72 characters
+- Stage specific files only — never `git add .` or `git add -A`
+- Run each git command in a separate Bash tool call (no `&&` chaining)
 
 ## Branches
 - Format: `feature/us-xxx-description` or `feature/description`
