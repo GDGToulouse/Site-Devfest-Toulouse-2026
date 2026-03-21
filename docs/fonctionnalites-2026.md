@@ -25,11 +25,16 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 ## Speakers
 - Liste complète avec photo, nom, entreprise
 - Page ou modale de détail : bio, réseaux sociaux, sessions associées
+- Autonomie des speakers : édition de leur propre fiche via un espace dédié
+- API de gestion des conférences
 
 ## Partenaires / Sponsors
 - Logos organisés par niveaux (Platinum, Gold, Silver, Soutien, Communautés)
 - Lien vers le site de chaque partenaire
 - CTA "Devenir partenaire"
+- Fiche détaillée par sponsor
+- Autonomie des sponsors : édition de leur propre fiche via un espace dédié
+- API de gestion des sponsors
 
 ## Blog / Actualités
 - Articles avec image, titre, extrait
@@ -92,6 +97,23 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 - Twitter Card
 - Schema.org (Event, Organization)
 - Balises title/description par page
+
+## Gestion des utilisateurs
+- Authentification et rôles (admin, sponsor, speaker)
+- Espace dédié pour les sponsors et speakers
+
+## Publications réseaux sociaux
+- Génération de visuels/publications pour les sponsors, speakers et conférences
+- Faciliter le partage sur les réseaux sociaux
+
+## Hall of replays
+- Historique de toutes les conférences du DevFest (toutes éditions)
+- Liens vers les vidéos YouTube associées
+
+## Passport digital des stands
+- QR code par stand sponsor
+- Scan par le participant : le tampon s'ajoute automatiquement
+- Barre de progression montrant les stands restants à visiter
 
 ## Responsive
 - Mobile-first, breakpoints tablette/desktop
