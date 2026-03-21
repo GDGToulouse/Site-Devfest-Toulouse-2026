@@ -2459,7 +2459,7 @@
       ],
       "sessions": [
         {
-          "title": "Keynote d'ouverture",
+          "title": "Développeurs de jeux vidéo : rois de la combine ?",
           "description": "Développeurs de jeux vidéo : rois de la combine ?",
           "speakers": [
             "Laurent Victorino"
@@ -2469,10 +2469,11 @@
           "tags": [
             "General"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=jwaJ7U9SSDM"
         },
         {
-          "title": "Keynote de fermeture",
+          "title": "Hype Driven Development",
           "description": "Hype Driven Development",
           "speakers": [
             "Quentin Adam"
@@ -2482,7 +2483,8 @@
           "tags": [
             "General"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=nfd3wh-GOQI"
         },
         {
           "title": "Let’s Sketchnote : prise de notes visuelle",
@@ -3808,7 +3810,7 @@
           "youtube": "https://www.youtube.com/watch?v=-d_Ka7OE4Xk"
         },
         {
-          "title": ">-",
+          "title": "Comprendre le rôle du noyau d'un système d'exploitation",
           "description": "Programmer le noyau d'un système d'exploitation est un très bon moyen pour en comprendre le fonctionnement et le scope de son travail (IO, gestion de la mémoire, etc).\nCette présentation a pour but de présenter et de développer les composants élémentaires d'un micro noyau UNIX.\n\nDans ce talk je présenterai:\n- L'émulateur QEMU\n- La réalisation d'un secteur de boot avec une micro console\n- Comment gérer les interruptions hardware (clavier) et software\n- La gestion des appels systèmes\n- Un système multi-process simple qui va permettre de découvrir le surcoût des changements de contexte liés à la programmation concurrentielle",
           "speakers": [
             "Alessio Coltellacci"
@@ -3818,7 +3820,8 @@
           "tags": [
             "_cloud___infra"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=y928d3uVEys"
         },
         {
           "title": "Développeurs en reconversion, développeurs quand même !",
@@ -3986,7 +3989,7 @@
           "youtube": "https://www.youtube.com/watch?v=3r12HslMosQ"
         },
         {
-          "title": ">-",
+          "title": "Le troll dans ta machine",
           "description": "Jean-Yves Girard, le génial inventeur des indispensables [montres à moutarde](http://girard.perso.math.cnrs.fr/moutarde.pdf) (1990), est certes un joyeux trublion.\n\nMais avant d'en arriver à ce sommet indépassable, il a tout de même publié deux-trois petites choses en chemin:\n\n- Rust, vous connaissez? L'idée première du système de typage de Rust est la logique dite \"[linéaire](http://girard.perso.math.cnrs.fr/linear.pdf)\", due à Jean-Yves Girard (1987).\n- Haskell, ça vous dit quelque chose? Les systèmes de typage de Haskell mais aussi Scala (et d'une certaine manière Java) sont basés sur le \"[système F](https://en.wikipedia.org/wiki/System_F)\" (ou lambda-calcul de second ordre), dû à... Jean-Yves Girard (1972).\n- Idris, vous avez entendu parler? Le système de typage d'Idris est basé sur la théorie des types de Per Martin-Löf, dont la première version a été prouvée incorrecte par... Jean-Yves Girard, qui depuis possède un [paradoxe](https://en.wikipedia.org/wiki/System_U#Girard's_paradox) à son nom. (Girard et Martin-Löf sont par ailleurs de très bons potes et ont ferraillé sec contre les logiciens classiques dans leur prime jeunesse.)\n\nTrès méconnu mais probalement l'un des penseurs les plus influents pour l'informatique de ce début de XXIe siècle, Girard est tout aussi sérieux que fantasque. Son style toujours acéré et polémique s'appuie sur une vision très claire de ce que devrait être la logique: vivante, joyeuse, fertile.\n\nDans cette courte présentation, on s'attachera à comprendre pourquoi Girard est aussi virulent dans son discours, quels sont les objectifs de sa pensée, et pourquoi elle a déjà porté tant de fruits dans le monde de l'informatique.",
           "speakers": [
             "Guillaume Andrieu"
@@ -3996,10 +3999,11 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=w_KFjqAxEu8"
         },
         {
-          "title": ">-",
+          "title": "Live coding musical : vous savez coder ?",
           "description": "Sans nécessiter de formation musicale pointue, tout développeur peut créer des morceaux qui sonnent bien et faire du \"live coding\" pour improviser en direct.\n\nAprès un rapide tour d'horizon des environnements de codage musical comme Sonic-Pi en Ruby ou FoxDot en Python, on codera/composera en live un morceau de musique électro avec comme seul outil un navigateur web, les API WebAudio et WebMIDI et la librairie Tone.js.\n\nQuelques samples bien choisis, une pincée de séquences harmonieuses, une bonne dose d'aléatoire encadré, et hop, tout le monde se mettra à danser ! Et puisque la musique c'est aussi des maths, on parlera de musique générative avec des chaînes de Markov et des L-Systems.\n\nDavid Guetta n'a qu'à bien se tenir !\n\n---\n<blockquote class=\"twitter-tweet\">\n    <p lang=\"en\" dir=\"ltr\">The code for my music live coding talk at <a href=\"https://twitter.com/DevFestToulouse?ref_src=twsrc%5Etfw\">@DevFestToulouse</a> and the code used on stage are available at <a href=\"https://t.co/DCT1k4UQss\">https://t.co/DCT1k4UQss</a><br><br>And here&#39;s a quick recording of the &quot;grand finale&quot;<br>🎶 <a href=\"https://t.co/TXPrfnHRXG\">https://t.co/TXPrfnHRXG</a></p>&mdash; Sylvain Wallez (@bluxte) <a href=\"https://twitter.com/bluxte/status/1180535831477530624?ref_src=twsrc%5Etfw\">October 5, 2019</a>\n</blockquote>\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>",
           "speakers": [
             "Sylvain Wallez"
@@ -4009,7 +4013,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=LShM4QzMOxY"
         },
         {
           "title": "L'histoire de la découverte d'une backdoor signée OnePlus",
@@ -4068,7 +4073,7 @@
           "youtube": "https://www.youtube.com/watch?v=lnW1_X9WxkM"
         },
         {
-          "title": ">-",
+          "title": "Mon p*** de voyant moteur est encore allumé !",
           "description": "Depuis les années 70 tous les constructeurs autos intégrent des calculateurs électroniques.\nLes moteurs des voitures modernes sont des systèmes informatiques complexes qui s'appuient sur des dizaines de capteurs... et du code. \nComment ça fonctionne ? A quoi ressemble ce code et que fait-il ?\nQu'est-ce qu'il se passe lorsqu'on fait une \"reprog\" ? \nQue signifie le voyant moteur allumé ? Comment débugger tout ça ?\nSoulevons le capot (électronique), analysons le matériel mis en oeuvre mais surtout le logiciel grâce aux sources des calculateurs \"Megasquirt\" et allons explorer la face cachée numérique de nos voitures.\n\n---\n\nLe code utilisé pendant ma conf pour les intéressés : <https://github.com/mathieupassenaud/devfesttoulouse-python-obd>\n\n\n<blockquote class=\"twitter-tweet\">\n    <p lang=\"fr\" dir=\"ltr\">Cette année au <a href=\"https://twitter.com/DevFestToulouse?ref_src=twsrc%5Etfw\">@DevFestToulouse</a> j&#39;ai fait tourner un mock de moteur. Du coup, puisque vous me l&#39;avez demandé voici comment j&#39;ai pu en arriver là <a href=\"https://t.co/iq5juHH3MT\">pic.twitter.com/iq5juHH3MT</a></p>&mdash; Mathieu Passenaud (@mathieupassenau) <a href=\"https://twitter.com/mathieupassenau/status/1180873060272021505?ref_src=twsrc%5Etfw\">October 6, 2019</a>\n</blockquote>\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>",
           "speakers": [
             "Mathieu Passenaud"
@@ -4078,7 +4083,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=1o5v8Ew9FjE"
         },
         {
           "title": "Premiers pas avec un microcontrôleur et Google Cloud IoT Core",
@@ -4223,7 +4229,7 @@
           "youtube": "https://www.youtube.com/watch?v=JADZMaRL4cE"
         },
         {
-          "title": ">-",
+          "title": "Numérique et environnement",
           "description": "Le numérique fait-il partie du problème ou de la solution quand on parle de réchauffement climatique ?\n\n5 milliards de smartphones en circulation en 2020, ça représente quoi en consommation énergétique, en gaz à effet de serre, en pollution chimique ?\n\nLe streaming illimité à 10 euros par mois c'est le pied mais aujourd'hui Netflix a à peu près l'empreinte carbone du plus gros cimentier mondial, qui va payer la facture environnementale ?\n\nTous les mails de votre vie (que vous ne lirez plus jamais) disponibles sur Gmail, très utile, mais après 2020 on ne saura peut-être plus produire industriellement les équipements nécessaires à leur stockage.\n\nOn arrive dans \"l'âge des limites\", pour le numérique comme pour le reste. Quels sont les leviers pour basculer vers un numérique durable ?\n\nEt si malgré tout on décidait de s'en foutre ? 2 degrés en plus, c'est juste un pull en moins non ? Non. Par contre c'est 30% en moins sur les rendements agricoles pour ... 30 % de population en plus en 2050. En 1970, Dennis Meadows modélisait sur les ordinateurs du MIT un crash du système planétaire pour les décennies 2020-2030. Pour l'instant, c'est cette trajectoire que notre monde suit.",
           "speakers": [
             "Sébastien Brault"
@@ -4233,7 +4239,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=jA8aHSMZ_DI"
         },
         {
           "title": "⛳️ Votre API web passe-t-elle le contrôle technique ? ",
