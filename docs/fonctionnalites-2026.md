@@ -5,7 +5,7 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 ---
 
 ## Page d'accueil
-- Hero : visuel fort (photo/vidéo), logo, date, lieu
+- Section hero (bannière plein écran en haut de page) : image ou vidéo de fond, logo DevFest Toulouse, date et lieu de l'événement, bouton d'action principal
 - Chiffres clés : participants, sessions, tracks, durée
 - Présentation : qu'est-ce que le DevFest Toulouse
 - CTA principal : billetterie ou inscription
