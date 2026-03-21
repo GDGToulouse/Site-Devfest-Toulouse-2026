@@ -1303,7 +1303,7 @@
           "title": "Functional Programming Explained to my grandma",
           "description": "Functional programming reminds you of some old school memories... Monad scares you and you think High Order Function are rude words. However you love lambdas and you feel immutability is a great thing. I will introduce you to core principles of functionnal programming without complexity and you will be able to apply them straight away. No installation required: just internet, a basic knowledge of your favourite language and a web browser.",
           "speakers": [
-            "1136"
+            "Charlotte Cavalier"
           ],
           "language": "fr",
           "format": "conference",
@@ -1330,8 +1330,8 @@
           "title": "Ok Google, is there any presentations about ChatBots?",
           "description": "Ever wanted to build a chatbot? What if you could use a voice assistant to manage your agenda for the conference? Know if there are any presentations on Machine Learning, or Docker, or your favorite programming language? Find out more about a speaker...etc.\n\nIn this session, we will look at how to build our own voice assistant, using Google Cloud's natural speech and voice recognition APIs with API.AI services, and Google Cloud Functions to implement Necessary business logic. \n\nGrab some popcorn and enjoy!",
           "speakers": [
-            "1222",
-            "1028"
+            "Wassim Chegham",
+            "Guillaume Laforge"
           ],
           "language": "fr",
           "format": "conference",
@@ -3737,7 +3737,7 @@
             "_method___tools"
           ],
           "complexity": "beginner",
-          "youtube": "https://www.youtube.com/watch?v=oh6o499ktMU"
+          "youtube": "https://www.youtube.com/watch?v=6KR0rNN4coU"
         },
         {
           "title": "Applications de Brainfuck, langage minimaliste mais Turing-complet",
@@ -3778,7 +3778,8 @@
           "tags": [
             "_languages"
           ],
-          "complexity": "advanced"
+          "complexity": "advanced",
+          "youtube": "https://www.youtube.com/watch?v=NedshJ6n7UI"
         },
         {
           "title": "A la découverte de la réalité augmentée avec ARCore",
