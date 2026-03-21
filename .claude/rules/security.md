@@ -22,6 +22,17 @@
 - Prefer well-maintained packages with active security advisories
 - Review dependency additions — avoid pulling in large transitive trees for small features
 
+## Security Headers
+- Set `Content-Security-Policy` to restrict script/style sources
+- Enable `Strict-Transport-Security` (HSTS) with a long max-age
+- Set `X-Frame-Options: DENY` (or use CSP `frame-ancestors`)
+- Set `X-Content-Type-Options: nosniff`
+
 ## Authentication & Authorization
 - Verify permissions on every request — never rely solely on client-side checks
 - Use constant-time comparison for tokens and secrets
+
+## Dependency Updates
+- Run `npm audit` / `yarn audit` regularly
+- Update dependencies with known vulnerabilities promptly
+- Pin major versions to avoid unexpected breaking changes

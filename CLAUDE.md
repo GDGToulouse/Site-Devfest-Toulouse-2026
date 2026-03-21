@@ -11,3 +11,4 @@ Detailed rules are in `.claude/rules/`:
 - **git-workflow.md** — Conventional Commits, branch naming, PRs, worktrees
 - **security.md** — Secrets, input validation, OWASP, auth
 - **task-management.md** — Plan mode, subagents, context management
+- **testing.md** — Test strategy, naming conventions, test structure
