@@ -1212,7 +1212,8 @@
           "tags": [
             "General"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=Jcs2Fp8jHEQ"
         },
         {
           "title": "CSS is Awesome !",
@@ -1225,7 +1226,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=fPObs60585w"
         },
         {
           "title": "Modules ES6 & HTTP/2 - Va-t-on arrêter de packager notre code JavaScript ?",
@@ -1238,7 +1240,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=yLUwjl7bN6U"
         },
         {
           "title": "Deep learning for satellite image processing, lessons learned",
@@ -1251,7 +1254,8 @@
           "tags": [
             "IA"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=dLfdmbRz9EE"
         },
         {
           "title": "Quand Internet sera gouvernée par les |chats> de Shrödinger",
@@ -1264,7 +1268,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=4J_KzGvHpcg"
         },
         {
           "title": "Des portes logiques pneumatiques en bois",
@@ -1277,7 +1282,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=L3UoWDWoJJE"
         },
         {
           "title": "Plus loin avec Kotlin !",
@@ -1290,7 +1296,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=3zVdKPZyq5Q"
         },
         {
           "title": "Functional Programming Explained to my grandma",
@@ -1316,7 +1323,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=ei0SOj7oRsg"
         },
         {
           "title": "Ok Google, is there any presentations about ChatBots?",
@@ -1343,7 +1351,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=rbuEIIwYly8"
         },
         {
           "title": "Un chatbot en 5 étapes avec api.ai",
@@ -1356,7 +1365,8 @@
           "tags": [
             "IA"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=xh7cTxQCeY0"
         },
         {
           "title": "Quand nous avons emmené notre web app chez les Bisounours",
@@ -1369,7 +1379,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=8z00go15PAw"
         },
         {
           "title": "Elastic : comment fonctionne une équipe d'ingénierie totalement distribuée de 250 personnes",
@@ -1382,7 +1393,8 @@
           "tags": [
             "Methods & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=rrlPhedNjbA"
         },
         {
           "title": "Il n'y a pas que Angular, React ou VueJS dans la vie",
@@ -1395,7 +1407,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=K8U6KDD_6sU"
         },
         {
           "title": "Make load-balancing great again with Traefik!",
@@ -1408,7 +1421,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=qRatic6jBd4"
         },
         {
           "title": "Comment être un développeur ethique et green ? Dilemne entre la course technologique et mon impact sur la société.",
@@ -1421,7 +1435,8 @@
           "tags": [
             "Methods & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=AM-G43Zyqng"
         },
         {
           "title": "Kubernetes et les containers pour votre application Web : step by step",
@@ -1434,7 +1449,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=UBkp48NXyW0"
         },
         {
           "title": "Bonnes pratiques React en 15 diapos",
@@ -1447,7 +1463,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=8t7YdaigW9U"
         },
         {
           "title": "WebAssembly ? Web et assembleur ? WTF !",
@@ -1460,7 +1477,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=6nNTQOMb3H8"
         },
         {
           "title": "Mixité dans le monde des Web Components",
@@ -1474,7 +1492,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=gAJh58ejuQc"
         },
         {
           "title": "Demain j'arrête le café, je me met au crabe !",
@@ -1488,7 +1507,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=AV-B0caPKMg"
         },
         {
           "title": "Azure pour les développeurs",
@@ -1501,7 +1521,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=RpFCq0KaWlE"
         },
         {
           "title": "Elm, est-ce si bien qu'on le dit",
@@ -1514,7 +1535,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=BHTgiBGyY8U"
         },
         {
           "title": "Stream processing avec Apache Flink",
@@ -1527,7 +1549,8 @@
           "tags": [
             "Data"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=wdhKfBs_lvI"
         },
         {
           "title": "A la découverte de Google Flutter et Fuchsia dans l’écosystème Dart",
@@ -1541,7 +1564,8 @@
           "tags": [
             "Mobile"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=TzO5dgm-AVE"
         },
         {
           "title": "Déploiement automatique d'app iOS et/ou Android",
@@ -1555,7 +1579,8 @@
           "tags": [
             "Mobile"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=f7UD9nCXrS4"
         },
         {
           "title": "L'UX a sauvé mon DevOps",
@@ -1569,7 +1594,8 @@
           "tags": [
             "Methods & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=Fewiev77RR8"
         },
         {
           "title": "Faire du Machine Learning sans Data Scientist",
@@ -1582,7 +1608,8 @@
           "tags": [
             "Machine Learning"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=6oYA4tguYUs"
         },
         {
           "title": "Balade au pays de «Let's Encrypt»",
@@ -1595,7 +1622,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=o8NYd55Sl2Y"
         },
         {
           "title": "Libérée! Délivrée! ou Comment devenir développeuse open source ?",
@@ -1608,7 +1636,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=mx1aX_69Atw"
         },
         {
           "title": "ES2048",
@@ -1621,7 +1650,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=YAFRxqz8lrU"
         },
         {
           "title": "Les lois de la physique classique s'appliquent aussi au Big Data !",
@@ -1634,7 +1664,8 @@
           "tags": [
             "Data"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=0lLf51o4a_o"
         },
         {
           "title": "Et après Développeur, chef de projet ?",
@@ -1647,7 +1678,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=JRXUgIwcPlw"
         },
         {
           "title": "Apéro fonctionnel",
@@ -1664,7 +1696,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=o4ueMzhro1o"
         },
         {
           "title": "Big Data avec AWS : notre retour d'expérience sur l'utilisation des services managés",
@@ -1679,7 +1712,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=4dd-K_fkUx4"
         },
         {
           "title": "Ici votre commandant de bord, on passe en mode avion !",
@@ -1692,7 +1726,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=zzLZSM_pOIE"
         },
         {
           "title": "Interprétabilité des modèles de Machine Learning avec LIME",
@@ -1706,7 +1741,8 @@
           "tags": [
             "Machine Learning"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=PHMR6j8DvKk"
         }
       ]
     },
@@ -2459,7 +2495,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=NInM_wndk2U"
         },
         {
           "title": "Ceinture noire Karate en tests d’API REST",
@@ -2473,7 +2510,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=ZNrCw5T-wls"
         },
         {
           "title": "Premiers pas avec Capacitor... dans le monde réel",
@@ -2486,7 +2524,8 @@
           "tags": [
             "Native mobile apps"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=a4zCakyQN-o"
         },
         {
           "title": "Votre mission ? Découvrir Haskell et le mettre en prod",
@@ -2499,7 +2538,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=5VCIaYvWecM"
         },
         {
           "title": "Développer une application web avec Rust",
@@ -2512,7 +2552,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=rhAqG4gh400"
         },
         {
           "title": "La programmation fonctionnelle sans céder à la mode",
@@ -2525,7 +2566,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=AQ_q-hdtNS4"
         },
         {
           "title": "Architecture Decision Records: Réconciliez vous avec votre documentation",
@@ -2538,7 +2580,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=EDYplU1PB5s"
         },
         {
           "title": "Détectez et trackez les Zergs qui se cachent dans vos dépendances !",
@@ -2551,7 +2594,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=aZeR6PypJ8k"
         },
         {
           "title": "La tête dans les nuages avec un Raspberry Pi",
@@ -2564,7 +2608,8 @@
           "tags": [
             "IOT"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=UcADSVfOg3k"
         },
         {
           "title": "Agile, Craftsmanship, DevOps and other monsters - how to fight with them.",
@@ -2577,7 +2622,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=tWPlvgtJgF4"
         },
         {
           "title": "Google Container Tools : développer efficacement dans un monde de conteneurs",
@@ -2590,7 +2636,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=-t1cTnhoGTg"
         },
         {
           "title": "S'aider du Data-Oriented Design pour écrire des applications performantes",
@@ -2603,7 +2650,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=3lzpK45cyBo"
         },
         {
           "title": "#RetourAuxSources : 🍪 Les cookies HTTP",
@@ -2616,7 +2664,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=CcTbecZ67_o"
         },
         {
           "title": "Des APIs de Machine Learning sur étagère, à l'entrainement distribué dans le cloud",
@@ -2629,7 +2678,8 @@
           "tags": [
             "Big Data / ML / AI"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=gSewdZrom10"
         },
         {
           "title": "Tests BDD: faites rédiger vos tests End-to-End par les fonctionnels",
@@ -2642,7 +2692,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=7u3luu6BmDg"
         },
         {
           "title": "Lighthouse : mesurer et améliorer votre performance web",
@@ -2668,7 +2719,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=1oKEcDdYANY"
         },
         {
           "title": "Tensorflow, is there really no spoon ?",
@@ -2681,7 +2733,8 @@
           "tags": [
             "Big Data / ML / AI"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=4QIjIoHP0x4"
         },
         {
           "title": "Comment perdre sa surchage featurale ?",
@@ -2694,7 +2747,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=YM3pnJDhATE"
         },
         {
           "title": "Angular Elements",
@@ -2707,7 +2761,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=ozVffQPTQXk"
         },
         {
           "title": "Comment t'organiser quand tu es b****lique de naissance (et depuis des décennies), que tu as plusieurs jobs (ou projets), sans exploser en vol ... Et bosser à plusieurs ... Et y arriver",
@@ -2720,7 +2775,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=2_hdqZ3TuQo"
         },
         {
           "title": "Découvrir par l’exemple: Microservices et Event Sourcing avec Kafka et Kubernetes",
@@ -2733,7 +2789,8 @@
           "tags": [
             "Big Data / ML / AI"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=RXaGjS5C-lE"
         },
         {
           "title": "Testcontainers pour de vrais tests d'intégration d'Elasticsearch",
@@ -2746,7 +2803,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=KgcV15lCDk4"
         },
         {
           "title": "Systemd, de /dev/null à root",
@@ -2759,7 +2817,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=4AqbpZrBaOE"
         },
         {
           "title": "Template de déploiements Kubernetes avec Kontemplate",
@@ -2772,7 +2831,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=KF3gvGnpjIg"
         },
         {
           "title": "Burger Quiz s'invite au DevFest avec un Sel ou Poivre \"Code, Data ou les deux\"",
@@ -2785,7 +2845,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=9kUmvV947X8"
         },
         {
           "title": "Introduction à Arrow - Typeclass is the new interface",
@@ -2799,7 +2860,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=uiLimq64zJI"
         },
         {
           "title": "Comprendre le théorème de CAP avec Apache Kafka",
@@ -2812,7 +2874,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=yLp0crdThzQ"
         },
         {
           "title": "Remake de jeux rétro avec Vue.js",
@@ -2826,7 +2889,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=TDgln192b-Y"
         },
         {
           "title": "Exploring reactive programming in Java",
@@ -2839,7 +2903,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=LxBn42ROcwg"
         },
         {
           "title": "The Big Web Quizz",
@@ -2853,7 +2918,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=PL9aQDMgv4w"
         },
         {
           "title": "Pourquoi et comment crafter la Data-Science sur mesure.",
@@ -2866,7 +2932,8 @@
           "tags": [
             "Big Data / ML / AI"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=rFxSrzR-EXE"
         },
         {
           "title": "Multiplatfom projects with Kotlin",
@@ -2879,7 +2946,8 @@
           "tags": [
             "Languages"
           ],
-          "complexity": "Intermédiaire"
+          "complexity": "Intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=9ukHegwJivg"
         },
         {
           "title": "Angular Schematics pour une meilleure productivité et plus de partage",
@@ -2892,7 +2960,8 @@
           "tags": [
             "Web"
           ],
-          "complexity": "Confirmé"
+          "complexity": "Confirmé",
+          "youtube": "https://www.youtube.com/watch?v=VLQYPA5gZEA"
         },
         {
           "title": "GCP pour les Data Scientists",
@@ -2905,7 +2974,8 @@
           "tags": [
             "Cloud"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=yjOkeruVBIE"
         },
         {
           "title": "CONTEXTVS, STVLTE! (Context, stupid!)",
@@ -2918,7 +2988,8 @@
           "tags": [
             "Method & Tools"
           ],
-          "complexity": "Débutant"
+          "complexity": "Débutant",
+          "youtube": "https://www.youtube.com/watch?v=eLN3smdZZYg"
         },
         {
           "title": "The Old Man Glitch - Escalade de bug sur la première génération de Pokemon sur Gameboy",
@@ -2931,7 +3002,8 @@
           "tags": [
             "WTF"
           ],
-          "complexity": "Beginner"
+          "complexity": "Beginner",
+          "youtube": "https://www.youtube.com/watch?v=hBo28RVftNc"
         }
       ]
     },
@@ -3633,7 +3705,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=3XIAC098fAI"
         },
         {
           "title": "3 techniques faciles de manipulation",
@@ -3646,7 +3719,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=OgOAMs6b5R0"
         },
         {
           "title": "Allo Paris, ici San Francisco. Et si on codait ensemble avec VS Code?",
@@ -3660,7 +3734,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=oh6o499ktMU"
         },
         {
           "title": "Applications de Brainfuck, langage minimaliste mais Turing-complet",
@@ -3673,7 +3748,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=deswvXZ0Sjc"
         },
         {
           "title": "Authentication/Authorization Starters Battle",
@@ -3686,7 +3762,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=yU_Uvm3m3VY"
         },
         {
           "title": "A Kotlin multiplatform evolution",
@@ -3713,7 +3790,8 @@
           "tags": [
             "_native_mobile_apps"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=MPnesJY8f0s"
         },
         {
           "title": "Brace yourself, \\U0001F366Vanilla is coming … back \\U0001F576!",
@@ -3726,7 +3804,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=-d_Ka7OE4Xk"
         },
         {
           "title": ">-",
@@ -3752,7 +3831,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=jyTISfF8MTo"
         },
         {
           "title": "DevOps at scale",
@@ -3765,7 +3845,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=ww-Kg0bH6E4"
         },
         {
           "title": "De Java à un exécutable natif : GraalVM et Quarkus changent la donne",
@@ -3778,7 +3859,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=cLyw7vPr3mo"
         },
         {
           "title": "Four Diseases",
@@ -3791,7 +3873,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=E9EKWrRcyYk"
         },
         {
           "title": "Introduction à la programmation par contraintes",
@@ -3804,7 +3887,8 @@
           "tags": [
             "_big_data___ml___ai"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=l44o4gt62GM"
         },
         {
           "title": "Une analyse critique des \"Tech Trends\"",
@@ -3817,7 +3901,8 @@
           "tags": [
             "keynote"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=aYA_a0-bplY"
         },
         {
           "title": "Keynote de fermeture (overflow)",
@@ -3841,7 +3926,8 @@
           "tags": [
             "keynote"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=LHzVkjHjSso"
         },
         {
           "title": "Keynote d'ouverture (overflow)",
@@ -3852,7 +3938,8 @@
           "tags": [
             "keynote"
           ],
-          "complexity": ""
+          "complexity": "",
+          "youtube": "https://www.youtube.com/watch?v=AFhHrQIAw3g"
         },
         {
           "title": "Le burn-out agile",
@@ -3865,7 +3952,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=ciAORrJYHc8"
         },
         {
           "title": "Le design de l'erreur",
@@ -3878,7 +3966,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=9P8FZIqUuTM"
         },
         {
           "title": "Le jaillissement de l'esprit",
@@ -3893,7 +3982,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=3r12HslMosQ"
         },
         {
           "title": ">-",
@@ -3932,7 +4022,8 @@
           "tags": [
             "_native_mobile_apps"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=XyczLWRnD8M"
         },
         {
           "title": "Machine learning avec des allumettes et des cotillons",
@@ -3945,7 +4036,8 @@
           "tags": [
             "_big_data___ml___ai"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=KrKEAaNQVTQ"
         },
         {
           "title": "Modern Forms in React",
@@ -3958,7 +4050,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=DDLqhCMaMLU"
         },
         {
           "title": "Monitoring OVH: 300k serveurs, 27 DCs une plateforme de métriques ",
@@ -3971,7 +4064,8 @@
           "tags": [
             "_big_data___ml___ai"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=lnW1_X9WxkM"
         },
         {
           "title": ">-",
@@ -3997,7 +4091,8 @@
           "tags": [
             "_iot"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=kQYepd4mFLo"
         },
         {
           "title": "Quand les ratés des IAs nous renvoient à nos propres biais sociétaux",
@@ -4011,7 +4106,8 @@
           "tags": [
             "_big_data___ml___ai"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=gB5qsODoGhU"
         },
         {
           "title": "Rockin’ in the Angular World",
@@ -4025,7 +4121,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=OA4-sHevu9s"
         },
         {
           "title": "Rust as a High-Level Langage",
@@ -4038,7 +4135,8 @@
           "tags": [
             "_languages"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=AAr6uALbYY0"
         },
         {
           "title": "Rust, WebAssembly, and the future of Serverless",
@@ -4051,7 +4149,8 @@
           "tags": [
             "_cloud___infra"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=qZGimWMYc2E"
         },
         {
           "title": "The Freedom of Static Typing",
@@ -4064,7 +4163,8 @@
           "tags": [
             "_languages"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=qfyhzwYWVn8"
         },
         {
           "title": "The rise of the web",
@@ -4077,7 +4177,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=wPRwD4rLOVo"
         },
         {
           "title": "Un distributeur automatique d'argent de poche pour les enfants",
@@ -4090,7 +4191,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=z72VgzUirL4"
         },
         {
           "title": "WebGPU: Next-generation 3D Graphics on the Web",
@@ -4103,7 +4205,8 @@
           "tags": [
             "_web"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=_UFkuYZrXV0"
         },
         {
           "title": "« 47 ans : ils n’ont toujours pas remarqué … »",
@@ -4116,7 +4219,8 @@
           "tags": [
             "_wtf"
           ],
-          "complexity": "beginner"
+          "complexity": "beginner",
+          "youtube": "https://www.youtube.com/watch?v=JADZMaRL4cE"
         },
         {
           "title": ">-",
@@ -4142,7 +4246,8 @@
           "tags": [
             "_method___tools"
           ],
-          "complexity": "intermediate"
+          "complexity": "intermediate",
+          "youtube": "https://www.youtube.com/watch?v=k7IIz7Z1MxM"
         }
       ]
     },
@@ -5371,7 +5476,7 @@
           "name": "Aurélie Vache",
           "company": "OVHcloud",
           "city": "Toulouse",
-          "bio": "Aurélie Vache is a Developer Advocate at OVHcloud in Toulouse, France. She is Docker Captain, CNCF ambassador, Google Cloud Developer Expert, Women techmarkers Ambassador &amp; GitPod Hero. She has been working as a Developer and Ops for over 18 years. Cloud enthusiast and advocates DevOps/Cloud/Golang best practices.\r\n\r\nConferences and meetups organizer since 2016. Technical writer (dev.to/aurelievache), a book author &amp; reviewer, a sketchnoter and a speaker at international conferences.\r\n\r\nMentor and promote diversity and accessibility in technology.\r\n\r\nShe created a new visual way for people to learn and understand Cloud technologies: \"Understanding Kubernetes/Istio/Docker in a visual way\" in sketchnotes, books and videos.\r\n \r\nBlog: https://dev.to/aurelievache/\r\nYouTube: https://www.youtube.com/c/AurelieVache",
+          "bio": "Aurélie Vache is a Developer Advocate at OVHcloud in Toulouse, France. She is Docker Captain, CNCF ambassador, Google Cloud Developer Expert, Women techmarkers Ambassador &amp; GitPod Hero. She has been working as a Developer and Ops for over 18 years. Cloud enthusiast and advocates DevOps/Cloud/Golang best practices.\r\n\r\nConferences and meetups organizer since 2016. Technical writer (dev.to/aurelievache), a book author &amp; reviewer, a sketchnoter and a speaker at international conferences.\r\n\r\nMentor and promote diversity and accessibility in technology.\r\n\r\nShe created a new visual way for people to learn and understand Cloud technologies: \"Understanding Kubernetes/Istio/Docker in a visual way\" in sketchnotes, books and videos.\r\n\r\nBlog: https://dev.to/aurelievache/\r\nYouTube: https://www.youtube.com/c/AurelieVache",
           "socials": [
             {
               "type": "twitter",
@@ -5886,7 +5991,8 @@
           "speakers": [],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=k5txSq17Ddo"
         },
         {
           "title": "Sortir des ETL : Transition d'une solution \"Code Less\" à une approche \"Code Full\"",
@@ -5907,7 +6013,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=9PpMCwLzljg"
         },
         {
           "title": "La prod est en flammes ? Pas de stress, j'ai strace (et ses copains)",
@@ -5917,7 +6024,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=rc8q9Vv35WU"
         },
         {
           "title": "CQRS / ES : nos heuristiques après plusieurs années de production",
@@ -5929,7 +6037,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=aE8cJnJKae8"
         },
         {
           "title": "Créer sa propre Malware Sandbox",
@@ -5939,7 +6048,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=Bxc56OblZTQ"
         },
         {
           "title": "Introduction à la Géodata - Les tuiles vectorielles",
@@ -5949,7 +6059,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=_fdQymt_si4"
         },
         {
           "title": "Fermé pour inventaire : histoire et mécanique des « closures »",
@@ -5959,17 +6070,19 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=HYqmX1jaRP0"
         },
         {
           "title": "Après l'ordi 8 bit voici la carte VGA sur breadboard",
-          "description": "\"Ce que je ne peux pas créer, je ne le comprends pas” - Richard Feynman, un des plus grands physiciens, pédagogue remarquable et drôle.  Je suis passionné par l’informatique bien sûr, mais surtout par la création en général et l’apprentissage en particulier.  Je souhaite vous présenter, mon retour d’expérience de la création d’une carte VGA fonctionnelle à partir de composants électroniques simples et le tout sur breadboard !  Ancré dans un storytelling bien à moi, je ferai une démonstration en live comme j'ai déjà fait avec l’ordinateur 8 bit avant et quels enseignements j’en ai tirés.",
+          "description": "\"Ce que je ne peux pas créer, je ne le comprends pas” - Richard Feynman, un des plus grands physiciens, pédagogue remarquable et drôle. Je suis passionné par l’informatique bien sûr, mais surtout par la création en général et l’apprentissage en particulier. Je souhaite vous présenter, mon retour d’expérience de la création d’une carte VGA fonctionnelle à partir de composants électroniques simples et le tout sur breadboard ! Ancré dans un storytelling bien à moi, je ferai une démonstration en live comme j'ai déjà fait avec l’ordinateur 8 bit avant et quels enseignements j’en ai tirés.",
           "speakers": [
             "Olivier HUBER"
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=VsumNHjalB8"
         },
         {
           "title": "Du CSS aux shaders WebGL : panorama des techniques d'animation",
@@ -5979,7 +6092,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=HKIEQM0j0u4"
         },
         {
           "title": "Un Backup C'est bien, un réplica c'est mieux : démystification de la réplication sur PostgreSQL !",
@@ -5989,7 +6103,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=yPFR3xOg5MU"
         },
         {
           "title": "OpenAPI (dev tools)",
@@ -5999,7 +6114,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=t1PqyxaHriE"
         },
         {
           "title": "Passer de Terraform à Pulumi : Galère ou Épopée ? 🌟",
@@ -6010,7 +6126,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=oQqegPNzJVg"
         },
         {
           "title": "What’s new in Traefik v3?",
@@ -6020,7 +6137,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=a3P8ofWr3sc"
         },
         {
           "title": "Façonnez Votre Cloud avec Karpenter : Les Secrets du Maître Charpentier du Numérique",
@@ -6032,7 +6150,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=q92jhU5Ezx0"
         },
         {
           "title": "Compose to Kube, Same player shoot again",
@@ -6043,7 +6162,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=iN7POv7tpQA"
         },
         {
           "title": "✨ Du GPU dans mes conteneurs !",
@@ -6053,7 +6173,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=kbEeE0qZqIk"
         },
         {
           "title": "Au-delà du réel : créer une civilisation virtuelle avec les LLMs",
@@ -6073,7 +6194,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=6l46YPupq-c"
         },
         {
           "title": "Mieux cultiver et mieux manger grâce au logiciel : la tech au service de l'agriculture",
@@ -6085,7 +6207,8 @@
           ],
           "language": "fr",
           "format": "keynote",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=cISfNkFilds"
         },
         {
           "title": "Transformation numérique dans les services publics : dématérialisation, IA et inclusion.",
@@ -6095,7 +6218,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=4qCTItLmFtA"
         },
         {
           "title": "SBOM, le début de la transparence",
@@ -6105,7 +6229,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=4lU4SgSa9z0"
         },
         {
           "title": "De l'analyse de données oui, mais en Kotlin !",
@@ -6115,7 +6240,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=hDmGy5FGzmM"
         },
         {
           "title": "Histoire de l'Art Génératif",
@@ -6125,7 +6251,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=OHlah-0Mfik"
         },
         {
           "title": "Rambo Python",
@@ -6136,7 +6263,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=t-f0cuOiuu0"
         },
         {
           "title": "Open-source sans burn-out ? Le modèle CNCF",
@@ -6146,7 +6274,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=xx2LHTJo-y8"
         },
         {
           "title": "Plongez dans l'Univers XR : Du Réel à la Réalité mixte, l'Expérience Immersive de Demain !",
@@ -6157,7 +6286,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=lSDD6rMjGk8"
         },
         {
           "title": "Gateway API, 10 ans de maturation pour une nouvelle API Kubernetes",
@@ -6167,7 +6297,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=IYg3ZiGxwn8"
         },
         {
           "title": "Anatomie d'une faille",
@@ -6177,7 +6308,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=ccnSpR-CSHA"
         },
         {
           "title": "Android, Compose, Multiplateforme & Serveur - Injection de dépendances multiplateforme en Kotlin",
@@ -6187,7 +6319,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=PgT9lc-jWVk"
         },
         {
           "title": "Anatomie d'un test, ou l'utilité d'un test front",
@@ -6197,7 +6330,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=WdEgu5Ma8WY"
         },
         {
           "title": "Automatisons avec le Low Code et le No Code de Google Workspace",
@@ -6207,7 +6341,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=ubYQgUOvk7E"
         },
         {
           "title": "SOPS, Passez un savon à vos secrets en clair !",
@@ -6217,7 +6352,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=oulAQGfdThI"
         },
         {
           "title": "Compose Multiplatform : La prochaine référence du développement mobile",
@@ -6227,7 +6363,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=AMX_1Hr4T_U"
         },
         {
           "title": "Mais en fait, WebRTC c’est le feu ?",
@@ -6237,7 +6374,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=eTIOORXWPIU"
         },
         {
           "title": "Sarah Connor ?",
@@ -6247,7 +6385,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=vgIlmvBB1H4"
         },
         {
           "title": "Orchestrez vos workflows métier avec Temporal.io",
@@ -6257,7 +6396,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=Wrr19RuKO-c"
         },
         {
           "title": "Quarkus: Greener, Faster, Better, Stronger",
@@ -6267,7 +6407,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=vcLUOB2_89k"
         },
         {
           "title": "TestContainers: la révolution pour vos tests unitaires",
@@ -6277,7 +6418,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=ppxg_f_KMGE"
         },
         {
           "title": "Comment j'ai trouvé le sens de la vie grâce à WebAssembly",
@@ -6287,7 +6429,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=UtZP7r63hpQ"
         },
         {
           "title": "Live-Coding: Devenez un ninja du Web Scraping avec Scrapoxy !",
@@ -6297,7 +6440,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=aUqj0O4-qbE"
         },
         {
           "title": "Live coding : créons un outil de mesure de perf pour Android",
@@ -6307,7 +6451,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=ps_iWevUFh4"
         },
         {
           "title": "Gemini, le Large Language Model de Google",
@@ -6317,7 +6462,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=83bruscz6Qc"
         },
         {
           "title": "TinyGo, petit mais costaud ! 💪",
@@ -6328,7 +6474,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=ZyjLH_e9Vyo"
         },
         {
           "title": "Développer des macros en Rust",
@@ -6338,7 +6485,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=gq5Bek4R2WE"
         },
         {
           "title": "Cracking the Quantum Code: Découvrons la révolution quantique !",
@@ -6348,7 +6496,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=syhDBXDbNJY"
         },
         {
           "title": "La recherche à l'ère de l'IA",
@@ -6358,7 +6507,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=FPW8nO0VGVg"
         },
         {
           "title": "10 tests simples pour améliorer l'accessibilité de votre site",
@@ -6378,7 +6528,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=z4BO6OSTYC8"
         }
       ]
     },
@@ -7131,7 +7282,8 @@
           "speakers": [],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=nxVhlSdwFwA"
         },
         {
           "title": "Beyond agile : Dans les coulisses des licornes géantes de la Tech !",
@@ -7139,7 +7291,8 @@
           "speakers": [],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=hGSbAc7EFtk"
         },
         {
           "title": "Orchestration d’agents IA : LangGraph et le benchmark GAIA",
@@ -7211,7 +7364,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=d8nLfDFcip4"
         },
         {
           "title": "Un Pixel, puis un autre : Comment faire tourner DOOM sur une liseuse électronique 🕹️",
@@ -7221,7 +7375,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=tWY7pczq9Zk"
         },
         {
           "title": "Un back-end métier pour mon IDE !",
@@ -7232,7 +7387,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=o-7-3BGj1ng"
         },
         {
           "title": "toute ma stack est dans ma BDD : Postgres et quelques \"power tools\" pour mon backend",
@@ -7243,7 +7399,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=0kDcFUIZgn0"
         },
         {
           "title": "Metal-As-A-Service : Gérer votre bare-metal en MaaS, comme si c'était une machine virtuelle !",
@@ -7253,7 +7410,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=12jBU55wMM8"
         },
         {
           "title": "MCP et A2A : Révolutionner l'Interconnexion et la Collaboration des Agents IA",
@@ -7264,7 +7422,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=Cp0BHAqSeJA"
         },
         {
           "title": "L'observabilité en pratique: comment devenir proactif avec les bugs",
@@ -7274,7 +7433,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=S5CrF72KzNo"
         },
         {
           "title": "L'IA et la blockchain, les alliés de la sécurité",
@@ -7284,7 +7444,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=epB_7irDPJ4"
         },
         {
           "title": "Les coulisses de JavaScript : ce qu’on utilise sans comprendre 🎭",
@@ -7295,7 +7456,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=JoFJTwsiRlc"
         },
         {
           "title": "Les codes à barres, c'est pas que de la barre !",
@@ -7305,7 +7467,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=fzgCNLfSnzA"
         },
         {
           "title": "L'enfer des tests auto",
@@ -7316,7 +7479,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=6O4EjKHUpEI"
         },
         {
           "title": "Le monstre invisible : l'empreinte carbone de l’IA",
@@ -7326,7 +7490,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=-LaQKYSXfcs"
         },
         {
           "title": "Le hasard fait bien les tests",
@@ -7336,7 +7501,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=bJqIfKFYDpE"
         },
         {
           "title": "Le content design sauve vos formulaires",
@@ -7346,7 +7512,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=pOwX0IiEzsQ"
         },
         {
           "title": "La réactivité et les signaux : démystifions la magie du frontend",
@@ -7356,7 +7523,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "confirmé"
+          "complexity": "confirmé",
+          "youtube": "https://www.youtube.com/watch?v=USxzteUL-Qg"
         },
         {
           "title": "Kafka 4, fantastique ?",
@@ -7366,7 +7534,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=pC_w9EPjEtA"
         },
         {
           "title": "JEP 49.3 - cette nouvelle fonctionnalité Java est validée !!!",
@@ -7376,7 +7545,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=wGrPlTB8jt8"
         },
         {
           "title": "Je malmène ton LLM en direct avec 10 failles de sécurités",
@@ -7386,7 +7556,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=JByDb8f_fFQ"
         },
         {
           "title": "IHM critiques : quand les tâches utilisateur testent le code",
@@ -7396,7 +7567,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=1CES05sG-zc"
         },
         {
           "title": "IA et Edge Computing : traitement du langage efficace, sobre et sans dépendance",
@@ -7407,7 +7579,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=mzPTyx5SE4o"
         },
         {
           "title": "Haute couture du Web : le grand défilé du CSS 🎨",
@@ -7418,7 +7591,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=lEy342rfZ1w"
         },
         {
           "title": "Étudiant et développeur : Rebondir après les échecs dans la création de Fillzz",
@@ -7428,7 +7602,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=t2YMa96LomA"
         },
         {
           "title": "Top 3 des outils de l'OWASP",
@@ -7448,7 +7623,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=wIM57aP-5Yw"
         },
         {
           "title": "Signaux faibles d'une révolution vocale dans les IHM",
@@ -7458,7 +7634,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=NbF_dnZ9na0"
         },
         {
           "title": "REX: une approche moderne de gestion de clusters Kubernetes",
@@ -7469,7 +7646,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=SMeZAl3JMws"
         },
         {
           "title": "Rewrite It In Rust: peut-on RIIR de tout ?",
@@ -7479,7 +7657,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=cxVxFBw7Tio"
         },
         {
           "title": "Renovate à la rescousse 🦸: Automatisez la dette technique de votre infra Kubernetes",
@@ -7489,7 +7668,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "confirmé"
+          "complexity": "confirmé",
+          "youtube": "https://www.youtube.com/watch?v=1U3PwCzHYGo"
         },
         {
           "title": "Quand l'IA rejoint le Calcul Haute Performance (ou High Performance Computing)",
@@ -7499,7 +7679,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=GU3_WeC3gnQ"
         },
         {
           "title": "Parlez à vos données (sans coder) : IA agentique et Claude avec le protocole MCP",
@@ -7509,7 +7690,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=Be_0YSvN0cU"
         },
         {
           "title": "Orchestrer un Univers de Jeu de Rôle avec des Agents IA Multi-Containers",
@@ -7520,7 +7702,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=Aj1FtC6HEdY"
         },
         {
           "title": "Embellir des QR Codes à l’ère de la GenAI",
@@ -7530,7 +7713,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=1052vjmxCTI"
         },
         {
           "title": "Docker Bake, élégance et standardisation pour le build de vos images Docker",
@@ -7540,7 +7724,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=iC5ovhVhaLI"
         },
         {
           "title": "Dessine-moi un logiciel (ou l’art des schémas qui marquent les esprits)",
@@ -7550,7 +7735,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=IX8zjvRr1Ds"
         },
         {
           "title": "Démystifier OAuth2 et OIDC",
@@ -7560,7 +7746,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=Q8KHI7t4Ws4"
         },
         {
           "title": "Démêler vrais produits et hallucinations, REX d'un agent téléphonique chercheur de chaussettes",
@@ -7570,7 +7757,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=oklVnHiILkU"
         },
         {
           "title": "De zéro à Data as a Product en 60 jours : anatomie d’un lancement data produit réussi",
@@ -7580,7 +7768,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=kmT__Ckz2X0"
         },
         {
           "title": "Conception de logiciels : le match humains vs AI",
@@ -7590,7 +7779,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=CmYN9fEeCDw"
         },
         {
           "title": "Codepocalypse Now: LangChain4j vs. Spring AI",
@@ -7601,7 +7791,8 @@
           ],
           "language": "en",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=wDKzRI8bT6Y"
         },
         {
           "title": "Au Coeur d'une Core Team",
@@ -7611,7 +7802,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=kY_nDdPQaRM"
         },
         {
           "title": "Du chaos à l’élégance : refactorer des workflows complexes avec des events",
@@ -7621,7 +7813,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=rMVspnnGuH4"
         },
         {
           "title": "Apprentissage interactif et IA centrée utilisateur : retour d'expérience",
@@ -7632,7 +7825,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=HX_ohsFjoQQ"
         },
         {
           "title": "Another World, une belle leçon d’architecture logicielle",
@@ -7642,7 +7836,8 @@
           ],
           "language": "fr",
           "format": "keynote",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=QCnYO5bOmmY"
         },
         {
           "title": "Accroître l’accessibilité de son application pour l’optimiser à l’ensemble de ses utilisateurs",
@@ -7652,7 +7847,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=GnBpk9UemBA"
         },
         {
           "title": "A la découverte de la famille des modèles BERT",
@@ -7662,7 +7858,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=LRLmZp7gEPA"
         },
         {
           "title": "45 min pour mettre son application à genoux : le guide complet du test de charge",
@@ -7673,7 +7870,8 @@
           ],
           "language": "fr",
           "format": "conference",
-          "complexity": "intermédiaire"
+          "complexity": "intermédiaire",
+          "youtube": "https://www.youtube.com/watch?v=rBlG3Rsb3YI"
         },
         {
           "title": "\"Sésame, ouvre-toi\" : sécurise ton serveur SSH avec du Port Knocking !",
@@ -7683,7 +7881,8 @@
           ],
           "language": "fr",
           "format": "quickie",
-          "complexity": "débutant"
+          "complexity": "débutant",
+          "youtube": "https://www.youtube.com/watch?v=OsUaE4kSoc8"
         }
       ]
     }
