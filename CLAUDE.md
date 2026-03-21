@@ -17,21 +17,6 @@
 Use the **Context7 MCP server** to fetch up-to-date documentation for libraries before using them.
 Always prefer Context7 docs over training data when working with fast-moving dependencies.
 
-## Specialized Agents
-
-### Built-in Agents
-
-Use via the Agent tool with `subagent_type`:
-
-| Agent | Use case |
-|-------|----------|
-| `Explore` | Codebase exploration, file/code search |
-| `Plan` | Architecture and implementation planning |
-| `spec-compliance-analyzer` | Verify code matches specifications |
-| `ux-flow-auditor` | UX flow and interaction audits |
-| `ui-accessibility-auditor` | WCAG / accessibility audits |
-| `ui-mobile-rendering-auditor` | Mobile rendering checks |
-
 ## Project Rules
 
 Detailed rules are in `.claude/rules/`:
