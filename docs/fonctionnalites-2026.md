@@ -1,0 +1,97 @@
+# Fonctionnalités du site DevFest Toulouse 2026
+
+Liste brute basée sur l'analyse des éditions 2016 à 2025.
+
+---
+
+## Page d'accueil
+- Hero : visuel fort (photo/vidéo), logo, date, lieu
+- Chiffres clés : participants, sessions, tracks, durée
+- Présentation : qu'est-ce que le DevFest Toulouse
+- CTA principal : billetterie ou inscription
+- Speakers en vedette : grille de 4-8 speakers mis en avant
+- Partenaires : logos par niveau de sponsoring
+- Dernières actualités : 2-3 articles récents
+- Replay vidéo / aftermovie de l'édition précédente
+
+## Programme / Schedule
+- Grille horaire par salle/track
+- Sessions cliquables avec détail (titre, description, speaker, tags, durée, langue, niveau)
+- Formats : keynotes, conférences (40min), quickies (15min)
+- Catégories colorées
+- Filtrage : par niveau, format, langue, catégorie, recherche texte
+- Export agenda (ICAL, PDF)
+
+## Speakers
+- Liste complète avec photo, nom, entreprise
+- Page ou modale de détail : bio, réseaux sociaux, sessions associées
+
+## Partenaires / Sponsors
+- Logos organisés par niveaux (Platinum, Gold, Silver, Soutien, Communautés)
+- Lien vers le site de chaque partenaire
+- CTA "Devenir partenaire"
+
+## Blog / Actualités
+- Articles avec image, titre, extrait
+- Page de détail par article
+
+## Lieu
+- Nom et description du lieu
+- Adresse et lien itinéraire (Google Maps)
+- Carte intégrée ou lien vers la carte
+
+## Billetterie
+- Paliers de prix (Blind Bird, Early Bird, Normal) avec états sold-out
+- Lien vers la plateforme externe
+
+## Équipe
+- Grille des organisateurs avec photo, nom, rôle, réseaux sociaux
+
+## FAQ
+- Questions/réponses : accès au lieu, formats des talks, billetterie, remboursement
+
+## À propos / Historique
+- Présentation du GDG Toulouse
+- Frise chronologique des éditions passées
+- Liens vers les sites archivés
+
+## Galerie photos
+- Lien vers album Google Photos (officiel + collaboratif)
+
+## CFP (Call for Papers)
+- Lien vers Sessionize pour soumettre un sujet
+- Dates d'ouverture/fermeture du CFP
+
+## Contact
+- Formulaire : nom, email, objet (dropdown), message
+
+## Code de conduite
+- Version française
+- Version anglaise
+
+## Mentions légales / RGPD
+- Informations association, hébergeur
+- Politique de données personnelles
+
+## Footer
+- Réseaux sociaux (X/Twitter, Bluesky, LinkedIn, YouTube)
+- Contact (email)
+- Mentions légales
+- Liens vers les éditions précédentes
+
+## Page 404
+- Message d'erreur personnalisé + lien retour accueil
+
+## Accessibilité
+- Skip to content
+- Navigation clavier
+- Contrastes suffisants
+
+## SEO / Meta tags
+- Open Graph (Facebook/LinkedIn)
+- Twitter Card
+- Schema.org (Event, Organization)
+- Balises title/description par page
+
+## Responsive
+- Mobile-first, breakpoints tablette/desktop
