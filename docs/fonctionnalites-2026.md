@@ -13,6 +13,10 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 - Partenaires : logos par niveau de sponsoring
 - Dernières actualités : 2-3 articles récents
 - Replay vidéo / aftermovie de l'édition précédente
+- Statuts annuels de la page d'accueil, basculables depuis le backend admin :
+  - "Édition en préparation" : page minimale, teasing
+  - "Annonce de la nouvelle édition" : affichage progressif des informations au fur et à mesure de leur disponibilité (date, lieu, CFP, speakers, programme, billetterie…)
+  - "Rendez-vous l'année prochaine" : bilan de l'édition passée, replay, photos
 
 ## Programme / Schedule
 - Grille horaire par salle/track
