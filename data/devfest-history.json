@@ -474,20 +474,6 @@
             "Méthodes et Outils"
           ],
           "complexity": "Débutant"
-        },
-        {
-          "title": "Data science in space",
-          "description": "Cloud, big data et machine learning, des buzzwords dont on entend beaucoup parler… mais quelles sont les réelles opportunités d’application ? Le traitement, l’analyse et la valorisation de données spatiales sont des points critiques pour le futur, les activités de notre Pôle Scientifique répondent à ces problématiques. Découvrez comment l’ensemble de ces outils accélèrent le segment spatial à travers notamment un usecase de monitoring de culture de riz sur la base de données Sentinel 1.",
-          "speakers": [
-            "Cédric Cormont",
-            "Delphine Nobileau"
-          ],
-          "language": "fr",
-          "format": "conference",
-          "tags": [
-            "Web"
-          ],
-          "complexity": "Confirmé"
         }
       ]
     },
@@ -2938,7 +2924,7 @@
           "youtube": "https://www.youtube.com/watch?v=rFxSrzR-EXE"
         },
         {
-          "title": "Multiplatfom projects with Kotlin",
+          "title": "Multiplatform projects with Kotlin",
           "description": "Kotlin is an alternative programming language for JVM. But it is not limited to a single platform. Instead, the team is working hard to bring it everywhere. It is already possible to run Kotlin on Android and compile it to JavaScript to write homogeneous web applications. And there is Kotlin/Native project actively in development, which will bring Kotlin to desktop and iOS.\n\nIn this session, we'll see how Kotlin can help us share code between platforms and what are the best practices in doing this.",
           "speakers": [
             "Victor Kropp"
@@ -3909,17 +3895,6 @@
           "youtube": "https://www.youtube.com/watch?v=aYA_a0-bplY"
         },
         {
-          "title": "Keynote de fermeture (overflow)",
-          "description": "[Keynote de fermeture](../keynote_close)",
-          "speakers": [],
-          "language": "fr",
-          "format": "keynote",
-          "tags": [
-            "keynote"
-          ],
-          "complexity": ""
-        },
-        {
           "title": "Une histoire de l'informatique, du métier à tisser à la machine de Babbage...",
           "description": "...où l'on parle aussi de la Pascaline, de table de logarithmes et d'éviter les erreurs. Et d'en faire.\n\n---\n\n[Histoires de Mathématiques](https://hist-math.fr/)\n\n<blockquote class=\"twitter-tweet\">\n    <p lang=\"fr\" dir=\"ltr\">Petit thread complément indispensable à mon talk d&#39;hier au <a href=\"https://twitter.com/DevFestToulouse?ref_src=twsrc%5Etfw\">@DevFestToulouse</a> , deux choses que je n&#39;ai pas réussi à dire dans le temps : D&#39;abord si je vous ai donné un tout petit peu envie d&#39;en savoir plus sur l&#39;histoire des maths et de l&#39;informatique, le site de Bernard Ycart <a href=\"https://t.co/ejtAam5Kjy\">pic.twitter.com/ejtAam5Kjy</a></p>&mdash; Fabien Trégan (@FTregan) <a href=\"https://twitter.com/FTregan/status/1180059776371306496?ref_src=twsrc%5Etfw\">October 4, 2019</a>\n</blockquote>\n<script async src=\"https://platform.twitter.com/widgets.js\" charset=\"utf-8\"></script>",
           "speakers": [
@@ -3932,18 +3907,6 @@
           ],
           "complexity": "",
           "youtube": "https://www.youtube.com/watch?v=LHzVkjHjSso"
-        },
-        {
-          "title": "Keynote d'ouverture (overflow)",
-          "description": "[Keynote d'ouverture](../keynote_open)",
-          "speakers": [],
-          "language": "fr",
-          "format": "keynote",
-          "tags": [
-            "keynote"
-          ],
-          "complexity": "",
-          "youtube": "https://www.youtube.com/watch?v=AFhHrQIAw3g"
         },
         {
           "title": "Le burn-out agile",
