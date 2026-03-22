@@ -3,13 +3,15 @@
 Lots de développement calés sur le rétroplanning de l'édition 2026.
 Chaque lot doit être **en production** avant la date indiquée.
 
+> Note : le site WordPress existant a été conservé pour l'annonce du 9 mars et l'ouverture du CFP. Le nouveau site prend le relais à partir du lot 1.
+
 ---
 
 ## Rétroplanning de référence
 
 | Date | Jalon |
 |------|-------|
-| 09 mars | Annonce édition + ouverture CFP |
+| ~~09 mars~~ | ~~Annonce édition + ouverture CFP~~ *(couvert par l'ancien site)* |
 | 08-09 avril | Plaquette sponsor + Blind Bird + réunion sponsors |
 | Mai | Démarcher bénévoles, relances CFP |
 | 31 mai | Clôture CFP |
@@ -24,72 +26,55 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ---
 
-## Lot 0 — Fondations (prêt avant le 09 mars)
+## Lot 1 — Fondations, Sponsors & Billetterie (prêt avant le 08 avril)
 
-**Objectif** : le site existe, est déployé, et affiche la page d'annonce.
+**Objectif** : le nouveau site remplace l'ancien. Les sponsors sont visibles, le Blind Bird peut être annoncé, le CFP est mis en avant.
 
-### Fonctionnalités
+### Fondations techniques
 
 - Mise en place technique : framework, déploiement, CI/CD
-- Header complet (logo, navigation, réseaux sociaux, CTA « Proposer un talk » → Sessionize)
-- Footer complet (logo, réseaux, 3 colonnes, barre basse)
-- Page d'accueil en mode **« Annonce de l'édition »** :
-  - Hero (titre, date, lieu, CTAs)
-  - Chiffres clés (édition précédente)
-  - À propos / GDG Toulouse / écosystème
-  - Replay / aftermovie édition précédente
-- Pages de contenu : Code de conduite, Mentions légales
-- Page 404
-- Page Contact (formulaire)
+- Mise en place du design system (Google Sans, Font Awesome, tokens CSS)
+- SSR + cache HTTP
 - SEO de base (meta tags, OG, Schema.org Event)
 - Accessibilité (skip to content, navigation clavier, contrastes)
 - Responsive (mobile-first)
 - i18n (structure bilingue FR/EN, URLs localisées)
 
-### Transverse
+### Pages publiques
 
-- Mise en place du design system (Google Sans, Font Awesome, tokens CSS)
-- SSR + cache HTTP
-- Déploiement continu
-
----
-
-## Lot 1 — Sponsors & CFP (prêt avant le 08 avril)
-
-**Objectif** : les sponsors sont visibles, le CTA « Devenir partenaire » fonctionne, le CFP est mis en avant.
-
-### Fonctionnalités
-
+- Header complet (logo, navigation, réseaux sociaux, CTAs « Devenir partenaire » + « Proposer un talk »)
+- Footer complet (logo, réseaux, 3 colonnes, barre basse)
+- Page d'accueil en mode **« Annonce de l'édition »** :
+  - Hero (titre, date, lieu, CTAs)
+  - Chiffres clés (édition précédente)
+  - Section Partenaires (grille par niveau)
+  - À propos / GDG Toulouse / écosystème
+  - Dernières actualités (grille de 4 ArticleCards)
+  - Replay / aftermovie édition précédente
 - Page Partenaires : liste avec cartes par niveau (Platinum/Gold/autres)
 - Page de détail sponsor (description, logo, liens sociaux)
-- Section Partenaires sur la page d'accueil
-- CTA « Devenir partenaire » actif (header + accueil + page partenaires)
 - Page CFP (dates, lien Sessionize)
-- Admin : gestion des sponsors (CRUD)
-- Admin : API de gestion des sponsors
+- Page Actualités (liste en grille de cards)
+- Page de détail article (contenu riche)
+- Page Billetterie (paliers, états sold-out, lien externe)
+- Page Contact (formulaire + encart latéral)
+- Pages de contenu : Code de conduite, Mentions légales
+- Page 404
+
+### Admin
+
+- Gestion des sponsors (CRUD)
+- Gestion des articles (CRUD)
+- API de gestion des sponsors
+- Configuration du statut annuel de la page d'accueil
 
 ### Souhaitable
 
 - Sponsor connecté : édition de sa propre fiche
-- Blog / Actualités (pour publier l'annonce d'ouverture du CFP)
 
 ---
 
-## Lot 2 — Blog & Billetterie (prêt avant le 09 avril)
-
-**Objectif** : le Blind Bird peut être annoncé via le blog, avec lien billetterie.
-
-### Fonctionnalités
-
-- Page Actualités (liste en grille de cards)
-- Page de détail article (contenu riche)
-- Section « Dernières actualités » sur la page d'accueil
-- Page Billetterie (paliers, états sold-out, lien externe)
-- Admin : gestion des articles (CRUD)
-
----
-
-## Lot 3 — Speakers & Sessions (prêt avant le 19 juin)
+## Lot 2 — Speakers & Sessions (prêt avant le 19 juin)
 
 **Objectif** : les speakers sélectionnés sont publiés, leurs fiches sont en ligne.
 
@@ -110,7 +95,7 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ---
 
-## Lot 4 — Programme (prêt avant septembre)
+## Lot 3 — Programme (prêt avant septembre)
 
 **Objectif** : le programme complet est publié avec la grille horaire.
 
@@ -129,7 +114,7 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ---
 
-## Lot 5 — Contenu complémentaire (prêt avant octobre)
+## Lot 4 — Contenu complémentaire (prêt avant octobre)
 
 **Objectif** : toutes les pages publiques sont en place pour la communication finale.
 
@@ -144,7 +129,7 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ---
 
-## Lot 6 — Jour J (prêt avant le 19 novembre)
+## Lot 5 — Jour J (prêt avant le 19 novembre)
 
 **Objectif** : les fonctionnalités liées à l'événement en direct sont prêtes.
 
@@ -173,10 +158,8 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 | Lot | Échéance | Pages / Fonctionnalités clés |
 |-----|----------|------------------------------|
-| **Lot 0** | 09 mars | Accueil (annonce), Contact, CoC, Mentions légales, 404, Header, Footer |
-| **Lot 1** | 08 avril | Partenaires, CFP, Admin sponsors |
-| **Lot 2** | 09 avril | Blog, Billetterie (Blind Bird) |
-| **Lot 3** | 19 juin | Speakers, Sessions, Authentification |
-| **Lot 4** | Septembre | Programme complet, Filtrage, Export agenda |
-| **Lot 5** | Octobre | Lieu, Équipe, FAQ, Historique, Replays, Galerie |
-| **Lot 6** | 19 novembre | Passport digital, Jour J |
+| **Lot 1** | 08 avril | Fondations, Accueil, Partenaires, Blog, Billetterie, CFP, Contact, CoC, Mentions légales, 404 |
+| **Lot 2** | 19 juin | Speakers, Sessions, Authentification |
+| **Lot 3** | Septembre | Programme complet, Filtrage, Export agenda |
+| **Lot 4** | Octobre | Lieu, Équipe, FAQ, Historique, Replays, Galerie |
+| **Lot 5** | 19 novembre | Passport digital, Jour J |
