@@ -20,6 +20,8 @@ Les spécifications du projet sont dans le dossier `docs/` :
 | [objectifs-techniques.md](docs/objectifs-techniques.md) | Objectifs techniques (rendu, performance, SEO, accessibilité) |
 | [historique-sites.md](docs/historique-sites.md) | Analyse des sites des éditions passées (2016–2025) |
 | [modele-donnees-historique.md](docs/modele-donnees-historique.md) | Modèle de données de `data/devfest-history.json` |
+| [modele-donnees-metier.md](docs/modele-donnees-metier.md) | Modèle de données métier (entités, relations, bilingue) |
+| [maquettes-figma.md](docs/maquettes-figma.md) | Inventaire des maquettes Figma et structure des pages |
 
 ## Données historiques
 

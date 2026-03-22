@@ -13,7 +13,9 @@ docs/                          # Specification documents (in French)
 ├── fonctionnalites-2026.md    # Feature list for the 2026 site
 ├── objectifs-techniques.md    # Technical objectives (SEO, perf, a11y, rendering)
 ├── historique-sites.md        # Analysis of past DevFest Toulouse sites (2016-2025)
-└── modele-donnees-historique.md  # Data model for devfest-history.json
+├── modele-donnees-historique.md  # Data model for devfest-history.json
+├── modele-donnees-metier.md   # Business data model (entities, relationships)
+└── maquettes-figma.md         # Figma mockups inventory and structure
 data/
 └── devfest-history.json       # Historical data: speakers & sessions (2016-2025)
 .claude/rules/                 # Detailed coding & workflow rules
@@ -27,6 +29,8 @@ Always consult these documents before making assumptions about features or archi
 - **`docs/objectifs-techniques.md`** — Technical objectives: SSR + cache strategy, Lighthouse targets (≥90), Core Web Vitals, SEO, accessibility (WCAG 2.1 AA), i18n readiness, security headers
 - **`docs/historique-sites.md`** — Evolution of past sites (stacks, features per year)
 - **`docs/modele-donnees-historique.md`** — Schema for `data/devfest-history.json` (327 speakers, 282 sessions across 7 editions)
+- **`docs/modele-donnees-metier.md`** — Business data model: all domain entities, attributes, relationships and bilingual strategy
+- **`docs/maquettes-figma.md`** — Figma mockups: pages designed, shared components, structure ([Figma file](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499))
 
 ## Key Technical Decisions (from specs)
 
