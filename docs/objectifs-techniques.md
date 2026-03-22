@@ -17,6 +17,10 @@
 
 - Balises Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) sur toutes les pages
 - Twitter Card (`twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`)
+- Balises événement : le DevFest étant un événement annuel récurrent, exploiter les propriétés Open Graph dédiées aux événements :
+  - `og:type` = `website` sur les pages générales, `article` sur les articles de blog
+  - Données structurées `Event` (Schema.org) enrichies : `startDate`, `endDate`, `location`, `eventStatus`, `eventAttendanceMode`, `organizer`, `offers` (billetterie)
+  - Propriétés supplémentaires pour les événements récurrents : `previousStartDate` (éditions passées), `superEvent` (DevFest global)
 - Image OG dédiée par type de contenu :
   - Page d'accueil : visuel de l'édition
   - Speaker : photo du speaker + nom + DevFest branding
@@ -28,15 +32,40 @@
 
 ## Stratégie de rendu
 
-### Page d'accueil — fichier statique pré-calculé
-- Régénération à chaque modification de contenu (build statique déclenché par webhook ou action admin)
-- Servie directement par le serveur web ou le CDN (temps de réponse < 100ms)
-- Aucun appel API côté client au premier chargement
+### Pages publiques (dont la page d'accueil) — SSR + cache
 
-### Pages publiques non authentifiées — rendu côté serveur (SSR)
+Toutes les pages publiques suivent la même stratégie de rendu : **rendu côté serveur (SSR) avec mise en cache HTTP**.
+
 - Rendu HTML côté serveur pour un contenu indexable immédiatement par les moteurs de recherche
 - Hydratation côté client pour l'interactivité (filtres, recherche, navigation dynamique)
-- Pages concernées : speakers, sessions, programme, sponsors, blog, FAQ, à propos, lieu, code de conduite
+- Pages concernées : **page d'accueil**, speakers, sessions, programme, sponsors, blog, FAQ, à propos, lieu, code de conduite
+
+#### Politique de cache
+
+- Pages HTML servies avec `Cache-Control: s-maxage=3600, stale-while-revalidate=60` (cache CDN 1h, avec revalidation transparente)
+- La page d'accueil peut avoir un TTL plus court (ex. : `s-maxage=300`) pour refléter les mises à jour plus fréquemment
+- Assets statiques (images, CSS, JS) : cache long avec hash dans le nom de fichier (cache busting)
+
+#### Invalidation à la demande
+
+Le cache est purgé de façon ciblée lorsque le contenu change, sans attendre l'expiration du TTL :
+
+- **Changement de statut annuel** (bascule entre « Édition en préparation », « Annonce », « Rendez-vous l'année prochaine ») : purge de la page d'accueil
+- **Modification de contenu** (speaker, sponsor, article, programme) : purge des pages impactées
+- **Action manuelle admin** : bouton « Purger le cache » dans le back-office pour forcer la revalidation d'une page ou de l'ensemble du site
+- Mécanisme : endpoint de revalidation interne appelé par le back-office ou par webhook, qui déclenche une purge CDN ciblée par URL
+
+#### Contenu conditionnel de la page d'accueil
+
+La page d'accueil affiche des sections différentes selon le statut annuel actif. Le statut est une donnée de configuration lue côté serveur au moment du rendu :
+
+| Statut | Sections affichées |
+|---|---|
+| Édition en préparation | Hero teasing, newsletter, réseaux sociaux, replay édition précédente |
+| Annonce de l'édition | Hero complet, chiffres clés, speakers en vedette, sponsors, billetterie, blog |
+| Rendez-vous l'année prochaine | Bilan, aftermovie, galerie photos, replay, lien éditions précédentes |
+
+La bascule de statut dans le back-office déclenche une purge immédiate du cache de la page d'accueil.
 
 ### Pages authentifiées — rendu hybride (SSR + SPA)
 - Rendu serveur pour le squelette de page et le contenu initial
