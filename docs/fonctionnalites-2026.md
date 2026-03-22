@@ -7,17 +7,19 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ## Header
 
 - Logo DevFest Toulouse (lien vers l'accueil)
-- Navigation principale : Programme, Speakers, Partenaires, Actus
+- Navigation principale : Programme, Speakers, Partenaires, Actus (liens simples ou dropdowns — à arbitrer)
 - Réseaux sociaux : LinkedIn, YouTube, X/Twitter, Bluesky
 - 2 CTAs : « Devenir partenaire » (secondaire, outline) et « Proposer un talk » (principal, lien Sessionize)
 
 ## Page d'accueil
 
 - **Section hero** : image de fond avec coins arrondis, titre « DevFest Toulouse » (vert + terre cuite), sous-titre « La conférence Toulousaine par les devs et pour les devs. », date, lieu, 2 CTAs (« Devenir partenaire » + « Proposer un talk »)
-- **Chiffres clés** : journée, participants, conférences, stands — dans un encart blanc arrondi avec ombrage, titre « La plus grande conférence tech du bassin Toulousain », illustration La Grave
+- **Chiffres clés** : journée, participants, conférences, stands, tracks, durée — dans un encart blanc arrondi avec ombrage, titre « La plus grande conférence tech du bassin Toulousain », illustration La Grave
 - **Partenaires** : titre « Ils soutiennent le #DevFestToulouse », CTA « Devenir Partenaire », grille de sponsors par niveau avec cartes colorées (Platinum en grand avec baseline, autres niveaux en cartes plus petites), illustration croix occitane
 - **À propos** : section « Derrière le #DevFestToulouse », image de fond avec overlay, bloc texte sur fond blanc semi-transparent présentant le GDG Toulouse, puis section « Plongez dans notre écosystèmes » avec CTAs ToulouseTech et CloudToulouse
+- **Speakers en vedette** : grille de 4-8 speakers mis en avant
 - **Dernières actualités** : titre, lien « Lire plus d'articles », grille de 4 ArticleCards
+- **Replay vidéo / aftermovie** de l'édition précédente
 - Statuts annuels de la page d'accueil, basculables depuis le backend admin :
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations au fur et à mesure de leur disponibilité (date, lieu, CFP, speakers, programme, billetterie…)
@@ -81,7 +83,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 
 ## Contact
 - Formulaire : prénom, nom, email, téléphone, objet (dropdown), message
-- Encart latéral : délais de réponse (bénévoles), adresse postale (GDG Toulouse), réseaux sociaux
+- Encart latéral : délais de réponse (bénévoles), réseaux sociaux
 
 ## Code de conduite
 - Contenu textuel avec paragraphes et sous-titres
