@@ -30,9 +30,9 @@
 | # | Règle |
 |---|-------|
 | RG-400 | La page Lieu affiche les informations du lieu associé à l'édition courante. |
-| RG-401 | Les informations affichées sont : nom du lieu, description (FR + EN), adresse postale, lien itinéraire (Google Maps). |
-| RG-402 | Une carte interactive (Google Maps ou équivalent) ou un lien vers une carte est affiché. |
-| RG-403 | Si une carte interactive est intégrée, elle utilise un chargement différé pour ne pas pénaliser les performances. |
+| RG-401 | Les informations affichées sont : nom du lieu, description (FR + EN), adresse postale, lien itinéraire (Google Maps), informations pratiques (transports, parking, plan intérieur). |
+| RG-402 | Une carte interactive Leaflet + OpenStreetMap est intégrée sur la page. |
+| RG-403 | La carte utilise un chargement différé (lazy loading) pour ne pas pénaliser les performances. |
 | RG-404 | Le lieu est une entité réutilisable : si le DevFest se tient au même endroit plusieurs années, le lieu et ses salles sont partagés. |
 
 ### Équipe
@@ -41,7 +41,7 @@
 |---|-------|
 | RG-410 | La page Équipe affiche la liste des organisateurs du DevFest Toulouse. |
 | RG-411 | Chaque membre affiche : photo, nom, rôle dans l'organisation, liens sociaux. |
-| RG-412 | L'ordre d'affichage des membres est aléatoire (randomisé à chaque visite ou à chaque build, pas de hiérarchie visible). |
+| RG-412 | Les membres de l'équipe sont affichés par ordre alphabétique (nom de famille). |
 | RG-413 | Les membres d'équipe sont associés à l'édition courante. |
 
 ### FAQ
@@ -60,7 +60,7 @@
 | # | Règle |
 |---|-------|
 | RG-430 | La page À propos / Historique présente le GDG Toulouse et l'histoire du DevFest. |
-| RG-431 | Une frise chronologique interactive affiche les éditions passées (2016 à 2025). |
+| RG-431 | Une frise chronologique affiche les éditions passées (2016 à 2025). Composant custom en CSS (liste verticale avec points et ligne de connexion), sans librairie externe. |
 | RG-432 | Chaque entrée de la frise affiche : année, lieu, nombre de participants, nombre de sessions, lien vers le site archivé. |
 | RG-433 | La frise utilise les données de `data/devfest-history.json` et les métadonnées des éditions. |
 | RG-434 | Des liens vers les sites archivés des éditions précédentes sont fournis (ex. `2019.devfesttoulouse.fr`). |
@@ -73,7 +73,7 @@
 | RG-440 | Le Hall of replays affiche l'historique de toutes les conférences de toutes les éditions ayant des vidéos. |
 | RG-441 | Les données proviennent de `data/devfest-history.json` (champ `youtube` des sessions). |
 | RG-442 | Les sessions sont groupées par édition (année), de la plus récente à la plus ancienne. |
-| RG-443 | Chaque session avec vidéo affiche : titre, speaker(s), édition (année), lien YouTube. |
+| RG-443 | Chaque session avec vidéo affiche : titre, speaker(s), édition (année), player YouTube intégré (lazy loading) et lien « Regarder sur YouTube ». |
 | RG-444 | Un filtre par édition (année) est disponible. |
 | RG-445 | Une recherche texte sur le titre et le speaker est disponible. |
 
@@ -81,7 +81,7 @@
 
 | # | Règle |
 |---|-------|
-| RG-450 | La page Galerie photos affiche un ou plusieurs liens vers des albums Google Photos. |
+| RG-450 | La page Galerie photos affiche une mini galerie de miniatures (photos sélectionnées) avec un lien vers les albums Google Photos complets. |
 | RG-451 | Deux types d'albums sont distingués : l'album officiel et l'album collaboratif (contributif par les participants). |
 | RG-452 | Les albums sont associés à l'édition courante. Si des albums d'éditions précédentes existent, ils sont listés en dessous. |
 
@@ -101,7 +101,7 @@
 - [ ] Description du lieu (dans la langue de la page) (RG-401).
 - [ ] Adresse postale complète.
 - [ ] Bouton « Itinéraire » menant vers Google Maps (lien externe, nouvel onglet).
-- [ ] Carte Google Maps intégrée ou image de carte statique (RG-402, RG-403).
+- [ ] Carte Leaflet + OpenStreetMap intégrée avec lazy loading (RG-402, RG-403).
 - [ ] La carte utilise un chargement différé (façade ou lazy loading) pour la performance.
 - [ ] `<title>` : « Lieu — DevFest Toulouse 2026 ».
 - [ ] La page est bilingue FR/EN.
@@ -121,7 +121,7 @@
 - [ ] Breadcrumb : Accueil > Équipe.
 - [ ] Grille de membres de l'équipe (4 colonnes desktop, 2 tablette, 1 mobile).
 - [ ] Chaque membre affiche : photo, nom, rôle, liens sociaux (icônes cliquables).
-- [ ] L'ordre est aléatoire à chaque visite (RG-412).
+- [ ] Les membres sont affichés par ordre alphabétique (RG-412).
 - [ ] `<title>` : « Équipe — DevFest Toulouse 2026 ».
 - [ ] La page est bilingue FR/EN.
 
@@ -179,7 +179,7 @@
 **Critères d'acceptation :**
 - [ ] Breadcrumb : Accueil > Hall of replays.
 - [ ] Sessions groupées par édition, de la plus récente à la plus ancienne (RG-442).
-- [ ] Chaque session affiche : titre, speaker(s), lien YouTube (RG-443).
+- [ ] Chaque session affiche : titre, speaker(s), player YouTube intégré (lazy loading) + lien « Regarder sur YouTube » (RG-443).
 - [ ] Filtre par édition (dropdown ou onglets) (RG-444).
 - [ ] Recherche texte sur titre et speaker (RG-445).
 - [ ] Clic sur le lien YouTube → ouverture dans un nouvel onglet (ou player intégré).
@@ -200,7 +200,7 @@
 
 **Critères d'acceptation :**
 - [ ] Breadcrumb : Accueil > Galerie photos.
-- [ ] Liens vers les albums Google Photos de l'édition courante (RG-450, RG-451) :
+- [ ] Mini galerie de miniatures avec liens vers les albums Google Photos complets (RG-450, RG-451) :
   - Album officiel (photographe)
   - Album collaboratif (participants)
 - [ ] Chaque lien s'ouvre dans un nouvel onglet.
@@ -354,9 +354,9 @@
 
 | # | Question | Impact |
 |---|----------|--------|
-| QO-040 | La carte interactive sur la page Lieu utilise-t-elle Google Maps Embed API (gratuite, iframe), Google Maps JavaScript API (payante, interactive), ou une alternative open source (Leaflet + OpenStreetMap) ? | Coût, dépendance |
-| QO-041 | La frise chronologique de la page À propos est-elle un composant custom ou une librairie existante ? Quel niveau d'interactivité (animations au scroll, clic pour déplier, etc.) ? | Effort, accessibilité |
-| QO-042 | Le Hall of replays intègre-t-il les vidéos directement (player YouTube intégré) ou affiche-t-il uniquement des liens/miniatures vers YouTube ? L'intégration directe impacte les performances. | Performance, UX |
-| QO-043 | Faut-il des informations pratiques supplémentaires sur la page Lieu (transports en commun, parking, plan intérieur du centre de congrès) ? | Contenu, design |
-| QO-044 | L'ordre aléatoire des membres de l'équipe est-il randomisé à chaque chargement de page (côté client), à chaque build SSR (quotidien ?), ou une seule fois par déploiement ? | Implémentation, cache |
-| QO-045 | La Galerie photos doit-elle afficher des miniatures des photos (nécessite l'API Google Photos ou un scraping) ou uniquement des liens vers les albums ? | Complexité, API, RGPD |
+| ~~QO-040~~ | ~~Carte du lieu ?~~ **Résolu** : Leaflet + OpenStreetMap (open source, gratuit, pas de clé API). | — |
+| ~~QO-041~~ | ~~Frise chronologique ?~~ **Résolu** : composant custom en CSS (liste verticale avec points et ligne). Pas de librairie externe — le volume de données (~10 éditions) ne le justifie pas. | — |
+| ~~QO-042~~ | ~~Hall of replays : player ou liens ?~~ **Résolu** : player YouTube intégré (lazy loading pour les performances) avec un lien « Regarder sur YouTube ». | — |
+| ~~QO-043~~ | ~~Infos pratiques lieu ?~~ **Résolu** : oui, dans une page dédiée « Infos pratiques » (transports, parking, plan intérieur). | — |
+| ~~QO-044~~ | ~~Ordre de l'équipe ?~~ **Résolu** : ordre alphabétique (pas de randomisation). | — |
+| ~~QO-045~~ | ~~Galerie photos ?~~ **Résolu** : mini galerie avec miniatures + lien vers les albums Google Photos complets. | — |

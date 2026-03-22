@@ -63,11 +63,12 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 - Page de détail par article : contenu riche avec paragraphes et sous-titres
 - Breadcrumb sur chaque page
 
-### Lieu
+### Lieu & Infos pratiques
 
 - Nom et description du lieu
 - Adresse et lien itinéraire (Google Maps)
-- Carte intégrée ou lien vers la carte
+- Carte Leaflet + OpenStreetMap intégrée
+- Page dédiée infos pratiques : transports en commun, parking, plan intérieur
 
 ### Billetterie
 
