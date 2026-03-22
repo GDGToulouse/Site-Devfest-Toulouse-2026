@@ -37,7 +37,7 @@ Always consult these documents before making assumptions about features or archi
 - **SEO**: Schema.org (Event, Organization, Person, Article), Open Graph, Twitter Cards, dynamic OG images
 - **Performance**: Lighthouse ≥90 all categories, LCP <2.5s, INP <200ms, CLS <0.1
 - **Accessibility**: WCAG 2.1 AA, keyboard nav, skip-to-content, axe-core in CI
-- **i18n**: FR default, structure ready for EN
+- **i18n**: natively bilingual (FR default + EN), localized URLs (`/fr/...`, `/en/...`)
 
 ## Critical Rules
 

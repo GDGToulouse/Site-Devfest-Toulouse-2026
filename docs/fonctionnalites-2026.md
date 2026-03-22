@@ -119,5 +119,13 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 - Scan par le participant : le tampon s'ajoute automatiquement
 - Barre de progression montrant les stands restants à visiter
 
+## Internationalisation
+- Site nativement bilingue français / anglais
+- Français comme langue par défaut
+- Sélecteur de langue accessible depuis toutes les pages
+- Tous les contenus (pages, articles, sessions, fiches speakers/sponsors) disponibles dans les deux langues
+- URLs localisées (ex. `/fr/speakers/...`, `/en/speakers/...`)
+- Attribut `lang` correct sur `<html>` et sur les blocs de contenu en langue différente
+
 ## Responsive
 - Mobile-first, breakpoints tablette/desktop

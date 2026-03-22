@@ -116,9 +116,11 @@ La bascule de statut dans le back-office déclenche une purge immédiate du cach
 
 ## Internationalisation
 
-- Structure prête pour le multilingue (FR par défaut, EN envisageable)
+- Site nativement bilingue : français (langue par défaut) et anglais
 - Textes externalisés dans des fichiers de traduction
+- URLs localisées avec préfixe de langue (`/fr/...`, `/en/...`)
 - Attribut `lang` correct sur le `<html>` et les blocs de contenu en langue différente
+- Détection de la langue du navigateur pour suggestion automatique (sans redirection forcée)
 
 ## Monitoring et observabilité
 
