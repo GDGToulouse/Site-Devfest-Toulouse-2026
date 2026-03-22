@@ -1,0 +1,362 @@
+# Lot 4 — Contenu complémentaire
+
+**Échéance** : octobre 2026
+**Objectif** : toutes les pages publiques sont en place pour la communication finale.
+
+**Prérequis** : Lots 1-3 livrés et en production.
+
+---
+
+## Table des matières
+
+1. [Règles de gestion](#règles-de-gestion)
+2. [User stories — Lieu](#user-stories--lieu)
+3. [User stories — Équipe](#user-stories--équipe)
+4. [User stories — FAQ](#user-stories--faq)
+5. [User stories — Historique / À propos](#user-stories--historique--à-propos)
+6. [User stories — Hall of replays](#user-stories--hall-of-replays)
+7. [User stories — Galerie photos](#user-stories--galerie-photos)
+8. [User stories — Admin](#user-stories--admin)
+9. [Parcours utilisateur](#parcours-utilisateur)
+10. [Cas limites et erreurs](#cas-limites-et-erreurs)
+11. [Questions ouvertes](#questions-ouvertes)
+
+---
+
+## Règles de gestion
+
+### Lieu
+
+| # | Règle |
+|---|-------|
+| RG-400 | La page Lieu affiche les informations du lieu associé à l'édition courante. |
+| RG-401 | Les informations affichées sont : nom du lieu, description (FR + EN), adresse postale, lien itinéraire (Google Maps). |
+| RG-402 | Une carte interactive (Google Maps ou équivalent) ou un lien vers une carte est affiché. |
+| RG-403 | Si une carte interactive est intégrée, elle utilise un chargement différé pour ne pas pénaliser les performances. |
+| RG-404 | Le lieu est une entité réutilisable : si le DevFest se tient au même endroit plusieurs années, le lieu et ses salles sont partagés. |
+
+### Équipe
+
+| # | Règle |
+|---|-------|
+| RG-410 | La page Équipe affiche la liste des organisateurs du DevFest Toulouse. |
+| RG-411 | Chaque membre affiche : photo, nom, rôle dans l'organisation, liens sociaux. |
+| RG-412 | L'ordre d'affichage des membres est aléatoire (randomisé à chaque visite ou à chaque build, pas de hiérarchie visible). |
+| RG-413 | Les membres d'équipe sont associés à l'édition courante. |
+
+### FAQ
+
+| # | Règle |
+|---|-------|
+| RG-420 | La FAQ est une liste de questions/réponses organisée par thème. |
+| RG-421 | Le contenu est bilingue (FR + EN). |
+| RG-422 | Les questions sont présentées sous forme d'accordéon (expandable/collapsible). |
+| RG-423 | Les questions sont accessibles au clavier (Enter/Space pour ouvrir/fermer, navigation par flèches). |
+| RG-424 | Les données structurées Schema.org `FAQPage` sont générées pour le SEO. |
+| RG-425 | Les thèmes habituels sont : Accès au lieu, Formats des talks, Billetterie, Remboursement, Accessibilité, Divers. |
+
+### Historique / À propos
+
+| # | Règle |
+|---|-------|
+| RG-430 | La page À propos / Historique présente le GDG Toulouse et l'histoire du DevFest. |
+| RG-431 | Une frise chronologique interactive affiche les éditions passées (2016 à 2025). |
+| RG-432 | Chaque entrée de la frise affiche : année, lieu, nombre de participants, nombre de sessions, lien vers le site archivé. |
+| RG-433 | La frise utilise les données de `data/devfest-history.json` et les métadonnées des éditions. |
+| RG-434 | Des liens vers les sites archivés des éditions précédentes sont fournis (ex. `2019.devfesttoulouse.fr`). |
+| RG-435 | Le contenu textuel de présentation du GDG est bilingue (FR + EN). |
+
+### Hall of replays
+
+| # | Règle |
+|---|-------|
+| RG-440 | Le Hall of replays affiche l'historique de toutes les conférences de toutes les éditions ayant des vidéos. |
+| RG-441 | Les données proviennent de `data/devfest-history.json` (champ `youtube` des sessions). |
+| RG-442 | Les sessions sont groupées par édition (année), de la plus récente à la plus ancienne. |
+| RG-443 | Chaque session avec vidéo affiche : titre, speaker(s), édition (année), lien YouTube. |
+| RG-444 | Un filtre par édition (année) est disponible. |
+| RG-445 | Une recherche texte sur le titre et le speaker est disponible. |
+
+### Galerie photos
+
+| # | Règle |
+|---|-------|
+| RG-450 | La page Galerie photos affiche un ou plusieurs liens vers des albums Google Photos. |
+| RG-451 | Deux types d'albums sont distingués : l'album officiel et l'album collaboratif (contributif par les participants). |
+| RG-452 | Les albums sont associés à l'édition courante. Si des albums d'éditions précédentes existent, ils sont listés en dessous. |
+
+---
+
+## User stories — Lieu
+
+### US-400 : Page Lieu
+
+**En tant que** visiteur,
+**je veux** connaître le lieu de l'événement et comment m'y rendre,
+**afin de** préparer mon déplacement.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Lieu.
+- [ ] Nom du lieu (ex. « Centre de Congrès Diagora ») en titre principal.
+- [ ] Description du lieu (dans la langue de la page) (RG-401).
+- [ ] Adresse postale complète.
+- [ ] Bouton « Itinéraire » menant vers Google Maps (lien externe, nouvel onglet).
+- [ ] Carte Google Maps intégrée ou image de carte statique (RG-402, RG-403).
+- [ ] La carte utilise un chargement différé (façade ou lazy loading) pour la performance.
+- [ ] `<title>` : « Lieu — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+- [ ] Données structurées Schema.org `Place` avec `name`, `address`, `geo`.
+
+---
+
+## User stories — Équipe
+
+### US-410 : Page Équipe
+
+**En tant que** visiteur,
+**je veux** voir qui organise le DevFest Toulouse,
+**afin de** mettre un visage sur l'équipe.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Équipe.
+- [ ] Grille de membres de l'équipe (4 colonnes desktop, 2 tablette, 1 mobile).
+- [ ] Chaque membre affiche : photo, nom, rôle, liens sociaux (icônes cliquables).
+- [ ] L'ordre est aléatoire à chaque visite (RG-412).
+- [ ] `<title>` : « Équipe — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+
+---
+
+## User stories — FAQ
+
+### US-420 : Page FAQ
+
+**En tant que** visiteur,
+**je veux** trouver rapidement des réponses à mes questions pratiques,
+**afin de** préparer ma participation au DevFest.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > FAQ.
+- [ ] Questions organisées par thème (RG-425).
+- [ ] Chaque question est un accordéon : clic pour déplier/replier la réponse (RG-422).
+- [ ] Les accordéons sont accessibles au clavier (RG-423) : Enter/Space pour toggle, ARIA `role="button"`, `aria-expanded`, `aria-controls`.
+- [ ] Plusieurs questions peuvent être ouvertes en même temps.
+- [ ] `<title>` : « FAQ — DevFest Toulouse 2026 ».
+- [ ] Données structurées Schema.org `FAQPage` (RG-424).
+- [ ] La page est bilingue FR/EN (RG-421).
+
+---
+
+## User stories — Historique / À propos
+
+### US-430 : Page À propos avec frise chronologique
+
+**En tant que** visiteur,
+**je veux** découvrir l'histoire du DevFest Toulouse,
+**afin de** comprendre l'évolution de l'événement.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > À propos.
+- [ ] Section de présentation du GDG Toulouse (texte bilingue).
+- [ ] Frise chronologique interactive des éditions (2016 à 2025) (RG-431).
+- [ ] Chaque point de la frise affiche : année, lieu, nombre de participants, nombre de sessions (RG-432).
+- [ ] Lien « Voir le site » vers le site archivé de chaque édition (RG-434).
+- [ ] La frise est responsive : verticale sur mobile, horizontale sur desktop.
+- [ ] Animation au scroll (apparition progressive des entrées).
+- [ ] `<title>` : « À propos — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+
+---
+
+## User stories — Hall of replays
+
+### US-440 : Page Hall of replays
+
+**En tant que** visiteur,
+**je veux** parcourir les vidéos de toutes les éditions passées du DevFest,
+**afin de** (re)voir des conférences qui m'intéressent.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Hall of replays.
+- [ ] Sessions groupées par édition, de la plus récente à la plus ancienne (RG-442).
+- [ ] Chaque session affiche : titre, speaker(s), lien YouTube (RG-443).
+- [ ] Filtre par édition (dropdown ou onglets) (RG-444).
+- [ ] Recherche texte sur titre et speaker (RG-445).
+- [ ] Clic sur le lien YouTube → ouverture dans un nouvel onglet (ou player intégré).
+- [ ] Les données proviennent de `data/devfest-history.json` (RG-441).
+- [ ] `<title>` : « Hall of replays — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+- [ ] Pagination ou lazy loading si le nombre de vidéos est important (7 éditions, potentiellement 100+ vidéos).
+
+---
+
+## User stories — Galerie photos
+
+### US-450 : Page Galerie photos
+
+**En tant que** visiteur,
+**je veux** accéder aux photos de l'événement,
+**afin de** revivre l'ambiance du DevFest.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Galerie photos.
+- [ ] Liens vers les albums Google Photos de l'édition courante (RG-450, RG-451) :
+  - Album officiel (photographe)
+  - Album collaboratif (participants)
+- [ ] Chaque lien s'ouvre dans un nouvel onglet.
+- [ ] Si des albums d'éditions précédentes existent, ils sont listés en dessous sous un titre « Éditions précédentes » (RG-452).
+- [ ] `<title>` : « Galerie photos — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+
+---
+
+## User stories — Admin
+
+### US-460 : Gestion du lieu
+
+**En tant qu'** admin,
+**je veux** configurer le lieu de l'édition courante,
+**afin de** alimenter la page Lieu.
+
+**Critères d'acceptation :**
+- [ ] Création/modification d'un lieu : nom, description (FR + EN), adresse, coordonnées GPS, lien itinéraire.
+- [ ] Gestion des salles du lieu : nom, capacité (optionnel), ordre d'affichage.
+- [ ] Association du lieu à l'édition courante.
+- [ ] Possibilité de réutiliser un lieu existant d'une édition passée (RG-404).
+- [ ] Après modification, purge du cache de la page Lieu.
+
+### US-461 : Gestion de l'équipe
+
+**En tant qu'** admin,
+**je veux** gérer les membres de l'équipe organisatrice,
+**afin de** publier la page Équipe.
+
+**Critères d'acceptation :**
+- [ ] CRUD des membres d'équipe : nom, photo, rôle, liens sociaux.
+- [ ] Association des membres à l'édition courante (RG-413).
+- [ ] Après modification, purge du cache de la page Équipe.
+
+### US-462 : Gestion de la FAQ
+
+**En tant qu'** admin,
+**je veux** gérer les questions/réponses de la FAQ,
+**afin de** les maintenir à jour.
+
+**Critères d'acceptation :**
+- [ ] CRUD des questions : question (FR + EN), réponse (FR + EN), thème, ordre d'affichage.
+- [ ] Les thèmes sont libres (créés à la volée ou sélectionnés depuis une liste existante).
+- [ ] Après modification, purge du cache de la page FAQ.
+
+### US-463 : Gestion de la page À propos
+
+**En tant qu'** admin,
+**je veux** modifier le texte de présentation de la page À propos,
+**afin de** mettre à jour le contenu.
+
+**Critères d'acceptation :**
+- [ ] Éditeur de contenu riche bilingue (FR + EN) pour le texte de présentation du GDG.
+- [ ] La frise chronologique est alimentée automatiquement par les données des éditions (pas de saisie manuelle des données historiques).
+- [ ] Après modification, purge du cache de la page À propos.
+
+### US-464 : Gestion des albums photos
+
+**En tant qu'** admin,
+**je veux** ajouter les liens vers les albums Google Photos,
+**afin d'** alimenter la page Galerie photos.
+
+**Critères d'acceptation :**
+- [ ] Ajout/modification de liens d'albums : URL, type (officiel/collaboratif), édition associée.
+- [ ] Après modification, purge du cache de la page Galerie photos.
+
+---
+
+## Parcours utilisateur
+
+### Parcours 1 : Préparation logistique du visiteur
+
+1. Le visiteur clique sur « Lieu » dans la navigation (ou via la page d'accueil).
+2. Il voit le nom du lieu, la description, l'adresse.
+3. Il clique sur « Itinéraire » → Google Maps s'ouvre avec la destination pré-remplie.
+4. Il revient sur le site et consulte la FAQ.
+5. Il ouvre la question « Comment se garer ? » → la réponse s'affiche.
+6. Il ouvre la question « Y a-t-il un repas inclus ? » → la réponse s'affiche.
+
+### Parcours 2 : Découverte de l'historique
+
+1. Le visiteur clique sur « À propos » dans la navigation.
+2. Il lit la présentation du GDG Toulouse.
+3. Il scrolle et découvre la frise chronologique.
+4. Il voit l'édition 2016 (IUT Blagnac, 300 participants) et l'évolution jusqu'à 2025.
+5. Il clique sur « Voir le site 2019 » → le site archivé s'ouvre dans un nouvel onglet.
+
+### Parcours 3 : Recherche d'un replay
+
+1. Le visiteur clique sur « Hall of replays ».
+2. Il voit les sessions groupées par édition (2025 en premier).
+3. Il sélectionne l'édition 2024 dans le filtre.
+4. Il tape « Kotlin » dans la recherche texte.
+5. Il trouve une session et clique sur le lien YouTube → la vidéo s'ouvre.
+
+### Parcours 4 : Admin met en place le contenu complémentaire
+
+1. L'admin configure le lieu : nom, adresse, coordonnées, description FR/EN.
+2. Il ajoute les salles (Salle Ampère, Salle Pasteur, etc.) avec leur ordre d'affichage.
+3. Il ajoute les membres de l'équipe (photo, nom, rôle, réseaux sociaux).
+4. Il crée les questions de la FAQ par thème.
+5. Il met à jour le texte de la page À propos.
+6. Il ajoute les liens vers les albums Google Photos.
+7. Toutes les pages sont publiées et le cache est purgé.
+
+---
+
+## Cas limites et erreurs
+
+### Lieu
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Aucun lieu associé à l'édition courante | La page Lieu affiche un message « Le lieu sera annoncé prochainement ». |
+| Coordonnées GPS non renseignées | La carte intégrée est masquée, seul le lien itinéraire (via adresse textuelle) est affiché. |
+| API Google Maps indisponible | Affichage d'une image statique de la carte en fallback, ou du lien itinéraire seul. |
+
+### Équipe
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Aucun membre d'équipe pour l'édition courante | La page Équipe affiche un message « L'équipe sera présentée prochainement ». |
+| Membre sans photo | Un placeholder est affiché (silhouette). |
+| Membre sans liens sociaux | Aucune icône sociale n'est affichée pour ce membre. |
+
+### FAQ
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Aucune question dans la FAQ | La page affiche un message « La FAQ sera bientôt disponible ». |
+| Question sans thème | La question apparaît dans un groupe « Divers » / « Other ». |
+
+### Hall of replays
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Édition sans aucune vidéo YouTube | L'édition n'apparaît pas dans la liste (rien à afficher). |
+| Lien YouTube cassé (vidéo supprimée) | Le lien reste affiché ; l'utilisateur voit le message d'erreur YouTube. Pas de vérification automatique de la validité des liens. |
+| Recherche sans résultat | Message « Aucun replay trouvé pour votre recherche ». |
+
+### Galerie photos
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Aucun album configuré | La page affiche « Les photos seront bientôt disponibles ». |
+
+---
+
+## Questions ouvertes
+
+| # | Question | Impact |
+|---|----------|--------|
+| QO-040 | La carte interactive sur la page Lieu utilise-t-elle Google Maps Embed API (gratuite, iframe), Google Maps JavaScript API (payante, interactive), ou une alternative open source (Leaflet + OpenStreetMap) ? | Coût, dépendance |
+| QO-041 | La frise chronologique de la page À propos est-elle un composant custom ou une librairie existante ? Quel niveau d'interactivité (animations au scroll, clic pour déplier, etc.) ? | Effort, accessibilité |
+| QO-042 | Le Hall of replays intègre-t-il les vidéos directement (player YouTube intégré) ou affiche-t-il uniquement des liens/miniatures vers YouTube ? L'intégration directe impacte les performances. | Performance, UX |
+| QO-043 | Faut-il des informations pratiques supplémentaires sur la page Lieu (transports en commun, parking, plan intérieur du centre de congrès) ? | Contenu, design |
+| QO-044 | L'ordre aléatoire des membres de l'équipe est-il randomisé à chaque chargement de page (côté client), à chaque build SSR (quotidien ?), ou une seule fois par déploiement ? | Implémentation, cache |
+| QO-045 | La Galerie photos doit-elle afficher des miniatures des photos (nécessite l'API Google Photos ou un scraping) ou uniquement des liens vers les albums ? | Complexité, API, RGPD |
