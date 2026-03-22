@@ -2,7 +2,6 @@
 
 Référence unifiée couvrant la charte graphique, les guidelines de marque, le style guide, les design tokens, le UI Kit et le content style guide. Basé sur la charte graphique DevFest Toulouse 2024 et les maquettes Figma 2025.
 
-Source de la charte : `docs/CharteGraphique_Devfest2024.pdf`
 Source des maquettes : [Figma DevFestToulouse-2025](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499)
 
 ---
@@ -497,7 +496,6 @@ Organisées dans `docs/assets/{Bismarck,Malachite,TerreCuite}/`.
 
 | Document | Contenu |
 |----------|---------|
-| `docs/CharteGraphique_Devfest2024.pdf` | Charte graphique officielle (logo, couleurs, typos, icônes) |
 | `docs/maquettes-figma.md` | Inventaire des maquettes Figma et structure des pages |
 | `docs/maquettes/*.svg` | Exports SVG de toutes les maquettes (référence visuelle durable) |
 | `docs/assets/` | Logo (SVG/PNG/EPS), illustrations croquis (PNG, 3 couleurs) |

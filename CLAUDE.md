@@ -17,7 +17,8 @@ docs/                          # Specification documents (in French)
 ├── modele-donnees-metier.md   # Business data model (entities, relationships)
 ├── maquettes-figma.md         # Figma mockups inventory and structure
 ├── design-system.md           # Design system, tokens, UI kit, brand guidelines
-└── CharteGraphique_Devfest2024.pdf  # Official 2024 brand guidelines (source)
+├── maquettes/                 # SVG exports of all Figma mockups
+└── assets/                    # Logo files, sketch illustrations (3 colors)
 data/
 └── devfest-history.json       # Historical data: speakers & sessions (2016-2025)
 .claude/rules/                 # Detailed coding & workflow rules
@@ -33,8 +34,7 @@ Always consult these documents before making assumptions about features or archi
 - **`docs/modele-donnees-historique.md`** — Schema for `data/devfest-history.json` (327 speakers, 282 sessions across 7 editions)
 - **`docs/modele-donnees-metier.md`** — Business data model: all domain entities, attributes, relationships and bilingual strategy
 - **`docs/maquettes-figma.md`** — Figma mockups: pages designed, shared components, structure ([Figma file](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499))
-- **`docs/design-system.md`** — Design system: brand guidelines, color palette, typography, design tokens, UI kit, content style guide
-- **`docs/CharteGraphique_Devfest2024.pdf`** — Official 2024 brand guidelines (logo, colors, fonts, iconography)
+- **`docs/design-system.md`** — Design system: brand guidelines, color palette (Google Sans), design tokens, UI kit (Font Awesome icons), content style guide
 
 ## Key Technical Decisions (from specs)
 
