@@ -9,7 +9,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ### Header
 
 - Logo DevFest Toulouse (lien vers l'accueil)
-- Navigation principale : Programme, Speakers, Partenaires, Actus (liens simples ou dropdowns — à arbitrer)
+- Navigation principale : Programme, Speakers, Partenaires, Actus — premier niveau toujours cliquable, dropdowns dynamiques selon le contenu publié (ex. Conférences + Speakers sous Programme une fois publiés)
 - Réseaux sociaux : LinkedIn, YouTube, X/Twitter, Bluesky
 - 2 CTAs : « Devenir partenaire » (secondaire, outline) et « Proposer un talk » (principal, lien Sessionize)
 

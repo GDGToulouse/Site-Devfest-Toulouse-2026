@@ -64,6 +64,7 @@
 | RG-035 | Chaque page a des balises `<link rel="alternate" hreflang="fr">` et `<link rel="alternate" hreflang="en">` pointant vers les versions dans les deux langues. |
 | RG-036 | La détection de la langue du navigateur est utilisée pour suggérer un changement de langue (bannière non bloquante), sans redirection automatique. |
 | RG-037 | Un sélecteur de langue est accessible depuis toutes les pages (dans le header ou à proximité). |
+| RG-038 | Le choix de langue de l'utilisateur est mémorisé (localStorage) pour ne pas réafficher la bannière de suggestion. |
 
 ### Accessibilité
 
@@ -146,6 +147,7 @@
 | RG-095 | Les articles peuvent être associés à des étiquettes (tags) pour la classification. |
 | RG-096 | Chaque édition du DevFest existe automatiquement comme étiquette. |
 | RG-097 | L'image OG d'un article est son image à la une. Si absente, l'image OG par défaut du site est utilisée. |
+| RG-098 | La liste des actualités est paginée avec 9 articles par page. |
 
 ### Billetterie
 
@@ -296,7 +298,8 @@
 **Critères d'acceptation :**
 - [ ] Le header est fixe (sticky) en haut de page, hauteur 60px, fond blanc avec ombre.
 - [ ] Logo DevFest Toulouse (version minimale/avatar 48px) à gauche, lien vers l'accueil.
-- [ ] Navigation : Programme, Speakers, Partenaires, Actus — chaque lien mène à la page correspondante (en gris #777776, Google Sans Regular 16px).
+- [ ] Navigation : Programme, Speakers, Partenaires, Actus — les liens de premier niveau sont toujours cliquables et mènent à la page correspondante (en gris #777776, Google Sans Regular 16px).
+- [ ] Les dropdowns apparaissent quand c'est pertinent : une fois les conférences publiées, « Programme » affiche un dropdown vers Conférences et Speakers ; une fois l'agenda publié, le dropdown inclut aussi Conférences et Speakers en sous-éléments.
 - [ ] Réseaux sociaux : icônes LinkedIn, YouTube, X/Twitter, Bluesky (24px) — liens vers les profils officiels, ouverts dans un nouvel onglet.
 - [ ] CTA secondaire « Devenir partenaire » (bouton outline bleu #507BBD).
 - [ ] CTA principal « Proposer un talk » (bouton plein bleu #507BBD) — lien vers Sessionize.
@@ -318,7 +321,7 @@
   - Navigation : Programme, Speakers, Partenaires, Actus
   - Nos écosystèmes tech : ToulouseTechHub, CloudToulouse (liens externes)
   - Éditions précédentes : DevFest Toulouse 2025, 2024, 2023 (liens externes vers les anciens sites)
-- [ ] Barre basse : fond blanc 75% opacité, texte « Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse », liens Mentions légales, Code de conduite, Plan du site.
+- [ ] Barre basse : fond blanc 75% opacité, texte « Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse », liens Mentions légales, Code de conduite, Plan du site (lien vers le sitemap XML).
 - [ ] Sur mobile : les 3 colonnes passent en empilé vertical (une colonne).
 
 ---
@@ -408,7 +411,7 @@
 - [ ] Grille de ArticleCards en 4 colonnes (desktop), 2 colonnes (tablette), 1 colonne (mobile).
 - [ ] Chaque card affiche : thumbnail (280x210px), titre (24px Bold), auteur (12px Bold Bismarck), date (10px gris), lien « Lire ».
 - [ ] Les articles sont triés par date décroissante (RG-092).
-- [ ] Si plus de 12 articles, pagination ou scroll infini.
+- [ ] Pagination : 9 articles par page (RG-098). Navigation page précédente / suivante + numéros de pages.
 - [ ] La page a un `<title>` « Actualités — DevFest Toulouse 2026 » (RG-010).
 
 ### US-131 : Page détail d'un article
@@ -709,13 +712,13 @@
 
 | # | Question | Impact |
 |---|----------|--------|
-| QO-001 | La navigation principale utilise-t-elle des liens simples ou des dropdowns (comme les « Agenda, À propos, Écosystème » du site 2023-2025) ? Le doc fonctionnalités mentionne « à arbitrer ». | Design header, implémentation navigation |
+| ~~QO-001~~ | ~~Liens simples ou dropdowns ?~~ **Résolu** : les deux. Premier niveau toujours cliquable. Les dropdowns apparaissent quand le contenu est publié : « Programme » affiche Conférences + Speakers en sous-menu une fois les conférences publiées, puis l'agenda en plus quand il est publié. | — |
 | QO-002 | Quelle plateforme de billetterie externe est utilisée (Billetweb, Eventbrite, autre) ? Le lien de redirection en dépend. | Page billetterie, données paliers |
 | QO-003 | Le formulaire de contact doit-il stocker les messages en base de données en plus de l'envoi email, pour archivage ? | Architecture back-end, RGPD |
-| QO-004 | Faut-il une pagination ou un scroll infini pour la liste des actualités ? Si pagination, combien d'articles par page ? | UX, performance |
+| ~~QO-004~~ | ~~Pagination ou scroll infini ?~~ **Résolu** : pagination avec 9 articles par page (RG-098). | — |
 | ~~QO-005~~ | ~~Google Sans licence OFL ?~~ **Résolu** : oui, SIL OFL depuis novembre 2025. | — |
 | QO-006 | Quel service d'envoi d'email utiliser pour le formulaire de contact (SendGrid, Resend, SMTP direct, etc.) ? | Infrastructure, coût |
-| QO-007 | Le plan du site (sitemap visuel pour les visiteurs, lien dans le footer) est-il une page à créer ou un simple lien vers le sitemap XML ? | Scope Lot 1 |
-| QO-008 | La bannière de suggestion de langue doit-elle se souvenir du choix de l'utilisateur (cookie / localStorage) pour ne pas se réafficher ? | UX, RGPD (cookie) |
+| ~~QO-007~~ | ~~Plan du site : page HTML ou sitemap XML ?~~ **Résolu** : simple lien vers le sitemap XML (RG-013). | — |
+| ~~QO-008~~ | ~~Mémoriser le choix de langue ?~~ **Résolu** : oui, via localStorage (RG-038). Pas de cookie, donc pas d'impact RGPD. | — |
 | ~~QO-009~~ | ~~CMS headless ou interface custom ?~~ **Résolu** : interface admin custom avec éditeur WYSIWYG open source (type TipTap) pour les articles. Pas de CMS headless — trop lourd pour le volume de contenu. | — |
 | ~~QO-010~~ | ~~Brouillon ou toggle publié ?~~ **Résolu** : mode brouillon avec prévisualisation pour les articles. | — |
