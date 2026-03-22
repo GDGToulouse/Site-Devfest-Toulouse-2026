@@ -26,9 +26,9 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ---
 
-## Lot 1 — Fondations, Sponsors & Billetterie (prêt avant le 08 avril)
+## Lot 1 — Fondations & Billetterie (prêt avant le 08 avril)
 
-**Objectif** : le nouveau site remplace l'ancien. Les sponsors sont visibles, le Blind Bird peut être annoncé, le CFP est mis en avant.
+**Objectif** : le nouveau site remplace l'ancien. Le Blind Bird peut être annoncé, le CFP est mis en avant.
 
 ### Fondations techniques
 
@@ -47,12 +47,9 @@ Chaque lot doit être **en production** avant la date indiquée.
 - Page d'accueil en mode **« Annonce de l'édition »** :
   - Hero (titre, date, lieu, CTAs)
   - Chiffres clés (édition précédente)
-  - Section Partenaires (grille par niveau)
   - À propos / GDG Toulouse / écosystème
   - Dernières actualités (grille de 4 ArticleCards)
   - Replay / aftermovie édition précédente
-- Page Partenaires : liste avec cartes par niveau (Platinum/Gold/autres)
-- Page de détail sponsor (description, logo, liens sociaux)
 - Page CFP (dates, lien Sessionize)
 - Page Actualités (liste en grille de cards)
 - Page de détail article (contenu riche)
@@ -63,31 +60,32 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 ### Admin
 
-- Gestion des sponsors (CRUD)
 - Gestion des articles (CRUD)
-- API de gestion des sponsors
 - Configuration du statut annuel de la page d'accueil
-
-### Souhaitable
-
-- Sponsor connecté : édition de sa propre fiche
 
 ---
 
-## Lot 2 — Speakers & Sessions (prêt avant le 19 juin)
+## Lot 2 — Speakers, Sessions & Sponsors (prêt avant le 19 juin)
 
-**Objectif** : les speakers sélectionnés sont publiés, leurs fiches sont en ligne.
+**Objectif** : les speakers sélectionnés et les sponsors sont publiés simultanément.
 
 ### Fonctionnalités
 
 - Page Speakers (liste avec photo, nom, entreprise)
 - Page de détail speaker (bio, réseaux sociaux, sessions)
 - Section « Speakers en vedette » sur la page d'accueil
+- Page Partenaires : liste avec cartes par niveau (Platinum/Gold/autres)
+- Page de détail sponsor (description, logo, liens sociaux)
+- Section Partenaires sur la page d'accueil
+- CTA « Devenir partenaire » actif (header + accueil + page partenaires)
 - Admin : gestion des speakers (CRUD)
 - Admin : gestion des sessions (CRUD)
+- Admin : gestion des sponsors (CRUD)
 - Admin : API de gestion des conférences
-- Speaker connecté : édition de sa propre fiche
+- Admin : API de gestion des sponsors
 - Authentification (rôles admin, speaker, sponsor)
+- Speaker connecté : édition de sa propre fiche
+- Sponsor connecté : édition de sa propre fiche
 
 ### Souhaitable
 
@@ -158,8 +156,8 @@ Chaque lot doit être **en production** avant la date indiquée.
 
 | Lot | Échéance | Pages / Fonctionnalités clés |
 |-----|----------|------------------------------|
-| **Lot 1** | 08 avril | Fondations, Accueil, Partenaires, Blog, Billetterie, CFP, Contact, CoC, Mentions légales, 404 |
-| **Lot 2** | 19 juin | Speakers, Sessions, Authentification |
+| **Lot 1** | 08 avril | Fondations, Accueil, Blog, Billetterie, CFP, Contact, CoC, Mentions légales, 404 |
+| **Lot 2** | 19 juin | Speakers, Sponsors, Sessions, Authentification, Espaces connectés |
 | **Lot 3** | Septembre | Programme complet, Filtrage, Export agenda |
 | **Lot 4** | Octobre | Lieu, Équipe, FAQ, Historique, Replays, Galerie |
 | **Lot 5** | 19 novembre | Passport digital, Jour J |
