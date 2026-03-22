@@ -1,18 +1,23 @@
 # Fonctionnalités du site DevFest Toulouse 2026
 
-Liste brute basée sur l'analyse des éditions 2016 à 2025.
+Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquettes Figma.
 
 ---
 
+## Header
+
+- Logo DevFest Toulouse (lien vers l'accueil)
+- Navigation principale : Programme, Speakers, Partenaires, Actus
+- Réseaux sociaux : LinkedIn, YouTube, X/Twitter, Bluesky
+- 2 CTAs : « Devenir partenaire » (secondaire, outline) et « Proposer un talk » (principal, lien Sessionize)
+
 ## Page d'accueil
-- Section hero (bannière plein écran en haut de page) : image ou vidéo de fond, logo DevFest Toulouse, date et lieu de l'événement, bouton d'action principal
-- Chiffres clés : participants, sessions, tracks, durée
-- Présentation : qu'est-ce que le DevFest Toulouse
-- CTA principal : billetterie ou inscription
-- Speakers en vedette : grille de 4-8 speakers mis en avant
-- Partenaires : logos par niveau de sponsoring
-- Dernières actualités : 2-3 articles récents
-- Replay vidéo / aftermovie de l'édition précédente
+
+- **Section hero** : image de fond avec coins arrondis, titre « DevFest Toulouse » (vert + terre cuite), sous-titre « La conférence Toulousaine par les devs et pour les devs. », date, lieu, 2 CTAs (« Devenir partenaire » + « Proposer un talk »)
+- **Chiffres clés** : journée, participants, conférences, stands — dans un encart blanc arrondi avec ombrage, titre « La plus grande conférence tech du bassin Toulousain », illustration La Grave
+- **Partenaires** : titre « Ils soutiennent le #DevFestToulouse », CTA « Devenir Partenaire », grille de sponsors par niveau avec cartes colorées (Platinum en grand avec baseline, autres niveaux en cartes plus petites), illustration croix occitane
+- **À propos** : section « Derrière le #DevFestToulouse », image de fond avec overlay, bloc texte sur fond blanc semi-transparent présentant le GDG Toulouse, puis section « Plongez dans notre écosystèmes » avec CTAs ToulouseTech et CloudToulouse
+- **Dernières actualités** : titre, lien « Lire plus d'articles », grille de 4 ArticleCards
 - Statuts annuels de la page d'accueil, basculables depuis le backend admin :
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations au fur et à mesure de leur disponibilité (date, lieu, CFP, speakers, programme, billetterie…)
@@ -28,21 +33,24 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 
 ## Speakers
 - Liste complète avec photo, nom, entreprise
-- Page ou modale de détail : bio, réseaux sociaux, sessions associées
+- Page de détail : bio, réseaux sociaux, sessions associées
 - Autonomie des speakers : édition de leur propre fiche via un espace dédié
 - API de gestion des conférences
 
 ## Partenaires / Sponsors
-- Logos organisés par niveaux (Platinum, Gold, Silver, Soutien, Communautés)
-- Lien vers le site de chaque partenaire
+- Cartes par niveau de sponsoring avec code couleur :
+  - **Platinum** : grande carte (logo, nom, baseline/accroche), bandeau vert (#41B38E)
+  - **Gold** : carte moyenne (logo, nom), bandeau jaune (#FFD428)
+  - **Autres niveaux** : carte moyenne (logo, nom), bandeau rose (#EE7CAD)
+- Page de détail par sponsor : logo, description longue, liens sociaux
 - CTA "Devenir partenaire"
-- Fiche détaillée par sponsor
 - Autonomie des sponsors : édition de leur propre fiche via un espace dédié
 - API de gestion des sponsors
 
 ## Blog / Actualités
-- Articles avec image, titre, extrait
-- Page de détail par article
+- Liste en grille de cards (thumbnail, titre, auteur, date, lien « Lire »)
+- Page de détail par article : contenu riche avec paragraphes et sous-titres
+- Breadcrumb sur chaque page
 
 ## Lieu
 - Nom et description du lieu
@@ -68,25 +76,31 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 - Lien vers album Google Photos (officiel + collaboratif)
 
 ## CFP (Call for Papers)
-- Lien vers Sessionize pour soumettre un sujet
+- Lien vers Sessionize pour soumettre un sujet (CTA dans le header)
 - Dates d'ouverture/fermeture du CFP
 
 ## Contact
-- Formulaire : nom, email, objet (dropdown), message
+- Formulaire : prénom, nom, email, téléphone, objet (dropdown), message
+- Encart latéral : délais de réponse (bénévoles), adresse postale (GDG Toulouse), réseaux sociaux
 
 ## Code de conduite
-- Version française
-- Version anglaise
+- Contenu textuel avec paragraphes et sous-titres
+- Version française et version anglaise
 
 ## Mentions légales / RGPD
+- Contenu textuel avec paragraphes et sous-titres
 - Informations association, hébergeur
 - Politique de données personnelles
 
 ## Footer
-- Réseaux sociaux (X/Twitter, Bluesky, LinkedIn, YouTube)
-- Contact (email)
-- Mentions légales
-- Liens vers les éditions précédentes
+- Logo DevFest Toulouse
+- Réseaux sociaux (LinkedIn, YouTube, X/Twitter, Bluesky)
+- 3 colonnes de liens :
+  - **Navigation** : Programme, Speakers, Partenaires, Actus
+  - **Nos écosystèmes tech** : ToulouseTechHub, CloudToulouse
+  - **Éditions précédentes** : DevFest Toulouse 2025, 2024, 2023
+- CTA « Contactez nous »
+- Barre basse : mention « Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse », liens Mentions légales, Code de conduite, Plan du site
 
 ## Page 404
 - Message d'erreur personnalisé + lien retour accueil
@@ -95,6 +109,7 @@ Liste brute basée sur l'analyse des éditions 2016 à 2025.
 - Skip to content
 - Navigation clavier
 - Contrastes suffisants
+- Breadcrumb sur toutes les pages intérieures
 
 ## SEO / Meta tags
 - Open Graph (Facebook/LinkedIn)
