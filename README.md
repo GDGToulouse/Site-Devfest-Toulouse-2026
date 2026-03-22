@@ -22,6 +22,7 @@ Les spécifications du projet sont dans le dossier `docs/` :
 | [modele-donnees-historique.md](docs/modele-donnees-historique.md) | Modèle de données de `data/devfest-history.json` |
 | [modele-donnees-metier.md](docs/modele-donnees-metier.md) | Modèle de données métier (entités, relations, bilingue) |
 | [maquettes-figma.md](docs/maquettes-figma.md) | Inventaire des maquettes Figma et structure des pages |
+| [design-system.md](docs/design-system.md) | Design system complet (charte, couleurs, typos, tokens, UI kit) |
 
 ## Données historiques
 
