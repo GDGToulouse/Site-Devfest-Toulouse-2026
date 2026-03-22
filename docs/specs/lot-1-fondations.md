@@ -156,7 +156,7 @@
 | RG-100 | La billetterie affiche les paliers de prix dans l'ordre : Blind Bird, Early Bird, Normal. |
 | RG-101 | Chaque palier a un nom, un prix en euros et un état (Disponible ou Épuisé). |
 | RG-102 | Un palier épuisé (sold out) est affiché barré ou grisé avec la mention « Épuisé » / « Sold out ». |
-| RG-103 | Chaque palier disponible comporte un lien vers la plateforme de billetterie externe (Billetweb ou autre). |
+| RG-103 | Chaque palier disponible comporte un lien vers la plateforme de billetterie externe (Billetweb). |
 | RG-104 | La page de billetterie n'effectue aucune transaction : elle redirige vers la plateforme externe. |
 | RG-105 | Les paliers non encore ouverts ne sont pas affichés, ou affichés avec la mention « Bientôt disponible ». |
 
@@ -168,8 +168,9 @@
 | RG-111 | Les objets possibles dans le dropdown sont : « Partenariat », « Presse / Média », « Accessibilité », « Question générale », « Autre ». |
 | RG-112 | Le formulaire est protégé contre le spam (CAPTCHA invisible ou honeypot). |
 | RG-113 | Après soumission réussie, un message de confirmation est affiché sur la page (pas de redirection). |
-| RG-114 | Les messages de contact sont envoyés par email à contact@devfesttoulouse.fr. |
-| RG-115 | Les données du formulaire ne sont pas stockées en base de données (envoi email uniquement), conformément au RGPD. |
+| RG-114 | Les messages de contact sont envoyés par email à contact@devfesttoulouse.fr via SMTP local (Postfix ou équivalent). |
+| RG-115 | Les messages de contact sont stockés en base de données en plus de l'envoi email, pour consultation depuis l'interface admin. |
+| RG-117 | La conservation des messages de contact est mentionnée dans la politique RGPD (Mentions légales). Les messages peuvent être supprimés par un admin. |
 | RG-116 | L'encart latéral affiche : une note sur les délais de réponse (« Nous sommes bénévoles, merci pour votre patience ») et les liens vers les réseaux sociaux. |
 | RG-117 | Les validations sont effectuées côté client (feedback immédiat) ET côté serveur (sécurité). |
 
@@ -600,6 +601,18 @@
 - [ ] Éditeur de contenu riche bilingue (FR + EN) pour chaque page de contenu.
 - [ ] Après modification, le cache de la page concernée est purgé.
 
+### US-195 : Consultation des messages de contact
+
+**En tant qu'** admin,
+**je veux** consulter les messages envoyés via le formulaire de contact,
+**afin de** pouvoir y répondre et suivre les demandes.
+
+**Critères d'acceptation :**
+- [ ] Liste des messages triés par date (plus récent en premier) avec : date, nom, email, objet, extrait du message.
+- [ ] Page de détail d'un message avec le contenu complet.
+- [ ] Possibilité de supprimer un message (RG-117, RGPD).
+- [ ] Indicateur lu/non lu pour suivre le traitement.
+
 ---
 
 ## Parcours utilisateur
@@ -713,11 +726,11 @@
 | # | Question | Impact |
 |---|----------|--------|
 | ~~QO-001~~ | ~~Liens simples ou dropdowns ?~~ **Résolu** : les deux. Premier niveau toujours cliquable. Les dropdowns apparaissent quand le contenu est publié : « Programme » affiche Conférences + Speakers en sous-menu une fois les conférences publiées, puis l'agenda en plus quand il est publié. | — |
-| QO-002 | Quelle plateforme de billetterie externe est utilisée (Billetweb, Eventbrite, autre) ? Le lien de redirection en dépend. | Page billetterie, données paliers |
-| QO-003 | Le formulaire de contact doit-il stocker les messages en base de données en plus de l'envoi email, pour archivage ? | Architecture back-end, RGPD |
+| ~~QO-002~~ | ~~Plateforme de billetterie ?~~ **Résolu** : Billetweb. | — |
+| ~~QO-003~~ | ~~Stocker les messages en BDD ?~~ **Résolu** : oui, stockage en BDD + envoi email. Consultation et suppression depuis l'admin (RG-115, RG-117, US-195). | — |
 | ~~QO-004~~ | ~~Pagination ou scroll infini ?~~ **Résolu** : pagination avec 9 articles par page (RG-098). | — |
 | ~~QO-005~~ | ~~Google Sans licence OFL ?~~ **Résolu** : oui, SIL OFL depuis novembre 2025. | — |
-| QO-006 | Quel service d'envoi d'email utiliser pour le formulaire de contact (SendGrid, Resend, SMTP direct, etc.) ? | Infrastructure, coût |
+| ~~QO-006~~ | ~~Service d'envoi d'email ?~~ **Résolu** : SMTP local sur le serveur (Postfix ou équivalent, choix définitif à confirmer). | — |
 | ~~QO-007~~ | ~~Plan du site : page HTML ou sitemap XML ?~~ **Résolu** : simple lien vers le sitemap XML (RG-013). | — |
 | ~~QO-008~~ | ~~Mémoriser le choix de langue ?~~ **Résolu** : oui, via localStorage (RG-038). Pas de cookie, donc pas d'impact RGPD. | — |
 | ~~QO-009~~ | ~~CMS headless ou interface custom ?~~ **Résolu** : interface admin custom avec éditeur WYSIWYG open source (type TipTap) pour les articles. Pas de CMS headless — trop lourd pour le volume de contenu. | — |
