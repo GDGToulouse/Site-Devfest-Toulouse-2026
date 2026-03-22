@@ -89,6 +89,8 @@
 | RG-247 | Le lien de modification donne accès uniquement à la fiche concernée (bio, photo, liens sociaux pour un speaker ; description, logo, liens pour un sponsor). Il ne donne pas accès au back-office admin. |
 | RG-248 | Le token dans l'URL est suffisamment long et aléatoire (min 32 caractères, crypto-random) pour ne pas être devinable. |
 | RG-249 | L'accès via un lien de modification révoqué ou désactivé affiche un message d'erreur clair invitant à contacter l'organisation. |
+| RG-250 | L'envoi des emails de lien de modification utilise la même infrastructure SMTP que le formulaire de contact (Postfix ou équivalent, cf. QO-006 du Lot 1). |
+| RG-251 | Si l'envoi de l'email échoue, l'admin voit un message d'erreur explicite et peut relancer l'envoi. |
 
 ---
 
@@ -220,8 +222,6 @@
 - [ ] L'admin peut verrouiller la fiche (désactiver le lien sans le supprimer) (RG-245).
 - [ ] Un lien révoqué ou désactivé affiche un message d'erreur clair (RG-249).
 - [ ] 48h avant l'événement, tous les liens sont automatiquement désactivés (RG-246).
-- [ ] Après déconnexion, redirection vers la page d'accueil.
-- [ ] Le JWT et le refresh token sont invalidés.
 
 ---
 
@@ -249,12 +249,13 @@
 **afin de** contrôler mon image sur le site du DevFest.
 
 **Critères d'acceptation :**
-- [ ] Dashboard sponsor avec vue sur sa fiche actuelle.
+- [ ] L'accès via le lien affiche directement le formulaire d'édition de la fiche (pas de login).
 - [ ] Champs éditables : description (FR + EN), logo (upload), site web, liens sociaux (ajout/suppression).
 - [ ] Prévisualisation de la fiche.
 - [ ] Bouton « Enregistrer » — modifications immédiates (après purge du cache).
 - [ ] Le sponsor ne peut pas modifier son nom ni son niveau de sponsoring (géré par l'admin).
 - [ ] Le logo uploadé est validé : format (JPEG, PNG, SVG, WebP), taille max 2 Mo.
+- [ ] Si le lien est révoqué ou désactivé, message d'erreur clair (RG-249).
 
 ---
 
@@ -302,7 +303,7 @@
 - [ ] Création : nom, logo, niveau de sponsoring (parmi les niveaux ouverts pour l'édition — RG-230), site web, description (FR + EN), liens sociaux.
 - [ ] Modification de tous les champs (y compris le niveau de sponsoring).
 - [ ] Suppression avec confirmation.
-- [ ] Association d'un sponsor à un compte utilisateur (pour l'accès connecté).
+- [ ] Gestion du lien de modification : envoyer, révoquer, verrouiller (US-221).
 - [ ] Après modification, purge du cache des pages impactées.
 
 ### US-243 : API de gestion des conférences
@@ -392,25 +393,25 @@
 
 ### Parcours 3 : Speaker édite sa fiche
 
-1. Le speaker reçoit un email avec un lien de création de compte.
-2. Il crée son compte (email + mot de passe).
-3. Il se connecte → redirigé vers son dashboard speaker.
+1. L'admin crée la fiche du speaker dans le back-office et clique sur « Envoyer le lien de modification ».
+2. Le speaker reçoit un email contenant un lien de modification unique.
+3. Il clique sur le lien → il accède directement au formulaire d'édition de sa fiche (pas de login).
 4. Il voit sa fiche actuelle (photo, bio, liens sociaux).
-5. Il clique sur « Modifier ».
-6. Il met à jour sa biographie en français et en anglais.
-7. Il ajoute un lien Bluesky.
-8. Il uploade une nouvelle photo (le système la recadre/optimise).
-9. Il clique sur « Enregistrer ».
-10. Il voit la prévisualisation mise à jour.
-11. La fiche publique est mise à jour après purge du cache.
+5. Il met à jour sa biographie en français et en anglais.
+6. Il ajoute un lien Bluesky.
+7. Il uploade une nouvelle photo (le système la recadre/optimise).
+8. Il clique sur « Enregistrer ».
+9. Il voit la prévisualisation mise à jour.
+10. La fiche publique est mise à jour après purge du cache.
 
 ### Parcours 4 : Sponsor édite sa fiche
 
-1. Le sponsor reçoit ses identifiants par email.
-2. Il se connecte → dashboard sponsor.
-3. Il met à jour la description de son entreprise (FR + EN).
-4. Il uploade un nouveau logo.
-5. Il enregistre → la fiche publique est mise à jour.
+1. L'admin crée la fiche du sponsor dans le back-office et clique sur « Envoyer le lien de modification ».
+2. Le sponsor reçoit un email contenant un lien de modification unique.
+3. Il clique sur le lien → il accède directement au formulaire d'édition de sa fiche (pas de login).
+4. Il met à jour la description de son entreprise (FR + EN).
+5. Il uploade un nouveau logo.
+6. Il clique sur « Enregistrer » → la fiche publique est mise à jour après purge du cache.
 
 ### Parcours 5 : Admin publie les speakers
 
@@ -419,8 +420,8 @@
 3. Il crée un speaker : nom, photo, entreprise, bio FR + EN.
 4. Il l'associe à une session existante.
 5. Il marque certains speakers « en vedette ».
-6. Il publie → les pages publiques sont mises à jour.
-7. Il crée un compte utilisateur pour le speaker et l'associe.
+6. Il envoie un lien de modification au speaker (US-221) pour qu'il puisse compléter sa fiche.
+7. Il publie → les pages publiques sont mises à jour.
 
 ---
 
@@ -447,15 +448,15 @@
 | Tous les sponsors d'un niveau supprimés | Le groupe de ce niveau disparaît de la page Partenaires. |
 | Aucun sponsor publié | La section Partenaires de la page d'accueil est masquée. La page Partenaires affiche un message. |
 
-### Authentification
+### Liens de modification
 
 | Cas | Comportement attendu |
 |-----|---------------------|
-| Email ou mot de passe incorrect | Message générique « Identifiants incorrects » (ne pas préciser lequel est faux). |
-| Compte bloqué (5 tentatives) | Message « Compte temporairement bloqué. Réessayez dans 30 minutes ». |
-| Token JWT expiré | Tentative de refresh automatique avec le refresh token. Si échec, redirection vers la page de connexion. |
-| Speaker tente d'accéder au dashboard admin | Erreur 403, redirection vers son propre dashboard. |
-| Utilisateur connecté accède à une page de connexion | Redirection vers son dashboard. |
+| Lien de modification révoqué | Message d'erreur clair invitant à contacter l'organisation (RG-249). |
+| Lien de modification désactivé (fiche verrouillée) | Message d'erreur clair invitant à contacter l'organisation (RG-249). |
+| Lien de modification expiré (48h avant l'événement) | Message « Les modifications sont clôturées. Contactez l'organisation si nécessaire » (RG-246). |
+| Token invalide ou inexistant dans l'URL | Page 404. |
+| Échec d'envoi de l'email de lien de modification | L'admin voit un message d'erreur et peut relancer l'envoi (RG-251). |
 
 ### Upload d'images
 

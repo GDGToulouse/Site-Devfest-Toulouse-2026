@@ -115,8 +115,8 @@
 | RG-082 | En mode « Édition en préparation » : hero teasing, newsletter, réseaux sociaux, replay édition précédente. |
 | RG-083 | En mode « Annonce de l'édition » : hero complet, chiffres clés, sponsors (si disponibles), billetterie (si active), speakers en vedette (si disponibles), dernières actualités, replay. |
 | RG-084 | En mode « Rendez-vous l'année prochaine » : bilan, aftermovie, galerie photos, replays, lien éditions précédentes. |
-| RG-085 | La bascule de statut par un admin déclenche une purge immédiate du cache de la page d'accueil. |
-| RG-086 | Pour le Lot 1, seul le mode « Annonce de l'édition » est implémenté (les sections Speakers et Sponsors sont masquées tant que les données ne sont pas disponibles). |
+| RG-140 | La bascule de statut par un admin déclenche une purge immédiate du cache de la page d'accueil. |
+| RG-141 | Pour le Lot 1, seul le mode « Annonce de l'édition » est implémenté (les sections Speakers et Sponsors sont masquées tant que les données ne sont pas disponibles). |
 
 ### Statut de publication (transverse)
 
@@ -132,8 +132,8 @@
 
 | # | Règle |
 |---|-------|
-| RG-083 | Le back-office est une interface admin custom intégrée au site (pas de CMS headless externe). |
-| RG-084 | L'édition du contenu riche (articles, descriptions) utilise un éditeur WYSIWYG open source (type TipTap) permettant la mise en forme simple (titres, gras, italique, listes, liens) et l'ajout de photos. |
+| RG-142 | Le back-office est une interface admin custom intégrée au site (pas de CMS headless externe). |
+| RG-143 | L'édition du contenu riche (articles, descriptions) utilise un éditeur WYSIWYG open source (type TipTap) permettant la mise en forme simple (titres, gras, italique, listes, liens) et l'ajout de photos. |
 
 ### Blog / Actualités
 
@@ -159,6 +159,8 @@
 | RG-103 | Chaque palier disponible comporte un lien vers la plateforme de billetterie externe (Billetweb). |
 | RG-104 | La page de billetterie n'effectue aucune transaction : elle redirige vers la plateforme externe. |
 | RG-105 | Les paliers non encore ouverts ne sont pas affichés, ou affichés avec la mention « Bientôt disponible ». |
+| RG-145 | Les paliers de billetterie peuvent être importés automatiquement depuis l'API Billetweb. L'import crée les paliers avec les données récupérées (nom, prix, état, lien). Les paliers déjà existants sont mis à jour. |
+| RG-146 | La clé API Billetweb est configurable dans les paramètres du site (interface admin). Elle est stockée comme variable d'environnement côté serveur et n'est jamais exposée côté client. |
 
 ### Formulaire de contact
 
@@ -172,7 +174,7 @@
 | RG-115 | Les messages de contact sont stockés en base de données en plus de l'envoi email, pour consultation depuis l'interface admin. |
 | RG-117 | La conservation des messages de contact est mentionnée dans la politique RGPD (Mentions légales). Les messages peuvent être supprimés par un admin. |
 | RG-116 | L'encart latéral affiche : une note sur les délais de réponse (« Nous sommes bénévoles, merci pour votre patience ») et les liens vers les réseaux sociaux. |
-| RG-117 | Les validations sont effectuées côté client (feedback immédiat) ET côté serveur (sécurité). |
+| RG-144 | Les validations sont effectuées côté client (feedback immédiat) ET côté serveur (sécurité). |
 
 ### Pages de contenu (CoC, Mentions légales)
 
@@ -487,7 +489,7 @@
   - Objet (dropdown avec les valeurs de RG-111)
   - Message (textarea, pleine largeur, 400px de haut)
   - Bouton « Envoyer » (CTA centré)
-- [ ] Validation côté client : champs obligatoires, format email, longueur min du message (RG-117).
+- [ ] Validation côté client : champs obligatoires, format email, longueur min du message (RG-144).
 - [ ] Messages d'erreur sous chaque champ invalide, avec `aria-describedby` et `aria-invalid` (RG-046).
 - [ ] Protection anti-spam (RG-112).
 - [ ] Après soumission réussie : message de confirmation affiché sur la page, formulaire réinitialisé (RG-113).
@@ -567,7 +569,7 @@
 **Critères d'acceptation :**
 - [ ] Interface admin avec un sélecteur proposant les 3 statuts (RG-081).
 - [ ] Le statut actif est clairement indiqué.
-- [ ] Le changement de statut déclenche une purge immédiate du cache de la page d'accueil (RG-085).
+- [ ] Le changement de statut déclenche une purge immédiate du cache de la page d'accueil (RG-140).
 - [ ] Une confirmation est demandée avant le changement.
 
 ### US-192 : Gestion des paliers de billetterie
@@ -578,8 +580,9 @@
 
 **Critères d'acceptation :**
 - [ ] Interface admin pour lister et modifier les paliers.
+- [ ] Bouton « Importer depuis Billetweb » : récupère les paliers (nom, prix, état, lien) via l'API Billetweb et les crée automatiquement (RG-145).
 - [ ] Champs éditables : nom, prix, état (Disponible / Épuisé / Bientôt disponible), lien externe.
-- [ ] Après modification, le cache de la page Billetterie est purgé.
+- [ ] Après modification ou import, le cache de la page Billetterie est purgé.
 
 ### US-193 : Gestion du contenu CFP
 

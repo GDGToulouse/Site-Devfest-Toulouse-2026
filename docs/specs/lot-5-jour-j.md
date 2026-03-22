@@ -16,7 +16,8 @@
 5. [User stories — Souhaitables](#user-stories--souhaitables)
 6. [Parcours utilisateur](#parcours-utilisateur)
 7. [Cas limites et erreurs](#cas-limites-et-erreurs)
-8. [Questions ouvertes](#questions-ouvertes)
+8. [User stories — Édition en préparation (page d'accueil)](#user-stories--édition-en-préparation-page-daccueil)
+9. [Questions ouvertes](#questions-ouvertes)
 
 ---
 
@@ -287,6 +288,33 @@
 |-----|---------------------|
 | 1000 participants scannent des QR codes simultanément | L'endpoint de scan est optimisé pour supporter la charge (opération unitaire rapide, pas de transaction lourde). |
 | Wi-Fi de la conférence saturé | L'UX mobile est légère (pas d'assets lourds). Un message invite à utiliser les données mobiles en cas de lenteur. |
+
+---
+
+## User stories — Édition en préparation (page d'accueil)
+
+### Règles de gestion
+
+| # | Règle |
+|---|-------|
+| RG-540 | En mode « Édition en préparation » (RG-082 du Lot 1), la page d'accueil affiche un contenu minimal orienté teasing et fidélisation. |
+| RG-541 | Les éléments affichés en mode « Édition en préparation » sont : hero teasing (date et lieu si connus, sinon message générique), inscription newsletter, liens vers les réseaux sociaux, replay de l'édition précédente (aftermovie). |
+| RG-542 | Les sections non pertinentes en mode préparation (billetterie, speakers en vedette, sponsors, actualités) sont masquées. |
+
+### US-540 : Page d'accueil en mode « Édition en préparation »
+
+**En tant que** visiteur,
+**je veux** voir une page d'accueil teasing entre deux éditions,
+**afin de** savoir que le DevFest Toulouse reviendra et de rester informé.
+
+**Critères d'acceptation :**
+- [ ] Le hero affiche le branding DevFest Toulouse avec un message teasing (ex. « Le DevFest Toulouse revient en 2027 ! ») et la date/lieu si connus.
+- [ ] Un formulaire d'inscription newsletter est affiché de manière visible (email + bouton « S'inscrire »).
+- [ ] Les liens vers les réseaux sociaux (LinkedIn, YouTube, X/Twitter, Bluesky) sont affichés avec des icônes cliquables.
+- [ ] L'aftermovie de l'édition précédente est intégré (chargement différé, même logique que US-124).
+- [ ] Les sections billetterie, speakers en vedette, sponsors et actualités sont masquées (RG-542).
+- [ ] Le mécanisme de bascule est celui déjà implémenté dans le Lot 1 (US-191, RG-081).
+- [ ] Le cache est purgé lors de la bascule vers ce statut (RG-140 du Lot 1).
 
 ---
 
