@@ -330,9 +330,30 @@ Ces illustrations sont monochromes et utilisent les couleurs de la charte.
 - 4 blocs : icône (48px) + valeur (Bold 64px) + label (Regular 24px)
 - Blocs de 298×192px, radius 20px
 
+### Éléments de formulaire (page Contact)
+
+| Élément | Style |
+|---------|-------|
+| Text input | Label au-dessus, largeur 616px (ou 292px en demi-largeur) |
+| Select dropdown | Même style que text input, avec icône chevron |
+| Textarea | Largeur 616px, hauteur 400px |
+| Label | Product Sans Regular, au-dessus du champ |
+| Bouton submit | MainCallToAction centré sous le formulaire |
+
 ---
 
 ## 8. Patterns de mise en page
+
+### Template commun
+
+Toutes les pages suivent le même squelette :
+
+```
+Header (60px, fixe)
+└── Breadcrumb (sauf accueil, position : left 100px, top 124px)
+    └── Contenu (largeur variable selon le type de page)
+        └── Footer (496px, fond Malachite, radius 32px)
+```
 
 ### Hero (page d'accueil)
 
@@ -341,30 +362,40 @@ Ces illustrations sont monochromes et utilisent les couleurs de la charte.
 - Description : blocs blancs empilés avec texte 32px, coin arrondi bottom-right
 - CTAs : alignés en bas à gauche
 
-### Pages de contenu (Code de conduite, Mentions légales)
+### Pages de liste
 
-- Structure simple : breadcrumb + titre principal (H2) + paragraphes + sous-titres + footer
+Structure commune : breadcrumb + grille de cards + footer.
+
+| Page | Grille | Card |
+|------|--------|------|
+| Actualités | 4 colonnes, gap 48px | ArticleCard 300×400px |
+| Conférences | Grille de session cards | Card avec titre, speaker, catégorie |
+| Speakers | Grille de speaker cards | Card avec photo, nom, entreprise |
+| Partenaires | Hiérarchie par niveau | PartnerCard Platinum (340×481px) + Gold/autres (340×240px) |
+
+### Pages de détail — deux colonnes
+
+| Page | Colonne gauche (616px) | Colonne droite (512px) |
+|------|------------------------|------------------------|
+| Partenaire | Description longue (multi-paragraphes) | Logo (512×300px) + liens sociaux |
+| Contact | Formulaire (6 champs + submit) | Infos pratiques (délais, réseaux sociaux) |
+
+### Pages de détail — contenu riche
+
+Pour les articles, le code de conduite et les mentions légales :
+
 - Largeur de contenu : 1152px, marge gauche 100px
+- Titre principal : H2 (64px Bold)
+- Sous-sections : H4/H5 (36-40px Bold)
+- Corps de texte : 16px Regular, line-height 1.6
+- Paragraphes séparés par des espacements réguliers
 
-### Page de détail sponsor
+### Pages de détail — profil
 
-- Layout deux colonnes :
-  - Gauche : description longue (616px de large), texte riche multi-paragraphes
-  - Droite : logo (512×300px), liens sociaux en dessous
-- Breadcrumb en haut
-
-### Page de contact
-
-- Layout deux colonnes :
-  - Gauche : formulaire (616px) — prénom/nom côte à côte, email, téléphone, objet (dropdown), message (textarea)
-  - Droite : encart (512px) avec 3 blocs — « Délais de réponse » (texte bénévoles), « Nos réseaux » (icônes)
-- CTA « Envoyer » centré sous le formulaire
-
-### Grilles
-
-- **Articles** : 4 colonnes, gap 48px
-- **Sponsors Platinum** : 2 colonnes
-- **Sponsors Gold/autres** : 4 colonnes
+| Page | Structure |
+|------|-----------|
+| Speaker | Photo + nom/entreprise/ville + bio + réseaux sociaux (Socials) + liste des sessions |
+| Conférence | Titre + speaker(s) + description + métadonnées (format, catégorie, niveau, langue, salle, horaire) |
 
 ---
 
@@ -410,5 +441,6 @@ Ordre d'affichage constant : LinkedIn, YouTube, X/Twitter, Bluesky.
 | Document | Contenu |
 |----------|---------|
 | `docs/CharteGraphique_Devfest2024.pdf` | Charte graphique officielle (logo, couleurs, typos, icônes) |
-| `docs/maquettes-figma.md` | Inventaire des maquettes Figma |
+| `docs/maquettes-figma.md` | Inventaire des maquettes Figma et structure des pages |
+| `docs/maquettes/*.svg` | Exports SVG de toutes les maquettes (référence visuelle durable) |
 | `docs/design-system.md` | Ce document (design system complet) |
