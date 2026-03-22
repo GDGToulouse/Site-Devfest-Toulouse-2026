@@ -28,7 +28,7 @@
 |---|-------|
 | RG-500 | Le passport digital est un parcours ludique incitant les participants à visiter les stands des sponsors. |
 | RG-501 | Chaque sponsor participant dispose d'un QR code unique affiché sur son stand physique. |
-| RG-502 | Le participant scanne le QR code avec son téléphone (appareil photo natif ou scanner intégré à la web app). |
+| RG-502 | Le participant scanne le QR code via un scanner intégré au site (utilisation de l'API caméra web). |
 | RG-503 | Le scan ajoute automatiquement un « tampon » sur le passport digital du participant. |
 | RG-504 | Le passport affiche une barre de progression : nombre de stands visités / nombre total de stands participants. |
 | RG-505 | Le passport digital nécessite une authentification (le participant doit être connecté pour que ses tampons soient sauvegardés). |
@@ -44,7 +44,7 @@
 |---|-------|
 | RG-520 | Le rôle « participant » est ajouté au système d'authentification (en plus de admin, speaker, sponsor). |
 | RG-521 | Un participant s'inscrit avec son email + mot de passe ou via OAuth (Google). |
-| RG-522 | L'inscription participant est ouverte à tous (pas de vérification de billet dans un premier temps). |
+| RG-522 | L'inscription participant est ouverte à tous, sans vérification de billet. |
 | RG-523 | Le participant connecté a accès à son passport digital. |
 | RG-524 | Le participant ne peut pas accéder aux dashboards admin, speaker ou sponsor. |
 
@@ -57,6 +57,10 @@
 | RG-532 | La section billetterie est masquée en mode « Rendez-vous l'année prochaine ». |
 | RG-533 | Le CTA « Proposer un talk » est remplacé par un CTA « Revoir les talks » (lien vers le Hall of replays). |
 | RG-534 | Le passport digital est désactivé après la fin de l'événement. |
+| RG-535 | Les données du passport digital (scans par participant) sont conservées 12 mois maximum après l'événement pour les statistiques, puis supprimées automatiquement. Cette durée est mentionnée dans la politique RGPD. |
+| RG-536 | Les QR codes des stands sont statiques : générés une fois et imprimés. Ils ne sont pas renouvelables dynamiquement. |
+| RG-537 | En mode « Rendez-vous l'année prochaine », les pages Speakers, Sponsors et Programme restent accessibles comme archives consultables (pas de redirection 404). |
+| RG-538 | Il n'y a pas de page « Après le DevFest » séparée : la page d'accueil en mode bilan (RG-531) remplit ce rôle. |
 
 ---
 
@@ -290,10 +294,10 @@
 
 | # | Question | Impact |
 |---|----------|--------|
-| QO-050 | Le passport digital est-il lié à une récompense (tombola, lot, badge physique) ? Si oui, quel est le seuil (100%, N stands minimum) ? | UX, gamification, logistique |
-| QO-051 | Le scanner de QR code intégré (US-502) est-il nécessaire ou le scan via l'appareil photo natif du téléphone suffit-il ? Le scanner intégré ajoute de la complexité. | Scope, effort |
-| QO-052 | Faut-il vérifier que le participant a bien un billet (via email ou identifiant Billetweb) avant de lui permettre de créer un compte, ou l'inscription est-elle libre ? | Sécurité, intégration billetterie |
-| QO-053 | Les données du passport digital (scans par participant) doivent-elles être conservées après l'événement (statistiques) ou supprimées (RGPD) ? | RGPD, analytics |
-| QO-054 | En mode « Rendez-vous l'année prochaine », les pages Speakers, Sponsors et Programme restent-elles accessibles (archive consultable) ou sont-elles masquées ? | UX, SEO (éviter les 404 sur des pages indexées) |
-| QO-055 | Les QR codes sont-ils statiques (générés une fois, imprimés) ou dynamiques (renouvellement possible en cas de fuite) ? | Sécurité, logistique |
-| QO-056 | Faut-il une page « Après le DevFest » séparée résumant l'édition passée avec aftermovie, chiffres et photos, ou la page d'accueil en mode bilan suffit-elle ? | Scope, SEO |
+| QO-050 | Le passport digital est-il lié à une récompense (tombola, lot, badge physique) ? Si oui, quel est le seuil (100%, N stands minimum) ? | UX, gamification, logistique — **Non tranché**, à définir ultérieurement. |
+| ~~QO-051~~ | ~~Scanner QR intégré ou natif ?~~ **Résolu** : scanner intégré dans le site (caméra via l'API web). | — |
+| ~~QO-052~~ | ~~Vérifier le billet avant inscription ?~~ **Résolu** : non, inscription libre sans vérification Billetweb. | — |
+| ~~QO-053~~ | ~~Données passport conservées ou supprimées ?~~ **Résolu** : conservées 12 mois maximum après l'événement (statistiques), puis supprimées automatiquement (RGPD). | — |
+| ~~QO-054~~ | ~~Pages post-événement accessibles ?~~ **Résolu** : oui, les pages Speakers, Sponsors et Programme restent accessibles en mode « Rendez-vous l'année prochaine » (archive consultable, pas de 404). | — |
+| ~~QO-055~~ | ~~QR codes statiques ou dynamiques ?~~ **Résolu** : statiques, générés une fois et imprimés. | — |
+| ~~QO-056~~ | ~~Page « Après le DevFest » séparée ?~~ **Résolu** : non, la page d'accueil en mode bilan suffit. Pas de page séparée. | — |
