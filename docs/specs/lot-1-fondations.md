@@ -117,6 +117,23 @@
 | RG-085 | La bascule de statut par un admin déclenche une purge immédiate du cache de la page d'accueil. |
 | RG-086 | Pour le Lot 1, seul le mode « Annonce de l'édition » est implémenté (les sections Speakers et Sponsors sont masquées tant que les données ne sont pas disponibles). |
 
+### Statut de publication (transverse)
+
+| # | Règle |
+|---|-------|
+| RG-085 | Toutes les entités métier (articles, sessions, speakers, sponsors) possèdent un statut de publication : **brouillon** ou **publié**. |
+| RG-086 | Seules les entités au statut « publié » sont visibles sur le site public. Les brouillons ne sont visibles que dans le back-office admin. |
+| RG-087 | Un admin peut prévisualiser une entité en brouillon avant de la publier. L'URL de prévisualisation n'est pas indexable (meta `noindex`). |
+| RG-088 | Le passage de « brouillon » à « publié » (et inversement) est une action explicite de l'admin. |
+| RG-089 | Par défaut, une entité nouvellement créée est en statut « brouillon ». |
+
+### Back-office admin (transverse)
+
+| # | Règle |
+|---|-------|
+| RG-083 | Le back-office est une interface admin custom intégrée au site (pas de CMS headless externe). |
+| RG-084 | L'édition du contenu riche (articles, descriptions) utilise un éditeur WYSIWYG open source (type TipTap) permettant la mise en forme simple (titres, gras, italique, listes, liens) et l'ajout de photos. |
+
 ### Blog / Actualités
 
 | # | Règle |
@@ -696,9 +713,9 @@
 | QO-002 | Quelle plateforme de billetterie externe est utilisée (Billetweb, Eventbrite, autre) ? Le lien de redirection en dépend. | Page billetterie, données paliers |
 | QO-003 | Le formulaire de contact doit-il stocker les messages en base de données en plus de l'envoi email, pour archivage ? | Architecture back-end, RGPD |
 | QO-004 | Faut-il une pagination ou un scroll infini pour la liste des actualités ? Si pagination, combien d'articles par page ? | UX, performance |
-| QO-005 | Le design system mentionne Google Sans comme police principale. Sa licence OFL est-elle confirmée pour un usage web commercial (même associatif) ? | Typographie, fallback |
+| ~~QO-005~~ | ~~Google Sans licence OFL ?~~ **Résolu** : oui, SIL OFL depuis novembre 2025. | — |
 | QO-006 | Quel service d'envoi d'email utiliser pour le formulaire de contact (SendGrid, Resend, SMTP direct, etc.) ? | Infrastructure, coût |
 | QO-007 | Le plan du site (sitemap visuel pour les visiteurs, lien dans le footer) est-il une page à créer ou un simple lien vers le sitemap XML ? | Scope Lot 1 |
 | QO-008 | La bannière de suggestion de langue doit-elle se souvenir du choix de l'utilisateur (cookie / localStorage) pour ne pas se réafficher ? | UX, RGPD (cookie) |
-| QO-009 | Le back-office admin est-il un CMS headless existant (Strapi, Sanity, etc.) ou une interface custom ? | Architecture, effort de développement |
-| QO-010 | Faut-il un mode « brouillon » avec prévisualisation pour les articles, ou un simple toggle publié/non publié ? | Complexité admin |
+| ~~QO-009~~ | ~~CMS headless ou interface custom ?~~ **Résolu** : interface admin custom avec éditeur WYSIWYG open source (type TipTap) pour les articles. Pas de CMS headless — trop lourd pour le volume de contenu. | — |
+| ~~QO-010~~ | ~~Brouillon ou toggle publié ?~~ **Résolu** : mode brouillon avec prévisualisation pour les articles. | — |

@@ -24,6 +24,8 @@
 
 ## Règles de gestion
 
+> **Rappel transverse** : toutes les entités métier (speakers, sessions, sponsors) possèdent un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). Seules les entités publiées sont visibles sur le site public. Les nouvelles entités sont créées en brouillon par défaut.
+
 ### Speakers
 
 | # | Règle |
@@ -463,4 +465,4 @@
 | QO-024 | Le CTA « Devenir partenaire » mène-t-il vers un Google Form (comme sur le site 2023-2025), vers la page Contact avec l'objet pré-sélectionné, ou vers une page dédiée ? | UX, scope |
 | QO-025 | Quel fournisseur OAuth utiliser ? Google uniquement, ou aussi GitHub/LinkedIn ? | Scope authentification |
 | QO-026 | Les cartes Platinum doivent-elles afficher une « baseline » (accroche du sponsor). Si oui, ce champ est-il obligatoire pour les Platinum ? | Modèle de données, design |
-| QO-027 | Les sessions créées dans le Lot 2 sont-elles visibles publiquement dès leur création, ou y a-t-il un état « brouillon » ? | Workflow publication |
+| ~~QO-027~~ | ~~Brouillon pour les sessions ?~~ **Résolu** : oui. Toutes les entités métier (sessions, speakers, sponsors) ont un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). | — |
