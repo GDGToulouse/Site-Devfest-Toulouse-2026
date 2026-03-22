@@ -29,7 +29,7 @@
 | # | Règle |
 |---|-------|
 | RG-300 | La grille du programme affiche les sessions organisées par créneau horaire (lignes) et par salle (colonnes). |
-| RG-301 | Les créneaux horaires sont définis par l'admin : heure de début, heure de fin. Si l'événement est multi-jours, les créneaux sont regroupés par jour. |
+| RG-301 | Les créneaux horaires sont définis par l'admin : heure de début, heure de fin. L'événement 2026 se déroule sur une seule journée. |
 | RG-302 | Les salles affichées sont celles du lieu de l'édition courante, ordonnées selon leur « ordre d'affichage ». |
 | RG-303 | Chaque cellule de la grille correspond à une session assignée à un créneau et une salle. |
 | RG-304 | Les keynotes occupent toute la largeur de la grille (toutes les salles fusionnées). |
@@ -42,7 +42,7 @@
 
 | # | Règle |
 |---|-------|
-| RG-310 | Les filtres disponibles sont : niveau (Débutant, Intermédiaire, Confirmé, Tous), format (Conférence, Quickie, Keynote), langue (FR, EN), catégorie (liste dynamique), recherche texte (titre et description). |
+| RG-310 | Les filtres disponibles sont : niveau (Débutant, Intermédiaire, Confirmé, Tous), format (Conférence, Quickie, Keynote), langue (FR, EN), catégorie (liste dynamique), recherche texte (titre et description). Le filtrage est effectué côté serveur. |
 | RG-311 | Les filtres sont cumulatifs (ET logique entre les critères). |
 | RG-312 | Le filtre « recherche texte » effectue une recherche insensible à la casse et aux accents sur le titre et la description des sessions. |
 | RG-313 | Quand un filtre est actif, les sessions qui ne correspondent pas sont visuellement atténuées (opacité réduite) ou masquées dans la grille. |
@@ -54,7 +54,7 @@
 | # | Règle |
 |---|-------|
 | RG-320 | L'export ICAL (.ics) génère un fichier contenant toutes les sessions (ou uniquement les sessions filtrées) avec : titre, description, date/heure de début et fin, salle (location). |
-| RG-321 | L'export PDF génère un document lisible avec la grille horaire complète, imprimable en A4 paysage. |
+| RG-321 | L'export PDF utilise une feuille de style CSS `@media print` optimisée pour l'impression en A4 paysage. Pas de génération serveur. |
 | RG-322 | Les exports sont disponibles uniquement quand le programme est publié (créneaux et salles assignés). |
 
 ### Page détail session
@@ -328,9 +328,9 @@
 
 | # | Question | Impact |
 |---|----------|--------|
-| QO-030 | La grille du programme est-elle une maquette non encore créée (cf. maquettes-figma.md). Quel design adopter ? S'inspirer des éditions passées (Hoverboard) ou design custom ? | Design, effort |
-| QO-031 | Le filtrage des sessions doit-il fonctionner côté client (JS, filtrage instantané) ou côté serveur (rechargement) ? Pour les 70+ sessions attendues, le côté client semble plus performant. | Architecture, UX |
-| QO-032 | L'export ICAL doit-il inclure un lien vers la page de détail de la session dans la description de l'événement ? | Contenu de l'export |
-| QO-033 | Le PDF est-il généré côté serveur (librairie type Puppeteer, jsPDF) ou côté client (impression CSS @media print) ? | Architecture, dépendances |
-| QO-034 | L'événement 2026 est-il confirmé sur un seul jour ? Si multi-jours, la grille doit-elle gérer des onglets par jour ? | Complexité grille |
-| QO-035 | Les sessions « Office Hours » (Q&A informel avec les speakers, présent en 2018-2019) sont-elles prévues pour 2026 ? Si oui, comment les intégrer dans la grille ? | Format de session, design grille |
+| QO-030 | La grille du programme est-elle une maquette non encore créée (cf. maquettes-figma.md). Quel design adopter ? S'inspirer des éditions passées (Hoverboard) ou design custom ? | Design, effort — **Non tranché**, à définir ultérieurement. |
+| ~~QO-031~~ | ~~Filtrage côté client ou serveur ?~~ **Résolu** : côté serveur. | — |
+| ~~QO-032~~ | ~~Lien page de détail dans l'export ICAL ?~~ **Résolu** : oui, bonne idée mais non prioritaire. À implémenter en bonus. | — |
+| ~~QO-033~~ | ~~Export PDF côté serveur ou client ?~~ **Résolu** : côté client via CSS `@media print` (le plus simple, pas de dépendance serveur). | — |
+| ~~QO-034~~ | ~~Un seul jour ?~~ **Résolu** : oui, événement confirmé sur un seul jour. Pas d'onglets multi-jours. | — |
+| ~~QO-035~~ | ~~Office Hours ?~~ **Résolu** : non, pas prévues pour 2026. | — |
