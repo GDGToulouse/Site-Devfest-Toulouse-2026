@@ -123,7 +123,7 @@
 - [ ] Nom, entreprise, ville.
 - [ ] Biographie complète (dans la langue de la page).
 - [ ] Liens sociaux (Twitter, GitHub, LinkedIn, Bluesky, site web) — icônes cliquables.
-- [ ] Liste des sessions associées au speaker (titre, format, catégorie) — cliquables vers la page de détail session.
+- [ ] Liste des sessions associées au speaker (titre, format, catégorie) — cliquables vers la page de détail session. **Note** : la page de détail session complète est implémentée dans le Lot 3. En Lot 2, le lien mène vers une vue minimale (titre, description, speaker(s)) sans salle ni créneau horaire.
 - [ ] `<title>` : « {Nom du speaker} — DevFest Toulouse 2026 ».
 - [ ] Image OG générée dynamiquement (RG-208).
 - [ ] Données structurées Schema.org `Person` (name, image, jobTitle, worksFor, sameAs).

@@ -292,7 +292,7 @@ Ces illustrations sont monochromes et utilisent les couleurs de la charte.
 
 - Hauteur : 60px
 - Fond : blanc avec ombre `shadow-header`
-- Gauche : logo (avatar 48px) + navbar (4 liens, Product Sans Regular 16px, gris #777776, tracking 0.4px)
+- Gauche : logo (avatar 48px) + navbar (4 liens, Google Sans Regular 16px, gris #777776, tracking 0.4px)
 - Droite : réseaux sociaux (4 icônes 24px) + 2 CTAs (Small)
 
 ### Footer
@@ -314,7 +314,7 @@ Ces illustrations sont monochromes et utilisent les couleurs de la charte.
 - Dimensions : 300×400px
 - Fond : blanc, radius 32px, ombre `shadow-card`
 - Thumbnail : 280×210px, radius 26px, centré en haut (marge 10px)
-- Titre : Product Sans Bold 24px, noir, max 260px de large
+- Titre : Google Sans Bold 24px, noir, max 260px de large
 - Auteur : « by » (Regular 10px gris) + nom (Bold 12px Bismarck #B94420)
 - Pied de carte : date (Regular 10px gris) + « Lire » (Regular 16px noir, tracking 0.4px)
 
@@ -346,7 +346,7 @@ Ces illustrations sont monochromes et utilisent les couleurs de la charte.
 | Text input | Label au-dessus, largeur 616px (ou 292px en demi-largeur) |
 | Select dropdown | Même style que text input, avec icône chevron |
 | Textarea | Largeur 616px, hauteur 400px |
-| Label | Product Sans Regular, au-dessus du champ |
+| Label | Google Sans Regular, au-dessus du champ |
 | Bouton submit | MainCallToAction centré sous le formulaire |
 
 ---

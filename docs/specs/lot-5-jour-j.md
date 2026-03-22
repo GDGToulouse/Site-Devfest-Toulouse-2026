@@ -300,6 +300,7 @@
 | RG-540 | En mode « Édition en préparation » (RG-082 du Lot 1), la page d'accueil affiche un contenu minimal orienté teasing et fidélisation. |
 | RG-541 | Les éléments affichés en mode « Édition en préparation » sont : hero teasing (date et lieu si connus, sinon message générique), inscription newsletter, liens vers les réseaux sociaux, replay de l'édition précédente (aftermovie). |
 | RG-542 | Les sections non pertinentes en mode préparation (billetterie, speakers en vedette, sponsors, actualités) sont masquées. |
+| RG-543 | L'inscription newsletter utilise un fournisseur d'emailing externe (à définir — Mailchimp, Brevo, ou équivalent). Le formulaire ne collecte que l'adresse email. L'intégration technique (API du fournisseur) est réalisée dans ce lot. |
 
 ### US-540 : Page d'accueil en mode « Édition en préparation »
 

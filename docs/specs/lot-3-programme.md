@@ -5,6 +5,8 @@
 
 **Prérequis** : Lot 2 livré et en production (speakers, sessions, sponsors existants).
 
+> **Glossaire** : dans ce document, « session » désigne une entrée du programme (conférence, quickie ou keynote). La page publique utilise le terme « Conférences » dans les URLs et la navigation (ex. `/fr/programme/conferences/`).
+
 ---
 
 ## Table des matières
@@ -42,10 +44,10 @@
 
 | # | Règle |
 |---|-------|
-| RG-310 | Les filtres disponibles sont : niveau (Débutant, Intermédiaire, Confirmé, Tous), format (Conférence, Quickie, Keynote), langue (FR, EN), catégorie (liste dynamique), recherche texte (titre et description). Le filtrage est effectué côté serveur. |
+| RG-310 | Les filtres disponibles sont : niveau (Débutant, Intermédiaire, Confirmé, Tous), format (Conférence, Quickie, Keynote), langue (FR, EN), catégorie (liste dynamique), recherche texte (titre et description). Le filtrage est effectué côté serveur : chaque changement de filtre déclenche une requête serveur (page reload ou fetch), et l'URL est mise à jour avec les query params correspondants (cf. RG-314) pour permettre le partage de vues filtrées. Il ne s'agit pas d'un filtrage instantané côté client. |
 | RG-311 | Les filtres sont cumulatifs (ET logique entre les critères). |
 | RG-312 | Le filtre « recherche texte » effectue une recherche insensible à la casse et aux accents sur le titre et la description des sessions. |
-| RG-313 | Quand un filtre est actif, les sessions qui ne correspondent pas sont visuellement atténuées (opacité réduite) ou masquées dans la grille. |
+| RG-313 | Quand un filtre est actif, les sessions qui ne correspondent pas sont masquées (non affichées dans la grille). |
 | RG-314 | L'URL reflète les filtres actifs (query parameters) pour permettre le partage d'une vue filtrée. |
 | RG-315 | Les filtres s'appliquent aussi à la page Conférences (liste en grille de cards, telle que maquettée). |
 
@@ -54,7 +56,7 @@
 | # | Règle |
 |---|-------|
 | RG-320 | L'export ICAL (.ics) génère un fichier contenant toutes les sessions (ou uniquement les sessions filtrées) avec : titre, description, date/heure de début et fin, salle (location). |
-| RG-321 | L'export PDF utilise une feuille de style CSS `@media print` optimisée pour l'impression en A4 paysage. Pas de génération serveur. |
+| RG-321 | L'export PDF utilise une feuille de style CSS `@media print` optimisée pour l'impression en A4 paysage. Pas de génération serveur. Note : CSS `@media print` a des limitations pour les grilles complexes (multi-colonnes, hauteurs proportionnelles). Le rendu imprimé peut être simplifié par rapport à la version écran — c'est acceptable. |
 | RG-322 | Les exports sont disponibles uniquement quand le programme est publié (créneaux et salles assignés). |
 
 ### Page détail session
@@ -143,7 +145,7 @@
   - Recherche texte : champ de saisie libre
 - [ ] Les filtres sont cumulatifs (RG-311).
 - [ ] La recherche texte est insensible à la casse et aux accents (RG-312).
-- [ ] Les sessions non correspondantes sont visuellement atténuées ou masquées (RG-313).
+- [ ] Les sessions non correspondantes sont masquées (RG-313).
 - [ ] L'URL est mise à jour avec les filtres actifs (ex. `?level=beginner&category=cloud`) (RG-314).
 - [ ] Un bouton « Réinitialiser les filtres » est disponible.
 - [ ] Les compteurs de résultats sont mis à jour en temps réel (ex. « 12 sessions trouvées »).
@@ -265,7 +267,7 @@
 
 1. Le visiteur arrive sur la page Programme.
 2. Il active le filtre « Niveau : Débutant ».
-3. Les sessions non débutantes sont atténuées.
+3. Les sessions non débutantes sont masquées.
 4. Il ajoute le filtre « Catégorie : IA/ML/Data ».
 5. Il ne voit que les sessions IA/ML/Data de niveau Débutant (3 sessions).
 6. Il clique sur « Exporter en ICAL » → téléchargement du .ics avec ces 3 sessions.

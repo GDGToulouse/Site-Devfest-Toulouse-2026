@@ -11,15 +11,16 @@
 
 1. [Règles de gestion](#règles-de-gestion)
 2. [User stories — Lieu](#user-stories--lieu)
-3. [User stories — Équipe](#user-stories--équipe)
-4. [User stories — FAQ](#user-stories--faq)
-5. [User stories — Historique / À propos](#user-stories--historique--à-propos)
-6. [User stories — Hall of replays](#user-stories--hall-of-replays)
-7. [User stories — Galerie photos](#user-stories--galerie-photos)
-8. [User stories — Admin](#user-stories--admin)
-9. [Parcours utilisateur](#parcours-utilisateur)
-10. [Cas limites et erreurs](#cas-limites-et-erreurs)
-11. [Questions ouvertes](#questions-ouvertes)
+3. [User stories — Infos pratiques](#user-stories--infos-pratiques)
+4. [User stories — Équipe](#user-stories--équipe)
+5. [User stories — FAQ](#user-stories--faq)
+6. [User stories — Historique / À propos](#user-stories--historique--à-propos)
+7. [User stories — Hall of replays](#user-stories--hall-of-replays)
+8. [User stories — Galerie photos](#user-stories--galerie-photos)
+9. [User stories — Admin](#user-stories--admin)
+10. [Parcours utilisateur](#parcours-utilisateur)
+11. [Cas limites et erreurs](#cas-limites-et-erreurs)
+12. [Questions ouvertes](#questions-ouvertes)
 
 ---
 
@@ -62,7 +63,7 @@
 | RG-430 | La page À propos / Historique présente le GDG Toulouse et l'histoire du DevFest. |
 | RG-431 | Une frise chronologique affiche les éditions passées (2016 à 2025). Composant custom en CSS (liste verticale avec points et ligne de connexion), sans librairie externe. |
 | RG-432 | Chaque entrée de la frise affiche : année, lieu, nombre de participants, nombre de sessions, lien vers le site archivé. |
-| RG-433 | La frise utilise les données de `data/devfest-history.json` et les métadonnées des éditions. |
+| RG-433 | La frise utilise les données de `data/devfest-history.json` (speakers et sessions) et les métadonnées des éditions (nombre de participants, lieu, etc. stockés comme données admin-éditables dans l'entité édition — ces informations ne sont pas dans devfest-history.json). |
 | RG-434 | Des liens vers les sites archivés des éditions précédentes sont fournis (ex. `2019.devfesttoulouse.fr`). |
 | RG-435 | Le contenu textuel de présentation du GDG est bilingue (FR + EN). |
 
@@ -106,6 +107,23 @@
 - [ ] `<title>` : « Lieu — DevFest Toulouse 2026 ».
 - [ ] La page est bilingue FR/EN.
 - [ ] Données structurées Schema.org `Place` avec `name`, `address`, `geo`.
+
+## User stories — Infos pratiques
+
+### US-405 : Page Infos pratiques
+
+**En tant que** visiteur,
+**je veux** consulter les informations pratiques pour me rendre à l'événement,
+**afin de** préparer ma venue en connaissant les options de transport, parking et l'agencement des lieux.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Infos pratiques.
+- [ ] Section transport : moyens d'accès (métro/tram/bus, lignes et arrêts à proximité, navette si applicable).
+- [ ] Section parking : parkings disponibles à proximité, capacité indicative, tarifs si connus.
+- [ ] Section plan du lieu : plan intérieur (floor plan) du lieu avec les salles, les stands, les espaces de restauration et les points d'intérêt.
+- [ ] Les informations sont saisies par l'admin dans le back-office (champ de contenu riche bilingue FR + EN).
+- [ ] `<title>` : « Infos pratiques — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
 
 ---
 
@@ -161,7 +179,7 @@
 - [ ] Frise chronologique interactive des éditions (2016 à 2025) (RG-431).
 - [ ] Chaque point de la frise affiche : année, lieu, nombre de participants, nombre de sessions (RG-432).
 - [ ] Lien « Voir le site » vers le site archivé de chaque édition (RG-434).
-- [ ] La frise est responsive : verticale sur mobile, horizontale sur desktop.
+- [ ] La frise est verticale sur tous les écrans (cohérent avec le composant custom CSS en liste verticale — RG-431).
 - [ ] Animation au scroll (apparition progressive des entrées).
 - [ ] `<title>` : « À propos — DevFest Toulouse 2026 ».
 - [ ] La page est bilingue FR/EN.
@@ -266,6 +284,8 @@
 
 **Critères d'acceptation :**
 - [ ] Ajout/modification de liens d'albums : URL, type (officiel/collaboratif), édition associée.
+- [ ] Upload d'une sélection de photos (miniatures) pour la mini galerie de la page Galerie photos (RG-450). L'admin choisit les photos représentatives à afficher sur le site.
+- [ ] Les miniatures sont redimensionnées et optimisées (WebP, taille max adaptée à l'affichage en grille).
 - [ ] Après modification, purge du cache de la page Galerie photos.
 
 ---
@@ -317,7 +337,7 @@
 |-----|---------------------|
 | Aucun lieu associé à l'édition courante | La page Lieu affiche un message « Le lieu sera annoncé prochainement ». |
 | Coordonnées GPS non renseignées | La carte intégrée est masquée, seul le lien itinéraire (via adresse textuelle) est affiché. |
-| API Google Maps indisponible | Affichage d'une image statique de la carte en fallback, ou du lien itinéraire seul. |
+| Tuiles OpenStreetMap/Leaflet indisponibles | Affichage d'une image statique de la carte en fallback, ou de l'adresse textuelle avec le lien itinéraire seul. |
 
 ### Équipe
 

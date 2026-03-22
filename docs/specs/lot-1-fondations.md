@@ -47,7 +47,7 @@
 | RG-014 | Un fichier `robots.txt` est présent à la racine, référençant le sitemap. |
 | RG-015 | Chaque page a les balises Open Graph : `og:title`, `og:description`, `og:image`, `og:url`, `og:type`. |
 | RG-016 | Chaque page a les balises Twitter Card : `twitter:card` (summary_large_image), `twitter:title`, `twitter:description`, `twitter:image`. |
-| RG-017 | La page d'accueil inclut les données structurées Schema.org `Event` avec : `name`, `startDate`, `endDate`, `location`, `eventStatus`, `eventAttendanceMode`, `organizer`, `offers`. |
+| RG-017 | La page d'accueil inclut les données structurées Schema.org `Event` avec : `name`, `startDate`, `endDate`, `location`, `eventStatus`, `eventAttendanceMode`, `organizer`, `offers`, `previousStartDate` (dates de début des éditions passées, pour indiquer la récurrence), `superEvent` (référence au DevFest global, événement parent). |
 | RG-018 | Toutes les images ont un attribut `alt` descriptif. |
 | RG-019 | Un fil d'Ariane (breadcrumb) avec balisage structuré Schema.org `BreadcrumbList` est présent sur toutes les pages sauf l'accueil. |
 | RG-020 | Les images OG ont des dimensions minimales de 1200x630px. |
@@ -96,7 +96,7 @@
 
 | # | Règle |
 |---|-------|
-| RG-060 | Les headers de sécurité suivants sont définis sur toutes les réponses : `Content-Security-Policy`, `Strict-Transport-Security` (max-age ≥ 31536000), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`. |
+| RG-060 | Les headers de sécurité suivants sont définis sur toutes les réponses : `Content-Security-Policy`, `Strict-Transport-Security` (max-age ≥ 31536000), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`. Note : le SSR avec hydratation nécessite une CSP basée sur un nonce pour les scripts inline (le nonce est généré côté serveur à chaque requête). |
 | RG-061 | Les secrets (clés API, tokens) ne sont jamais dans le code source ; ils sont gérés via des variables d'environnement. |
 
 ### Responsive
@@ -148,6 +148,7 @@
 | RG-096 | Chaque édition du DevFest existe automatiquement comme étiquette. |
 | RG-097 | L'image OG d'un article est son image à la une. Si absente, l'image OG par défaut du site est utilisée. |
 | RG-098 | La liste des actualités est paginée avec 9 articles par page. |
+| RG-099 | Chaque article a un champ « auteur » optionnel (texte libre, nom de l'auteur). Si renseigné, l'auteur est affiché sur la card (« by {auteur} »). Si absent, aucun auteur n'est affiché. |
 
 ### Billetterie
 
@@ -161,6 +162,7 @@
 | RG-105 | Les paliers non encore ouverts ne sont pas affichés, ou affichés avec la mention « Bientôt disponible ». |
 | RG-145 | Les paliers de billetterie peuvent être importés automatiquement depuis l'API Billetweb. L'import crée les paliers avec les données récupérées (nom, prix, état, lien). Les paliers déjà existants sont mis à jour. |
 | RG-146 | La clé API Billetweb est configurable dans les paramètres du site (interface admin). Elle est stockée comme variable d'environnement côté serveur et n'est jamais exposée côté client. |
+| RG-148 | Un système d'analytics et de suivi des Core Web Vitals en conditions réelles (RUM — Real User Monitoring) est mis en place dans les fondations. Le choix de l'outil est libre (ex. Google Analytics, Vercel Analytics, web-vitals library). |
 
 ### Formulaire de contact
 
@@ -356,7 +358,7 @@
 **Critères d'acceptation :**
 - [ ] Encart blanc arrondi (radius 40px) avec ombre section.
 - [ ] Titre : « La plus grande conférence tech du bassin Toulousain » avec « tech » en Malachite et « Toulousain » en Terre cuite.
-- [ ] 4 blocs de statistiques avec icône Font Awesome + valeur en 64px Bold + label en 24px Regular :
+- [ ] Jusqu'à 4 blocs de statistiques affichés, avec icône Font Awesome + valeur en 64px Bold + label en 24px Regular. Les statistiques affichées sont configurables par l'admin (sélection parmi : journée, participants, conférences, stands, tracks, durée). La maquette montre 4 blocs par défaut :
   - Journée (fa-calendar-days)
   - Participants (fa-users)
   - Conférences (fa-microphone)
@@ -387,6 +389,20 @@
 - [ ] Grille de 4 ArticleCards (les 4 articles les plus récents).
 - [ ] Si moins de 4 articles existent, la grille s'adapte.
 - [ ] Si aucun article n'existe, la section est masquée.
+
+### US-125 : Section Billetterie (page d'accueil)
+
+**En tant que** visiteur,
+**je veux** voir les informations de billetterie directement sur la page d'accueil,
+**afin de** pouvoir acheter un billet sans chercher dans le site.
+
+**Critères d'acceptation :**
+- [ ] La section Billetterie est affichée sur la page d'accueil uniquement en mode « Annonce de l'édition » (RG-083).
+- [ ] La section apparaît quand au moins un palier de billetterie est actif (Disponible ou Épuisé).
+- [ ] Les paliers actifs sont affichés avec leur état (Disponible / Épuisé) (RG-100, RG-101, RG-102).
+- [ ] Un CTA « Voir la billetterie » renvoie vers la page Billetterie.
+- [ ] Si aucun palier n'est actif, la section est masquée.
+- [ ] En mode « Rendez-vous l'année prochaine », la section est masquée (RG-532).
 
 ### US-124 : Section Replay / Aftermovie
 
@@ -615,6 +631,19 @@
 - [ ] Page de détail d'un message avec le contenu complet.
 - [ ] Possibilité de supprimer un message (RG-117, RGPD).
 - [ ] Indicateur lu/non lu pour suivre le traitement.
+
+### US-196 : Purge manuelle du cache
+
+**En tant qu'** admin,
+**je veux** pouvoir purger manuellement le cache du site depuis le back-office,
+**afin de** forcer la mise à jour immédiate du contenu public en cas de besoin.
+
+**Critères d'acceptation :**
+- [ ] Bouton « Purger le cache » accessible dans le back-office admin.
+- [ ] L'admin peut choisir entre une purge globale (tout le site) ou ciblée (une page ou un groupe de pages).
+- [ ] Un message de confirmation est demandé avant la purge.
+- [ ] Un message de succès (ou d'erreur) est affiché après l'opération.
+- [ ] L'action est journalisée (qui a purgé, quand, quelle portée).
 
 ---
 
