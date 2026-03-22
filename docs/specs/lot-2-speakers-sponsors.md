@@ -34,7 +34,7 @@
 | RG-201 | Les informations obligatoires d'un speaker sont : nom, photo. Les informations facultatives sont : entreprise, ville, biographie (FR + EN), liens sociaux. |
 | RG-202 | Un speaker peut être marqué « en vedette » pour apparaître sur la page d'accueil. |
 | RG-203 | La biographie d'un speaker est bilingue (FR + EN). |
-| RG-204 | Un speaker est associé à un sponsor si son entreprise est partenaire de l'édition (lien automatique via le nom d'entreprise, confirmable par l'admin). |
+| RG-204 | Le lien entre un speaker et un sponsor (via l'entreprise) est établi manuellement par l'admin. |
 | RG-205 | La page de détail d'un speaker liste ses sessions de l'édition courante. |
 | RG-206 | Le slug d'un speaker est dérivé de son nom complet (ex. « marie-dupont ») et est unique par édition. |
 | RG-207 | La photo du speaker est redimensionnée et optimisée (WebP, taille max 400x400px). |
@@ -51,6 +51,7 @@
 | RG-214 | Le slug d'une session est dérivé du titre (ex. « kotlin-multiplatform-en-production »). |
 | RG-215 | L'image OG d'une session est générée dynamiquement : titre + speaker(s) + catégorie + branding DevFest. |
 | RG-216 | Les champs salle et créneau horaire ne sont pas obligatoires dans le Lot 2 (assignés dans le Lot 3 — Programme). |
+| RG-217 | Les speakers et sessions peuvent être créés manuellement un par un dans le back-office. L'import depuis Sessionize (JSON/CSV) est une fonctionnalité complémentaire. L'import via API Sessionize est un bonus ultérieur. |
 
 ### Sponsors
 
@@ -59,7 +60,7 @@
 | RG-220 | Un sponsor est associé à une édition avec un niveau de sponsoring. |
 | RG-221 | Les niveaux de sponsoring sont ordonnés par importance décroissante : Platinum, Gold, Silver, Soutien, Communauté. |
 | RG-222 | Les informations obligatoires d'un sponsor sont : nom, logo, niveau de sponsoring. Les informations facultatives sont : site web, description (FR + EN), liens sociaux. |
-| RG-223 | L'affichage des sponsors sur la page liste et sur la page d'accueil respecte la hiérarchie des niveaux : Platinum d'abord (grandes cartes), puis Gold (cartes moyennes), puis les autres (cartes moyennes). |
+| RG-223 | L'affichage des sponsors sur la page liste respecte la hiérarchie des niveaux : Platinum d'abord (grandes cartes avec logo, nom et baseline optionnelle), puis Gold (cartes moyennes avec logo et nom), puis les autres (cartes moyennes avec logo et nom). Sur la page d'accueil, seul le logo est affiché (sans le nom). |
 | RG-224 | Les cartes sponsors ont un bandeau coloré selon le niveau : Platinum → Émeraude (#41B38E), Gold → Jaune (#FFD428), Silver/autres → Rose (#EE7CAD). |
 | RG-225 | La description d'un sponsor est bilingue (FR + EN). |
 | RG-226 | La page de détail d'un sponsor affiche les speakers travaillant pour cette entreprise (lien via RG-204). |
@@ -67,19 +68,27 @@
 | RG-228 | Le logo du sponsor est redimensionné et optimisé (format originel respecté, taille max adaptée au niveau : 267x200px pour Platinum, 200x150px pour les autres). |
 | RG-229 | L'image OG d'un sponsor est son logo. |
 | RG-230 | Chaque édition définit quels niveaux de sponsoring sont ouverts. Seuls ces niveaux sont proposés lors de la création d'un sponsor. |
+| RG-231 | Le CTA « Devenir partenaire » redirige vers un Google Form externe (URL configurable par l'admin). |
 
-### Authentification
+### Authentification admin
 
 | # | Règle |
 |---|-------|
-| RG-240 | Les rôles utilisateur sont : admin, speaker, sponsor. |
-| RG-241 | L'authentification se fait par email + mot de passe ou via un fournisseur OAuth (Google). |
-| RG-242 | Un utilisateur avec le rôle speaker est lié à exactement un speaker. |
-| RG-243 | Un utilisateur avec le rôle sponsor est lié à exactement un sponsor. |
-| RG-244 | Un speaker ou sponsor ne peut éditer que sa propre fiche. |
-| RG-245 | Les sessions de tokens utilisent des JWT avec expiration courte (15 min) et refresh token (7 jours). |
-| RG-246 | Les mots de passe sont hashés avec bcrypt (ou argon2). Jamais stockés en clair. |
-| RG-247 | Après 5 tentatives de connexion échouées en 15 minutes, le compte est temporairement bloqué (30 minutes). |
+| RG-240 | Les admins s'authentifient via OAuth (Google ou GitHub). |
+| RG-241 | Seuls les admins ont un compte utilisateur sur le site. Les speakers et sponsors n'ont pas de compte. |
+
+### Liens de modification (speakers, sponsors, sessions)
+
+| # | Règle |
+|---|-------|
+| RG-242 | Chaque speaker, sponsor et session peut recevoir un **lien de modification** unique (token secret dans l'URL). Ce lien permet d'éditer la fiche sans authentification. |
+| RG-243 | Le lien de modification est envoyé par email à l'adresse de contact du speaker ou du sponsor. |
+| RG-244 | Un admin peut **révoquer** un lien de modification existant et en **générer un nouveau** (l'ancien devient invalide). |
+| RG-245 | Un admin peut rendre une fiche (speaker, sponsor ou session) **non éditable** hors admin (le lien de modification est désactivé sans être supprimé). |
+| RG-246 | **48h avant l'édition du DevFest**, tous les liens de modification sont automatiquement désactivés. Seuls les admins peuvent alors modifier les fiches. |
+| RG-247 | Le lien de modification donne accès uniquement à la fiche concernée (bio, photo, liens sociaux pour un speaker ; description, logo, liens pour un sponsor). Il ne donne pas accès au back-office admin. |
+| RG-248 | Le token dans l'URL est suffisamment long et aléatoire (min 32 caractères, crypto-random) pour ne pas être devinable. |
+| RG-249 | L'accès via un lien de modification révoqué ou désactivé affiche un message d'erreur clair invitant à contacter l'organisation. |
 
 ---
 
@@ -187,27 +196,30 @@
 
 ## User stories — Authentification
 
-### US-220 : Connexion utilisateur
+### US-220 : Connexion admin
 
-**En tant que** speaker ou sponsor,
-**je veux** me connecter à mon espace personnel,
-**afin de** gérer ma fiche.
-
-**Critères d'acceptation :**
-- [ ] Page de connexion avec email + mot de passe.
-- [ ] Option « Se connecter avec Google » (OAuth).
-- [ ] Après connexion réussie, redirection vers l'espace dédié au rôle (dashboard speaker ou sponsor).
-- [ ] Après 5 tentatives échouées en 15 min, message « Compte temporairement bloqué. Réessayez dans 30 minutes » (RG-247).
-- [ ] Lien « Mot de passe oublié » avec réinitialisation par email.
-
-### US-221 : Déconnexion
-
-**En tant que** utilisateur connecté,
-**je veux** me déconnecter,
-**afin de** sécuriser mon accès.
+**En tant qu'** admin,
+**je veux** me connecter au back-office,
+**afin de** gérer le contenu du site.
 
 **Critères d'acceptation :**
-- [ ] Bouton « Déconnexion » visible dans le header (quand connecté).
+- [ ] Connexion via OAuth Google ou GitHub (RG-240).
+- [ ] Après connexion réussie, redirection vers le dashboard admin.
+- [ ] Seuls les comptes autorisés (liste blanche configurée) peuvent se connecter comme admin.
+
+### US-221 : Lien de modification speaker/sponsor
+
+**En tant qu'** admin,
+**je veux** envoyer un lien de modification à un speaker ou un sponsor,
+**afin qu'** il puisse éditer sa fiche sans avoir de compte.
+
+**Critères d'acceptation :**
+- [ ] Bouton « Envoyer le lien de modification » sur la fiche admin d'un speaker ou sponsor.
+- [ ] L'email est envoyé à l'adresse de contact avec un lien unique contenant un token crypto-random (min 32 caractères) (RG-242, RG-248).
+- [ ] L'admin peut révoquer le lien et en générer un nouveau (RG-244).
+- [ ] L'admin peut verrouiller la fiche (désactiver le lien sans le supprimer) (RG-245).
+- [ ] Un lien révoqué ou désactivé affiche un message d'erreur clair (RG-249).
+- [ ] 48h avant l'événement, tous les liens sont automatiquement désactivés (RG-246).
 - [ ] Après déconnexion, redirection vers la page d'accueil.
 - [ ] Le JWT et le refresh token sont invalidés.
 
@@ -215,24 +227,24 @@
 
 ## User stories — Espaces connectés
 
-### US-230 : Speaker — édition de sa fiche
+### US-230 : Speaker — édition via lien de modification
 
-**En tant que** speaker connecté,
+**En tant que** speaker ayant reçu un lien de modification,
 **je veux** modifier ma biographie, ma photo et mes liens sociaux,
 **afin de** présenter un profil à jour sur le site.
 
 **Critères d'acceptation :**
-- [ ] Dashboard speaker avec vue sur sa fiche actuelle.
+- [ ] L'accès via le lien affiche directement le formulaire d'édition de la fiche (pas de login).
 - [ ] Champs éditables : biographie (FR + EN), photo (upload avec recadrage), entreprise, ville, liens sociaux (ajout/suppression).
 - [ ] Prévisualisation de la fiche telle qu'elle apparaîtra sur le site public.
-- [ ] Bouton « Enregistrer » — les modifications sont immédiatement visibles (après purge du cache).
-- [ ] Le speaker ne peut pas modifier ses sessions (géré par l'admin).
-- [ ] Le speaker ne peut pas modifier son nom (géré par l'admin).
+- [ ] Bouton « Enregistrer » — les modifications sont visibles après purge du cache.
+- [ ] Le speaker ne peut pas modifier ses sessions ni son nom (RG-247).
 - [ ] La photo uploadée est validée : format (JPEG, PNG, WebP), taille max 5 Mo, dimensions min 200x200px.
+- [ ] Si le lien est révoqué ou désactivé, message d'erreur clair (RG-249).
 
-### US-231 : Sponsor — édition de sa fiche
+### US-231 : Sponsor — édition via lien de modification
 
-**En tant que** sponsor connecté,
+**En tant que** sponsor ayant reçu un lien de modification,
 **je veux** modifier la description et le logo de mon entreprise,
 **afin de** contrôler mon image sur le site du DevFest.
 
@@ -259,8 +271,9 @@
 - [ ] Création d'un speaker : nom, photo, entreprise, ville, biographie (FR + EN), liens sociaux, flag « en vedette ».
 - [ ] Modification de tous les champs d'un speaker.
 - [ ] Suppression avec confirmation (et dissociation des sessions).
-- [ ] Association d'un speaker à un compte utilisateur (pour l'accès connecté).
-- [ ] Import depuis Sessionize (si applicable).
+- [ ] Gestion du lien de modification : envoyer, révoquer, verrouiller (US-221).
+- [ ] Association manuelle avec un sponsor (RG-204).
+- [ ] Import depuis Sessionize (JSON/CSV) en complément de la création manuelle (RG-217).
 - [ ] Après création/modification/suppression, purge du cache des pages impactées.
 
 ### US-241 : Gestion des sessions (CRUD)
@@ -458,11 +471,11 @@
 
 | # | Question | Impact |
 |---|----------|--------|
-| QO-020 | Comment se fait l'import depuis Sessionize ? API Sessionize, export JSON/CSV manuel, ou les deux ? | Workflow admin, effort dev |
-| QO-021 | Le lien speaker-sponsor (via l'entreprise) est-il automatique (matching par nom d'entreprise) ou manuel (sélection par l'admin) ? | Complexité, fiabilité |
-| QO-022 | Les speakers/sponsors reçoivent-ils un email d'invitation automatique pour créer leur compte, ou l'admin leur fournit-il des identifiants ? | Workflow, email transactionnel |
+| ~~QO-020~~ | ~~Import Sessionize ?~~ **Résolu** : en priorité création manuelle, puis import Sessionize (JSON/CSV), puis API Sessionize en bonus (RG-217). | — |
+| ~~QO-021~~ | ~~Lien speaker-sponsor automatique ou manuel ?~~ **Résolu** : manuel par l'admin (RG-204). | — |
+| ~~QO-022~~ | ~~Invitation speakers/sponsors ?~~ **Résolu** : pas de compte utilisateur. Un lien de modification unique est envoyé par email. L'admin peut le révoquer, le recréer, ou verrouiller la fiche. Gel automatique 48h avant l'événement (RG-242 à RG-249). | — |
 | QO-023 | La génération d'images OG dynamiques se fait-elle à la volée (au premier accès) ou en batch (lors de la publication) ? | Performance, coût |
-| QO-024 | Le CTA « Devenir partenaire » mène-t-il vers un Google Form (comme sur le site 2023-2025), vers la page Contact avec l'objet pré-sélectionné, ou vers une page dédiée ? | UX, scope |
-| QO-025 | Quel fournisseur OAuth utiliser ? Google uniquement, ou aussi GitHub/LinkedIn ? | Scope authentification |
-| QO-026 | Les cartes Platinum doivent-elles afficher une « baseline » (accroche du sponsor). Si oui, ce champ est-il obligatoire pour les Platinum ? | Modèle de données, design |
-| ~~QO-027~~ | ~~Brouillon pour les sessions ?~~ **Résolu** : oui. Toutes les entités métier (sessions, speakers, sponsors) ont un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). | — |
+| ~~QO-024~~ | ~~CTA « Devenir partenaire » ?~~ **Résolu** : redirige vers un Google Form externe, URL configurable (RG-231). | — |
+| ~~QO-025~~ | ~~Fournisseur OAuth ?~~ **Résolu** : Google + GitHub pour les admins (RG-240). | — |
+| ~~QO-026~~ | ~~Baseline Platinum obligatoire ?~~ **Résolu** : non, la baseline est optionnelle. Sur la page d'accueil, seul le logo est affiché (sans le nom) (RG-223). | — |
+| ~~QO-027~~ | ~~Brouillon pour les sessions ?~~ **Résolu** : oui. Toutes les entités métier ont un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). | — |
