@@ -38,7 +38,7 @@
 | RG-205 | La page de détail d'un speaker liste ses sessions de l'édition courante. |
 | RG-206 | Le slug d'un speaker est dérivé de son nom complet (ex. « marie-dupont ») et est unique par édition. |
 | RG-207 | La photo du speaker est redimensionnée et optimisée (WebP, taille max 400x400px). |
-| RG-208 | L'image OG d'un speaker est générée dynamiquement : photo + nom + branding DevFest (1200x630px). |
+| RG-208 | L'image OG d'un speaker est générée dynamiquement à la volée : photo + nom + branding DevFest (1200x630px). L'image est mise en cache CDN et invalidée à la modification de la fiche. |
 
 ### Sessions
 
@@ -49,7 +49,7 @@
 | RG-212 | Les niveaux possibles sont : Débutant, Intermédiaire, Confirmé. Si non renseigné, le niveau est considéré « Tous niveaux ». |
 | RG-213 | Une session appartient à une catégorie parmi celles définies pour l'édition courante. |
 | RG-214 | Le slug d'une session est dérivé du titre (ex. « kotlin-multiplatform-en-production »). |
-| RG-215 | L'image OG d'une session est générée dynamiquement : titre + speaker(s) + catégorie + branding DevFest. |
+| RG-215 | L'image OG d'une session est générée dynamiquement à la volée : titre + speaker(s) + catégorie + branding DevFest (1200x630px). Mise en cache CDN, invalidée à la modification. |
 | RG-216 | Les champs salle et créneau horaire ne sont pas obligatoires dans le Lot 2 (assignés dans le Lot 3 — Programme). |
 | RG-217 | Les speakers et sessions peuvent être créés manuellement un par un dans le back-office. L'import depuis Sessionize (JSON/CSV) est une fonctionnalité complémentaire. L'import via API Sessionize est un bonus ultérieur. |
 
@@ -474,7 +474,7 @@
 | ~~QO-020~~ | ~~Import Sessionize ?~~ **Résolu** : en priorité création manuelle, puis import Sessionize (JSON/CSV), puis API Sessionize en bonus (RG-217). | — |
 | ~~QO-021~~ | ~~Lien speaker-sponsor automatique ou manuel ?~~ **Résolu** : manuel par l'admin (RG-204). | — |
 | ~~QO-022~~ | ~~Invitation speakers/sponsors ?~~ **Résolu** : pas de compte utilisateur. Un lien de modification unique est envoyé par email. L'admin peut le révoquer, le recréer, ou verrouiller la fiche. Gel automatique 48h avant l'événement (RG-242 à RG-249). | — |
-| QO-023 | La génération d'images OG dynamiques se fait-elle à la volée (au premier accès) ou en batch (lors de la publication) ? | Performance, coût |
+| ~~QO-023~~ | ~~Images OG : à la volée ou en batch ?~~ **Résolu** : à la volée avec cache CDN. L'image est générée au premier accès, mise en cache, et invalidée lors de la modification de la fiche (même logique que les pages HTML). | — |
 | ~~QO-024~~ | ~~CTA « Devenir partenaire » ?~~ **Résolu** : redirige vers un Google Form externe, URL configurable (RG-231). | — |
 | ~~QO-025~~ | ~~Fournisseur OAuth ?~~ **Résolu** : Google + GitHub pour les admins (RG-240). | — |
 | ~~QO-026~~ | ~~Baseline Platinum obligatoire ?~~ **Résolu** : non, la baseline est optionnelle. Sur la page d'accueil, seul le logo est affiché (sans le nom) (RG-223). | — |
