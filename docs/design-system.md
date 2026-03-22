@@ -114,15 +114,27 @@ Les nuances principales représentent directement Toulouse (brique) et leur comp
 
 ## 3. Typographie
 
-### Police principale — Product Sans
+### Police principale — Google Sans
 
-Police géométrique sans empattement créée par Google, utilisée pour le logo DevFest officiel. C'est la typographie dominante du site.
+Police géométrique sans empattement créée par Google (anciennement connue sous le nom Product Sans). Disponible sur [Google Fonts](https://fonts.google.com/specimen/Google+Sans) sous licence SIL Open Font License depuis novembre 2025.
+
+C'est la typographie utilisée pour le logo DevFest officiel et la police dominante du site.
 
 | Variante | Usage |
 |----------|-------|
-| **Product Sans Bold** | Titres, boutons, chiffres clés, noms |
-| **Product Sans Regular** | Corps de texte, descriptions, navigation, labels |
-| **Product Sans Italic** | Baselines sponsors (Platinum) |
+| **Google Sans Bold** | Titres, boutons, chiffres clés, noms |
+| **Google Sans Regular** | Corps de texte, descriptions, navigation, labels |
+| **Google Sans Italic** | Baselines sponsors (Platinum) |
+
+#### Chargement web
+
+```html
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+```
+
+```css
+font-family: 'Google Sans', sans-serif;
+```
 
 ### Police secondaire — CCSignLanguage
 
@@ -134,12 +146,6 @@ Police manuscrite utilisée en seconde lecture pour évoquer le partage et la co
 
 > Note : CCSignLanguage n'apparaît pas dans les maquettes web. Son usage est réservé aux supports de communication (réseaux sociaux, visuels, print).
 
-### Fallback web
-
-```css
-font-family: 'Product Sans', sans-serif;
-```
-
 ---
 
 ## 4. Design Tokens
@@ -148,24 +154,24 @@ font-family: 'Product Sans', sans-serif;
 
 | Token | Font | Taille | Poids | Line Height | Usage |
 |-------|------|--------|-------|-------------|-------|
-| `heading-1` | Product Sans | 112px | Bold | 100% | Hero titre (DevFest, Toulouse) |
-| `heading-2` | Product Sans | 64px | Bold | 120% | Titres de sections |
-| `heading-3` | Product Sans | 48px | Bold | normal | Sous-titres (« Derrière le ») |
-| `heading-4` | Product Sans | 40px | Bold | 120% | Noms sponsors Platinum, statistiques valeurs |
-| `heading-5` | Product Sans | 36px | Bold | normal | Sous-sections (« Plongez dans… ») |
-| `description` | Product Sans | 32px | Regular | 140% | Descriptions, texte hero |
-| `description-bold` | Product Sans | 32px | Bold | 140% | Mots accentués dans descriptions |
-| `card-title-l` | Product Sans | 40px | Bold | 120% | Titre sur carte Platinum |
-| `card-title-m` | Product Sans | 32px | Bold | 120% | Titre sur carte Gold/autre |
-| `card-title-s` | Product Sans | 24px | Bold | 110% | Titre article card |
-| `stat-value` | Product Sans | 64px | Bold | 140% | Chiffre statistique |
-| `stat-label` | Product Sans | 24px | Regular | 120% | Label statistique |
-| `body` | Product Sans | 16px | Regular | 160% | Texte courant, navigation, footer |
-| `body-bold` | Product Sans | 16px | Bold | 100% | Boutons, labels importants |
-| `footer-heading` | Product Sans | 20px | Bold | 130% | Titres colonnes footer |
-| `footer-text` | Product Sans | 16px | Regular | 160% | Liens footer |
-| `caption` | Product Sans | 12px | Bold | 120% | Auteur article |
-| `small` | Product Sans | 10px | Regular | 120% | Date, « by » |
+| `heading-1` | Google Sans | 112px | Bold | 100% | Hero titre (DevFest, Toulouse) |
+| `heading-2` | Google Sans | 64px | Bold | 120% | Titres de sections |
+| `heading-3` | Google Sans | 48px | Bold | normal | Sous-titres (« Derrière le ») |
+| `heading-4` | Google Sans | 40px | Bold | 120% | Noms sponsors Platinum, statistiques valeurs |
+| `heading-5` | Google Sans | 36px | Bold | normal | Sous-sections (« Plongez dans… ») |
+| `description` | Google Sans | 32px | Regular | 140% | Descriptions, texte hero |
+| `description-bold` | Google Sans | 32px | Bold | 140% | Mots accentués dans descriptions |
+| `card-title-l` | Google Sans | 40px | Bold | 120% | Titre sur carte Platinum |
+| `card-title-m` | Google Sans | 32px | Bold | 120% | Titre sur carte Gold/autre |
+| `card-title-s` | Google Sans | 24px | Bold | 110% | Titre article card |
+| `stat-value` | Google Sans | 64px | Bold | 140% | Chiffre statistique |
+| `stat-label` | Google Sans | 24px | Regular | 120% | Label statistique |
+| `body` | Google Sans | 16px | Regular | 160% | Texte courant, navigation, footer |
+| `body-bold` | Google Sans | 16px | Bold | 100% | Boutons, labels importants |
+| `footer-heading` | Google Sans | 20px | Bold | 130% | Titres colonnes footer |
+| `footer-text` | Google Sans | 16px | Regular | 160% | Liens footer |
+| `caption` | Google Sans | 12px | Bold | 120% | Auteur article |
+| `small` | Google Sans | 10px | Regular | 120% | Date, « by » |
 
 ### Espacement
 
@@ -231,27 +237,31 @@ Les icônes suivent un style **croquis / esquisse** (hand-drawn), déclinable en
 | Terre cuite | `#EC6839` | Sur fond clair, accentuation |
 | Malachite | `#109E6E` | Sur fond clair, variante verte |
 
-### Icônes fonctionnelles (statistiques)
+### Icônes fonctionnelles — Font Awesome
 
-Les chiffres clés utilisent des icônes plus simples :
+Les icônes fonctionnelles du site utilisent [Font Awesome](https://fontawesome.com/) (licence gratuite, compatible open source / commercial).
 
-| Icône | Usage |
-|-------|-------|
-| Calendar | Journée / Date |
-| Users | Participants |
-| Mic | Conférences |
-| Handshake | Stands / Partenaires |
+#### Chiffres clés (statistiques)
 
-### Icônes réseaux sociaux
+| Icône | Font Awesome | Usage |
+|-------|-------------|-------|
+| Calendar | `fa-calendar-days` | Journée / Date |
+| Users | `fa-users` | Participants |
+| Mic | `fa-microphone` | Conférences |
+| Handshake | `fa-handshake` | Stands / Partenaires |
 
-Présentes dans le header (24px) et le footer (48px) :
+#### Réseaux sociaux
 
-| Réseau | Ordre d'affichage |
-|--------|-------------------|
-| LinkedIn | 1 |
-| YouTube | 2 |
-| X / Twitter | 3 |
-| Bluesky | 4 |
+Présents dans le header (24px) et le footer (48px) :
+
+| Réseau | Font Awesome | Ordre |
+|--------|-------------|-------|
+| LinkedIn | `fa-brands fa-linkedin` | 1 |
+| YouTube | `fa-brands fa-youtube` | 2 |
+| X / Twitter | `fa-brands fa-x-twitter` | 3 |
+| Bluesky | `fa-brands fa-bluesky` | 4 |
+
+Toutes ces icônes sont disponibles dans le plan gratuit de Font Awesome 7.
 
 ---
 
@@ -436,11 +446,59 @@ Ordre d'affichage constant : LinkedIn, YouTube, X/Twitter, Bluesky.
 
 ---
 
-## 10. Récapitulatif des fichiers de référence
+## 10. Inventaire des assets (`docs/assets/`)
+
+### Logo
+
+Disponible en 2 variantes (Principal et Secondaire/Minimal), chacune en 5 déclinaisons couleur :
+
+| Déclinaison | Light/Dark | Fichiers |
+|-------------|------------|----------|
+| Brique Light Mode | Light | SVG, PNG, JPG, EPS, PDF |
+| Bicolor Light Mode | Light | SVG, PNG, JPG, EPS, PDF |
+| Bicolor Dark Mode | Dark | SVG, PNG, JPG, EPS, PDF |
+| White Dark Mode | Dark | SVG, PNG, JPG, EPS, PDF |
+| Noir Blanc | Neutre | SVG, PNG, JPG, EPS, PDF |
+
+- **Web** : utiliser les SVG dans `docs/assets/Logo/Principal/RVB/svg/` et `docs/assets/Logo/Secondaire/RVB/svg/`
+- **Print** : utiliser les EPS/PDF dans `docs/assets/Logo/*/CMJN/`
+
+### Illustrations style croquis
+
+30 illustrations déclinées en 3 couleurs (Bismarck, Malachite, Terre cuite) = **90 fichiers PNG**.
+
+Organisées dans `docs/assets/{Bismarck,Malachite,TerreCuite}/`.
+
+#### Illustrations utilisées dans les maquettes
+
+| Illustration | Emplacement | Fichier |
+|--------------|-------------|---------|
+| La Grave | Section statistiques (accueil) | `LaGraveIlluDevFest.png` |
+| Croix occitane | Section sponsors (accueil) | `CroixOccitaneIlluDevFest.png` |
+
+#### Catalogue complet des illustrations
+
+| Catégorie | Illustrations |
+|-----------|---------------|
+| **Monuments** | La Grave, Pont Neuf |
+| **Symboles** | Croix occitane, Violette, Étoile |
+| **Personnages** | Geek, Geeke |
+| **Nourriture** | Burger, Croissant, Café, Cocktail, Boisson fraîche, Sandwich, Miam |
+| **Tech/Web** | Site Web, Site Web 2, DevFest |
+| **Décoration** | Flèche (×3), Soulignement (×3), Accolade droite/gauche, Entouré (×3), Expression, Exclamation, Point d'exclamation |
+| **Événement** | Communauté, Sponsors, Micro, Vestiaire, Toilette |
+| **Divers** | Tracteur, Monde Agri, Plane |
+
+> Note : les illustrations sont en PNG uniquement. Pour le web, une conversion en SVG serait souhaitable à terme pour le poids et la scalabilité.
+
+---
+
+## 11. Récapitulatif des fichiers de référence
 
 | Document | Contenu |
 |----------|---------|
 | `docs/CharteGraphique_Devfest2024.pdf` | Charte graphique officielle (logo, couleurs, typos, icônes) |
 | `docs/maquettes-figma.md` | Inventaire des maquettes Figma et structure des pages |
 | `docs/maquettes/*.svg` | Exports SVG de toutes les maquettes (référence visuelle durable) |
+| `docs/assets/` | Logo (SVG/PNG/EPS), illustrations croquis (PNG, 3 couleurs) |
 | `docs/design-system.md` | Ce document (design system complet) |
