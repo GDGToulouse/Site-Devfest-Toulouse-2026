@@ -1,10 +1,49 @@
 # CLAUDE.md
 
+## Project Overview
+
+DevFest Toulouse 2026 website — a new site built to replace the WordPress (Avada) site used for 2023-2025 editions. The goal is a durable, maintainable site that can be managed across editions.
+
+The project is currently in the **specification phase** — no application code exists yet. The `src/` directory has not been created.
+
+## Project Structure
+
+```
+docs/                          # Specification documents (in French)
+├── fonctionnalites-2026.md    # Feature list for the 2026 site
+├── objectifs-techniques.md    # Technical objectives (SEO, perf, a11y, rendering)
+├── historique-sites.md        # Analysis of past DevFest Toulouse sites (2016-2025)
+└── modele-donnees-historique.md  # Data model for devfest-history.json
+data/
+└── devfest-history.json       # Historical data: speakers & sessions (2016-2025)
+.claude/rules/                 # Detailed coding & workflow rules
+```
+
+## Specification Documents
+
+Always consult these documents before making assumptions about features or architecture:
+
+- **`docs/fonctionnalites-2026.md`** — Complete feature list (pages, components, user roles)
+- **`docs/objectifs-techniques.md`** — Technical objectives: SSR + cache strategy, Lighthouse targets (≥90), Core Web Vitals, SEO, accessibility (WCAG 2.1 AA), i18n readiness, security headers
+- **`docs/historique-sites.md`** — Evolution of past sites (stacks, features per year)
+- **`docs/modele-donnees-historique.md`** — Schema for `data/devfest-history.json` (327 speakers, 282 sessions across 7 editions)
+
+## Key Technical Decisions (from specs)
+
+- **Rendering**: SSR + HTTP cache for all public pages; hybrid SSR+SPA for authenticated pages
+- **Cache**: `Cache-Control: s-maxage=3600, stale-while-revalidate=60`; on-demand invalidation via admin
+- **Homepage**: conditional content based on annual status (preparation / announcement / see-you-next-year)
+- **User roles**: admin, sponsor, speaker — sponsors and speakers can edit their own profiles
+- **SEO**: Schema.org (Event, Organization, Person, Article), Open Graph, Twitter Cards, dynamic OG images
+- **Performance**: Lighthouse ≥90 all categories, LCP <2.5s, INP <200ms, CLS <0.1
+- **Accessibility**: WCAG 2.1 AA, keyboard nav, skip-to-content, axe-core in CI
+- **i18n**: FR default, structure ready for EN
+
 ## Critical Rules
 
 ### Always
 - Read code before modifying it
-- Consult CLAUDE.md and specification documents before making assumptions
+- Consult specification documents in `docs/` before making assumptions
 - Stage specific files only — never `git add .` or `git add -A`
 - Use Context7 MCP to fetch up-to-date library docs before using fast-moving dependencies
 
