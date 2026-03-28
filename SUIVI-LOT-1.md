@@ -74,7 +74,7 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 4.1 | Composant ArticleCard | — | TODO |
+| 4.1 | Composant ArticleCard | — | DONE (créé en Phase 3) |
 | 4.2 | Page liste actualités : grille, pagination 9/page | US-130, RG-098 | TODO |
 | 4.3 | Page détail article : contenu riche, breadcrumb | US-131 | TODO |
 | 4.4 | Étiquettes (tags) : page de tag, lien depuis les articles | RG-095, RG-096 | TODO |
