@@ -3,6 +3,8 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -62,9 +64,11 @@ export default async function LocaleLayout({
           {locale === "fr" ? "Aller au contenu" : "Skip to content"}
         </a>
         <NextIntlClientProvider>
+          <Header />
           <main id="main-content" role="main" className="flex-1">
             {children}
           </main>
+          <Footer />
         </NextIntlClientProvider>
       </body>
     </html>
