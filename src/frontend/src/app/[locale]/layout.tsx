@@ -55,22 +55,20 @@ export default async function LocaleLayout({
   }
 
   return (
-    <html lang={locale} className="h-full antialiased">
-      <body className="min-h-full flex flex-col">
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
-        >
-          {locale === "fr" ? "Aller au contenu" : "Skip to content"}
-        </a>
-        <NextIntlClientProvider>
-          <Header />
-          <main id="main-content" role="main" className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </NextIntlClientProvider>
-      </body>
-    </html>
+    <>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
+      >
+        {locale === "fr" ? "Aller au contenu" : "Skip to content"}
+      </a>
+      <NextIntlClientProvider>
+        <Header />
+        <main id="main-content" role="main" className="flex-1">
+          {children}
+        </main>
+        <Footer />
+      </NextIntlClientProvider>
+    </>
   );
 }

@@ -5,5 +5,9 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  return children;
+  return (
+    <html lang="fr" className="h-full antialiased" suppressHydrationWarning>
+      <body className="min-h-full flex flex-col">{children}</body>
+    </html>
+  );
 }
