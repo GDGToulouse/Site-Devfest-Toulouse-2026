@@ -40,14 +40,14 @@ export default function HeroSection() {
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
-              <p className="mt-2 text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
+              <p className="mt-[22px] text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
                 {t("subtitleLine1")}
               </p>
             </div>
 
             {/* Block 3: "les devs et pour les devs." — no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-1"
+              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-1 mt-[22px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
@@ -59,7 +59,7 @@ export default function HeroSection() {
 
             {/* Block 4: Date — narrower, no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-1"
+              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-1 mt-[22px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir">
@@ -69,7 +69,7 @@ export default function HeroSection() {
 
             {/* Block 5: Venue — narrowest, no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] pt-1 pb-4"
+              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] pt-1 pb-4 mt-[22px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir/70">
