@@ -42,10 +42,10 @@ Header, footer, page 404, sélecteur de langue. Le squelette visuel du site.
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 2.1 | Header : logo, navigation 4 liens, réseaux sociaux, CTAs, sticky, mobile hamburger | US-110 | TODO |
-| 2.2 | Footer : logo, réseaux, 3 colonnes liens, CTA contact, barre basse | US-111 | TODO |
-| 2.3 | Sélecteur de langue FR/EN + bannière suggestion langue navigateur | RG-036, RG-037, RG-038 | TODO |
-| 2.4 | Page 404 personnalisée | US-180, RG-130→132 | TODO |
+| 2.1 | Header : logo, navigation 4 liens, réseaux sociaux, CTAs, sticky, mobile hamburger | US-110 | DONE |
+| 2.2 | Footer : logo, réseaux, 3 colonnes liens, CTA contact, barre basse | US-111 | DONE |
+| 2.3 | Sélecteur de langue FR/EN (bannière suggestion à faire) | RG-036, RG-037, RG-038 | PARTIAL |
+| 2.4 | Page 404 personnalisée | US-180, RG-130→132 | DONE |
 
 **Critère de fin** : le header et le footer sont visibles sur `/fr/` et `/en/`, le menu hamburger fonctionne, la 404 est branded.
 
