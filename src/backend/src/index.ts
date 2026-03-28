@@ -13,8 +13,12 @@ const host = process.env.HOST || "0.0.0.0";
 
 const app = Fastify({ logger: true });
 
+const corsOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:3000",
+  process.env.BASE_URL || "http://localhost:3000",
+];
 await app.register(cors, {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: corsOrigins,
   credentials: true,
 });
 

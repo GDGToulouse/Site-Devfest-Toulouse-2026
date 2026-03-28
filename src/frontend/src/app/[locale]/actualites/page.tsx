@@ -53,7 +53,7 @@ export default async function ArticlesPage({
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              basePath={`/${locale}/actualites`}
+              basePath="/actualites"
             />
           </>
         )}

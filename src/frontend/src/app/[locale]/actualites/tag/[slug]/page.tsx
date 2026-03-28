@@ -61,7 +61,7 @@ export default async function TagPage({
             <Pagination
               currentPage={page}
               totalPages={totalPages}
-              basePath={`/${locale}/actualites/tag/${slug}`}
+              basePath={`/actualites/tag/${slug}`}
             />
           </>
         )}
