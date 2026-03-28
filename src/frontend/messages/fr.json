@@ -117,6 +117,39 @@
     "topicsTitle": "Quels sujets ?",
     "topicsDescription": "Web, Cloud, Mobile, IA, Sécurité, DevOps, Data, IoT... Tous les sujets tech sont les bienvenus. Nous recherchons aussi des retours d'expérience, des talks inspirants et des sujets transverses (culture, diversité, green IT)."
   },
+  "contact": {
+    "title": "Contact",
+    "description": "Contactez l'equipe du DevFest Toulouse.",
+    "home": "Accueil",
+    "form": {
+      "firstName": "Prenom",
+      "firstNamePlaceholder": "Votre prenom",
+      "firstNameError": "Le prenom est obligatoire",
+      "lastName": "Nom",
+      "lastNamePlaceholder": "Votre nom",
+      "lastNameError": "Le nom est obligatoire",
+      "email": "Email",
+      "emailPlaceholder": "vous@example.com",
+      "emailError": "Email invalide",
+      "phone": "Telephone (optionnel)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "category": "Objet",
+      "categoryPlaceholder": "Selectionnez une categorie",
+      "categoryError": "Veuillez selectionner une categorie",
+      "categoryOther": "Autre",
+      "message": "Message",
+      "messagePlaceholder": "Votre message...",
+      "messageError": "Le message doit contenir au moins 10 caracteres",
+      "submit": "Envoyer",
+      "sending": "Envoi en cours...",
+      "success": "Merci ! Nous avons recu votre message et vous repondrons dans les meilleurs delais.",
+      "error": "Une erreur s'est produite. Veuillez reessayer."
+    },
+    "sidebar": {
+      "responseTime": "Nous sommes benevoles, merci pour votre patience. Nous faisons de notre mieux pour repondre sous 48h.",
+      "followUs": "Suivez-nous :"
+    }
+  },
   "codeOfConduct": {
     "title": "Code de conduite",
     "description": "Code de conduite du DevFest Toulouse.",

@@ -67,6 +67,22 @@ export interface CfpSettings {
   closeDate: string | null;
 }
 
+export interface ContactCategory {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+}
+
+export interface ContactFormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  categoryId: number | null;
+  message: string;
+  website: string; // honeypot
+}
+
 export interface PaginatedArticles {
   articles: Article[];
   total: number;

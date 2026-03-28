@@ -212,6 +212,31 @@ async function main() {
 
   console.log(`CFP settings created: ${cfpSettings.length}`);
 
+  // --- Contact Categories ---
+  const contactCategories = [
+    { nameFr: "Sponsoring", nameEn: "Sponsoring", emailRecipients: "sponsors@devfesttoulouse.fr", sortOrder: 1 },
+    { nameFr: "Appel a conferences", nameEn: "Call for Papers", emailRecipients: "cfp@devfesttoulouse.fr", sortOrder: 2 },
+    { nameFr: "Presse / Media", nameEn: "Press / Media", emailRecipients: "presse@devfesttoulouse.fr", sortOrder: 3 },
+  ];
+
+  for (const cat of contactCategories) {
+    const existing = await prisma.contactCategory.findFirst({
+      where: { nameFr: cat.nameFr },
+    });
+    if (!existing) {
+      await prisma.contactCategory.create({ data: cat });
+    }
+  }
+
+  console.log(`Contact categories created: ${contactCategories.length}`);
+
+  // --- Contact Default Email ---
+  await prisma.siteSetting.upsert({
+    where: { key: "contact_default_email" },
+    update: {},
+    create: { key: "contact_default_email", value: "contact@devfesttoulouse.fr" },
+  });
+
   console.log("Seeding complete!");
 }
 

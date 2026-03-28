@@ -7,6 +7,7 @@ import type {
   Tag,
   ContentPage,
   CfpSettings,
+  ContactCategory,
   PaginatedArticles,
 } from "./types";
 
@@ -79,4 +80,8 @@ export async function getCfpSettings(): Promise<CfpSettings> {
       closeDate: null,
     }
   );
+}
+
+export async function getContactCategories(): Promise<ContactCategory[]> {
+  return (await fetchAPI<ContactCategory[]>("/api/contact/categories")) || [];
 }

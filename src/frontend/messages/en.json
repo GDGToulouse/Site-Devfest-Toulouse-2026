@@ -117,6 +117,39 @@
     "topicsTitle": "What topics?",
     "topicsDescription": "Web, Cloud, Mobile, AI, Security, DevOps, Data, IoT... All tech topics are welcome. We also look for experience reports, inspiring talks and cross-cutting topics (culture, diversity, green IT)."
   },
+  "contact": {
+    "title": "Contact",
+    "description": "Contact the DevFest Toulouse team.",
+    "home": "Home",
+    "form": {
+      "firstName": "First name",
+      "firstNamePlaceholder": "Your first name",
+      "firstNameError": "First name is required",
+      "lastName": "Last name",
+      "lastNamePlaceholder": "Your last name",
+      "lastNameError": "Last name is required",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "emailError": "Invalid email",
+      "phone": "Phone (optional)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "category": "Subject",
+      "categoryPlaceholder": "Select a category",
+      "categoryError": "Please select a category",
+      "categoryOther": "Other",
+      "message": "Message",
+      "messagePlaceholder": "Your message...",
+      "messageError": "Message must be at least 10 characters",
+      "submit": "Send",
+      "sending": "Sending...",
+      "success": "Thank you! We received your message and will respond as soon as possible.",
+      "error": "An error occurred. Please try again."
+    },
+    "sidebar": {
+      "responseTime": "We are volunteers, thank you for your patience. We do our best to respond within 48 hours.",
+      "followUs": "Follow us:"
+    }
+  },
   "codeOfConduct": {
     "title": "Code of Conduct",
     "description": "DevFest Toulouse Code of Conduct.",

@@ -100,11 +100,11 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 6.1 | Formulaire de contact : champs, validation client + serveur | US-160, RG-110, RG-144 | TODO |
-| 6.2 | Catégories dynamiques + "Autre" automatique | RG-111, RG-149→152 | TODO |
-| 6.3 | Envoi email SMTP + stockage BDD | RG-114, RG-115 | TODO |
-| 6.4 | Protection anti-spam (honeypot) | RG-112 | TODO |
-| 6.5 | Encart latéral : délais + réseaux | RG-116 | TODO |
+| 6.1 | Formulaire de contact : champs, validation client + serveur | US-160, RG-110, RG-144 | DONE |
+| 6.2 | Catégories dynamiques + "Autre" automatique | RG-111, RG-149→152 | DONE |
+| 6.3 | Envoi email SMTP + stockage BDD | RG-114, RG-115 | DONE |
+| 6.4 | Protection anti-spam (honeypot) | RG-112 | DONE |
+| 6.5 | Encart latéral : délais + réseaux | RG-116 | DONE |
 
 **Critère de fin** : le formulaire envoie un email et stocke en BDD, les catégories sont dynamiques.
 
@@ -169,6 +169,7 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 3 | Phase 3 terminée : homepage complète. Backend API (4 endpoints : editions, articles, ticket-tiers, key-figures). Frontend : Hero, Chiffres clés, À propos, Actualités (ArticleCard), Billetterie, Replay (YouTubeFacade), logique conditionnelle par statut annuel. Seed data, traductions FR/EN, vérification fonctionnelle navigateur. |
 | 2026-03-28 | Session 4 | Phase 4 terminée : blog & pages contenu. Backend : endpoints articles paginés, détail, tags, pages contenu. Frontend : liste actualités (grille 4 col, pagination 9/page), détail article (contenu riche HTML, Schema.org Article, breadcrumb, tags cliquables), filtrage par tag, Code de conduite, Mentions légales. Seed étendu (12 articles, 2 ContentPages). |
 | 2026-03-28 | Session 5 | Phase 5 terminée : billetterie (paliers avec statuts, prix barrés pour épuisés, CTA Acheter, note redirection Billetweb) et CFP (statut ouvert/fermé dynamique, dates, CTA Sessionize, formats acceptés, sujets). Backend : endpoint CFP settings. |
+| 2026-03-28 | Session 6 | Phase 6 terminée : formulaire de contact complet. Validation client+serveur, catégories dynamiques depuis BDD avec "Autre", honeypot anti-spam, envoi email SMTP (nodemailer + MailHog), stockage message en BDD, routage email par catégorie, encart latéral (délais + réseaux sociaux). |
 
 ---
 
