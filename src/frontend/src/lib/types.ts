@@ -38,3 +38,31 @@ export interface KeyFigure {
   labelFr: string;
   labelEn: string;
 }
+
+export interface ArticleDetail extends Article {
+  contentFr: string;
+  contentEn: string;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  slug: string;
+}
+
+export interface ContentPage {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  contentFr: string;
+  contentEn: string;
+  updatedAt: string;
+}
+
+export interface PaginatedArticles {
+  articles: Article[];
+  total: number;
+  page: number;
+  totalPages: number;
+}

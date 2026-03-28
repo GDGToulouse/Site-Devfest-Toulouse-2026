@@ -75,11 +75,11 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
 | 4.1 | Composant ArticleCard | — | DONE (créé en Phase 3) |
-| 4.2 | Page liste actualités : grille, pagination 9/page | US-130, RG-098 | TODO |
-| 4.3 | Page détail article : contenu riche, breadcrumb | US-131 | TODO |
-| 4.4 | Étiquettes (tags) : page de tag, lien depuis les articles | RG-095, RG-096 | TODO |
-| 4.5 | Page Code de conduite | US-170, RG-120, RG-121 | TODO |
-| 4.6 | Page Mentions légales | US-171, RG-122 | TODO |
+| 4.2 | Page liste actualités : grille, pagination 9/page | US-130, RG-098 | DONE |
+| 4.3 | Page détail article : contenu riche, breadcrumb | US-131 | DONE |
+| 4.4 | Étiquettes (tags) : page de tag, lien depuis les articles | RG-095, RG-096 | DONE |
+| 4.5 | Page Code de conduite | US-170, RG-120, RG-121 | DONE |
+| 4.6 | Page Mentions légales | US-171, RG-122 | DONE |
 
 **Critère de fin** : on peut naviguer dans les articles, les tags filtrent, les pages statiques sont lisibles en FR et EN.
 
@@ -167,6 +167,7 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 1 | Phase specs terminée. Choix techniques validés. Fichier de suivi créé. |
 | 2026-03-28 | Session 2 | Phase 1 terminée : init projets, Docker Compose, design tokens, i18n, Prisma v7, Better Auth, sécurité, SEO, a11y, sitemap, CI. Reste : Google Sans (fichiers manquants), Font Awesome, cache headers, compression, analytics. |
 | 2026-03-28 | Session 3 | Phase 3 terminée : homepage complète. Backend API (4 endpoints : editions, articles, ticket-tiers, key-figures). Frontend : Hero, Chiffres clés, À propos, Actualités (ArticleCard), Billetterie, Replay (YouTubeFacade), logique conditionnelle par statut annuel. Seed data, traductions FR/EN, vérification fonctionnelle navigateur. |
+| 2026-03-28 | Session 4 | Phase 4 terminée : blog & pages contenu. Backend : endpoints articles paginés, détail, tags, pages contenu. Frontend : liste actualités (grille 4 col, pagination 9/page), détail article (contenu riche HTML, Schema.org Article, breadcrumb, tags cliquables), filtrage par tag, Code de conduite, Mentions légales. Seed étendu (12 articles, 2 ContentPages). |
 
 ---
 

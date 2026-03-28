@@ -5,6 +5,7 @@ import { auth, isAdminEmail } from "./lib/auth.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
+import pageRoutes from "./routes/pages.js";
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
@@ -55,6 +56,7 @@ app.route({
 await app.register(editionRoutes, { prefix: "/api" });
 await app.register(articleRoutes, { prefix: "/api" });
 await app.register(settingsRoutes, { prefix: "/api" });
+await app.register(pageRoutes, { prefix: "/api" });
 
 // Admin guard — reusable hook
 export async function requireAdmin(request: import("fastify").FastifyRequest, reply: import("fastify").FastifyReply) {

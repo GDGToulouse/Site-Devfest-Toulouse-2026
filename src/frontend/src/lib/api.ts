@@ -1,4 +1,13 @@
-import type { Edition, Article, TicketTier, KeyFigure } from "./types";
+import type {
+  Edition,
+  Article,
+  ArticleDetail,
+  TicketTier,
+  KeyFigure,
+  Tag,
+  ContentPage,
+  PaginatedArticles,
+} from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
@@ -29,4 +38,33 @@ export async function getCurrentTicketTiers(): Promise<TicketTier[]> {
 
 export async function getKeyFigures(): Promise<KeyFigure[]> {
   return (await fetchAPI<KeyFigure[]>("/api/settings/key-figures")) || [];
+}
+
+export async function getArticles(
+  page = 1,
+  limit = 9,
+  tag?: string,
+): Promise<PaginatedArticles> {
+  const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+  if (tag) params.set("tag", tag);
+  return (
+    (await fetchAPI<PaginatedArticles>(`/api/articles?${params}`)) || {
+      articles: [],
+      total: 0,
+      page: 1,
+      totalPages: 0,
+    }
+  );
+}
+
+export async function getArticleBySlug(slug: string): Promise<ArticleDetail | null> {
+  return fetchAPI<ArticleDetail>(`/api/articles/${encodeURIComponent(slug)}`);
+}
+
+export async function getTags(): Promise<Tag[]> {
+  return (await fetchAPI<Tag[]>("/api/tags")) || [];
+}
+
+export async function getContentPage(slug: string): Promise<ContentPage | null> {
+  return fetchAPI<ContentPage>(`/api/pages/${encodeURIComponent(slug)}`);
 }

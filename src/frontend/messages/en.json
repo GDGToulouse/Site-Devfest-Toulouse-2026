@@ -70,5 +70,29 @@
   "lang": {
     "switchTo": "Passer en français",
     "suggestion": "Cette page est aussi disponible en français."
+  },
+  "articles": {
+    "title": "News",
+    "description": "All the latest news from DevFest Toulouse 2026.",
+    "home": "Home",
+    "noArticles": "No articles yet.",
+    "by": "by",
+    "backToList": "Back to news",
+    "taggedWith": "Articles tagged"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "codeOfConduct": {
+    "title": "Code of Conduct",
+    "description": "DevFest Toulouse Code of Conduct.",
+    "home": "Home"
+  },
+  "legalNotice": {
+    "title": "Legal Notice",
+    "description": "DevFest Toulouse legal notice.",
+    "home": "Home"
   }
 }
