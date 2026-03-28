@@ -1,0 +1,482 @@
+# Lot 2 — Speakers, Sessions & Sponsors
+
+**Échéance** : 19 juin 2026
+**Objectif** : les speakers sélectionnés et les sponsors sont publiés simultanément.
+
+**Prérequis** : Lot 1 livré et en production.
+
+---
+
+## Table des matières
+
+1. [Règles de gestion](#règles-de-gestion)
+2. [User stories — Speakers](#user-stories--speakers)
+3. [User stories — Sponsors](#user-stories--sponsors)
+4. [User stories — Page d'accueil (compléments)](#user-stories--page-daccueil-compléments)
+5. [User stories — Authentification](#user-stories--authentification)
+6. [User stories — Espaces connectés](#user-stories--espaces-connectés)
+7. [User stories — Admin](#user-stories--admin)
+8. [Parcours utilisateur](#parcours-utilisateur)
+9. [Cas limites et erreurs](#cas-limites-et-erreurs)
+10. [Questions ouvertes](#questions-ouvertes)
+
+---
+
+## Règles de gestion
+
+> **Rappel transverse** : toutes les entités métier (speakers, sessions, sponsors) possèdent un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). Seules les entités publiées sont visibles sur le site public. Les nouvelles entités sont créées en brouillon par défaut.
+
+### Speakers
+
+| # | Règle |
+|---|-------|
+| RG-200 | Un speaker est associé à une ou plusieurs sessions d'une édition donnée. |
+| RG-201 | Les informations obligatoires d'un speaker sont : nom, photo. Les informations facultatives sont : entreprise, ville, biographie (FR + EN), liens sociaux. |
+| RG-202 | Un speaker peut être marqué « en vedette » pour apparaître sur la page d'accueil. |
+| RG-203 | La biographie d'un speaker est bilingue (FR + EN). |
+| RG-204 | Le lien entre un speaker et un sponsor (via l'entreprise) est établi manuellement par l'admin. |
+| RG-205 | La page de détail d'un speaker liste ses sessions de l'édition courante. |
+| RG-206 | Le slug d'un speaker est dérivé de son nom complet (ex. « marie-dupont ») et est unique par édition. |
+| RG-207 | La photo du speaker est redimensionnée et optimisée (WebP, taille max 400x400px). |
+| RG-208 | L'image OG d'un speaker est générée dynamiquement à la volée : photo + nom + branding DevFest (1200x630px). L'image est mise en cache CDN et invalidée à la modification de la fiche. |
+
+### Sessions
+
+| # | Règle |
+|---|-------|
+| RG-210 | Une session a obligatoirement : titre (FR + EN), description (FR + EN), au moins un speaker, un format, une catégorie, une langue. |
+| RG-211 | Les formats possibles sont : Conférence (40 min), Quickie (15 min), Keynote. |
+| RG-212 | Les niveaux possibles sont : Débutant, Intermédiaire, Confirmé. Si non renseigné, le niveau est considéré « Tous niveaux ». |
+| RG-213 | Une session appartient à une catégorie parmi celles définies pour l'édition courante. |
+| RG-214 | Le slug d'une session est dérivé du titre (ex. « kotlin-multiplatform-en-production »). |
+| RG-215 | L'image OG d'une session est générée dynamiquement à la volée : titre + speaker(s) + catégorie + branding DevFest (1200x630px). Mise en cache CDN, invalidée à la modification. |
+| RG-216 | Les champs salle et créneau horaire ne sont pas obligatoires dans le Lot 2 (assignés dans le Lot 3 — Programme). |
+| RG-217 | Les speakers et sessions peuvent être créés manuellement un par un dans le back-office. L'import depuis Sessionize (JSON/CSV) est une fonctionnalité complémentaire. L'import via API Sessionize est un bonus ultérieur. |
+
+### Sponsors
+
+| # | Règle |
+|---|-------|
+| RG-220 | Un sponsor est associé à une édition avec un niveau de sponsoring. |
+| RG-221 | Les niveaux de sponsoring sont ordonnés par importance décroissante : Platinum, Gold, Silver, Soutien, Communauté. |
+| RG-222 | Les informations obligatoires d'un sponsor sont : nom, logo, niveau de sponsoring. Les informations facultatives sont : site web, description (FR + EN), liens sociaux. |
+| RG-223 | L'affichage des sponsors sur la page liste respecte la hiérarchie des niveaux : Platinum d'abord (grandes cartes avec logo, nom et baseline optionnelle), puis Gold (cartes moyennes avec logo et nom), puis les autres (cartes moyennes avec logo et nom). Sur la page d'accueil, seul le logo est affiché (sans le nom). |
+| RG-224 | Les cartes sponsors ont un bandeau coloré selon le niveau : Platinum → Émeraude (#41B38E), Gold → Jaune (#FFD428), Silver/autres → Rose (#EE7CAD). |
+| RG-225 | La description d'un sponsor est bilingue (FR + EN). |
+| RG-226 | La page de détail d'un sponsor affiche les speakers travaillant pour cette entreprise (lien via RG-204). |
+| RG-227 | Le slug d'un sponsor est dérivé de son nom (ex. « ovhcloud »). |
+| RG-228 | Le logo du sponsor est redimensionné et optimisé (format originel respecté, taille max adaptée au niveau : 267x200px pour Platinum, 200x150px pour les autres). |
+| RG-229 | L'image OG d'un sponsor est son logo. |
+| RG-230 | Chaque édition définit quels niveaux de sponsoring sont ouverts. Seuls ces niveaux sont proposés lors de la création d'un sponsor. |
+| RG-231 | Le CTA « Devenir partenaire » redirige vers un Google Form externe (URL configurable par l'admin). |
+
+### Authentification admin
+
+| # | Règle |
+|---|-------|
+| RG-240 | Les admins s'authentifient via OAuth (Google ou GitHub). |
+| RG-241 | Seuls les admins ont un compte utilisateur sur le site. Les speakers et sponsors n'ont pas de compte. |
+
+### Liens de modification (speakers, sponsors, sessions)
+
+| # | Règle |
+|---|-------|
+| RG-242 | Chaque speaker, sponsor et session peut recevoir un **lien de modification** unique (token secret dans l'URL). Ce lien permet d'éditer la fiche sans authentification. |
+| RG-243 | Le lien de modification est envoyé par email à l'adresse de contact du speaker ou du sponsor. |
+| RG-244 | Un admin peut **révoquer** un lien de modification existant et en **générer un nouveau** (l'ancien devient invalide). |
+| RG-245 | Un admin peut rendre une fiche (speaker, sponsor ou session) **non éditable** hors admin (le lien de modification est désactivé sans être supprimé). |
+| RG-246 | **48h avant l'édition du DevFest**, tous les liens de modification sont automatiquement désactivés. Seuls les admins peuvent alors modifier les fiches. |
+| RG-247 | Le lien de modification donne accès uniquement à la fiche concernée (bio, photo, liens sociaux pour un speaker ; description, logo, liens pour un sponsor). Il ne donne pas accès au back-office admin. |
+| RG-248 | Le token dans l'URL est suffisamment long et aléatoire (min 32 caractères, crypto-random) pour ne pas être devinable. |
+| RG-249 | L'accès via un lien de modification révoqué ou désactivé affiche un message d'erreur clair invitant à contacter l'organisation. |
+| RG-250 | L'envoi des emails de lien de modification utilise la même infrastructure SMTP que le formulaire de contact (Postfix ou équivalent, cf. QO-006 du Lot 1). |
+| RG-251 | Si l'envoi de l'email échoue, l'admin voit un message d'erreur explicite et peut relancer l'envoi. |
+
+---
+
+## User stories — Speakers
+
+### US-200 : Page liste des speakers
+
+**En tant que** visiteur,
+**je veux** voir la liste de tous les speakers du DevFest 2026,
+**afin de** découvrir qui interviendra.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Speakers.
+- [ ] Grille de speaker cards (4 colonnes desktop, 2 tablette, 1 mobile).
+- [ ] Chaque card affiche : photo, nom, entreprise.
+- [ ] Clic sur une card → page de détail du speaker.
+- [ ] Les speakers sont triés par ordre alphabétique du nom.
+- [ ] `<title>` : « Speakers — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+
+### US-201 : Page détail d'un speaker
+
+**En tant que** visiteur,
+**je veux** consulter la fiche détaillée d'un speaker,
+**afin de** connaître son parcours et ses sessions.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Speakers > {Nom du speaker}.
+- [ ] Photo du speaker.
+- [ ] Nom, entreprise, ville.
+- [ ] Biographie complète (dans la langue de la page).
+- [ ] Liens sociaux (Twitter, GitHub, LinkedIn, Bluesky, site web) — icônes cliquables.
+- [ ] Liste des sessions associées au speaker (titre, format, catégorie) — cliquables vers la page de détail session. **Note** : la page de détail session complète est implémentée dans le Lot 3. En Lot 2, le lien mène vers une vue minimale (titre, description, speaker(s)) sans salle ni créneau horaire.
+- [ ] `<title>` : « {Nom du speaker} — DevFest Toulouse 2026 ».
+- [ ] Image OG générée dynamiquement (RG-208).
+- [ ] Données structurées Schema.org `Person` (name, image, jobTitle, worksFor, sameAs).
+
+### US-202 : Section Speakers en vedette (page d'accueil)
+
+**En tant que** visiteur,
+**je veux** voir des speakers en vedette sur la page d'accueil,
+**afin de** découvrir les intervenants phares.
+
+**Critères d'acceptation :**
+- [ ] Section affichée entre la section Sponsors et la section Actualités (ou à l'emplacement défini par le design).
+- [ ] Grille de 4 à 8 speakers marqués « en vedette » (RG-202).
+- [ ] Chaque speaker affiche : photo, nom, entreprise.
+- [ ] Clic → page de détail du speaker.
+- [ ] Si aucun speaker n'est marqué en vedette, la section est masquée.
+- [ ] Lien « Voir tous les speakers » menant vers la page Speakers.
+
+---
+
+## User stories — Sponsors
+
+### US-210 : Page liste des sponsors
+
+**En tant que** visiteur,
+**je veux** voir tous les sponsors du DevFest 2026,
+**afin de** connaître les entreprises qui soutiennent l'événement.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Partenaires.
+- [ ] Sponsors affichés par niveau hiérarchique (RG-223) :
+  - Platinum : grandes cartes (340x481px), bandeau Émeraude, logo (267x200px), nom (40px Bold), baseline en italique.
+  - Gold : cartes moyennes (340x240px), bandeau Jaune, logo (200x150px), nom (32px Bold).
+  - Silver/autres : cartes moyennes (340x240px), bandeau Rose, logo (200x150px), nom (32px Bold).
+- [ ] Clic sur une carte → page de détail du sponsor.
+- [ ] CTA « Devenir partenaire » visible (lien vers formulaire/page partenariat).
+- [ ] `<title>` : « Partenaires — DevFest Toulouse 2026 ».
+- [ ] La page est bilingue FR/EN.
+
+### US-211 : Page détail d'un sponsor
+
+**En tant que** visiteur,
+**je veux** en savoir plus sur un sponsor,
+**afin de** comprendre son activité et son lien avec la tech.
+
+**Critères d'acceptation :**
+- [ ] Breadcrumb : Accueil > Partenaires > {Nom du sponsor}.
+- [ ] Layout deux colonnes (desktop) :
+  - Gauche (616px) : description longue du sponsor (dans la langue de la page).
+  - Droite (512px) : logo (512x300px) + liens sociaux.
+- [ ] Liens sociaux : icônes cliquables (Twitter, LinkedIn, site web...).
+- [ ] Section « Speakers de {Nom du sponsor} » listant les speakers associés (RG-226), cliquables.
+- [ ] `<title>` : « {Nom du sponsor} — DevFest Toulouse 2026 ».
+- [ ] Image OG : logo du sponsor (RG-229).
+- [ ] Données structurées Schema.org `Organization` (name, logo, url, sameAs).
+
+### US-212 : Section Partenaires (page d'accueil)
+
+**En tant que** visiteur,
+**je veux** voir les sponsors du DevFest sur la page d'accueil,
+**afin de** connaître les entreprises partenaires.
+
+**Critères d'acceptation :**
+- [ ] Titre : « Ils soutiennent le #DevFestToulouse ».
+- [ ] CTA « Devenir Partenaire ».
+- [ ] Grille de cartes sponsors par niveau (Platinum en grand, puis Gold, puis autres) — même design que la page Partenaires.
+- [ ] Illustration croix occitane en fond (coin haut droit).
+- [ ] Clic sur une carte → page de détail du sponsor.
+- [ ] Si aucun sponsor n'est publié, la section est masquée.
+
+---
+
+## User stories — Authentification
+
+### US-220 : Connexion admin
+
+**En tant qu'** admin,
+**je veux** me connecter au back-office,
+**afin de** gérer le contenu du site.
+
+**Critères d'acceptation :**
+- [ ] Connexion via OAuth Google ou GitHub (RG-240).
+- [ ] Après connexion réussie, redirection vers le dashboard admin.
+- [ ] Seuls les comptes autorisés (liste blanche configurée) peuvent se connecter comme admin.
+
+### US-221 : Lien de modification speaker/sponsor
+
+**En tant qu'** admin,
+**je veux** envoyer un lien de modification à un speaker ou un sponsor,
+**afin qu'** il puisse éditer sa fiche sans avoir de compte.
+
+**Critères d'acceptation :**
+- [ ] Bouton « Envoyer le lien de modification » sur la fiche admin d'un speaker ou sponsor.
+- [ ] L'email est envoyé à l'adresse de contact avec un lien unique contenant un token crypto-random (min 32 caractères) (RG-242, RG-248).
+- [ ] L'admin peut révoquer le lien et en générer un nouveau (RG-244).
+- [ ] L'admin peut verrouiller la fiche (désactiver le lien sans le supprimer) (RG-245).
+- [ ] Un lien révoqué ou désactivé affiche un message d'erreur clair (RG-249).
+- [ ] 48h avant l'événement, tous les liens sont automatiquement désactivés (RG-246).
+
+---
+
+## User stories — Espaces connectés
+
+### US-230 : Speaker — édition via lien de modification
+
+**En tant que** speaker ayant reçu un lien de modification,
+**je veux** modifier ma biographie, ma photo et mes liens sociaux,
+**afin de** présenter un profil à jour sur le site.
+
+**Critères d'acceptation :**
+- [ ] L'accès via le lien affiche directement le formulaire d'édition de la fiche (pas de login).
+- [ ] Champs éditables : biographie (FR + EN), photo (upload avec recadrage), entreprise, ville, liens sociaux (ajout/suppression).
+- [ ] Prévisualisation de la fiche telle qu'elle apparaîtra sur le site public.
+- [ ] Bouton « Enregistrer » — les modifications sont visibles après purge du cache.
+- [ ] Le speaker ne peut pas modifier ses sessions ni son nom (RG-247).
+- [ ] La photo uploadée est validée : format (JPEG, PNG, WebP), taille max 5 Mo, dimensions min 200x200px.
+- [ ] Si le lien est révoqué ou désactivé, message d'erreur clair (RG-249).
+
+### US-231 : Sponsor — édition via lien de modification
+
+**En tant que** sponsor ayant reçu un lien de modification,
+**je veux** modifier la description et le logo de mon entreprise,
+**afin de** contrôler mon image sur le site du DevFest.
+
+**Critères d'acceptation :**
+- [ ] L'accès via le lien affiche directement le formulaire d'édition de la fiche (pas de login).
+- [ ] Champs éditables : description (FR + EN), logo (upload), site web, liens sociaux (ajout/suppression).
+- [ ] Prévisualisation de la fiche.
+- [ ] Bouton « Enregistrer » — modifications immédiates (après purge du cache).
+- [ ] Le sponsor ne peut pas modifier son nom ni son niveau de sponsoring (géré par l'admin).
+- [ ] Le logo uploadé est validé : format (JPEG, PNG, SVG, WebP), taille max 2 Mo.
+- [ ] Si le lien est révoqué ou désactivé, message d'erreur clair (RG-249).
+
+---
+
+## User stories — Admin
+
+### US-240 : Gestion des speakers (CRUD)
+
+**En tant qu'** admin,
+**je veux** gérer les fiches speakers,
+**afin de** publier la liste des intervenants.
+
+**Critères d'acceptation :**
+- [ ] Liste des speakers avec recherche et tri.
+- [ ] Création d'un speaker : nom, photo, entreprise, ville, biographie (FR + EN), liens sociaux, flag « en vedette ».
+- [ ] Modification de tous les champs d'un speaker.
+- [ ] Suppression avec confirmation (et dissociation des sessions).
+- [ ] Gestion du lien de modification : envoyer, révoquer, verrouiller (US-221).
+- [ ] Association manuelle avec un sponsor (RG-204).
+- [ ] Import depuis Sessionize (JSON/CSV) en complément de la création manuelle (RG-217).
+- [ ] Après création/modification/suppression, purge du cache des pages impactées.
+
+### US-241 : Gestion des sessions (CRUD)
+
+**En tant qu'** admin,
+**je veux** gérer les sessions,
+**afin de** publier le contenu des conférences.
+
+**Critères d'acceptation :**
+- [ ] Liste des sessions avec recherche, tri et filtres (format, catégorie, langue).
+- [ ] Création d'une session : titre (FR + EN), description (FR + EN), speaker(s) (multi-select), format, catégorie, niveau, langue.
+- [ ] Modification de tous les champs.
+- [ ] Suppression avec confirmation.
+- [ ] Import depuis Sessionize (si applicable).
+- [ ] Les champs salle et créneau horaire sont disponibles mais non obligatoires (utilisés dans le Lot 3).
+- [ ] Après modification, purge du cache des pages impactées.
+
+### US-242 : Gestion des sponsors (CRUD)
+
+**En tant qu'** admin,
+**je veux** gérer les fiches sponsors,
+**afin de** publier la liste des partenaires.
+
+**Critères d'acceptation :**
+- [ ] Liste des sponsors avec recherche et tri.
+- [ ] Création : nom, logo, niveau de sponsoring (parmi les niveaux ouverts pour l'édition — RG-230), site web, description (FR + EN), liens sociaux.
+- [ ] Modification de tous les champs (y compris le niveau de sponsoring).
+- [ ] Suppression avec confirmation.
+- [ ] Gestion du lien de modification : envoyer, révoquer, verrouiller (US-221).
+- [ ] Après modification, purge du cache des pages impactées.
+
+### US-243 : API de gestion des conférences
+
+**En tant qu'** admin ou système externe,
+**je veux** une API REST pour gérer les sessions et speakers,
+**afin de** automatiser l'import depuis Sessionize.
+
+**Critères d'acceptation :**
+- [ ] Endpoints CRUD pour les speakers : `GET/POST /api/speakers`, `GET/PUT/DELETE /api/speakers/:id`.
+- [ ] Endpoints CRUD pour les sessions : `GET/POST /api/sessions`, `GET/PUT/DELETE /api/sessions/:id`.
+- [ ] Authentification requise (JWT, rôle admin).
+- [ ] Validation des données en entrée.
+- [ ] Réponses JSON avec codes HTTP standard (200, 201, 400, 401, 403, 404, 422).
+
+### US-244 : API de gestion des sponsors
+
+**En tant qu'** admin,
+**je veux** une API REST pour gérer les sponsors,
+**afin de** pouvoir automatiser ou intégrer.
+
+**Critères d'acceptation :**
+- [ ] Endpoints CRUD : `GET/POST /api/sponsors`, `GET/PUT/DELETE /api/sponsors/:id`.
+- [ ] Authentification requise (JWT, rôle admin).
+- [ ] Validation des données en entrée.
+- [ ] Réponses JSON standard.
+
+### US-245 : Gestion des niveaux de sponsoring par édition
+
+**En tant qu'** admin,
+**je veux** définir quels niveaux de sponsoring sont ouverts pour l'édition courante,
+**afin de** ne proposer que les niveaux pertinents.
+
+**Critères d'acceptation :**
+- [ ] Interface admin pour sélectionner les niveaux ouverts parmi : Platinum, Gold, Silver, Soutien, Communauté.
+- [ ] Les niveaux non sélectionnés ne sont pas proposés lors de la création d'un sponsor.
+
+### US-246 : Gestion des catégories de sessions
+
+**En tant qu'** admin,
+**je veux** définir les catégories (tracks) de l'édition courante,
+**afin de** classifier les sessions.
+
+**Critères d'acceptation :**
+- [ ] Interface admin pour créer, modifier, supprimer des catégories.
+- [ ] Chaque catégorie a un nom (FR + EN) et une couleur associée.
+- [ ] Les catégories sont associées à l'édition courante.
+
+---
+
+## User stories — Souhaitable (Lot 2)
+
+### US-250 : Génération de visuels speakers pour les réseaux sociaux
+
+**En tant qu'** admin,
+**je veux** générer des visuels de promotion pour chaque speaker,
+**afin de** faciliter la communication sur les réseaux sociaux.
+
+**Critères d'acceptation :**
+- [ ] Bouton « Générer le visuel » sur la fiche admin d'un speaker.
+- [ ] Le visuel inclut : photo du speaker, nom, titre de la session, branding DevFest.
+- [ ] Export en PNG 1200x630px (format OG / réseaux sociaux).
+- [ ] Possibilité de générer en lot (tous les speakers d'un coup).
+
+---
+
+## Parcours utilisateur
+
+### Parcours 1 : Découverte des speakers
+
+1. Le visiteur arrive sur la page d'accueil.
+2. Il voit la section « Speakers en vedette » avec 4-8 speakers.
+3. Il clique sur un speaker → page de détail.
+4. Il lit la biographie et voit les sessions associées.
+5. Il clique sur une session → page de détail session (titre, description, mais pas encore de salle/créneau — Lot 3).
+6. Il clique sur « Speakers » dans le breadcrumb → liste complète.
+7. Il parcourt la grille et clique sur un autre speaker.
+
+### Parcours 2 : Découverte des sponsors
+
+1. Le visiteur scrolle la page d'accueil et voit la section Partenaires.
+2. Il clique sur une carte sponsor Platinum → page de détail.
+3. Il lit la description, voit le logo et les liens sociaux.
+4. Il voit la section « Speakers de {Sponsor} » — deux speakers travaillent pour ce sponsor.
+5. Il clique sur un speaker → page de détail speaker.
+6. Il revient aux partenaires via le breadcrumb.
+
+### Parcours 3 : Speaker édite sa fiche
+
+1. L'admin crée la fiche du speaker dans le back-office et clique sur « Envoyer le lien de modification ».
+2. Le speaker reçoit un email contenant un lien de modification unique.
+3. Il clique sur le lien → il accède directement au formulaire d'édition de sa fiche (pas de login).
+4. Il voit sa fiche actuelle (photo, bio, liens sociaux).
+5. Il met à jour sa biographie en français et en anglais.
+6. Il ajoute un lien Bluesky.
+7. Il uploade une nouvelle photo (le système la recadre/optimise).
+8. Il clique sur « Enregistrer ».
+9. Il voit la prévisualisation mise à jour.
+10. La fiche publique est mise à jour après purge du cache.
+
+### Parcours 4 : Sponsor édite sa fiche
+
+1. L'admin crée la fiche du sponsor dans le back-office et clique sur « Envoyer le lien de modification ».
+2. Le sponsor reçoit un email contenant un lien de modification unique.
+3. Il clique sur le lien → il accède directement au formulaire d'édition de sa fiche (pas de login).
+4. Il met à jour la description de son entreprise (FR + EN).
+5. Il uploade un nouveau logo.
+6. Il clique sur « Enregistrer » → la fiche publique est mise à jour après purge du cache.
+
+### Parcours 5 : Admin publie les speakers
+
+1. L'admin accède à la section « Speakers » du back-office.
+2. Il clique sur « Importer depuis Sessionize » (si disponible) ou crée manuellement.
+3. Il crée un speaker : nom, photo, entreprise, bio FR + EN.
+4. Il l'associe à une session existante.
+5. Il marque certains speakers « en vedette ».
+6. Il envoie un lien de modification au speaker (US-221) pour qu'il puisse compléter sa fiche.
+7. Il publie → les pages publiques sont mises à jour.
+
+---
+
+## Cas limites et erreurs
+
+### Speakers
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Speaker sans photo | Un placeholder est affiché (silhouette avec les couleurs DevFest). Le visuel OG utilise le placeholder. |
+| Speaker sans session | Le speaker apparaît dans la liste mais sans section « Sessions » sur sa page de détail. |
+| Speaker avec plusieurs sessions | Toutes les sessions sont listées sur la page de détail. |
+| Deux speakers avec le même nom | Le slug est dédupliqué (ex. « jean-martin-2 »). |
+| Speaker supprimé alors qu'il a des sessions | L'admin doit d'abord dissocier les sessions (ou confirmation avec dissociation automatique). |
+| Speaker avec biographie dans une seule langue | La version manquante affiche la version disponible (fallback vers l'autre langue). |
+
+### Sponsors
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Sponsor sans description | La page de détail affiche uniquement le logo et les liens sociaux (pas de colonne gauche). |
+| Sponsor sans logo | Un placeholder est affiché (carré avec le nom en texte). |
+| Aucun speaker associé au sponsor | La section « Speakers de {Sponsor} » est masquée. |
+| Tous les sponsors d'un niveau supprimés | Le groupe de ce niveau disparaît de la page Partenaires. |
+| Aucun sponsor publié | La section Partenaires de la page d'accueil est masquée. La page Partenaires affiche un message. |
+
+### Liens de modification
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Lien de modification révoqué | Message d'erreur clair invitant à contacter l'organisation (RG-249). |
+| Lien de modification désactivé (fiche verrouillée) | Message d'erreur clair invitant à contacter l'organisation (RG-249). |
+| Lien de modification expiré (48h avant l'événement) | Message « Les modifications sont clôturées. Contactez l'organisation si nécessaire » (RG-246). |
+| Token invalide ou inexistant dans l'URL | Page 404. |
+| Échec d'envoi de l'email de lien de modification | L'admin voit un message d'erreur et peut relancer l'envoi (RG-251). |
+
+### Upload d'images
+
+| Cas | Comportement attendu |
+|-----|---------------------|
+| Image trop lourde (> 5 Mo speaker, > 2 Mo logo) | Message d'erreur « Le fichier est trop volumineux. Taille maximale : X Mo ». |
+| Format non supporté | Message d'erreur « Format non supporté. Formats acceptés : JPEG, PNG, WebP ». |
+| Image trop petite (< 200x200px pour speaker) | Message d'erreur « L'image doit faire au moins 200x200 pixels ». |
+
+---
+
+## Questions ouvertes
+
+| # | Question | Impact |
+|---|----------|--------|
+| ~~QO-020~~ | ~~Import Sessionize ?~~ **Résolu** : en priorité création manuelle, puis import Sessionize (JSON/CSV), puis API Sessionize en bonus (RG-217). | — |
+| ~~QO-021~~ | ~~Lien speaker-sponsor automatique ou manuel ?~~ **Résolu** : manuel par l'admin (RG-204). | — |
+| ~~QO-022~~ | ~~Invitation speakers/sponsors ?~~ **Résolu** : pas de compte utilisateur. Un lien de modification unique est envoyé par email. L'admin peut le révoquer, le recréer, ou verrouiller la fiche. Gel automatique 48h avant l'événement (RG-242 à RG-249). | — |
+| ~~QO-023~~ | ~~Images OG : à la volée ou en batch ?~~ **Résolu** : à la volée avec cache CDN. L'image est générée au premier accès, mise en cache, et invalidée lors de la modification de la fiche (même logique que les pages HTML). | — |
+| ~~QO-024~~ | ~~CTA « Devenir partenaire » ?~~ **Résolu** : redirige vers un Google Form externe, URL configurable (RG-231). | — |
+| ~~QO-025~~ | ~~Fournisseur OAuth ?~~ **Résolu** : Google + GitHub pour les admins (RG-240). | — |
+| ~~QO-026~~ | ~~Baseline Platinum obligatoire ?~~ **Résolu** : non, la baseline est optionnelle. Sur la page d'accueil, seul le logo est affiché (sans le nom) (RG-223). | — |
+| ~~QO-027~~ | ~~Brouillon pour les sessions ?~~ **Résolu** : oui. Toutes les entités métier ont un statut brouillon/publié (cf. RG-085 à RG-089 du Lot 1). | — |

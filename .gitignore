@@ -1,0 +1,6 @@
+# Claude Code local settings
+.claude/settings.local.json
+.claude/worktrees/
+
+# Source documents (content captured in design-system.md)
+docs/CharteGraphique_Devfest2024.pdf
