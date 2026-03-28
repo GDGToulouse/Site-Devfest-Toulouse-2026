@@ -42,7 +42,7 @@
   --color-link-footer: #FDF0EB;
 
   /* --- Typography --- */
-  --font-sans: 'Google Sans', system-ui, sans-serif;
+  --font-sans: var(--font-google-sans), system-ui, sans-serif;
 
   /* --- Shadows --- */
   --shadow-header: 0 4px 12px rgba(29, 29, 27, 0.10);

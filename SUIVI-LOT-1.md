@@ -16,7 +16,7 @@ Pas de pages visibles encore. On pose l'infrastructure.
 | 1.2 | Docker Compose : frontend + backend + BDD + SMTP (MailHog pour dev) | RG-064 | DONE |
 | 1.3 | Structure i18n : routing `/fr/...` `/en/...`, fichiers de traduction, middleware redirect `/` → `/fr/` | RG-030→038, US-103 | DONE |
 | 1.4 | Design tokens CSS (couleurs, typographies, espacements, ombres, radius) depuis design-system.md | — | DONE |
-| 1.5 | Google Sans : chargement via next/font/local | RG-055 | BLOCKED (fichiers police manquants) |
+| 1.5 | Google Sans : chargement via next/font/google | RG-055 | DONE |
 | 1.6 | Font Awesome : intégration (subset des icônes utilisées) | — | TODO |
 | 1.7 | Base de données : schema Prisma v7 (édition, article, palier billetterie, message contact, catégorie contact, page contenu, settings) | — | DONE |
 | 1.8 | Auth admin (Better Auth — Google + GitHub OAuth) | — | DONE |

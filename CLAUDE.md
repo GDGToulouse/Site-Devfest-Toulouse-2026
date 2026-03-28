@@ -112,12 +112,12 @@ Always consult these documents before making assumptions about features or archi
 - Stage specific files only — never `git add .` or `git add -A`
 - Use Context7 MCP to fetch up-to-date library docs before using fast-moving dependencies
 - Run each git command in its own separate Bash call — never chain with `cd` or `&&`
-- Never use `git -C` — always run git from the repo root
 
 ### Never
 - Never force-push to `main`
 - Never skip git hooks (`--no-verify`)
 - Never chain multiple git commands in a single Bash call
+- Never use `git -C` — always run git from the repo root
 
 ## MCP — Context7
 
