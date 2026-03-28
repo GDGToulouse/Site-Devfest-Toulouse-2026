@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
@@ -24,27 +25,35 @@ export default function Header() {
       role="banner"
       className="sticky top-0 z-40 h-[60px] bg-blanc shadow-header"
     >
-      <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between px-4 lg:px-[100px]">
-        {/* Logo */}
-        <Link href="/" className="flex items-center shrink-0">
-          <span className="text-lg font-bold">
-            <span className="text-malachite">&lt;&gt;</span>{" "}
-            <span className="text-noir">DevFest</span>
-          </span>
-        </Link>
+      <div className="mx-auto flex h-full max-w-[1440px] items-center px-4 lg:px-[100px]">
+        {/* Logo + Nav grouped on left */}
+        <div className="flex items-center gap-8">
+          <Link href="/" className="shrink-0">
+            <Image
+              src="/images/logo-devfest-96.png"
+              alt="DevFest Toulouse"
+              width={40}
+              height={40}
+              className="rounded-full"
+            />
+          </Link>
 
-        {/* Desktop nav */}
-        <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.key}
-              href={link.href}
-              className="text-gris text-base hover:text-noir transition-colors"
-            >
-              {t(link.key)}
-            </Link>
-          ))}
-        </nav>
+          {/* Desktop nav — right of logo */}
+          <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.key}
+                href={link.href}
+                className="text-gris text-base hover:text-noir transition-colors"
+              >
+                {t(link.key)}
+              </Link>
+            ))}
+          </nav>
+        </div>
+
+        {/* Spacer */}
+        <div className="flex-1" />
 
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-4">
@@ -53,7 +62,7 @@ export default function Header() {
             href="https://forms.gle/devfest-partenaire"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-s border border-bleu px-4 py-2 text-sm font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
+            className="rounded-l border-3 border-bleu px-5 py-2 text-sm font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
           >
             {tCta("becomePartner")}
           </a>
@@ -61,7 +70,7 @@ export default function Header() {
             href="https://sessionize.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-s bg-bleu px-4 py-2 text-sm font-bold text-blanc hover:opacity-90 transition-opacity"
+            className="rounded-l bg-bleu px-5 py-2 text-sm font-bold text-blanc hover:bg-bleu/90 transition-colors"
           >
             {tCta("submitTalk")}
           </a>
@@ -109,7 +118,7 @@ export default function Header() {
               href="https://forms.gle/devfest-partenaire"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-s border border-bleu px-4 py-2 text-sm font-bold text-bleu text-center"
+              className="rounded-l border-3 border-bleu px-4 py-2 text-sm font-bold text-bleu text-center"
             >
               {tCta("becomePartner")}
             </a>
@@ -117,7 +126,7 @@ export default function Header() {
               href="https://sessionize.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-s bg-bleu px-4 py-2 text-sm font-bold text-blanc text-center"
+              className="rounded-l bg-bleu px-4 py-2 text-sm font-bold text-blanc text-center"
             >
               {tCta("submitTalk")}
             </a>

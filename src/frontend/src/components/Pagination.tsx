@@ -35,7 +35,7 @@ export default function Pagination({
       {currentPage > 1 && (
         <Link
           href={buildHref(currentPage - 1)}
-          className="px-4 py-2 rounded-s border border-gris-clair text-gris hover:bg-blanc-casse transition-colors"
+          className="px-4 py-2 rounded-l border border-gris-clair text-gris hover:bg-blanc-casse transition-colors"
         >
           {t("previous")}
         </Link>
@@ -45,7 +45,7 @@ export default function Pagination({
         <Link
           key={page}
           href={buildHref(page)}
-          className={`px-4 py-2 rounded-s transition-colors ${
+          className={`px-4 py-2 rounded-l transition-colors ${
             page === currentPage
               ? "bg-bleu text-blanc font-bold"
               : "border border-gris-clair text-gris hover:bg-blanc-casse"
@@ -59,7 +59,7 @@ export default function Pagination({
       {currentPage < totalPages && (
         <Link
           href={buildHref(currentPage + 1)}
-          className="px-4 py-2 rounded-s border border-gris-clair text-gris hover:bg-blanc-casse transition-colors"
+          className="px-4 py-2 rounded-l border border-gris-clair text-gris hover:bg-blanc-casse transition-colors"
         >
           {t("next")}
         </Link>

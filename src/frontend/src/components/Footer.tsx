@@ -49,7 +49,7 @@ export default async function Footer() {
 
             <Link
               href="/contact"
-              className="inline-block rounded-s bg-bleu px-[18px] py-3 text-base font-bold text-blanc hover:opacity-90 transition-opacity w-fit"
+              className="inline-block rounded-l bg-bleu px-[18px] py-3 text-base font-bold text-blanc hover:opacity-90 transition-opacity w-fit"
             >
               {tCta("contactUs")}
             </Link>

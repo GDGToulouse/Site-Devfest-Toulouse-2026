@@ -18,7 +18,7 @@ export default function LanguageSwitcher() {
   return (
     <button
       onClick={handleSwitch}
-      className="text-sm text-gris hover:text-noir transition-colors px-2 py-1 rounded-s border border-gris-clair hover:border-noir"
+      className="text-sm text-gris hover:text-noir transition-colors px-4 py-1.5 rounded-l border-2 border-gris-clair hover:border-noir"
       aria-label={t("switchTo")}
     >
       {otherLocale.toUpperCase()}
