@@ -1,12 +1,13 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
-import { auth, isAdminEmail } from "./lib/auth.js";
+import { auth } from "./lib/auth.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import contactRoutes from "./routes/contact.js";
+import adminRoutes from "./routes/admin/index.js";
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
@@ -64,17 +65,8 @@ await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });
 await app.register(contactRoutes, { prefix: "/api" });
 
-// Admin guard — reusable hook
-export async function requireAdmin(request: import("fastify").FastifyRequest, reply: import("fastify").FastifyReply) {
-  const session = await auth.api.getSession({
-    headers: request.headers as unknown as Headers,
-  });
-
-  if (!session || !isAdminEmail(session.user.email)) {
-    reply.status(403).send({ error: "Forbidden" });
-    return;
-  }
-}
+// Admin routes (protected by requireAdmin hook)
+await app.register(adminRoutes, { prefix: "/api/admin" });
 
 try {
   await app.listen({ port, host });
