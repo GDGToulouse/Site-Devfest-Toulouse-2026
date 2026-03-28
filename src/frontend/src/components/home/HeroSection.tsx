@@ -76,27 +76,25 @@ export default function HeroSection() {
                 {t("venue")}
               </p>
             </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Buttons — completely outside the photo area, on plain white background */}
-      <div className="mx-auto max-w-[1440px] px-8 lg:px-16 pt-[50px] pb-12">
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link
-            href="/contact"
-            className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-base hover:bg-bleu hover:text-blanc transition-colors text-center"
-          >
-            {t("ctaPartner")}
-          </Link>
-          <a
-            href="https://sessionize.com"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-8 py-5 rounded-[12px] bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors text-center"
-          >
-            {t("ctaTalk")}
-          </a>
+            {/* Buttons — inside the staircase area, separated by button height */}
+            <div className="mt-16 pl-8 lg:pl-[175px] flex flex-col sm:flex-row gap-4">
+              <Link
+                href="/contact"
+                className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-base hover:bg-bleu hover:text-blanc transition-colors text-center"
+              >
+                {t("ctaPartner")}
+              </Link>
+              <a
+                href="https://sessionize.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-8 py-5 rounded-[12px] bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors text-center"
+              >
+                {t("ctaTalk")}
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
