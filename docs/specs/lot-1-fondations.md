@@ -169,10 +169,14 @@
 | # | Règle |
 |---|-------|
 | RG-110 | Le formulaire de contact comprend les champs : prénom (obligatoire), nom (obligatoire), email (obligatoire, format email validé), téléphone (facultatif), objet (obligatoire, dropdown), message (obligatoire, min 10 caractères). |
-| RG-111 | Les objets possibles dans le dropdown sont : « Partenariat », « Presse / Média », « Accessibilité », « Question générale », « Autre ». |
+| RG-111 | Les catégories du formulaire de contact sont configurables par l'admin. Chaque catégorie a un libellé (bilingue FR/EN) et une ou plusieurs adresses email de destination (séparées par des virgules). |
+| RG-149 | Une adresse email par défaut est configurable par l'admin (ex. `contact@devfesttoulouse.fr`). Elle est utilisée comme destinataire quand aucune catégorie n'est définie, ou pour la catégorie automatique « Autre ». |
+| RG-150 | Si aucune catégorie n'est configurée, le champ « Objet » n'est pas affiché et tous les messages sont envoyés à l'adresse par défaut. |
+| RG-151 | Dès qu'au moins une catégorie est configurée, une catégorie « Autre » est automatiquement ajoutée en fin de liste. Elle envoie à l'adresse par défaut. Elle n'est pas modifiable ni supprimable par l'admin. |
+| RG-152 | L'envoi d'un message de contact utilise l'adresse de destination de la catégorie sélectionnée. Si plusieurs adresses, le message est envoyé à toutes. |
 | RG-112 | Le formulaire est protégé contre le spam (CAPTCHA invisible ou honeypot). |
 | RG-113 | Après soumission réussie, un message de confirmation est affiché sur la page (pas de redirection). |
-| RG-114 | Les messages de contact sont envoyés par email à contact@devfesttoulouse.fr via SMTP local (Postfix ou équivalent). |
+| RG-114 | Les messages de contact sont envoyés par email via SMTP local (Postfix ou équivalent) à l'adresse de destination correspondant à la catégorie sélectionnée (RG-111, RG-149, RG-152). |
 | RG-115 | Les messages de contact sont stockés en base de données en plus de l'envoi email, pour consultation depuis l'interface admin. |
 | RG-117 | La conservation des messages de contact est mentionnée dans la politique RGPD (Mentions légales). Les messages peuvent être supprimés par un admin. |
 | RG-116 | L'encart latéral affiche : une note sur les délais de réponse (« Nous sommes bénévoles, merci pour votre patience ») et les liens vers les réseaux sociaux. |
@@ -502,7 +506,7 @@
   - Prénom + Nom côte à côte (292px chacun)
   - Email (pleine largeur)
   - Téléphone (pleine largeur, facultatif)
-  - Objet (dropdown avec les valeurs de RG-111)
+  - Objet (dropdown avec les catégories configurées par l'admin + « Autre » automatique — masqué si aucune catégorie configurée, cf. RG-111, RG-150, RG-151)
   - Message (textarea, pleine largeur, 400px de haut)
   - Bouton « Envoyer » (CTA centré)
 - [ ] Validation côté client : champs obligatoires, format email, longueur min du message (RG-144).
@@ -620,6 +624,23 @@
 - [ ] Éditeur de contenu riche bilingue (FR + EN) pour chaque page de contenu.
 - [ ] Après modification, le cache de la page concernée est purgé.
 
+### US-197 : Gestion des catégories du formulaire de contact
+
+**En tant qu'** admin,
+**je veux** configurer les catégories du formulaire de contact et leurs destinataires,
+**afin que** les messages soient envoyés aux bonnes personnes selon le sujet.
+
+**Critères d'acceptation :**
+- [ ] Champ « Adresse email par défaut » (obligatoire). Utilisée quand aucune catégorie n'existe ou pour la catégorie « Autre » (RG-149).
+- [ ] Liste des catégories existantes avec : libellé FR, libellé EN, adresses email de destination (RG-111).
+- [ ] Ajout d'une catégorie : libellé FR (obligatoire), libellé EN (obligatoire), emails de destination (obligatoire, un ou plusieurs séparés par des virgules).
+- [ ] Validation des adresses email au format correct à la saisie.
+- [ ] Modification d'une catégorie existante (libellé, emails).
+- [ ] Suppression d'une catégorie avec confirmation.
+- [ ] Réordonnancement des catégories par glisser-déposer (l'ordre détermine l'affichage dans le dropdown).
+- [ ] La catégorie « Autre » est affichée en bas de la liste en lecture seule, visible uniquement quand au moins une catégorie existe (RG-151).
+- [ ] Quand aucune catégorie n'est configurée, un message indique que le champ Objet ne sera pas affiché et que tous les messages iront à l'adresse par défaut (RG-150).
+
 ### US-195 : Consultation des messages de contact
 
 **En tant qu'** admin,
@@ -627,7 +648,8 @@
 **afin de** pouvoir y répondre et suivre les demandes.
 
 **Critères d'acceptation :**
-- [ ] Liste des messages triés par date (plus récent en premier) avec : date, nom, email, objet, extrait du message.
+- [ ] Liste des messages triés par date (plus récent en premier) avec : date, nom, email, catégorie (ou « — » si aucune), extrait du message.
+- [ ] Filtrage par catégorie de contact.
 - [ ] Page de détail d'un message avec le contenu complet.
 - [ ] Possibilité de supprimer un message (RG-117, RGPD).
 - [ ] Indicateur lu/non lu pour suivre le traitement.
@@ -734,6 +756,9 @@
 | Erreur serveur à l'envoi | Message d'erreur « Une erreur est survenue. Veuillez réessayer ou nous contacter directement à contact@devfesttoulouse.fr ». |
 | Soumission multiple rapide | Le bouton « Envoyer » est désactivé pendant le traitement (loading spinner). |
 | Bot/spam | Le CAPTCHA invisible ou honeypot bloque la soumission sans message visible pour les humains. |
+| Aucune catégorie configurée | Le champ Objet n'est pas affiché. Le message est envoyé à l'adresse par défaut (RG-150). |
+| Catégorie supprimée alors que des messages y sont associés | Les messages existants conservent le libellé de l'ancienne catégorie (stocké en texte, pas en référence). |
+| Adresse email de destination invalide dans une catégorie | L'envoi échoue pour cette adresse mais le message est stocké en BDD. L'admin peut corriger l'adresse et le visiteur n'est pas bloqué. |
 
 ### SEO et cache
 
