@@ -1,26 +1,74 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* ========================================
+   * DevFest Toulouse 2026 — Design Tokens
+   * Source: docs/design-system.md
+   * ======================================== */
+
+  /* --- Colors: Primary --- */
+  --color-bismarck: #B94420;
+  --color-terre-cuite: #EC6839;
+  --color-incarnadin: #F4A598;
+  --color-malachite: #109E6E;
+  --color-emeraude: #41B38E;
+  --color-menthe: #8BCBB7;
+  --color-eau: #C0E1D7;
+
+  /* --- Colors: Secondary --- */
+  --color-bleu: #507BBD;
+  --color-bleu-2: #63C6F2;
+  --color-bleu-3: #C4E6F1;
+  --color-vert-1: #31A853;
+  --color-vert-2: #72BA69;
+  --color-vert-3: #CDE3C0;
+  --color-orange: #F8AB06;
+  --color-jaune: #FFD428;
+  --color-jaune-clair: #FFE8A5;
+  --color-rouge: #E84336;
+  --color-rose: #EE7CAD;
+  --color-rose-clair: #F8D8D8;
+
+  /* --- Colors: Neutrals --- */
+  --color-noir: #1D1D1B;
+  --color-gris: #777776;
+  --color-gris-clair: #8E8E8D;
+  --color-gris-placeholder: #808080;
+  --color-blanc: #FFFFFF;
+  --color-blanc-casse: #FDF0EB;
+
+  /* --- Colors: Semantic --- */
+  --color-link: #703B27;
+  --color-link-footer: #FDF0EB;
+
+  /* --- Typography --- */
+  --font-sans: 'Google Sans', system-ui, sans-serif;
+
+  /* --- Shadows --- */
+  --shadow-header: 0 4px 12px rgba(29, 29, 27, 0.10);
+  --shadow-card: 0 12px 16px 4px rgba(29, 29, 27, 0.14);
+  --shadow-section: 0 4px 64px 4px rgba(29, 29, 27, 0.12);
+
+  /* --- Border Radius --- */
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-l: 18px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-4xl: 40px;
+  --radius-5xl: 56px;
+  --radius-hero: 64px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* --- Focus visible (accessibility) --- */
+:focus-visible {
+  outline: 3px solid var(--color-bleu);
+  outline-offset: 2px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--color-blanc);
+  color: var(--color-noir);
+  font-family: var(--font-sans);
 }
