@@ -224,7 +224,7 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
       <button
         type="submit"
         disabled={status === "sending"}
-        className="px-8 py-3 rounded-s bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="px-8 py-3 rounded-[12px] bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {status === "sending" ? t("sending") : t("submit")}
       </button>

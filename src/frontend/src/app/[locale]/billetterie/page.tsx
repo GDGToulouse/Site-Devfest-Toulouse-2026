@@ -72,7 +72,7 @@ export default async function TicketingPage() {
                         href={tier.externalUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-6 px-8 py-3 rounded-s bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors"
+                        className="mt-6 px-8 py-3 rounded-[12px] bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors"
                       >
                         {t("buy")}
                       </a>
