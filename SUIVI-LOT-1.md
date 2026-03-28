@@ -114,7 +114,7 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 7.1 | Layout admin : sidebar, protection par rôle | RG-142 | TODO |
+| 7.1 | Layout admin : sidebar, protection par rôle | RG-142 | DONE |
 | 7.2 | CRUD articles + éditeur WYSIWYG (TipTap) | US-190, RG-143 | TODO |
 | 7.3 | Gestion statut annuel | US-191 | TODO |
 | 7.4 | Gestion paliers billetterie + import Billetweb | US-192, RG-145, RG-146 | TODO |
@@ -170,6 +170,7 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 4 | Phase 4 terminée : blog & pages contenu. Backend : endpoints articles paginés, détail, tags, pages contenu. Frontend : liste actualités (grille 4 col, pagination 9/page), détail article (contenu riche HTML, Schema.org Article, breadcrumb, tags cliquables), filtrage par tag, Code de conduite, Mentions légales. Seed étendu (12 articles, 2 ContentPages). |
 | 2026-03-28 | Session 5 | Phase 5 terminée : billetterie (paliers avec statuts, prix barrés pour épuisés, CTA Acheter, note redirection Billetweb) et CFP (statut ouvert/fermé dynamique, dates, CTA Sessionize, formats acceptés, sujets). Backend : endpoint CFP settings. |
 | 2026-03-28 | Session 6 | Phase 6 terminée : formulaire de contact complet. Validation client+serveur, catégories dynamiques depuis BDD avec "Autre", honeypot anti-spam, envoi email SMTP (nodemailer + MailHog), stockage message en BDD, routage email par catégorie, encart latéral (délais + réseaux sociaux). |
+| 2026-03-28 | Session 7 | Tests : 19 tests backend (vitest), tests fonctionnels navigateur (pagination, formulaire contact, CORS). Fix double locale pagination + CORS multi-origin. Phase 7.1 : admin layout avec sidebar, auth shell Better Auth, page login OAuth, admin-guard middleware, dashboard. Reste 7.2→7.10. |
 
 ---
 
