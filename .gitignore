@@ -1,3 +1,32 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+.next/
+dist/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Debug
+pnpm-debug.log*
+npm-debug.log*
+
 # Claude Code local settings
 .claude/settings.local.json
 .claude/worktrees/
