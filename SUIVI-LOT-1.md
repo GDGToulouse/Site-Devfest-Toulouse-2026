@@ -115,15 +115,15 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
 | 7.1 | Layout admin : sidebar, protection par rôle | RG-142 | DONE |
-| 7.2 | CRUD articles + éditeur WYSIWYG (TipTap) | US-190, RG-143 | TODO |
-| 7.3 | Gestion statut annuel | US-191 | TODO |
-| 7.4 | Gestion paliers billetterie + import Billetweb | US-192, RG-145, RG-146 | TODO |
-| 7.5 | Gestion CFP (dates, état, lien) | US-193 | TODO |
-| 7.6 | Gestion pages contenu statique (CoC, Mentions) | US-194 | TODO |
-| 7.7 | Gestion catégories formulaire contact | US-197 | TODO |
-| 7.8 | Consultation messages de contact | US-195 | TODO |
-| 7.9 | Purge manuelle du cache | US-196 | TODO |
-| 7.10 | Gestion chiffres clés (sélection des stats affichées) | US-121 | TODO |
+| 7.2 | CRUD articles + éditeur WYSIWYG (TipTap) | US-190, RG-143 | DONE (textarea, TipTap à ajouter) |
+| 7.3 | Gestion statut annuel | US-191 | DONE |
+| 7.4 | Gestion paliers billetterie + import Billetweb | US-192, RG-145, RG-146 | DONE (CRUD, import Billetweb TODO) |
+| 7.5 | Gestion CFP (dates, état, lien) | US-193 | DONE |
+| 7.6 | Gestion pages contenu statique (CoC, Mentions) | US-194 | DONE |
+| 7.7 | Gestion catégories formulaire contact | US-197 | DONE |
+| 7.8 | Consultation messages de contact | US-195 | DONE |
+| 7.9 | Purge manuelle du cache | US-196 | DONE |
+| 7.10 | Gestion chiffres clés (sélection des stats affichées) | US-121 | DONE |
 
 **Critère de fin** : un admin peut publier un article, gérer la billetterie, configurer le contact, et purger le cache.
 
@@ -171,6 +171,7 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 5 | Phase 5 terminée : billetterie (paliers avec statuts, prix barrés pour épuisés, CTA Acheter, note redirection Billetweb) et CFP (statut ouvert/fermé dynamique, dates, CTA Sessionize, formats acceptés, sujets). Backend : endpoint CFP settings. |
 | 2026-03-28 | Session 6 | Phase 6 terminée : formulaire de contact complet. Validation client+serveur, catégories dynamiques depuis BDD avec "Autre", honeypot anti-spam, envoi email SMTP (nodemailer + MailHog), stockage message en BDD, routage email par catégorie, encart latéral (délais + réseaux sociaux). |
 | 2026-03-28 | Session 7 | Tests : 19 tests backend (vitest), tests fonctionnels navigateur (pagination, formulaire contact, CORS). Fix double locale pagination + CORS multi-origin. Phase 7.1 : admin layout avec sidebar, auth shell Better Auth, page login OAuth, admin-guard middleware, dashboard. Reste 7.2→7.10. |
+| 2026-03-28 | Session 8 | Phase 7 terminée (7.2→7.10). Backend : 7 fichiers routes admin (articles, editions, tickets, settings, pages, contact, cache). Frontend : 5 composants réutilisables (FormField, BilingualInput, DataTable, ConfirmDialog, StatusBadge) + 11 pages admin. 39 tests passent (19 publics + 20 admin). TipTap non installé (textarea pour l'instant). Import Billetweb non implémenté. |
 
 ---
 
@@ -182,3 +183,16 @@ Dernière passe avant mise en production.
 - Les phases 1-2 sont séquentielles ; les phases 3-6 peuvent être parallélisées après la phase 2
 - La phase 7 (admin) dépend des phases 3-6 pour les entités
 - La phase 8 est une passe finale transverse
+
+### Améliorations identifiées (hors scope Lot 1, à planifier)
+
+- **7.2** : Remplacer les `<textarea>` par TipTap WYSIWYG (`@tiptap/react`) pour l'édition d'articles
+- **7.4** : Import automatique des paliers depuis Billetweb (RG-146)
+- **7.2** : Upload d'images pour les articles (actuellement URL manuelle)
+- **7.x** : Dashboard admin : afficher les vrais compteurs (articles publiés/brouillons, messages non lus)
+- **7.x** : Feedback utilisateur après save/delete (toast notifications au lieu d'inline)
+- **7.x** : Validation côté serveur plus stricte sur les routes admin (longueur max, format slug, etc.)
+- **7.x** : Gestion des éditions : création d'une nouvelle édition depuis l'admin (bouton "Nouvelle édition")
+- **7.x** : Composant DataTable : tri par colonnes, recherche/filtre inline
+- **7.x** : Pages admin : ajout d'un DELETE endpoint pour les content pages
+- **7.x** : Tests admin : tests de validation (champs manquants, formats invalides)

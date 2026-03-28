@@ -1,0 +1,224 @@
+import type { FastifyInstance } from "fastify";
+import { prisma } from "../../lib/prisma.js";
+
+interface ArticleBody {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  contentFr: string;
+  contentEn: string;
+  excerptFr?: string;
+  excerptEn?: string;
+  imageUrl?: string;
+  author?: string;
+  publicationStatus?: "DRAFT" | "PUBLISHED";
+  editionId?: number;
+  tagIds?: number[];
+}
+
+export default async function adminArticleRoutes(app: FastifyInstance) {
+  // GET /api/admin/articles — list all articles (including drafts), with pagination
+  app.get<{
+    Querystring: { page?: string; limit?: string; status?: string };
+  }>("/articles", async (request) => {
+    const page = Math.max(Number(request.query.page) || 1, 1);
+    const limit = Math.min(Number(request.query.limit) || 20, 100);
+    const status = request.query.status;
+
+    const where = status ? { publicationStatus: status as "DRAFT" | "PUBLISHED" } : {};
+
+    const [articles, total] = await Promise.all([
+      prisma.article.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { tags: true, edition: true },
+      }),
+      prisma.article.count({ where }),
+    ]);
+
+    return {
+      articles: articles.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        titleFr: a.titleFr,
+        titleEn: a.titleEn,
+        excerptFr: a.excerptFr,
+        excerptEn: a.excerptEn,
+        imageUrl: a.imageUrl,
+        author: a.author,
+        publicationStatus: a.publicationStatus,
+        publishedAt: a.publishedAt,
+        createdAt: a.createdAt,
+        tags: a.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+        edition: a.edition ? { id: a.edition.id, year: a.edition.year } : null,
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  });
+
+  // GET /api/admin/articles/:id — single article for editing
+  app.get<{
+    Params: { id: string };
+  }>("/articles/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const article = await prisma.article.findUnique({
+      where: { id },
+      include: { tags: true, edition: true },
+    });
+
+    if (!article) return reply.status(404).send({ error: "Article not found" });
+
+    return {
+      id: article.id,
+      slug: article.slug,
+      titleFr: article.titleFr,
+      titleEn: article.titleEn,
+      contentFr: article.contentFr,
+      contentEn: article.contentEn,
+      excerptFr: article.excerptFr,
+      excerptEn: article.excerptEn,
+      imageUrl: article.imageUrl,
+      author: article.author,
+      publicationStatus: article.publicationStatus,
+      publishedAt: article.publishedAt,
+      editionId: article.editionId,
+      tags: article.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+    };
+  });
+
+  // POST /api/admin/articles — create article
+  app.post<{ Body: ArticleBody }>("/articles", async (request, reply) => {
+    const body = request.body;
+
+    if (!body.slug?.trim() || !body.titleFr?.trim() || !body.titleEn?.trim()) {
+      return reply.status(400).send({ error: "slug, titleFr, titleEn are required" });
+    }
+
+    const existing = await prisma.article.findUnique({ where: { slug: body.slug.trim() } });
+    if (existing) {
+      return reply.status(409).send({ error: "An article with this slug already exists" });
+    }
+
+    const isPublished = body.publicationStatus === "PUBLISHED";
+
+    const article = await prisma.article.create({
+      data: {
+        slug: body.slug.trim(),
+        titleFr: body.titleFr.trim(),
+        titleEn: body.titleEn.trim(),
+        contentFr: body.contentFr || "",
+        contentEn: body.contentEn || "",
+        excerptFr: body.excerptFr?.trim() || null,
+        excerptEn: body.excerptEn?.trim() || null,
+        imageUrl: body.imageUrl?.trim() || null,
+        author: body.author?.trim() || null,
+        publicationStatus: body.publicationStatus || "DRAFT",
+        publishedAt: isPublished ? new Date() : null,
+        editionId: body.editionId || null,
+        tags: body.tagIds?.length ? { connect: body.tagIds.map((id) => ({ id })) } : undefined,
+      },
+      include: { tags: true },
+    });
+
+    return reply.status(201).send({ id: article.id, slug: article.slug });
+  });
+
+  // PUT /api/admin/articles/:id — update article
+  app.put<{
+    Params: { id: string };
+    Body: ArticleBody;
+  }>("/articles/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const existing = await prisma.article.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: "Article not found" });
+
+    const body = request.body;
+    const isPublished = body.publicationStatus === "PUBLISHED";
+    const wasPublished = existing.publicationStatus === "PUBLISHED";
+
+    const article = await prisma.article.update({
+      where: { id },
+      data: {
+        slug: body.slug?.trim() || existing.slug,
+        titleFr: body.titleFr?.trim() || existing.titleFr,
+        titleEn: body.titleEn?.trim() || existing.titleEn,
+        contentFr: body.contentFr ?? existing.contentFr,
+        contentEn: body.contentEn ?? existing.contentEn,
+        excerptFr: body.excerptFr?.trim() ?? existing.excerptFr,
+        excerptEn: body.excerptEn?.trim() ?? existing.excerptEn,
+        imageUrl: body.imageUrl?.trim() ?? existing.imageUrl,
+        author: body.author?.trim() ?? existing.author,
+        publicationStatus: body.publicationStatus || existing.publicationStatus,
+        publishedAt: isPublished && !wasPublished ? new Date() : existing.publishedAt,
+        editionId: body.editionId !== undefined ? (body.editionId || null) : existing.editionId,
+        tags: body.tagIds !== undefined
+          ? { set: body.tagIds.map((tagId) => ({ id: tagId })) }
+          : undefined,
+      },
+      include: { tags: true },
+    });
+
+    return { id: article.id, slug: article.slug };
+  });
+
+  // DELETE /api/admin/articles/:id
+  app.delete<{
+    Params: { id: string };
+  }>("/articles/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const existing = await prisma.article.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: "Article not found" });
+
+    await prisma.article.delete({ where: { id } });
+    return { success: true };
+  });
+
+  // GET /api/admin/tags — list all tags
+  app.get("/tags", async () => {
+    return prisma.tag.findMany({ orderBy: { name: "asc" } });
+  });
+
+  // POST /api/admin/tags — create a tag
+  app.post<{
+    Body: { name: string };
+  }>("/tags", async (request, reply) => {
+    const name = request.body.name?.trim();
+    if (!name) return reply.status(400).send({ error: "name is required" });
+
+    const slug = name
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
+    const existing = await prisma.tag.findFirst({
+      where: { OR: [{ name }, { slug }] },
+    });
+    if (existing) return reply.status(409).send({ error: "Tag already exists" });
+
+    const tag = await prisma.tag.create({ data: { name, slug } });
+    return reply.status(201).send(tag);
+  });
+
+  // DELETE /api/admin/tags/:id
+  app.delete<{
+    Params: { id: string };
+  }>("/tags/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    await prisma.tag.delete({ where: { id } });
+    return { success: true };
+  });
+}

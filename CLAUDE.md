@@ -73,6 +73,10 @@ docker-compose.yml             # Dev environment: frontend + backend + db + mail
 .claude/rules/                 # Detailed coding & workflow rules
 ```
 
+## Progress Tracking
+
+- **`SUIVI-LOT-1.md`** — Lot 1 progress tracker: phases 1-8, task status, session journal, decisions, improvement backlog. **Read this file at the start of every session** to understand current progress and remaining work.
+
 ## Specification Documents
 
 Always consult these documents before making assumptions about features or architecture:

@@ -1,0 +1,131 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { adminFetch } from "@/lib/admin-api";
+import FormField from "@/components/admin/FormField";
+import StatusBadge from "@/components/admin/StatusBadge";
+
+interface EditionData {
+  id: number;
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  status: string;
+  aftermovieUrl: string | null;
+  galleryUrl: string | null;
+  archivedSiteUrl: string | null;
+}
+
+const STATUS_OPTIONS = [
+  { value: "PREPARATION", label: "Preparation", variant: "gray" as const },
+  { value: "ANNOUNCEMENT", label: "Annonce", variant: "green" as const },
+  { value: "SEE_YOU_NEXT_YEAR", label: "A l'annee prochaine", variant: "orange" as const },
+];
+
+export default function EditionsPage() {
+  const [editions, setEditions] = useState<EditionData[]>([]);
+  const [editing, setEditing] = useState<EditionData | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  async function loadEditions() {
+    setIsLoading(true);
+    const { data } = await adminFetch<EditionData[]>("/editions");
+    if (data) setEditions(data);
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    loadEditions();
+  }, []);
+
+  async function handleSave() {
+    if (!editing) return;
+    setIsSaving(true);
+
+    await adminFetch(`/editions/${editing.id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        status: editing.status,
+        startDate: editing.startDate || undefined,
+        endDate: editing.endDate || undefined,
+        aftermovieUrl: editing.aftermovieUrl || undefined,
+        galleryUrl: editing.galleryUrl || undefined,
+        archivedSiteUrl: editing.archivedSiteUrl || undefined,
+      }),
+    });
+
+    setIsSaving(false);
+    setEditing(null);
+    loadEditions();
+  }
+
+  function getStatusVariant(status: string): "green" | "orange" | "gray" {
+    return STATUS_OPTIONS.find((s) => s.value === status)?.variant || "gray";
+  }
+
+  if (isLoading) return <p className="text-gris">Chargement...</p>;
+
+  return (
+    <div>
+      <h1 className="text-3xl font-bold text-noir mb-8">Editions</h1>
+
+      <div className="space-y-4">
+        {editions.map((edition) => (
+          <div key={edition.id} className="bg-blanc rounded-xl shadow-card p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <h2 className="text-2xl font-bold text-noir">DevFest {edition.year}</h2>
+                <StatusBadge status={STATUS_OPTIONS.find((s) => s.value === edition.status)?.label || edition.status} variant={getStatusVariant(edition.status)} />
+              </div>
+              <button
+                onClick={() => setEditing(editing?.id === edition.id ? null : { ...edition })}
+                className="text-sm text-bleu hover:underline"
+              >
+                {editing?.id === edition.id ? "Annuler" : "Modifier"}
+              </button>
+            </div>
+
+            {editing?.id === edition.id && (
+              <div className="space-y-4 border-t border-gris/20 pt-4">
+                <div>
+                  <label className="block text-sm font-medium text-noir mb-1">Statut</label>
+                  <select
+                    value={editing.status}
+                    onChange={(e) => setEditing({ ...editing, status: e.target.value })}
+                    className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  >
+                    {STATUS_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <FormField label="Date debut" name="startDate" type="date" value={editing.startDate?.split("T")[0] || ""} onChange={(v) => setEditing({ ...editing, startDate: v })} />
+                  <FormField label="Date fin" name="endDate" type="date" value={editing.endDate?.split("T")[0] || ""} onChange={(v) => setEditing({ ...editing, endDate: v })} />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={editing.aftermovieUrl || ""} onChange={(v) => setEditing({ ...editing, aftermovieUrl: v })} />
+                  <FormField label="Galerie URL" name="galleryUrl" type="url" value={editing.galleryUrl || ""} onChange={(v) => setEditing({ ...editing, galleryUrl: v })} />
+                  <FormField label="Site archive URL" name="archivedSiteUrl" type="url" value={editing.archivedSiteUrl || ""} onChange={(v) => setEditing({ ...editing, archivedSiteUrl: v })} />
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleSave}
+                    disabled={isSaving}
+                    className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+                  >
+                    {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}

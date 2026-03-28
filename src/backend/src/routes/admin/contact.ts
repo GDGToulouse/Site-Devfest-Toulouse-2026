@@ -1,0 +1,154 @@
+import type { FastifyInstance } from "fastify";
+import { prisma } from "../../lib/prisma.js";
+
+interface ContactCategoryBody {
+  nameFr: string;
+  nameEn: string;
+  emailRecipients: string;
+  sortOrder?: number;
+  isActive?: boolean;
+}
+
+export default async function adminContactRoutes(app: FastifyInstance) {
+  // GET /api/admin/contact/categories
+  app.get("/contact/categories", async () => {
+    const categories = await prisma.contactCategory.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: { _count: { select: { messages: true } } },
+    });
+
+    return categories.map((c) => ({
+      id: c.id,
+      nameFr: c.nameFr,
+      nameEn: c.nameEn,
+      emailRecipients: c.emailRecipients,
+      sortOrder: c.sortOrder,
+      isActive: c.isActive,
+      messagesCount: c._count.messages,
+    }));
+  });
+
+  // POST /api/admin/contact/categories
+  app.post<{ Body: ContactCategoryBody }>("/contact/categories", async (request, reply) => {
+    const body = request.body;
+
+    if (!body.nameFr?.trim() || !body.nameEn?.trim() || !body.emailRecipients?.trim()) {
+      return reply.status(400).send({ error: "nameFr, nameEn, emailRecipients are required" });
+    }
+
+    const category = await prisma.contactCategory.create({
+      data: {
+        nameFr: body.nameFr.trim(),
+        nameEn: body.nameEn.trim(),
+        emailRecipients: body.emailRecipients.trim(),
+        sortOrder: body.sortOrder ?? 0,
+        isActive: body.isActive ?? true,
+      },
+    });
+
+    return reply.status(201).send({ id: category.id });
+  });
+
+  // PUT /api/admin/contact/categories/:id
+  app.put<{
+    Params: { id: string };
+    Body: Partial<ContactCategoryBody>;
+  }>("/contact/categories/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const existing = await prisma.contactCategory.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: "Category not found" });
+
+    const body = request.body;
+
+    const category = await prisma.contactCategory.update({
+      where: { id },
+      data: {
+        nameFr: body.nameFr?.trim() ?? existing.nameFr,
+        nameEn: body.nameEn?.trim() ?? existing.nameEn,
+        emailRecipients: body.emailRecipients?.trim() ?? existing.emailRecipients,
+        sortOrder: body.sortOrder ?? existing.sortOrder,
+        isActive: body.isActive ?? existing.isActive,
+      },
+    });
+
+    return { id: category.id };
+  });
+
+  // DELETE /api/admin/contact/categories/:id
+  app.delete<{
+    Params: { id: string };
+  }>("/contact/categories/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    await prisma.contactCategory.delete({ where: { id } });
+    return { success: true };
+  });
+
+  // GET /api/admin/contact/messages — list messages with pagination
+  app.get<{
+    Querystring: { page?: string; limit?: string; unreadOnly?: string };
+  }>("/contact/messages", async (request) => {
+    const page = Math.max(Number(request.query.page) || 1, 1);
+    const limit = Math.min(Number(request.query.limit) || 20, 100);
+    const unreadOnly = request.query.unreadOnly === "true";
+
+    const where = unreadOnly ? { isRead: false } : {};
+
+    const [messages, total] = await Promise.all([
+      prisma.contactMessage.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+        include: { category: { select: { nameFr: true } } },
+      }),
+      prisma.contactMessage.count({ where }),
+    ]);
+
+    return {
+      messages: messages.map((m) => ({
+        id: m.id,
+        firstName: m.firstName,
+        lastName: m.lastName,
+        email: m.email,
+        phone: m.phone,
+        categoryLabel: m.category?.nameFr || m.categoryLabel,
+        message: m.message,
+        isRead: m.isRead,
+        createdAt: m.createdAt,
+      })),
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
+  });
+
+  // PUT /api/admin/contact/messages/:id/read — mark message as read
+  app.put<{
+    Params: { id: string };
+  }>("/contact/messages/:id/read", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    await prisma.contactMessage.update({
+      where: { id },
+      data: { isRead: true },
+    });
+
+    return { success: true };
+  });
+
+  // DELETE /api/admin/contact/messages/:id
+  app.delete<{
+    Params: { id: string };
+  }>("/contact/messages/:id", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    await prisma.contactMessage.delete({ where: { id } });
+    return { success: true };
+  });
+}
