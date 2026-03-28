@@ -6,6 +6,7 @@ import type {
   KeyFigure,
   Tag,
   ContentPage,
+  CfpSettings,
   PaginatedArticles,
 } from "./types";
 
@@ -67,4 +68,15 @@ export async function getTags(): Promise<Tag[]> {
 
 export async function getContentPage(slug: string): Promise<ContentPage | null> {
   return fetchAPI<ContentPage>(`/api/pages/${encodeURIComponent(slug)}`);
+}
+
+export async function getCfpSettings(): Promise<CfpSettings> {
+  return (
+    (await fetchAPI<CfpSettings>("/api/settings/cfp")) || {
+      isOpen: false,
+      sessionizeUrl: null,
+      openDate: null,
+      closeDate: null,
+    }
+  );
 }

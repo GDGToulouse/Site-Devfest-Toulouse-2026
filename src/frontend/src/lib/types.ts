@@ -60,6 +60,13 @@ export interface ContentPage {
   updatedAt: string;
 }
 
+export interface CfpSettings {
+  isOpen: boolean;
+  sessionizeUrl: string | null;
+  openDate: string | null;
+  closeDate: string | null;
+}
+
 export interface PaginatedArticles {
   articles: Article[];
   total: number;

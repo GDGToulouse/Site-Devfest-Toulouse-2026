@@ -27,4 +27,20 @@ export default async function settingsRoutes(app: FastifyInstance) {
 
     return figures;
   });
+
+  // GET /api/settings/cfp — returns CFP configuration
+  app.get("/settings/cfp", async () => {
+    const settings = await prisma.siteSetting.findMany({
+      where: { key: { startsWith: "cfp_" } },
+    });
+
+    const map = new Map(settings.map((s) => [s.key, s.value]));
+
+    return {
+      isOpen: map.get("cfp_is_open") === "true",
+      sessionizeUrl: map.get("cfp_sessionize_url") || null,
+      openDate: map.get("cfp_open_date") || null,
+      closeDate: map.get("cfp_close_date") || null,
+    };
+  });
 }

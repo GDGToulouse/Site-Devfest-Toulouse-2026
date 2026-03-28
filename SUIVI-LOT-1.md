@@ -89,8 +89,8 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 5.1 | Page Billetterie : paliers, états, liens externes | US-140, RG-100→105 | TODO |
-| 5.2 | Page CFP : dates, CTA Sessionize, état ouvert/fermé | US-150 | TODO |
+| 5.1 | Page Billetterie : paliers, états, liens externes | US-140, RG-100→105 | DONE |
+| 5.2 | Page CFP : dates, CTA Sessionize, état ouvert/fermé | US-150 | DONE |
 
 **Critère de fin** : la page billetterie affiche les paliers, le CFP renvoie vers Sessionize.
 
@@ -168,6 +168,7 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 2 | Phase 1 terminée : init projets, Docker Compose, design tokens, i18n, Prisma v7, Better Auth, sécurité, SEO, a11y, sitemap, CI. Reste : Google Sans (fichiers manquants), Font Awesome, cache headers, compression, analytics. |
 | 2026-03-28 | Session 3 | Phase 3 terminée : homepage complète. Backend API (4 endpoints : editions, articles, ticket-tiers, key-figures). Frontend : Hero, Chiffres clés, À propos, Actualités (ArticleCard), Billetterie, Replay (YouTubeFacade), logique conditionnelle par statut annuel. Seed data, traductions FR/EN, vérification fonctionnelle navigateur. |
 | 2026-03-28 | Session 4 | Phase 4 terminée : blog & pages contenu. Backend : endpoints articles paginés, détail, tags, pages contenu. Frontend : liste actualités (grille 4 col, pagination 9/page), détail article (contenu riche HTML, Schema.org Article, breadcrumb, tags cliquables), filtrage par tag, Code de conduite, Mentions légales. Seed étendu (12 articles, 2 ContentPages). |
+| 2026-03-28 | Session 5 | Phase 5 terminée : billetterie (paliers avec statuts, prix barrés pour épuisés, CTA Acheter, note redirection Billetweb) et CFP (statut ouvert/fermé dynamique, dates, CTA Sessionize, formats acceptés, sujets). Backend : endpoint CFP settings. |
 
 ---
 

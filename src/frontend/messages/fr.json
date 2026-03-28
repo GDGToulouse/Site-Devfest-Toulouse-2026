@@ -85,6 +85,38 @@
     "previous": "Précédent",
     "next": "Suivant"
   },
+  "ticketing": {
+    "pageTitle": "Billetterie",
+    "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "available": "Disponible",
+    "soldOut": "Épuisé",
+    "buy": "Acheter",
+    "notOpenYet": "La billetterie n'est pas encore ouverte.",
+    "allSoldOut": "Billetterie complète — tous les billets sont épuisés.",
+    "externalNote": "La vente de billets est gérée par Billetweb. Vous serez redirigé vers la plateforme de paiement."
+  },
+  "cfp": {
+    "pageTitle": "Proposer un talk",
+    "description": "Soumettez votre présentation pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse accueille des speakers de tous horizons. Que vous soyez débutant ou expert, votre expérience et votre passion comptent. Proposez un talk et partagez vos connaissances avec la communauté.",
+    "statusOpen": "Le CFP est actuellement ouvert !",
+    "statusClosed": "Le CFP est fermé. Merci pour vos soumissions !",
+    "dates": "Du {open} au {close}",
+    "ctaSubmit": "Proposer un talk",
+    "formatsTitle": "Formats acceptés",
+    "formats": {
+      "conference": "Conférence",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plénière"
+    },
+    "topicsTitle": "Quels sujets ?",
+    "topicsDescription": "Web, Cloud, Mobile, IA, Sécurité, DevOps, Data, IoT... Tous les sujets tech sont les bienvenus. Nous recherchons aussi des retours d'expérience, des talks inspirants et des sujets transverses (culture, diversité, green IT)."
+  },
   "codeOfConduct": {
     "title": "Code de conduite",
     "description": "Code de conduite du DevFest Toulouse.",

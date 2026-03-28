@@ -85,6 +85,38 @@
     "previous": "Previous",
     "next": "Next"
   },
+  "ticketing": {
+    "pageTitle": "Tickets",
+    "description": "Buy your tickets for DevFest Toulouse 2026.",
+    "home": "Home",
+    "available": "Available",
+    "soldOut": "Sold out",
+    "buy": "Buy",
+    "notOpenYet": "Ticketing is not yet open.",
+    "allSoldOut": "All tickets are sold out.",
+    "externalNote": "Ticket sales are handled by Billetweb. You will be redirected to their payment platform."
+  },
+  "cfp": {
+    "pageTitle": "Submit a talk",
+    "description": "Submit your presentation for DevFest Toulouse 2026.",
+    "home": "Home",
+    "intro": "DevFest Toulouse welcomes speakers from all backgrounds. Whether you're a beginner or an expert, your experience and passion matter. Submit a talk and share your knowledge with the community.",
+    "statusOpen": "The CFP is currently open!",
+    "statusClosed": "The CFP is now closed. Thank you for your submissions!",
+    "dates": "From {open} to {close}",
+    "ctaSubmit": "Submit a talk",
+    "formatsTitle": "Accepted formats",
+    "formats": {
+      "conference": "Conference",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plenary session"
+    },
+    "topicsTitle": "What topics?",
+    "topicsDescription": "Web, Cloud, Mobile, AI, Security, DevOps, Data, IoT... All tech topics are welcome. We also look for experience reports, inspiring talks and cross-cutting topics (culture, diversity, green IT)."
+  },
   "codeOfConduct": {
     "title": "Code of Conduct",
     "description": "DevFest Toulouse Code of Conduct.",

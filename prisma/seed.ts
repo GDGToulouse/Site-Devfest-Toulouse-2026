@@ -194,6 +194,24 @@ async function main() {
 
   console.log(`Key figures settings created: ${keyFigures.length * 4}`);
 
+  // --- CFP Settings ---
+  const cfpSettings = [
+    { key: "cfp_is_open", value: "true" },
+    { key: "cfp_sessionize_url", value: "https://sessionize.com/devfest-toulouse-2026" },
+    { key: "cfp_open_date", value: "2026-03-15" },
+    { key: "cfp_close_date", value: "2026-05-31" },
+  ];
+
+  for (const entry of cfpSettings) {
+    await prisma.siteSetting.upsert({
+      where: { key: entry.key },
+      update: { value: entry.value },
+      create: entry,
+    });
+  }
+
+  console.log(`CFP settings created: ${cfpSettings.length}`);
+
   console.log("Seeding complete!");
 }
 
