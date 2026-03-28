@@ -17,11 +17,14 @@ export default function HeroSection() {
           }}
         />
 
-        {/* Staircase text blocks */}
+        {/* 5 staircase blocks — pyramid effect */}
         <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
           <div className="flex flex-col items-start">
-            {/* Block 1: DevFest — narrower, shifted right */}
-            <div className="bg-blanc pl-8 lg:pl-[100px] pr-16 lg:pr-32 pb-2 rounded-tr-hero rounded-br-hero">
+            {/* Block 1: DevFest — most indented, rounded top-right only */}
+            <div
+              className="bg-blanc pl-8 lg:pl-[100px] pr-16 lg:pr-28 pb-2"
+              style={{ borderTopRightRadius: "64px" }}
+            >
               <h1>
                 <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
                   DevFest
@@ -29,23 +32,46 @@ export default function HeroSection() {
               </h1>
             </div>
 
-            {/* Block 2: Toulouse + subtitle + date — wider, extends further right */}
-            <div className="bg-blanc pl-8 lg:pl-16 pr-20 lg:pr-48 py-4 pb-8 rounded-tr-hero rounded-br-hero">
+            {/* Block 2: Toulouse + "La conférence Toulousaine par" — wider, rounded top-right + bottom-right */}
+            <div
+              className="bg-blanc pl-8 lg:pl-16 pr-20 lg:pr-40 pb-3"
+              style={{ borderTopRightRadius: "64px", borderBottomRightRadius: "64px" }}
+            >
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
-
-              <p className="mt-4 text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed max-w-lg">
+              <p className="mt-2 text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
                 {t("subtitleLine1")}
-                <br />
+              </p>
+            </div>
+
+            {/* Block 3: "les devs et pour les devs." — no top-right, has bottom-right */}
+            <div
+              className="bg-blanc pl-8 lg:pl-16 pr-16 lg:pr-32 py-1"
+              style={{ borderBottomRightRadius: "64px" }}
+            >
+              <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
                 <strong>{t("subtitleLine2devs")}</strong>
                 {t("subtitleLine2end")}
                 <strong>{t("subtitleLine2devs2")}</strong>
               </p>
+            </div>
 
-              <p className="mt-3 text-lg text-noir/70">
-                <strong className="text-noir">{t("date")}</strong>
+            {/* Block 4: Date — narrower, no top-right, has bottom-right */}
+            <div
+              className="bg-blanc pl-8 lg:pl-16 pr-12 lg:pr-24 py-1"
+              style={{ borderBottomRightRadius: "64px" }}
+            >
+              <p className="text-lg text-noir">
+                <strong>{t("date")}</strong>
               </p>
+            </div>
+
+            {/* Block 5: Venue — narrowest, no top-right, has bottom-right */}
+            <div
+              className="bg-blanc pl-8 lg:pl-16 pr-10 lg:pr-20 pt-1 pb-4"
+              style={{ borderBottomRightRadius: "64px" }}
+            >
               <p className="text-lg text-noir/70">
                 {t("venue")}
               </p>
