@@ -19,9 +19,9 @@ export default function HeroSection() {
 
         {/* Staircase text blocks */}
         <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
-          <div className="flex flex-col items-start p-8 lg:p-16">
-            {/* Line 1: DevFest — offset left */}
-            <div className="bg-blanc pr-12 lg:pr-24 pb-2 rounded-tr-hero rounded-br-hero -ml-8 lg:-ml-16 pl-8 lg:pl-16">
+          <div className="flex flex-col items-start">
+            {/* Block 1: DevFest — narrower, shifted right */}
+            <div className="bg-blanc pl-8 lg:pl-[100px] pr-16 lg:pr-32 pb-2 rounded-tr-hero rounded-br-hero">
               <h1>
                 <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
                   DevFest
@@ -29,16 +29,13 @@ export default function HeroSection() {
               </h1>
             </div>
 
-            {/* Line 2: Toulouse — indented right relative to DevFest */}
-            <div className="bg-blanc pr-16 lg:pr-32 pb-4 rounded-tr-hero rounded-br-hero">
+            {/* Block 2: Toulouse + subtitle + date — wider, extends further right */}
+            <div className="bg-blanc pl-8 lg:pl-16 pr-20 lg:pr-48 py-4 pb-8 rounded-tr-hero rounded-br-hero">
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
-            </div>
 
-            {/* Line 3: Subtitle + date/venue */}
-            <div className="bg-blanc pr-8 lg:pr-16 py-4 pb-8 rounded-tr-hero rounded-br-hero">
-              <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed max-w-lg">
+              <p className="mt-4 text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed max-w-lg">
                 {t("subtitleLine1")}
                 <br />
                 <strong>{t("subtitleLine2devs")}</strong>
