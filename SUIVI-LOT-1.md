@@ -148,12 +148,15 @@ Dernière passe avant mise en production.
 
 ## Décisions à prendre avant de commencer
 
-| # | Question | Impact | Statut |
-|---|----------|--------|--------|
-| D-01 | Choix du framework (Next.js, Nuxt, Astro, SvelteKit…) | Structure tout le reste | TODO |
-| D-02 | Base de données (PostgreSQL, SQLite, autre) | Schema, Docker Compose | TODO |
-| D-03 | ORM / query builder (Prisma, Drizzle, Knex…) | Code data access | TODO |
-| D-04 | Hébergement cible (VPS, Vercel, Coolify…) | Docker Compose, CI/CD | TODO |
+| # | Question | Impact | Choix |
+|---|----------|--------|-------|
+| D-01 | Framework | Structure tout le reste | **Next.js** (App Router, Server Components) |
+| D-02 | Base de données | Schema, Docker Compose | **PostgreSQL** |
+| D-03 | ORM | Code data access | **Prisma** |
+| D-04 | Hébergement | Docker Compose, CI/CD | **VPS + Coolify** (manuel en prod, auto-deploy dev/beta) |
+| D-05 | Gestionnaire de paquets | Scripts, CI | **pnpm** |
+| D-06 | CSS | Stylisation | **Tailwind CSS** |
+| D-07 | Image Docker Node.js | Dockerfile | **node:lts-alpine** |
 
 ---
 
@@ -161,7 +164,7 @@ Dernière passe avant mise en production.
 
 | Date | Session | Avancement |
 |------|---------|------------|
-| — | — | — |
+| 2026-03-28 | Session 1 | Phase specs terminée. Choix techniques validés. Fichier de suivi créé. |
 
 ---
 
