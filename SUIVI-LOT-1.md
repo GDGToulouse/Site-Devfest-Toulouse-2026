@@ -12,8 +12,8 @@ Pas de pages visibles encore. On pose l'infrastructure.
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 1.1 | Choix du framework (Next.js, Nuxt, Astro…) + init projet | — | TODO |
-| 1.2 | Docker Compose : service web + BDD + SMTP (MailHog pour dev) | RG-064 | TODO |
+| 1.1 | Init frontend (Next.js) + backend (API REST) + restructuration | — | TODO |
+| 1.2 | Docker Compose : frontend + backend + BDD + SMTP (MailHog pour dev) | RG-064 | TODO |
 | 1.3 | Structure i18n : routing `/fr/...` `/en/...`, fichiers de traduction, middleware redirect `/` → `/fr/` | RG-030→038, US-103 | TODO |
 | 1.4 | Design tokens CSS (couleurs, typographies, espacements, ombres, radius) depuis design-system.md | — | TODO |
 | 1.5 | Google Sans : chargement via Google Fonts, preload, font-display: swap | RG-055 | TODO |

@@ -1,33 +1,42 @@
 # Variables d'environnement — Site DevFest Toulouse 2026
 
-Ce document centralise toutes les variables d'environnement nécessaires au fonctionnement du site. Elles sont injectées par Docker Compose et lues par le service web depuis ses variables d'environnement (`process.env` ou équivalent). **Le service ne lit jamais directement un fichier `.env`.**
+Ce document centralise toutes les variables d'environnement nécessaires au fonctionnement du site. Elles sont injectées par Docker Compose et lues par chaque service depuis ses variables d'environnement (`process.env`). **Les services ne lisent jamais directement un fichier `.env`.**
 
 Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fictives pour référence.
 
 ---
 
-## Application
+## Frontend (Next.js)
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
 | `NODE_ENV` | oui | Environnement d'exécution | `production` |
-| `BASE_URL` | oui | URL publique du site (utilisée pour les liens emails, images OG, sitemap, liens de modification) | `https://devfesttoulouse.fr` |
-| `PORT` | non | Port d'écoute du serveur (défaut : `3000`) | `3000` |
+| `BASE_URL` | oui | URL publique du site (utilisée pour les images OG, sitemap, canonical) | `https://devfesttoulouse.fr` |
+| `BACKEND_URL` | oui | URL interne du backend (réseau Docker) | `http://backend:4000` |
+| `PORT` | non | Port d'écoute du frontend (défaut : `3000`) | `3000` |
 
-## Base de données
+## Backend (API)
+
+| Variable | Obligatoire | Description | Exemple |
+|----------|:-----------:|-------------|---------|
+| `NODE_ENV` | oui | Environnement d'exécution | `production` |
+| `BASE_URL` | oui | URL publique du site (utilisée pour les liens emails, liens de modification) | `https://devfesttoulouse.fr` |
+| `PORT` | non | Port d'écoute du backend (défaut : `4000`) | `4000` |
+
+## Base de données (backend uniquement)
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
 | `DATABASE_URL` | oui | URL de connexion à la base de données | `postgresql://user:pass@db:5432/devfest` |
 
-## Sécurité
+## Sécurité (backend uniquement)
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
 | `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. | `a1b2c3d4...` |
 | `MAGIC_LINK_SECRET` | oui | Secret pour générer et vérifier les liens de modification speakers/sponsors. Distinct du `SESSION_SECRET`. | `e5f6g7h8...` |
 
-## OAuth (Google + GitHub)
+## OAuth — Google + GitHub (backend uniquement)
 
 Utilisé pour l'authentification des admins (Lot 2) et des participants au passport digital (Lot 5).
 
@@ -38,7 +47,7 @@ Utilisé pour l'authentification des admins (Lot 2) et des participants au passp
 | `OAUTH_GITHUB_CLIENT_ID` | oui | Client ID de l'application GitHub OAuth (admins uniquement) | `Iv1.abc123` |
 | `OAUTH_GITHUB_CLIENT_SECRET` | oui | Client Secret GitHub OAuth | `ghp_...` |
 
-## SMTP (envoi d'emails)
+## SMTP — envoi d'emails (backend uniquement)
 
 Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modification speakers/sponsors (Lot 2).
 
@@ -48,7 +57,7 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 | `SMTP_PORT` | non | Port SMTP (défaut : `25`) | `25` |
 | `SMTP_FROM` | oui | Adresse expéditeur des emails | `contact@devfesttoulouse.fr` |
 
-## API tierces
+## API tierces (backend uniquement)
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
@@ -56,7 +65,15 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 ---
 
-## Récapitulatif par lot
+## Récapitulatif par lot et par service
+
+### Frontend
+
+| Lot | Variables nécessaires |
+|-----|----------------------|
+| **Tous les lots** | `NODE_ENV`, `BASE_URL`, `BACKEND_URL`, `PORT` |
+
+### Backend
 
 | Lot | Variables nécessaires |
 |-----|----------------------|
