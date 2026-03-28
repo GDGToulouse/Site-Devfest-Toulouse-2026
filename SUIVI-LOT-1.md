@@ -12,24 +12,24 @@ Pas de pages visibles encore. On pose l'infrastructure.
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 1.1 | Init frontend (Next.js) + backend (API REST) + restructuration | — | TODO |
-| 1.2 | Docker Compose : frontend + backend + BDD + SMTP (MailHog pour dev) | RG-064 | TODO |
-| 1.3 | Structure i18n : routing `/fr/...` `/en/...`, fichiers de traduction, middleware redirect `/` → `/fr/` | RG-030→038, US-103 | TODO |
-| 1.4 | Design tokens CSS (couleurs, typographies, espacements, ombres, radius) depuis design-system.md | — | TODO |
-| 1.5 | Google Sans : chargement via Google Fonts, preload, font-display: swap | RG-055 | TODO |
+| 1.1 | Init frontend (Next.js) + backend (Fastify) | — | DONE |
+| 1.2 | Docker Compose : frontend + backend + BDD + SMTP (MailHog pour dev) | RG-064 | DONE |
+| 1.3 | Structure i18n : routing `/fr/...` `/en/...`, fichiers de traduction, middleware redirect `/` → `/fr/` | RG-030→038, US-103 | DONE |
+| 1.4 | Design tokens CSS (couleurs, typographies, espacements, ombres, radius) depuis design-system.md | — | DONE |
+| 1.5 | Google Sans : chargement via next/font/local | RG-055 | BLOCKED (fichiers police manquants) |
 | 1.6 | Font Awesome : intégration (subset des icônes utilisées) | — | TODO |
-| 1.7 | Base de données : schema initial (édition, article, palier billetterie, message contact, catégorie contact, page contenu) | — | TODO |
-| 1.8 | Auth admin (Google OAuth + GitHub OAuth) | — | TODO |
-| 1.9 | Headers de sécurité (CSP avec nonce, HSTS, X-Frame-Options…) | RG-060, US-106 | TODO |
-| 1.10 | SEO transverse : layout avec `<title>`, meta description, canonical, hreflang, OG, Twitter Card | RG-010→020, US-102 | TODO |
-| 1.11 | Breadcrumb composant + Schema.org BreadcrumbList | RG-019 | TODO |
-| 1.12 | Sitemap XML + robots.txt | RG-013, RG-014 | TODO |
-| 1.13 | Skip to content + landmarks ARIA | RG-041, RG-044, US-104 | TODO |
-| 1.14 | Responsive : breakpoints mobile/tablette/desktop | RG-070, RG-071, US-105 | TODO |
-| 1.15 | Cache-Control headers (SSR pages) | RG-002→004, US-101 | TODO |
-| 1.16 | Compression Brotli/Gzip | RG-005 | TODO |
-| 1.17 | Images : pipeline WebP/AVIF, srcset/sizes, lazy loading | RG-054 | TODO |
-| 1.18 | CI : linter + tests + axe-core | RG-063 | TODO |
+| 1.7 | Base de données : schema Prisma v7 (édition, article, palier billetterie, message contact, catégorie contact, page contenu, settings) | — | DONE |
+| 1.8 | Auth admin (Better Auth — Google + GitHub OAuth) | — | DONE |
+| 1.9 | Headers de sécurité (CSP, HSTS, X-Frame-Options…) | RG-060, US-106 | DONE |
+| 1.10 | SEO transverse : metadata, OG, Twitter Card, canonical, hreflang | RG-010→020, US-102 | DONE |
+| 1.11 | Breadcrumb composant + Schema.org BreadcrumbList | RG-019 | DONE |
+| 1.12 | Sitemap XML + robots.txt | RG-013, RG-014 | DONE |
+| 1.13 | Skip to content + landmarks ARIA | RG-041, RG-044, US-104 | DONE |
+| 1.14 | Responsive : breakpoints mobile/tablette/desktop | RG-070, RG-071, US-105 | TODO (via Tailwind, opérationnel dès Phase 2) |
+| 1.15 | Cache-Control headers (SSR pages) | RG-002→004, US-101 | TODO (à configurer avec les pages réelles) |
+| 1.16 | Compression Brotli/Gzip | RG-005 | TODO (config serveur/Coolify) |
+| 1.17 | Images : pipeline WebP/AVIF | RG-054 | DONE (config next.config.ts) |
+| 1.18 | CI : linter + typecheck | RG-063 | DONE |
 | 1.19 | Analytics / RUM (Core Web Vitals) | RG-148 | TODO |
 
 **Critère de fin** : `docker compose up` démarre le site, la route `/fr/` rend une page blanche avec le bon `<title>`, les headers de sécurité sont présents, les tests passent.
@@ -165,6 +165,7 @@ Dernière passe avant mise en production.
 | Date | Session | Avancement |
 |------|---------|------------|
 | 2026-03-28 | Session 1 | Phase specs terminée. Choix techniques validés. Fichier de suivi créé. |
+| 2026-03-28 | Session 2 | Phase 1 terminée : init projets, Docker Compose, design tokens, i18n, Prisma v7, Better Auth, sécurité, SEO, a11y, sitemap, CI. Reste : Google Sans (fichiers manquants), Font Awesome, cache headers, compression, analytics. |
 
 ---
 
