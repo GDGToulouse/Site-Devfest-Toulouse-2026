@@ -21,7 +21,7 @@ export default function HeroSection() {
         <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
           <div className="flex flex-col items-start p-8 lg:p-16">
             {/* Line 1: DevFest — offset left */}
-            <div className="bg-blanc pr-12 lg:pr-24 pb-2 rounded-tr-hero -ml-8 lg:-ml-16 pl-8 lg:pl-16">
+            <div className="bg-blanc pr-12 lg:pr-24 pb-2 rounded-tr-hero rounded-br-hero -ml-8 lg:-ml-16 pl-8 lg:pl-16">
               <h1>
                 <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
                   DevFest
@@ -30,7 +30,7 @@ export default function HeroSection() {
             </div>
 
             {/* Line 2: Toulouse — indented right relative to DevFest */}
-            <div className="bg-blanc pr-16 lg:pr-32 pb-4 rounded-tr-hero">
+            <div className="bg-blanc pr-16 lg:pr-32 pb-4 rounded-tr-hero rounded-br-hero">
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
