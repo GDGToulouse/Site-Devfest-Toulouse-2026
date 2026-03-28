@@ -62,7 +62,7 @@ export default function Header() {
             href="https://forms.gle/devfest-partenaire"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-l border-3 border-bleu px-5 py-2 text-sm font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
+            className="rounded-s border-2 border-bleu px-[18px] py-3 text-sm font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
           >
             {tCta("becomePartner")}
           </a>
@@ -70,7 +70,7 @@ export default function Header() {
             href="https://sessionize.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-l bg-bleu px-5 py-2 text-sm font-bold text-blanc hover:bg-bleu/90 transition-colors"
+            className="rounded-s bg-bleu px-[18px] py-3 text-sm font-bold text-blanc hover:bg-bleu/90 transition-colors"
           >
             {tCta("submitTalk")}
           </a>
@@ -118,7 +118,7 @@ export default function Header() {
               href="https://forms.gle/devfest-partenaire"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-l border-3 border-bleu px-4 py-2 text-sm font-bold text-bleu text-center"
+              className="rounded-s border-2 border-bleu px-[18px] py-3 text-sm font-bold text-bleu text-center"
             >
               {tCta("becomePartner")}
             </a>
@@ -126,7 +126,7 @@ export default function Header() {
               href="https://sessionize.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-l bg-bleu px-4 py-2 text-sm font-bold text-blanc text-center"
+              className="rounded-s bg-bleu px-[18px] py-3 text-sm font-bold text-blanc text-center"
             >
               {tCta("submitTalk")}
             </a>

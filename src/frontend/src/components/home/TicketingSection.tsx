@@ -49,7 +49,7 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
                     href={tier.externalUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="mt-6 px-6 py-2 rounded-l bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
+                    className="mt-6 px-6 py-2 rounded-s bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
                   >
                     {t("buy")}
                   </a>

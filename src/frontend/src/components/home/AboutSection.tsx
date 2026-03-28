@@ -34,7 +34,7 @@ export default function AboutSection() {
               href="https://www.toulousetechhub.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 rounded-l bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
+              className="px-8 py-3 rounded-s bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
             >
               Toulouse Tech Hub
             </a>
@@ -42,7 +42,7 @@ export default function AboutSection() {
               href="https://www.cloudtoulouse.com"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-8 py-3 rounded-l border-3 border-bleu text-bleu font-bold text-base hover:bg-bleu/10 transition-colors"
+              className="px-8 py-3 rounded-s border-2 border-bleu text-bleu font-bold text-base hover:bg-bleu/10 transition-colors"
             >
               Cloud Toulouse
             </a>

@@ -64,7 +64,7 @@ export default async function CfpPage() {
                   href={cfp.sessionizeUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-6 inline-block px-8 py-4 rounded-l bg-bleu text-blanc font-bold text-xl hover:bg-bleu/90 transition-colors"
+                  className="mt-6 inline-block px-8 py-4 rounded-s bg-bleu text-blanc font-bold text-xl hover:bg-bleu/90 transition-colors"
                 >
                   {t("ctaSubmit")}
                 </a>
