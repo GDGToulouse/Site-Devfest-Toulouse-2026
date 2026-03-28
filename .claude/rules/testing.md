@@ -29,8 +29,8 @@ Every feature or fix follows this strict cycle. Do not skip steps.
 6. Repeat until all tests pass.
 
 ### Step 3 — Functional testing via browser
-7. Start the dev server if not running.
-8. Use the **Chrome DevTools MCP** to navigate to the relevant page(s).
+7. Start the local Docker environment (`docker compose up`) if not running.
+8. Use the **Chrome DevTools MCP** to navigate to the relevant page(s) on the local Docker instance.
 9. Verify the feature visually and interactively:
    - Does the page render correctly?
    - Do interactions work (clicks, forms, navigation)?
