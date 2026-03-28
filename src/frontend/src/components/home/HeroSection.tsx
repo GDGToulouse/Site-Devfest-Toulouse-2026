@@ -23,7 +23,7 @@ export default function HeroSection() {
             {/* Block 1: DevFest — most indented, rounded top-right only */}
             <div
               className="bg-blanc pl-8 lg:pl-[100px] pr-16 lg:pr-28 pb-2"
-              style={{ borderTopRightRadius: "64px" }}
+              style={{ borderTopRightRadius: "40px" }}
             >
               <h1>
                 <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
@@ -35,7 +35,7 @@ export default function HeroSection() {
             {/* Block 2: Toulouse + "La conférence Toulousaine par" — wider, rounded top-right + bottom-right */}
             <div
               className="bg-blanc pl-8 lg:pl-16 pr-20 lg:pr-40 pb-3"
-              style={{ borderTopRightRadius: "64px", borderBottomRightRadius: "64px" }}
+              style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
             >
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
@@ -48,7 +48,7 @@ export default function HeroSection() {
             {/* Block 3: "les devs et pour les devs." — no top-right, has bottom-right */}
             <div
               className="bg-blanc pl-8 lg:pl-16 pr-16 lg:pr-32 py-1"
-              style={{ borderBottomRightRadius: "64px" }}
+              style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
                 <strong>{t("subtitleLine2devs")}</strong>
@@ -60,7 +60,7 @@ export default function HeroSection() {
             {/* Block 4: Date — narrower, no top-right, has bottom-right */}
             <div
               className="bg-blanc pl-8 lg:pl-16 pr-12 lg:pr-24 py-1"
-              style={{ borderBottomRightRadius: "64px" }}
+              style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir">
                 <strong>{t("date")}</strong>
@@ -70,7 +70,7 @@ export default function HeroSection() {
             {/* Block 5: Venue — narrowest, no top-right, has bottom-right */}
             <div
               className="bg-blanc pl-8 lg:pl-16 pr-10 lg:pr-20 pt-1 pb-4"
-              style={{ borderBottomRightRadius: "64px" }}
+              style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir/70">
                 {t("venue")}
