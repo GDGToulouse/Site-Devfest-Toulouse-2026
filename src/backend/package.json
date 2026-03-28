@@ -29,6 +29,9 @@
       "esbuild"
     ]
   },
+  "prisma": {
+    "seed": "tsx ../../prisma/seed.ts"
+  },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "tsx": "^4.21.0",

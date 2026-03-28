@@ -57,14 +57,14 @@ Les sections de la page d'accueil en mode "Annonce de l'édition".
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 3.1 | Section Hero : titre, date, lieu, image, CTAs | US-120 | TODO |
-| 3.2 | Section Chiffres clés : 4 blocs stats, illustration La Grave | US-121 | TODO |
-| 3.3 | Section Sponsors : masquée (pas de données encore, placeholder conditionnel) | RG-083 | TODO |
-| 3.4 | Section À propos / GDG Toulouse / Écosystème | US-122 | TODO |
-| 3.5 | Section Dernières actualités (4 ArticleCards) | US-123 | TODO |
-| 3.6 | Section Billetterie (conditionnelle) | US-125 | TODO |
-| 3.7 | Section Replay / Aftermovie (YouTube lazy) | US-124 | TODO |
-| 3.8 | Statut annuel : logique conditionnelle (seul "Annonce" pour le lot 1) | RG-080→084, RG-141 | TODO |
+| 3.1 | Section Hero : titre, date, lieu, image, CTAs | US-120 | DONE |
+| 3.2 | Section Chiffres clés : 4 blocs stats, illustration La Grave | US-121 | DONE |
+| 3.3 | Section Sponsors : masquée (pas de données encore, placeholder conditionnel) | RG-083 | DONE |
+| 3.4 | Section À propos / GDG Toulouse / Écosystème | US-122 | DONE |
+| 3.5 | Section Dernières actualités (4 ArticleCards) | US-123 | DONE |
+| 3.6 | Section Billetterie (conditionnelle) | US-125 | DONE |
+| 3.7 | Section Replay / Aftermovie (YouTube lazy) | US-124 | DONE |
+| 3.8 | Statut annuel : logique conditionnelle (seul "Annonce" pour le lot 1) | RG-080→084, RG-141 | DONE |
 
 **Critère de fin** : la page d'accueil est complète visuellement, les sections conditionnelles se masquent quand les données sont absentes.
 
@@ -166,6 +166,7 @@ Dernière passe avant mise en production.
 |------|---------|------------|
 | 2026-03-28 | Session 1 | Phase specs terminée. Choix techniques validés. Fichier de suivi créé. |
 | 2026-03-28 | Session 2 | Phase 1 terminée : init projets, Docker Compose, design tokens, i18n, Prisma v7, Better Auth, sécurité, SEO, a11y, sitemap, CI. Reste : Google Sans (fichiers manquants), Font Awesome, cache headers, compression, analytics. |
+| 2026-03-28 | Session 3 | Phase 3 terminée : homepage complète. Backend API (4 endpoints : editions, articles, ticket-tiers, key-figures). Frontend : Hero, Chiffres clés, À propos, Actualités (ArticleCard), Billetterie, Replay (YouTubeFacade), logique conditionnelle par statut annuel. Seed data, traductions FR/EN, vérification fonctionnelle navigateur. |
 
 ---
 

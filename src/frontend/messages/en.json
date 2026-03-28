@@ -17,9 +17,36 @@
   },
   "home": {
     "title": "DevFest Toulouse",
-    "subtitle": "The Toulouse conference by devs, for devs.",
-    "date": "November 19, 2026",
-    "venue": "Diagora, Labège"
+    "hero": {
+      "subtitle": "The Toulouse conference by devs, for devs.",
+      "date": "November 19, 2026",
+      "venue": "Diagora, Labège",
+      "ctaPartner": "Become a partner",
+      "ctaTalk": "Submit a talk"
+    },
+    "stats": {
+      "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
+    },
+    "about": {
+      "behindTitle": "Behind #DevFestToulouse",
+      "gdgDescription": "DevFest Toulouse is organized by GDG Toulouse, a passionate developer community. Since 2016, we bring together the Toulouse tech community every year around talks, workshops, and networking.",
+      "ecosystemTitle": "Dive into our ecosystem"
+    },
+    "news": {
+      "title": "Latest news",
+      "readMore": "Read more articles",
+      "readArticle": "Read"
+    },
+    "ticketing": {
+      "title": "Tickets",
+      "available": "Available",
+      "soldOut": "Sold out",
+      "buy": "Buy",
+      "viewAll": "View all tickets"
+    },
+    "replay": {
+      "title": "Replay"
+    }
   },
   "footer": {
     "tagline": "Bug-free since 2016 - DevFest Toulouse by GDG Toulouse",

@@ -1,4 +1,18 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale } from "next-intl/server";
+
+import {
+  getCurrentEdition,
+  getLatestArticles,
+  getCurrentTicketTiers,
+  getKeyFigures,
+} from "@/lib/api";
+
+import HeroSection from "@/components/home/HeroSection";
+import KeyFiguresSection from "@/components/home/KeyFiguresSection";
+import AboutSection from "@/components/home/AboutSection";
+import LatestNewsSection from "@/components/home/LatestNewsSection";
+import TicketingSection from "@/components/home/TicketingSection";
+import ReplaySection from "@/components/home/ReplaySection";
 
 const eventJsonLd = {
   "@context": "https://schema.org",
@@ -40,7 +54,16 @@ const eventJsonLd = {
 };
 
 export default async function HomePage() {
-  const t = await getTranslations("home");
+  const locale = await getLocale();
+
+  const [edition, articles, tiers, figures] = await Promise.all([
+    getCurrentEdition(),
+    getLatestArticles(4),
+    getCurrentTicketTiers(),
+    getKeyFigures(),
+  ]);
+
+  const isAnnouncement = edition?.status === "ANNOUNCEMENT";
 
   return (
     <>
@@ -48,15 +71,28 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
       />
-      <div className="flex flex-col items-center justify-center flex-1 p-8">
-        <h1 className="text-4xl font-bold text-noir">
-          <span className="text-malachite">DevFest</span>{" "}
-          <span className="text-terre-cuite">Toulouse</span>
-        </h1>
-        <p className="mt-4 text-gris">{t("subtitle")}</p>
-        <p className="mt-2 text-gris-clair text-sm">{t("date")}</p>
-        <p className="text-gris-clair text-sm">{t("venue")}</p>
-      </div>
+
+      <HeroSection />
+
+      {isAnnouncement && figures.length > 0 && (
+        <KeyFiguresSection figures={figures} locale={locale} />
+      )}
+
+      {/* Sponsors section: hidden until Lot 2 — RG-141 */}
+
+      {isAnnouncement && <AboutSection />}
+
+      {isAnnouncement && articles.length > 0 && (
+        <LatestNewsSection articles={articles} locale={locale} />
+      )}
+
+      {isAnnouncement && tiers.length > 0 && (
+        <TicketingSection tiers={tiers} locale={locale} />
+      )}
+
+      {edition?.aftermovieUrl && (
+        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+      )}
     </>
   );
 }

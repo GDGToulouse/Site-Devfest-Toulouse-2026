@@ -17,9 +17,36 @@
   },
   "home": {
     "title": "DevFest Toulouse",
-    "subtitle": "La conférence Toulousaine par les devs et pour les devs.",
-    "date": "19 novembre 2026",
-    "venue": "Diagora, Labège"
+    "hero": {
+      "subtitle": "La conférence Toulousaine par les devs et pour les devs.",
+      "date": "19 novembre 2026",
+      "venue": "Diagora, Labège",
+      "ctaPartner": "Devenir partenaire",
+      "ctaTalk": "Proposer un talk"
+    },
+    "stats": {
+      "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
+    },
+    "about": {
+      "behindTitle": "Derrière le #DevFestToulouse",
+      "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
+      "ecosystemTitle": "Plongez dans notre écosystème"
+    },
+    "news": {
+      "title": "Dernières actualités",
+      "readMore": "Lire plus d'articles",
+      "readArticle": "Lire"
+    },
+    "ticketing": {
+      "title": "Billetterie",
+      "available": "Disponible",
+      "soldOut": "Épuisé",
+      "buy": "Acheter",
+      "viewAll": "Voir la billetterie"
+    },
+    "replay": {
+      "title": "Replay"
+    }
   },
   "footer": {
     "tagline": "Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse",

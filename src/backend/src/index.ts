@@ -2,6 +2,9 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
 import { auth, isAdminEmail } from "./lib/auth.js";
+import editionRoutes from "./routes/editions.js";
+import articleRoutes from "./routes/articles.js";
+import settingsRoutes from "./routes/settings.js";
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
@@ -47,6 +50,11 @@ app.route({
     reply.send(body || null);
   },
 });
+
+// Public API routes
+await app.register(editionRoutes, { prefix: "/api" });
+await app.register(articleRoutes, { prefix: "/api" });
+await app.register(settingsRoutes, { prefix: "/api" });
 
 // Admin guard — reusable hook
 export async function requireAdmin(request: import("fastify").FastifyRequest, reply: import("fastify").FastifyReply) {
