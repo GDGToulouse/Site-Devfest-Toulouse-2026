@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev, "dev-*"]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  frontend:
+    name: Frontend — Lint & Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm build
+
+  backend:
+    name: Backend — Typecheck
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: src/backend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+
+      # Generate Prisma client (needed for typecheck)
+      - name: Install root deps for Prisma
+        working-directory: .
+        run: pnpm install --frozen-lockfile
+      - name: Generate Prisma client
+        working-directory: .
+        run: pnpm db:generate
+        env:
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+
+      - run: pnpm typecheck
