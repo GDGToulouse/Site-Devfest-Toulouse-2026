@@ -8,22 +8,26 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "pnpm --dir ../.. db:migrate",
-    "db:generate": "pnpm --dir ../.. db:generate",
-    "db:push": "pnpm --dir ../.. db:push",
-    "db:studio": "pnpm --dir ../.. db:studio",
+    "db:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "db:generate": "prisma generate --schema ../../prisma/schema.prisma",
+    "db:push": "prisma db push --schema ../../prisma/schema.prisma",
+    "db:studio": "prisma studio --schema ../../prisma/schema.prisma",
     "test": "echo \"No tests configured yet\" && exit 0"
   },
   "dependencies": {
     "@fastify/cors": "^11.2.0",
     "@fastify/helmet": "^13.0.2",
-    "@prisma/adapter-pg": "^7.6.0",
-    "@prisma/client": "^7.6.0",
+    "@prisma/client": "6",
     "better-auth": "^1.5.6",
-    "dotenv": "^17.3.1",
     "fastify": "^5.8.4",
-    "pg": "^8.20.0",
-    "prisma": "^7.6.0"
+    "prisma": "6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "esbuild"
+    ]
   },
   "devDependencies": {
     "@types/node": "^25.5.0",
