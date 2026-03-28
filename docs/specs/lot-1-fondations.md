@@ -161,7 +161,7 @@
 | RG-104 | La page de billetterie n'effectue aucune transaction : elle redirige vers la plateforme externe. |
 | RG-105 | Les paliers non encore ouverts ne sont pas affichés, ou affichés avec la mention « Bientôt disponible ». |
 | RG-145 | Les paliers de billetterie peuvent être importés automatiquement depuis l'API Billetweb. L'import crée les paliers avec les données récupérées (nom, prix, état, lien). Les paliers déjà existants sont mis à jour. |
-| RG-146 | La clé API Billetweb est configurable dans les paramètres du site (interface admin). Elle est stockée comme variable d'environnement côté serveur et n'est jamais exposée côté client. |
+| RG-146 | La clé API Billetweb est une variable d'environnement serveur, injectée par Docker Compose. Le service web la lit depuis ses variables d'environnement (jamais depuis un fichier `.env` directement). Elle n'est jamais exposée côté client. Sa modification nécessite une mise à jour de la configuration Docker et un redéploiement. |
 | RG-148 | Un système d'analytics et de suivi des Core Web Vitals en conditions réelles (RUM — Real User Monitoring) est mis en place dans les fondations. Le choix de l'outil est libre (ex. Google Analytics, Vercel Analytics, web-vitals library). |
 
 ### Formulaire de contact

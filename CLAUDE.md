@@ -17,6 +17,7 @@ docs/                          # Specification documents (in French)
 ├── modele-donnees-metier.md   # Business data model (entities, relationships)
 ├── maquettes-figma.md         # Figma mockups inventory and structure
 ├── design-system.md           # Design system, tokens, UI kit, brand guidelines
+├── variables-environnement.md # Environment variables reference (Docker Compose)
 ├── maquettes/                 # SVG exports of all Figma mockups
 └── assets/                    # Logo files, sketch illustrations (3 colors)
 data/
@@ -35,6 +36,7 @@ Always consult these documents before making assumptions about features or archi
 - **`docs/modele-donnees-metier.md`** — Business data model: all domain entities, attributes, relationships and bilingual strategy
 - **`docs/maquettes-figma.md`** — Figma mockups: pages designed, shared components, structure ([Figma file](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499))
 - **`docs/design-system.md`** — Design system: brand guidelines, color palette (Google Sans), design tokens, UI kit (Font Awesome icons), content style guide
+- **`docs/variables-environnement.md`** — All environment variables: database, SMTP, OAuth, API keys, secrets — injected via Docker Compose
 
 ## Key Technical Decisions (from specs)
 
