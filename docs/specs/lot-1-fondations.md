@@ -97,7 +97,15 @@
 | # | Règle |
 |---|-------|
 | RG-060 | Les headers de sécurité suivants sont définis sur toutes les réponses : `Content-Security-Policy`, `Strict-Transport-Security` (max-age ≥ 31536000), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`. Note : le SSR avec hydratation nécessite une CSP basée sur un nonce pour les scripts inline (le nonce est généré côté serveur à chaque requête). |
-| RG-061 | Les secrets (clés API, tokens) ne sont jamais dans le code source ; ils sont gérés via des variables d'environnement. |
+| RG-061 | Les secrets (clés API, tokens) ne sont jamais dans le code source ; ils sont gérés via des variables d'environnement injectées par Docker Compose (cf. `docs/variables-environnement.md`). |
+
+### Contraintes de développement
+
+| # | Règle |
+|---|-------|
+| RG-062 | **Documentation à jour** : avant d'utiliser toute bibliothèque, framework ou API, consulter sa documentation via Context7 MCP. Ne jamais se fier aux connaissances du modèle pour la syntaxe ou la configuration de dépendances — elles peuvent être obsolètes. |
+| RG-063 | **Workflow TDD** : chaque fonctionnalité ou correction suit le cycle strict : (1) écrire le code + les tests automatisés → commit, (2) exécuter les tests → corriger si échec → commit, (3) vérifier fonctionnellement dans le navigateur via Chrome DevTools MCP → corriger si problème → commit, (4) push. Ne jamais pousser du code avec des tests en échec ou non vérifié dans le navigateur. |
+| RG-064 | **Variables d'environnement** : le service web lit ses secrets et sa configuration depuis les variables d'environnement du processus (injectées par Docker Compose). Il ne lit jamais directement un fichier `.env`. |
 
 ### Responsive
 

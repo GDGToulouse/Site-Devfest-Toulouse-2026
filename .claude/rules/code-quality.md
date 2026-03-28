@@ -16,5 +16,10 @@
 - Tolerate 2-3 similar occurrences before extracting
 - Extract only when the duplicated logic has a single reason to change
 
+## Documentation lookup
+- **Always** use Context7 MCP to fetch up-to-date documentation before using any library, framework, or API
+- This applies to all dependencies, even well-known ones (React, Next.js, Prisma, etc.) — training data may be outdated
+- Prefer Context7 docs over training data for: API syntax, configuration, version migration, setup instructions
+
 ## Performance
 - Be mindful of N+1 queries, unbounded loops, and memory leaks
