@@ -5,8 +5,19 @@ import path from "node:path";
 import crypto from "node:crypto";
 
 const UPLOADS_DIR = "/app/uploads";
-const ALLOWED_MIMES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_FILE_SIZE = 5_000_000; // 5 MB
+const ALLOWED_MIMES = [
+  // Images
+  "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  // Documents
+  "application/pdf",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+];
+const MAX_FILE_SIZE = 20_000_000; // 20 MB
 
 export default async function adminImageRoutes(app: FastifyInstance) {
   // POST /api/admin/images — upload a single image
@@ -37,7 +48,7 @@ export default async function adminImageRoutes(app: FastifyInstance) {
 
     if (data.file.truncated) {
       await fs.promises.unlink(destPath);
-      return reply.code(413).send({ error: "File too large (max 5 MB)" });
+      return reply.code(413).send({ error: "File too large (max 20 MB)" });
     }
 
     const stat = await fs.promises.stat(destPath);
@@ -51,30 +62,34 @@ export default async function adminImageRoutes(app: FastifyInstance) {
     };
   });
 
-  // GET /api/admin/images — list all uploaded images
+  // GET /api/admin/images — list all uploaded files
   app.get("/images", async () => {
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
 
+    const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
+
     const files = await fs.promises.readdir(UPLOADS_DIR);
-    const images = await Promise.all(
+    const items = await Promise.all(
       files
         .filter((f) => f !== ".gitkeep")
         .map(async (filename) => {
           const filePath = path.join(UPLOADS_DIR, filename);
           const stat = await fs.promises.stat(filePath);
+          const ext = path.extname(filename).toLowerCase();
           return {
             filename,
             url: `/uploads/${filename}`,
             size: stat.size,
             uploadedAt: stat.mtime.toISOString(),
+            isImage: IMAGE_EXTS.includes(ext),
+            ext,
           };
         })
     );
 
-    // Sort by date descending
-    images.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
+    items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 
-    return images;
+    return items;
   });
 
   // DELETE /api/admin/images/:filename — delete an image

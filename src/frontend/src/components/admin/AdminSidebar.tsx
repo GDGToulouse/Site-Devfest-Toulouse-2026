@@ -21,7 +21,7 @@ const navItems = [
   { label: "Billetterie", href: "/fr/admin/ticketing", icon: "ticket", roles: ["ADMIN"] },
   { label: "CFP", href: "/fr/admin/cfp", icon: "mic", roles: ["ADMIN"] },
   { label: "Pages", href: "/fr/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
-  { label: "Images", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
+  { label: "Fichiers", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
   { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
 ];
