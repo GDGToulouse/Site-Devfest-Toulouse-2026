@@ -2,6 +2,15 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
+// Dev-only test accounts — see docs/comptes-dev-local.md
+// These users are created in the User table so they are authorized.
+// To set a password, use the "Mot de passe oublié" flow (email sent to MailHog at http://localhost:8025).
+// To connect via OAuth, configure the Google/GitHub credentials in .env.
+const DEV_ACCOUNTS = [
+  { name: "Admin DevFest", email: "admin@devfesttoulouse.fr", role: "ADMIN" as const },
+  { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", role: "EDITOR" as const },
+];
+
 async function main() {
   console.log("Seeding database...");
 
@@ -236,6 +245,23 @@ async function main() {
     update: {},
     create: { key: "contact_default_email", value: "contact@devfesttoulouse.fr" },
   });
+
+  // --- Dev test accounts ---
+  if (process.env.NODE_ENV !== "production") {
+    for (const account of DEV_ACCOUNTS) {
+      await prisma.user.upsert({
+        where: { email: account.email },
+        update: { role: account.role },
+        create: {
+          email: account.email,
+          name: account.name,
+          role: account.role,
+        },
+      });
+      console.log(`Dev account ready: ${account.email} (${account.role})`);
+    }
+    console.log("To set passwords, use 'Mot de passe oublié' on /admin (emails at http://localhost:8025)");
+  }
 
   console.log("Seeding complete!");
 }

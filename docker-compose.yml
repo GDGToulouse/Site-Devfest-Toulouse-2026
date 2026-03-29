@@ -35,7 +35,7 @@ services:
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
       - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
-      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr,editor@devfesttoulouse.fr}
       - SMTP_HOST=mailhog
       - SMTP_PORT=1025
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
