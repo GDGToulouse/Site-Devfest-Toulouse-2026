@@ -67,7 +67,7 @@ export default async function Footer() {
                   <li key={link.key}>
                     <Link
                       href={link.href}
-                      className="text-blanc-casse text-base hover:text-blanc transition-colors"
+                      className="text-blanc/80 text-base hover:text-blanc transition-colors"
                     >
                       {tNav(link.key)}
                     </Link>
@@ -88,7 +88,7 @@ export default async function Footer() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blanc-casse text-base hover:text-blanc transition-colors"
+                      className="text-blanc/80 text-base hover:text-blanc transition-colors"
                     >
                       {link.label}
                     </a>
@@ -109,7 +109,7 @@ export default async function Footer() {
                       href={link.href}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blanc-casse text-base hover:text-blanc transition-colors"
+                      className="text-blanc/80 text-base hover:text-blanc transition-colors"
                     >
                       {link.label}
                     </a>
