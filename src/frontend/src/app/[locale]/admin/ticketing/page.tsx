@@ -163,10 +163,10 @@ export default function TicketingPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-gris/20">
+      <div className="overflow-x-auto rounded-xl border border-gris/20 bg-blanc">
         <table className="w-full text-sm">
           <thead>
-            <tr className="bg-blanc-casse border-b border-gris/20">
+            <tr className="bg-blanc-casse/60 border-b border-gris/20">
               <th className="text-left px-4 py-3 font-medium text-gris">Nom</th>
               <th className="text-left px-4 py-3 font-medium text-gris">Prix</th>
               <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
