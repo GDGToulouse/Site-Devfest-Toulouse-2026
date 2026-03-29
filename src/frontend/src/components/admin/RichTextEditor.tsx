@@ -4,12 +4,28 @@ import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
-import Image from "@tiptap/extension-image";
+import ImageBase from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import ImagePickerDialog from "./ImagePickerDialog";
+
+const Image = ImageBase.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      "data-align": {
+        default: null,
+        parseHTML: (element) => element.getAttribute("data-align"),
+        renderHTML: (attributes) => {
+          if (!attributes["data-align"]) return {};
+          return { "data-align": attributes["data-align"] };
+        },
+      },
+    };
+  },
+});
 
 interface RichTextEditorProps {
   label: string;
@@ -45,7 +61,10 @@ export default function RichTextEditor({
         openOnClick: false,
         HTMLAttributes: { rel: "noopener noreferrer" },
       }),
-      Image,
+      Image.configure({
+        inline: false,
+        allowBase64: false,
+      }),
       Underline,
       Highlight,
       TextAlign.configure({
@@ -316,24 +335,42 @@ function Toolbar({
         {/* Text align */}
         <button
           type="button"
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          className={btnClass(editor.isActive({ textAlign: "left" }))}
+          onClick={() => {
+            if (editor.isActive("image")) {
+              editor.chain().focus().updateAttributes("image", { "data-align": null }).run();
+            } else {
+              editor.chain().focus().setTextAlign("left").run();
+            }
+          }}
+          className={btnClass(editor.isActive("image") ? !editor.getAttributes("image")["data-align"] : editor.isActive({ textAlign: "left" }))}
           title="Aligner a gauche"
         >
           ≡←
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          className={btnClass(editor.isActive({ textAlign: "center" }))}
+          onClick={() => {
+            if (editor.isActive("image")) {
+              editor.chain().focus().updateAttributes("image", { "data-align": "center" }).run();
+            } else {
+              editor.chain().focus().setTextAlign("center").run();
+            }
+          }}
+          className={btnClass(editor.isActive("image") ? editor.getAttributes("image")["data-align"] === "center" : editor.isActive({ textAlign: "center" }))}
           title="Centrer"
         >
           ≡↔
         </button>
         <button
           type="button"
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          className={btnClass(editor.isActive({ textAlign: "right" }))}
+          onClick={() => {
+            if (editor.isActive("image")) {
+              editor.chain().focus().updateAttributes("image", { "data-align": "right" }).run();
+            } else {
+              editor.chain().focus().setTextAlign("right").run();
+            }
+          }}
+          className={btnClass(editor.isActive("image") ? editor.getAttributes("image")["data-align"] === "right" : editor.isActive({ textAlign: "right" }))}
           title="Aligner a droite"
         >
           →≡

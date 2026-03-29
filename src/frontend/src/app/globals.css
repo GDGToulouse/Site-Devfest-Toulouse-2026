@@ -171,6 +171,21 @@ body {
   height: auto;
   border-radius: 0.5rem;
   margin: 1rem 0;
+  cursor: pointer;
+}
+.tiptap-content img.ProseMirror-selectednode {
+  outline: 3px solid var(--color-malachite);
+  outline-offset: 2px;
+}
+.tiptap-content img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+.tiptap-content img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+  display: block;
 }
 .tiptap-content p.is-editor-empty:first-child::before {
   content: attr(data-placeholder);
