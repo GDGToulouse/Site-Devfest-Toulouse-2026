@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 interface AdminUser {
   email: string;
   name: string | null;
+  role: "ADMIN" | "EDITOR";
 }
 
 interface AdminSidebarProps {
@@ -14,20 +15,21 @@ interface AdminSidebarProps {
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/fr/admin", icon: "grid" },
-  { label: "Articles", href: "/fr/admin/articles", icon: "file-text" },
-  { label: "Edition", href: "/fr/admin/editions", icon: "calendar" },
-  { label: "Billetterie", href: "/fr/admin/ticketing", icon: "ticket" },
-  { label: "CFP", href: "/fr/admin/cfp", icon: "mic" },
-  { label: "Pages", href: "/fr/admin/pages", icon: "book" },
-  { label: "Categories contact", href: "/fr/admin/contact/categories", icon: "tag" },
-  { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail" },
-  { label: "Chiffres cles", href: "/fr/admin/key-figures", icon: "bar-chart" },
-  { label: "Cache", href: "/fr/admin/cache", icon: "refresh" },
+  { label: "Dashboard", href: "/fr/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
+  { label: "Articles", href: "/fr/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
+  { label: "Edition", href: "/fr/admin/editions", icon: "calendar", roles: ["ADMIN"] },
+  { label: "Billetterie", href: "/fr/admin/ticketing", icon: "ticket", roles: ["ADMIN"] },
+  { label: "CFP", href: "/fr/admin/cfp", icon: "mic", roles: ["ADMIN"] },
+  { label: "Pages", href: "/fr/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
+  { label: "Catégories contact", href: "/fr/admin/contact/categories", icon: "tag", roles: ["ADMIN"] },
+  { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
+  { label: "Chiffres clés", href: "/fr/admin/key-figures", icon: "bar-chart", roles: ["ADMIN"] },
+  { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
 ];
 
 export default function AdminSidebar({ user, onLogout }: AdminSidebarProps) {
   const pathname = usePathname();
+  const visibleItems = navItems.filter((item) => item.roles.includes(user.role));
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
@@ -39,7 +41,7 @@ export default function AdminSidebar({ user, onLogout }: AdminSidebarProps) {
       </div>
 
       <nav className="flex-1 py-4 overflow-y-auto">
-        {navItems.map((item) => {
+        {visibleItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/fr/admin" && pathname.startsWith(item.href));
           return (
             <Link
@@ -59,11 +61,12 @@ export default function AdminSidebar({ user, onLogout }: AdminSidebarProps) {
 
       <div className="p-4 border-t border-blanc/10">
         <p className="text-xs text-blanc/50 truncate">{user.email}</p>
+        <p className="text-xs text-blanc/30">{user.role === "ADMIN" ? "Administrateur" : "Éditeur"}</p>
         <button
           onClick={onLogout}
           className="mt-2 text-sm text-blanc/70 hover:text-blanc transition-colors"
         >
-          Deconnexion
+          Déconnexion
         </button>
       </div>
     </aside>

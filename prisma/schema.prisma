@@ -30,6 +30,7 @@ enum TicketTierStatus {
 
 enum UserRole {
   ADMIN
+  EDITOR
 }
 
 // --- Edition ---

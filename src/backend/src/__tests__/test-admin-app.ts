@@ -1,3 +1,6 @@
+// Set env vars needed by Better Auth before any imports
+process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
+
 import Fastify from "fastify";
 import adminArticleRoutes from "../routes/admin/articles.js";
 import adminEditionRoutes from "../routes/admin/editions.js";

@@ -152,21 +152,42 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 
 ---
 
-## Admin
+## Back-office — Rôles et permissions
 
-### Gestion des éditions
+### Matrice des droits
 
+| Fonctionnalité | ADMIN | EDITOR |
+|---|---|---|
+| Articles — CRUD, publication, tags | ✅ | ✅ |
+| Pages contenu — édition CoC, Mentions légales | ✅ | ✅ |
+| Messages contact — consultation | ✅ | ✅ (lecture seule) |
+| Dashboard — statistiques globales | ✅ | ✅ |
+| Édition — statut annuel, dates, URLs | ✅ | ❌ |
+| Billetterie — paliers, prix, statuts | ✅ | ❌ |
+| CFP — ouverture/fermeture, URL Sessionize | ✅ | ❌ |
+| Catégories contact — CRUD | ✅ | ❌ |
+| Chiffres clés — gestion des stats | ✅ | ❌ |
+| Cache — purge manuelle | ✅ | ❌ |
+| Gestion utilisateurs — invitation, rôles | ✅ | ❌ |
+
+### Admin (rôle ADMIN)
+
+- Accès complet à toutes les fonctionnalités du back-office
 - Configuration du statut annuel de la page d'accueil :
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations
   - "Rendez-vous l'année prochaine" : bilan, replay, photos
 - Purge du cache (manuelle ou déclenchée par changement de statut)
-
-### Gestion du contenu
-
 - Gestion des sessions, speakers, sponsors, articles
-- API de gestion des conférences
-- API de gestion des sponsors
+- Gestion des utilisateurs et de leurs rôles
+
+### Éditeur (rôle EDITOR)
+
+- Rédaction et publication d'articles (CRUD complet + gestion des tags)
+- Édition des pages de contenu statique (Code de conduite, Mentions légales)
+- Consultation des messages de contact (lecture seule, pas de suppression)
+- Accès au dashboard (statistiques globales)
+- Pas d'accès à : configuration de l'édition, billetterie, CFP, catégories contact, chiffres clés, cache, gestion utilisateurs
 
 ### Publications réseaux sociaux
 
@@ -206,7 +227,11 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 
 ### Authentification
 
-- Authentification et rôles (admin, sponsor, speaker, participant)
+- Authentification et rôles :
+  - **ADMIN** : accès complet au back-office (configuration, contenu, utilisateurs)
+  - **EDITOR** : accès limité au contenu éditorial (articles, pages, lecture messages)
+  - **SPEAKER** : édition de sa propre fiche (lot ultérieur)
+  - **SPONSOR** : édition de sa propre fiche (lot ultérieur)
 - Espace dédié par rôle
 - **3 méthodes de connexion** :
   - Compte local (email + mot de passe)

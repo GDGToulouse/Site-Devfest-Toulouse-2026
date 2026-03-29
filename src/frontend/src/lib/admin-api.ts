@@ -5,6 +5,7 @@ interface AdminUser {
   email: string;
   name: string | null;
   image: string | null;
+  role: "ADMIN" | "EDITOR";
 }
 
 export async function adminFetch<T>(

@@ -1,5 +1,6 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
 
 interface ContactCategoryBody {
   nameFr: string;
@@ -10,7 +11,7 @@ interface ContactCategoryBody {
 }
 
 export default async function adminContactRoutes(app: FastifyInstance) {
-  // GET /api/admin/contact/categories
+  // GET /api/admin/contact/categories (ADMIN + EDITOR can read)
   app.get("/contact/categories", async () => {
     const categories = await prisma.contactCategory.findMany({
       orderBy: { sortOrder: "asc" },
@@ -28,8 +29,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     }));
   });
 
-  // POST /api/admin/contact/categories
-  app.post<{ Body: ContactCategoryBody }>("/contact/categories", async (request, reply) => {
+  // POST /api/admin/contact/categories (ADMIN only)
+  app.post<{ Body: ContactCategoryBody }>("/contact/categories", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const body = request.body;
 
     if (!body.nameFr?.trim() || !body.nameEn?.trim() || !body.emailRecipients?.trim()) {
@@ -49,11 +50,11 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     return reply.status(201).send({ id: category.id });
   });
 
-  // PUT /api/admin/contact/categories/:id
+  // PUT /api/admin/contact/categories/:id (ADMIN only)
   app.put<{
     Params: { id: string };
     Body: Partial<ContactCategoryBody>;
-  }>("/contact/categories/:id", async (request, reply) => {
+  }>("/contact/categories/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
@@ -76,10 +77,10 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     return { id: category.id };
   });
 
-  // DELETE /api/admin/contact/categories/:id
+  // DELETE /api/admin/contact/categories/:id (ADMIN only)
   app.delete<{
     Params: { id: string };
-  }>("/contact/categories/:id", async (request, reply) => {
+  }>("/contact/categories/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
@@ -141,10 +142,10 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  // DELETE /api/admin/contact/messages/:id
+  // DELETE /api/admin/contact/messages/:id (ADMIN only)
   app.delete<{
     Params: { id: string };
-  }>("/contact/messages/:id", async (request, reply) => {
+  }>("/contact/messages/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 

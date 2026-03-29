@@ -11,6 +11,7 @@ interface AdminUser {
   email: string;
   name: string | null;
   image: string | null;
+  role: "ADMIN" | "EDITOR";
 }
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
