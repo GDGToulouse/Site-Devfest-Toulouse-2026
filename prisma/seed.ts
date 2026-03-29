@@ -1,14 +1,17 @@
 import { PrismaClient } from "@prisma/client";
 
+// Set BASE_URL before importing auth (Better Auth needs it at import time)
+process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
+process.env.ADMIN_EMAILS = process.env.ADMIN_EMAILS || "admin@devfesttoulouse.fr,editor@devfesttoulouse.fr";
+
+const { auth } = await import("../src/backend/src/lib/auth.js");
+
 const prisma = new PrismaClient();
 
 // Dev-only test accounts — see docs/comptes-dev-local.md
-// These users are created in the User table so they are authorized.
-// To set a password, use the "Mot de passe oublié" flow (email sent to MailHog at http://localhost:8025).
-// To connect via OAuth, configure the Google/GitHub credentials in .env.
 const DEV_ACCOUNTS = [
-  { name: "Admin DevFest", email: "admin@devfesttoulouse.fr", role: "ADMIN" as const },
-  { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", role: "EDITOR" as const },
+  { name: "Admin DevFest", email: "admin@devfesttoulouse.fr", password: "admin1234!dev", role: "ADMIN" as const },
+  { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", password: "editor1234!dev", role: "EDITOR" as const },
 ];
 
 async function main() {
@@ -246,21 +249,37 @@ async function main() {
     create: { key: "contact_default_email", value: "contact@devfesttoulouse.fr" },
   });
 
-  // --- Dev test accounts ---
+  // --- Dev test accounts (with passwords) ---
   if (process.env.NODE_ENV !== "production") {
     for (const account of DEV_ACCOUNTS) {
-      await prisma.user.upsert({
-        where: { email: account.email },
-        update: { role: account.role },
-        create: {
-          email: account.email,
-          name: account.name,
-          role: account.role,
-        },
-      });
-      console.log(`Dev account ready: ${account.email} (${account.role})`);
+      const existing = await prisma.user.findUnique({ where: { email: account.email } });
+      if (!existing) {
+        try {
+          await auth.api.signUpEmail({
+            body: {
+              name: account.name,
+              email: account.email,
+              password: account.password,
+            },
+          });
+          // Update role (signUpEmail creates with default role)
+          await prisma.user.update({
+            where: { email: account.email },
+            data: { role: account.role, emailVerified: true },
+          });
+          console.log(`Dev account created: ${account.email} (${account.role}) — password: ${account.password}`);
+        } catch (err) {
+          // If signUpEmail fails (e.g. tables not ready), fallback to direct insert
+          await prisma.user.create({
+            data: { email: account.email, name: account.name, role: account.role },
+          });
+          console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
+        }
+      } else {
+        await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
+        console.log(`Dev account exists: ${account.email} (${existing.role})`);
+      }
     }
-    console.log("To set passwords, use 'Mot de passe oublié' on /admin (emails at http://localhost:8025)");
   }
 
   console.log("Seeding complete!");

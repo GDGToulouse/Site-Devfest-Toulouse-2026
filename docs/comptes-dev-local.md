@@ -4,10 +4,10 @@
 
 ## Comptes provisionnés par le seed
 
-| Rôle | Email | Usage |
-|------|-------|-------|
-| ADMIN | `admin@devfesttoulouse.fr` | Accès complet au back-office |
-| EDITOR | `editor@devfesttoulouse.fr` | Rédaction d'articles et pages |
+| Rôle | Email | Mot de passe | Usage |
+|------|-------|-------------|-------|
+| ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` | Accès complet au back-office |
+| EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` | Rédaction d'articles et pages |
 
 ## Configuration
 
@@ -19,16 +19,14 @@ ADMIN_EMAILS=admin@devfesttoulouse.fr,editor@devfesttoulouse.fr
 
 Les comptes sont créés dans la table `User` par `prisma/seed.ts`.
 
-## Première connexion (mot de passe local)
+## Connexion
 
 1. Lancer `docker compose up`
 2. Aller sur http://localhost:3000/fr/admin
-3. Cliquer **« Mot de passe oublié ? »**
-4. Entrer l'email du compte (ex. `admin@devfesttoulouse.fr`)
-5. Ouvrir MailHog : http://localhost:8025
-6. Cliquer sur le lien de réinitialisation dans l'email reçu
-7. Définir un mot de passe (minimum 10 caractères)
-8. Se connecter avec email + mot de passe
+3. Entrer l'email et le mot de passe du tableau ci-dessus
+4. Cliquer **« Se connecter »**
+
+> Si les mots de passe n'ont pas pu être provisionnés par le seed (tables Better Auth pas encore créées), utiliser le flow **« Mot de passe oublié ? »** → MailHog (http://localhost:8025) pour en définir un.
 
 ## Première connexion (OAuth)
 
