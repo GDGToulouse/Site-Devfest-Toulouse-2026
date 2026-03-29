@@ -48,8 +48,11 @@ export function getAuthUrl(provider: "google" | "github"): string {
   return `${BACKEND_URL}/api/auth/sign-in/social?provider=${provider}&callbackURL=${encodeURIComponent(callbackURL)}`;
 }
 
-export function getLogoutUrl(): string {
-  return `${BACKEND_URL}/api/auth/sign-out`;
+export async function signOut(): Promise<void> {
+  await fetch(`${BACKEND_URL}/api/auth/sign-out`, {
+    method: "POST",
+    credentials: "include",
+  });
 }
 
 export async function signInWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string }> {

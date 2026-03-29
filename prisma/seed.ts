@@ -4,7 +4,7 @@ import { PrismaClient } from "@prisma/client";
 process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 process.env.ADMIN_EMAILS = process.env.ADMIN_EMAILS || "admin@devfesttoulouse.fr,editor@devfesttoulouse.fr";
 
-const { auth } = await import("../src/backend/src/lib/auth.js");
+const { auth } = await import("../src/lib/auth.js");
 
 const prisma = new PrismaClient();
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 
-import { getAdminSession, getLogoutUrl } from "@/lib/admin-api";
+import { getAdminSession, signOut } from "@/lib/admin-api";
 import AdminLogin from "./AdminLogin";
 import AdminSidebar from "./AdminSidebar";
 
@@ -29,8 +29,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       });
   }, []);
 
-  function handleLogout() {
-    window.location.href = getLogoutUrl();
+  async function handleLogout() {
+    await signOut();
+    setUser(null);
   }
 
   if (isLoading) {
