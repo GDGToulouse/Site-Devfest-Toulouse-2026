@@ -61,6 +61,7 @@ export default function ArticleCard({ article, locale }: ArticleCardProps) {
           <Link
             href={`/actualites/${article.slug}`}
             className="text-base text-link font-normal hover:underline"
+            aria-label={`${t("readArticle")} : ${title}`}
           >
             {t("readArticle")}
           </Link>
