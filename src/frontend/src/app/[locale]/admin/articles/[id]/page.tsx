@@ -6,6 +6,7 @@ import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import TagInput from "@/components/admin/TagInput";
 
 interface ArticleForm {
   slug: string;
@@ -147,15 +148,6 @@ export default function ArticleEditorPage() {
     }
   }
 
-  function toggleTag(tagId: number) {
-    setForm((prev) => ({
-      ...prev,
-      tagIds: prev.tagIds.includes(tagId)
-        ? prev.tagIds.filter((id) => id !== tagId)
-        : [...prev.tagIds, tagId],
-    }));
-  }
-
   if (isLoading) {
     return <p className="text-gris">Chargement...</p>;
   }
@@ -279,26 +271,12 @@ export default function ArticleEditorPage() {
             </select>
           </div>
 
-          {tags.length > 0 && (
-            <div>
-              <p className="text-sm font-medium text-noir mb-2">Tags</p>
-              <div className="flex flex-wrap gap-2">
-                {tags.map((tag) => (
-                  <button
-                    key={tag.id}
-                    onClick={() => toggleTag(tag.id)}
-                    className={`px-3 py-1 rounded-full text-sm ${
-                      form.tagIds.includes(tag.id)
-                        ? "bg-malachite text-blanc"
-                        : "bg-blanc-casse text-gris hover:bg-gris/10"
-                    }`}
-                  >
-                    {tag.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+          <TagInput
+            allTags={tags}
+            selectedTagIds={form.tagIds}
+            onChange={(tagIds) => updateForm("tagIds", tagIds)}
+            onTagCreated={(tag) => setTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name)))}
+          />
         </div>
       </div>
     </div>
