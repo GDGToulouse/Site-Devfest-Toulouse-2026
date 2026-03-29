@@ -100,7 +100,7 @@ export default function ContactCategoriesPage() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-gris/20 bg-blanc">
+      <div className="overflow-x-auto rounded-xl shadow-card bg-blanc">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-blanc-casse/60 border-b border-gris/20">

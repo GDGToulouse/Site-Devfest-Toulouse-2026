@@ -74,7 +74,7 @@ export default function ContactMessagesPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 bg-blanc rounded-xl shadow-card p-4">
           {messages.length === 0 ? (
             <p className="text-gris py-8 text-center">Aucun message</p>
           ) : (
