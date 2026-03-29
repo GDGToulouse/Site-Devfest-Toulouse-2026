@@ -51,7 +51,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-blanc-casse">
+    <div className="fixed inset-0 z-50 flex bg-blanc-casse w-screen h-screen overflow-hidden">
       <AdminSidebar user={user} onLogout={handleLogout} />
       <main className="flex-1 overflow-y-auto p-8">
         {children}
