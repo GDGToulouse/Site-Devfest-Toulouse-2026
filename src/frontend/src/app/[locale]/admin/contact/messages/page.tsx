@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import ContactCategories from "@/components/admin/ContactCategories";
 
 interface Message {
   id: number;
@@ -25,6 +26,7 @@ interface MessagesResponse {
 }
 
 export default function ContactMessagesPage() {
+  const [activeTab, setActiveTab] = useState<"messages" | "categories">("messages");
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -103,14 +105,41 @@ export default function ContactMessagesPage() {
 
   const categories = [...new Set(messages.map((m) => m.categoryLabel).filter(Boolean))] as string[];
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading && activeTab === "messages") return <p className="text-gris">Chargement...</p>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold text-noir">Messages ({total})</h1>
+        <h1 className="text-3xl font-bold text-noir">Contact</h1>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-gris/20 mb-6">
+        <button
+          onClick={() => setActiveTab("messages")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
+            activeTab === "messages"
+              ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
+              : "text-gris hover:text-noir"
+          }`}
+        >
+          Messages ({total})
+        </button>
+        <button
+          onClick={() => setActiveTab("categories")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
+            activeTab === "categories"
+              ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
+              : "text-gris hover:text-noir"
+          }`}
+        >
+          Categories
+        </button>
+      </div>
+
+      {activeTab === "categories" && <ContactCategories />}
+
+      {activeTab === "messages" && <>
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <input
@@ -271,6 +300,7 @@ export default function ContactMessagesPage() {
       </div>
 
       <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer le message" message="Supprimer ce message ?" confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      </>}
     </div>
   );
 }

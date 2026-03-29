@@ -18,7 +18,7 @@ interface ContactCategory {
 
 const emptyCategory = { nameFr: "", nameEn: "", emailRecipients: "", sortOrder: "0", isActive: true };
 
-export default function ContactCategoriesPage() {
+export default function ContactCategories() {
   const [categories, setCategories] = useState<ContactCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -76,8 +76,7 @@ export default function ContactCategoriesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-noir">Categories de contact</h1>
+      <div className="flex justify-end mb-4">
         <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">Nouvelle categorie</button>
       </div>
 
