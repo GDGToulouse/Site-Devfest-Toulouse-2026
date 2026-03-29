@@ -50,3 +50,67 @@ export function getAuthUrl(provider: "google" | "github"): string {
 export function getLogoutUrl(): string {
   return `${BACKEND_URL}/api/auth/sign-out`;
 }
+
+export async function signInWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/sign-in/email`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (res.ok) return { success: true };
+
+    const body = await res.json().catch(() => null);
+    if (res.status === 401 || res.status === 403) {
+      return { success: false, error: "Email ou mot de passe incorrect" };
+    }
+    if (body?.message?.includes("verify")) {
+      return { success: false, error: "Veuillez vérifier votre email avant de vous connecter" };
+    }
+    return { success: false, error: body?.message || "Erreur de connexion" };
+  } catch {
+    return { success: false, error: "Impossible de contacter le serveur" };
+  }
+}
+
+export async function signUpWithEmail(
+  name: string,
+  email: string,
+  password: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/sign-up/email`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (res.ok) return { success: true };
+
+    const body = await res.json().catch(() => null);
+    if (body?.message?.includes("already")) {
+      return { success: false, error: "Un compte existe déjà avec cet email" };
+    }
+    return { success: false, error: body?.message || "Erreur lors de l'inscription" };
+  } catch {
+    return { success: false, error: "Impossible de contacter le serveur" };
+  }
+}
+
+export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/auth/forget-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/fr/admin` }),
+    });
+
+    if (res.ok) return { success: true };
+    return { success: false, error: "Erreur lors de l'envoi" };
+  } catch {
+    return { success: false, error: "Impossible de contacter le serveur" };
+  }
+}
