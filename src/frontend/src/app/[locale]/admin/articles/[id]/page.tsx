@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
-import BilingualInput from "@/components/admin/BilingualInput";
 
 interface ArticleForm {
   slug: string;
@@ -53,6 +52,7 @@ export default function ArticleEditorPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
+  const [activeLang, setActiveLang] = useState<"fr" | "en">("fr");
 
   useEffect(() => {
     adminFetch<TagOption[]>("/tags").then(({ data }) => {
@@ -198,40 +198,42 @@ export default function ArticleEditorPage() {
             </button>
           </div>
 
-          <BilingualInput
-            label="Titre"
-            nameFr="titleFr"
-            nameEn="titleEn"
-            valueFr={form.titleFr}
-            valueEn={form.titleEn}
-            onChangeFr={(v) => updateForm("titleFr", v)}
-            onChangeEn={(v) => updateForm("titleEn", v)}
-            required
-          />
+          <div className="flex gap-1 border-b border-gris/20">
+            <button
+              onClick={() => setActiveLang("fr")}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
+                activeLang === "fr"
+                  ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
+                  : "text-gris hover:text-noir"
+              }`}
+            >
+              Francais
+            </button>
+            <button
+              onClick={() => setActiveLang("en")}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
+                activeLang === "en"
+                  ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
+                  : "text-gris hover:text-noir"
+              }`}
+            >
+              English
+            </button>
+          </div>
 
-          <BilingualInput
-            label="Extrait"
-            nameFr="excerptFr"
-            nameEn="excerptEn"
-            valueFr={form.excerptFr}
-            valueEn={form.excerptEn}
-            onChangeFr={(v) => updateForm("excerptFr", v)}
-            onChangeEn={(v) => updateForm("excerptEn", v)}
-            multiline
-            rows={2}
-          />
-
-          <BilingualInput
-            label="Contenu"
-            nameFr="contentFr"
-            nameEn="contentEn"
-            valueFr={form.contentFr}
-            valueEn={form.contentEn}
-            onChangeFr={(v) => updateForm("contentFr", v)}
-            onChangeEn={(v) => updateForm("contentEn", v)}
-            multiline
-            rows={12}
-          />
+          {activeLang === "fr" ? (
+            <div className="space-y-4">
+              <FormField label="Titre" name="titleFr" value={form.titleFr} onChange={(v) => updateForm("titleFr", v)} required />
+              <FormField label="Extrait" name="excerptFr" value={form.excerptFr} onChange={(v) => updateForm("excerptFr", v)} multiline rows={2} />
+              <FormField label="Contenu" name="contentFr" value={form.contentFr} onChange={(v) => updateForm("contentFr", v)} multiline rows={12} />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} required />
+              <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
+              <FormField label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} multiline rows={12} />
+            </div>
+          )}
         </div>
 
         <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
