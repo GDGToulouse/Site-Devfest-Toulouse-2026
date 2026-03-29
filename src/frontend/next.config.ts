@@ -36,7 +36,7 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https:",
+              "img-src 'self' data: https: http://localhost:4000",
               `connect-src 'self' http://localhost:4000${isDev ? " ws://localhost:3000" : ""}`,
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
