@@ -37,7 +37,7 @@ export default function RichTextEditor({
         codeBlock: false,
         blockquote: false,
         heading: {
-          levels: [4, 5],
+          levels: [2, 3, 4, 5],
         },
       }),
       Link.configure({
@@ -153,6 +153,45 @@ function Toolbar({
   return (
     <div className="border-b border-gris/20 bg-blanc-casse/50">
       <div className="flex gap-1 flex-wrap p-2">
+        {/* Undo / Redo */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().undo().run()}
+          disabled={!editor.can().undo()}
+          className={`${btnBase} ${btnInactive} disabled:opacity-30`}
+          title="Annuler (Ctrl+Z)"
+        >
+          ↩
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().redo().run()}
+          disabled={!editor.can().redo()}
+          className={`${btnBase} ${btnInactive} disabled:opacity-30`}
+          title="Retablir (Ctrl+Y)"
+        >
+          ↪
+        </button>
+
+        <span className="w-px bg-gris/20 mx-1" />
+
+        {/* Headings */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
+          className={btnClass(editor.isActive("heading", { level: 2 }))}
+          title="Titre H2"
+        >
+          H2
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
+          className={btnClass(editor.isActive("heading", { level: 3 }))}
+          title="Titre H3"
+        >
+          H3
+        </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
@@ -172,11 +211,12 @@ function Toolbar({
 
         <span className="w-px bg-gris/20 mx-1" />
 
+        {/* Inline formatting */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBold().run()}
           className={btnClass(editor.isActive("bold"))}
-          title="Gras"
+          title="Gras (Ctrl+B)"
         >
           <strong>B</strong>
         </button>
@@ -184,22 +224,50 @@ function Toolbar({
           type="button"
           onClick={() => editor.chain().focus().toggleItalic().run()}
           className={btnClass(editor.isActive("italic"))}
-          title="Italique"
+          title="Italique (Ctrl+I)"
         >
           <em>I</em>
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleStrike().run()}
+          className={btnClass(editor.isActive("strike"))}
+          title="Barre"
+        >
+          <s>S</s>
         </button>
 
         <span className="w-px bg-gris/20 mx-1" />
 
+        {/* Lists */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           className={btnClass(editor.isActive("bulletList"))}
           title="Liste a puces"
         >
-          Liste
+          • Liste
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          className={btnClass(editor.isActive("orderedList"))}
+          title="Liste numerotee"
+        >
+          1. Liste
         </button>
 
+        <span className="w-px bg-gris/20 mx-1" />
+
+        {/* Block elements */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
+          className={`${btnBase} ${btnInactive}`}
+          title="Separateur horizontal"
+        >
+          —
+        </button>
         <button
           type="button"
           onClick={handleLinkClick}
