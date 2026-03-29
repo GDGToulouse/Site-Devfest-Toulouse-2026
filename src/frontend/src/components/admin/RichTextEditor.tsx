@@ -6,6 +6,9 @@ import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
+import Underline from "@tiptap/extension-underline";
+import Highlight from "@tiptap/extension-highlight";
+import TextAlign from "@tiptap/extension-text-align";
 import ImagePickerDialog from "./ImagePickerDialog";
 
 interface RichTextEditorProps {
@@ -34,8 +37,6 @@ export default function RichTextEditor({
     immediatelyRender: false,
     extensions: [
       StarterKit.configure({
-        codeBlock: false,
-        blockquote: false,
         heading: {
           levels: [2, 3, 4, 5],
         },
@@ -45,6 +46,11 @@ export default function RichTextEditor({
         HTMLAttributes: { rel: "noopener noreferrer" },
       }),
       Image,
+      Underline,
+      Highlight,
+      TextAlign.configure({
+        types: ["heading", "paragraph"],
+      }),
       Placeholder.configure({ placeholder }),
     ],
     content: value,
@@ -230,16 +236,40 @@ function Toolbar({
         </button>
         <button
           type="button"
+          onClick={() => editor.chain().focus().toggleUnderline().run()}
+          className={btnClass(editor.isActive("underline"))}
+          title="Souligne (Ctrl+U)"
+        >
+          <span className="underline">U</span>
+        </button>
+        <button
+          type="button"
           onClick={() => editor.chain().focus().toggleStrike().run()}
           className={btnClass(editor.isActive("strike"))}
           title="Barre"
         >
           <s>S</s>
         </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleCode().run()}
+          className={btnClass(editor.isActive("code"))}
+          title="Code inline"
+        >
+          &lt;/&gt;
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHighlight().run()}
+          className={btnClass(editor.isActive("highlight"))}
+          title="Surligner"
+        >
+          <span className="bg-jaune/60 px-0.5">H</span>
+        </button>
 
         <span className="w-px bg-gris/20 mx-1" />
 
-        {/* Lists */}
+        {/* Lists & blocks */}
         <button
           type="button"
           onClick={() => editor.chain().focus().toggleBulletList().run()}
@@ -256,10 +286,22 @@ function Toolbar({
         >
           1. Liste
         </button>
-
-        <span className="w-px bg-gris/20 mx-1" />
-
-        {/* Block elements */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
+          className={btnClass(editor.isActive("blockquote"))}
+          title="Citation"
+        >
+          ❝
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleCodeBlock().run()}
+          className={btnClass(editor.isActive("codeBlock"))}
+          title="Bloc de code"
+        >
+          { }
+        </button>
         <button
           type="button"
           onClick={() => editor.chain().focus().setHorizontalRule().run()}
@@ -268,6 +310,46 @@ function Toolbar({
         >
           —
         </button>
+
+        <span className="w-px bg-gris/20 mx-1" />
+
+        {/* Text align */}
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          className={btnClass(editor.isActive({ textAlign: "left" }))}
+          title="Aligner a gauche"
+        >
+          ≡←
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          className={btnClass(editor.isActive({ textAlign: "center" }))}
+          title="Centrer"
+        >
+          ≡↔
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          className={btnClass(editor.isActive({ textAlign: "right" }))}
+          title="Aligner a droite"
+        >
+          →≡
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().setTextAlign("justify").run()}
+          className={btnClass(editor.isActive({ textAlign: "justify" }))}
+          title="Justifier"
+        >
+          ≡≡
+        </button>
+
+        <span className="w-px bg-gris/20 mx-1" />
+
+        {/* Link & Image */}
         <button
           type="button"
           onClick={handleLinkClick}
