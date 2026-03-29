@@ -8,13 +8,6 @@ interface CfpBody {
   closeDate?: string;
 }
 
-interface KeyFigureBody {
-  icon: string;
-  value: string;
-  labelFr: string;
-  labelEn: string;
-}
-
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/cfp
   app.get("/settings/cfp", async () => {
@@ -53,57 +46,4 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  // GET /api/admin/settings/key-figures
-  app.get("/settings/key-figures", async () => {
-    const settings = await prisma.siteSetting.findMany({
-      where: { key: { startsWith: "key_figure_" } },
-      orderBy: { key: "asc" },
-    });
-
-    const settingsMap = new Map(settings.map((s) => [s.key, s.value]));
-    const figures: KeyFigureBody[] = [];
-
-    for (let i = 1; i <= 10; i++) {
-      const prefix = `key_figure_${i}`;
-      const icon = settingsMap.get(`${prefix}_icon`);
-      if (!icon) break;
-
-      figures.push({
-        icon,
-        value: settingsMap.get(`${prefix}_value`) || "0",
-        labelFr: settingsMap.get(`${prefix}_label_fr`) || "",
-        labelEn: settingsMap.get(`${prefix}_label_en`) || "",
-      });
-    }
-
-    return figures;
-  });
-
-  // PUT /api/admin/settings/key-figures
-  app.put<{
-    Body: KeyFigureBody[];
-  }>("/settings/key-figures", async (request) => {
-    const figures = request.body;
-
-    // Delete all existing key figures
-    await prisma.siteSetting.deleteMany({
-      where: { key: { startsWith: "key_figure_" } },
-    });
-
-    // Recreate
-    for (let i = 0; i < figures.length; i++) {
-      const prefix = `key_figure_${i + 1}`;
-      const fig = figures[i];
-      await prisma.siteSetting.createMany({
-        data: [
-          { key: `${prefix}_icon`, value: fig.icon },
-          { key: `${prefix}_value`, value: fig.value },
-          { key: `${prefix}_label_fr`, value: fig.labelFr },
-          { key: `${prefix}_label_en`, value: fig.labelEn },
-        ],
-      });
-    }
-
-    return { success: true, count: figures.length };
-  });
 }

@@ -16,17 +16,29 @@ interface EditionData {
   archivedSiteUrl: string | null;
 }
 
+interface KeyFigureData {
+  icon: string;
+  value: string;
+  labelFr: string;
+  labelEn: string;
+}
+
 const STATUS_OPTIONS = [
   { value: "PREPARATION", label: "Preparation", variant: "gray" as const },
   { value: "ANNOUNCEMENT", label: "Annonce", variant: "green" as const },
   { value: "SEE_YOU_NEXT_YEAR", label: "A l'annee prochaine", variant: "orange" as const },
 ];
 
+const EMPTY_FIGURE: KeyFigureData = { icon: "", value: "", labelFr: "", labelEn: "" };
+
 export default function EditionsPage() {
   const [editions, setEditions] = useState<EditionData[]>([]);
   const [editing, setEditing] = useState<EditionData | null>(null);
+  const [keyFigures, setKeyFigures] = useState<KeyFigureData[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingFigures, setIsSavingFigures] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedFigures, setExpandedFigures] = useState<number | null>(null);
 
   async function loadEditions() {
     setIsLoading(true);
@@ -38,6 +50,29 @@ export default function EditionsPage() {
   useEffect(() => {
     loadEditions();
   }, []);
+
+  async function loadKeyFigures(editionId: number) {
+    const { data } = await adminFetch<KeyFigureData[]>(`/editions/${editionId}/key-figures`);
+    setKeyFigures(data || []);
+  }
+
+  function toggleEditing(edition: EditionData) {
+    if (editing?.id === edition.id) {
+      setEditing(null);
+    } else {
+      setEditing({ ...edition });
+    }
+  }
+
+  function toggleFigures(editionId: number) {
+    if (expandedFigures === editionId) {
+      setExpandedFigures(null);
+      setKeyFigures([]);
+    } else {
+      setExpandedFigures(editionId);
+      loadKeyFigures(editionId);
+    }
+  }
 
   async function handleSave() {
     if (!editing) return;
@@ -60,6 +95,23 @@ export default function EditionsPage() {
     loadEditions();
   }
 
+  async function handleSaveFigures(editionId: number) {
+    setIsSavingFigures(true);
+    await adminFetch(`/editions/${editionId}/key-figures`, {
+      method: "PUT",
+      body: JSON.stringify(keyFigures),
+    });
+    setIsSavingFigures(false);
+  }
+
+  function updateFigure(index: number, field: keyof KeyFigureData, value: string) {
+    setKeyFigures((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: value } : f)));
+  }
+
+  function removeFigure(index: number) {
+    setKeyFigures((prev) => prev.filter((_, i) => i !== index));
+  }
+
   function getStatusVariant(status: string): "green" | "orange" | "gray" {
     return STATUS_OPTIONS.find((s) => s.value === status)?.variant || "gray";
   }
@@ -78,12 +130,20 @@ export default function EditionsPage() {
                 <h2 className="text-2xl font-bold text-noir">DevFest {edition.year}</h2>
                 <StatusBadge status={STATUS_OPTIONS.find((s) => s.value === edition.status)?.label || edition.status} variant={getStatusVariant(edition.status)} />
               </div>
-              <button
-                onClick={() => setEditing(editing?.id === edition.id ? null : { ...edition })}
-                className="text-sm text-bleu hover:underline"
-              >
-                {editing?.id === edition.id ? "Annuler" : "Modifier"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => toggleFigures(edition.id)}
+                  className="text-sm text-bleu hover:underline"
+                >
+                  {expandedFigures === edition.id ? "Masquer chiffres" : "Chiffres cles"}
+                </button>
+                <button
+                  onClick={() => toggleEditing(edition)}
+                  className="text-sm text-bleu hover:underline"
+                >
+                  {editing?.id === edition.id ? "Annuler" : "Modifier"}
+                </button>
+              </div>
             </div>
 
             {editing?.id === edition.id && (
@@ -119,6 +179,49 @@ export default function EditionsPage() {
                     className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
                   >
                     {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {expandedFigures === edition.id && (
+              <div className="border-t border-gris/20 pt-4 mt-4">
+                <h3 className="text-lg font-bold text-noir mb-4">Chiffres cles</h3>
+
+                {keyFigures.length === 0 ? (
+                  <p className="text-gris text-sm mb-4">Aucun chiffre cle pour cette edition.</p>
+                ) : (
+                  <div className="space-y-3 mb-4">
+                    {keyFigures.map((fig, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
+                        <FormField label={i === 0 ? "Icone" : ""} name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
+                        <FormField label={i === 0 ? "Valeur" : ""} name={`value-${i}`} value={fig.value} onChange={(v) => updateFigure(i, "value", v)} placeholder="3000" />
+                        <FormField label={i === 0 ? "Label FR" : ""} name={`labelFr-${i}`} value={fig.labelFr} onChange={(v) => updateFigure(i, "labelFr", v)} placeholder="Participants" />
+                        <FormField label={i === 0 ? "Label EN" : ""} name={`labelEn-${i}`} value={fig.labelEn} onChange={(v) => updateFigure(i, "labelEn", v)} placeholder="Attendees" />
+                        <button
+                          onClick={() => removeFigure(i)}
+                          className="text-terre-cuite hover:underline text-sm pb-2"
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setKeyFigures([...keyFigures, { ...EMPTY_FIGURE }])}
+                    className="px-3 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse"
+                  >
+                    + Ajouter
+                  </button>
+                  <button
+                    onClick={() => handleSaveFigures(edition.id)}
+                    disabled={isSavingFigures}
+                    className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+                  >
+                    {isSavingFigures ? "Sauvegarde..." : "Sauvegarder les chiffres"}
                   </button>
                 </div>
               </div>

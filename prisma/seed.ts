@@ -156,55 +156,19 @@ async function main() {
 
   console.log("Content pages created: 2");
 
-  // --- Key Figures (SiteSettings) ---
+  // --- Key Figures (per-Edition) ---
+  await prisma.keyFigure.deleteMany({ where: { editionId: edition.id } });
   const keyFigures = [
-    {
-      icon: "calendar",
-      value: "1",
-      labelFr: "Journée",
-      labelEn: "Day",
-    },
-    {
-      icon: "users",
-      value: "3000",
-      labelFr: "Participants",
-      labelEn: "Attendees",
-    },
-    {
-      icon: "microphone",
-      value: "80",
-      labelFr: "Conférences",
-      labelEn: "Talks",
-    },
-    {
-      icon: "handshake",
-      value: "60",
-      labelFr: "Stands",
-      labelEn: "Booths",
-    },
+    { icon: "calendar", value: "1", labelFr: "Journée", labelEn: "Day", sortOrder: 0 },
+    { icon: "users", value: "3000", labelFr: "Participants", labelEn: "Attendees", sortOrder: 1 },
+    { icon: "microphone", value: "80", labelFr: "Conférences", labelEn: "Talks", sortOrder: 2 },
+    { icon: "handshake", value: "60", labelFr: "Stands", labelEn: "Booths", sortOrder: 3 },
   ];
+  await prisma.keyFigure.createMany({
+    data: keyFigures.map((fig) => ({ ...fig, editionId: edition.id })),
+  });
 
-  for (let i = 0; i < keyFigures.length; i++) {
-    const fig = keyFigures[i];
-    const prefix = `key_figure_${i + 1}`;
-
-    const entries = [
-      { key: `${prefix}_icon`, value: fig.icon },
-      { key: `${prefix}_value`, value: fig.value },
-      { key: `${prefix}_label_fr`, value: fig.labelFr },
-      { key: `${prefix}_label_en`, value: fig.labelEn },
-    ];
-
-    for (const entry of entries) {
-      await prisma.siteSetting.upsert({
-        where: { key: entry.key },
-        update: { value: entry.value },
-        create: entry,
-      });
-    }
-  }
-
-  console.log(`Key figures settings created: ${keyFigures.length * 4}`);
+  console.log(`Key figures created: ${keyFigures.length}`);
 
   // --- CFP Settings ---
   const cfpSettings = [

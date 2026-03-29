@@ -24,7 +24,6 @@ const navItems = [
   { label: "Images", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Catégories contact", href: "/fr/admin/contact/categories", icon: "tag", roles: ["ADMIN"] },
   { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
-  { label: "Chiffres clés", href: "/fr/admin/key-figures", icon: "bar-chart", roles: ["ADMIN"] },
   { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
 ];
 

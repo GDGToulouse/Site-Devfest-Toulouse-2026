@@ -49,6 +49,20 @@ model Edition {
 
   ticketTiers      TicketTier[]
   articles         Article[]       @relation("EditionArticles")
+  keyFigures       KeyFigure[]
+}
+
+// --- Key Figures ---
+
+model KeyFigure {
+  id        Int     @id @default(autoincrement())
+  icon      String
+  value     String
+  labelFr   String
+  labelEn   String
+  sortOrder Int     @default(0)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 }
 
 // --- Blog / Articles ---

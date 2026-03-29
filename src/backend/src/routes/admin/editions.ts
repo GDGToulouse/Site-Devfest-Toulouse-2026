@@ -109,4 +109,57 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     return reply.status(201).send({ id: edition.id, year: edition.year });
   });
+
+  // --- Key Figures per Edition ---
+
+  // GET /api/admin/editions/:id/key-figures
+  app.get<{ Params: { id: string } }>(
+    "/editions/:id/key-figures",
+    async (request, reply) => {
+      const id = Number(request.params.id);
+      if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+      const figures = await prisma.keyFigure.findMany({
+        where: { editionId: id },
+        orderBy: { sortOrder: "asc" },
+      });
+
+      return figures.map((f) => ({
+        id: f.id,
+        icon: f.icon,
+        value: f.value,
+        labelFr: f.labelFr,
+        labelEn: f.labelEn,
+        sortOrder: f.sortOrder,
+      }));
+    }
+  );
+
+  // PUT /api/admin/editions/:id/key-figures — replace all key figures for an edition
+  app.put<{
+    Params: { id: string };
+    Body: { icon: string; value: string; labelFr: string; labelEn: string }[];
+  }>("/editions/:id/key-figures", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const edition = await prisma.edition.findUnique({ where: { id } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    const figures = request.body;
+
+    await prisma.keyFigure.deleteMany({ where: { editionId: id } });
+    await prisma.keyFigure.createMany({
+      data: figures.map((fig, i) => ({
+        icon: fig.icon,
+        value: fig.value,
+        labelFr: fig.labelFr,
+        labelEn: fig.labelEn,
+        sortOrder: i,
+        editionId: id,
+      })),
+    });
+
+    return { success: true, count: figures.length };
+  });
 }

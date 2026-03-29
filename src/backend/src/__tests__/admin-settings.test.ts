@@ -43,40 +43,4 @@ describe("Admin Settings API", () => {
     await app.close();
   });
 
-  it("GET /api/admin/settings/key-figures should return figures", async () => {
-    const app = await buildAdminApp();
-    const res = await app.inject({ method: "GET", url: "/api/admin/settings/key-figures" });
-    expect(res.statusCode).toBe(200);
-    expect(Array.isArray(res.json())).toBe(true);
-    await app.close();
-  });
-
-  it("PUT /api/admin/settings/key-figures should update figures", async () => {
-    const app = await buildAdminApp();
-
-    // Get current
-    const getRes = await app.inject({ method: "GET", url: "/api/admin/settings/key-figures" });
-    const current = getRes.json();
-
-    // Update with test data
-    const res = await app.inject({
-      method: "PUT",
-      url: "/api/admin/settings/key-figures",
-      payload: [
-        { icon: "fa-users", value: "2000+", labelFr: "Participants", labelEn: "Attendees" },
-        { icon: "fa-microphone", value: "80+", labelFr: "Speakers", labelEn: "Speakers" },
-      ],
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().count).toBe(2);
-
-    // Restore
-    await app.inject({
-      method: "PUT",
-      url: "/api/admin/settings/key-figures",
-      payload: current,
-    });
-
-    await app.close();
-  });
 });

@@ -2,30 +2,25 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 
 export default async function settingsRoutes(app: FastifyInstance) {
-  // GET /api/settings/key-figures — returns structured key figures from SiteSettings
+  // GET /api/settings/key-figures — returns key figures for the current edition
   app.get("/settings/key-figures", async () => {
-    const settings = await prisma.siteSetting.findMany({
-      where: { key: { startsWith: "key_figure_" } },
-      orderBy: { key: "asc" },
+    const currentEdition = await prisma.edition.findFirst({
+      orderBy: { year: "desc" },
     });
 
-    const settingsMap = new Map(settings.map((s) => [s.key, s.value]));
-    const figures = [];
+    if (!currentEdition) return [];
 
-    for (let i = 1; i <= 10; i++) {
-      const prefix = `key_figure_${i}`;
-      const icon = settingsMap.get(`${prefix}_icon`);
-      if (!icon) break;
+    const figures = await prisma.keyFigure.findMany({
+      where: { editionId: currentEdition.id },
+      orderBy: { sortOrder: "asc" },
+    });
 
-      figures.push({
-        icon,
-        value: settingsMap.get(`${prefix}_value`) || "0",
-        labelFr: settingsMap.get(`${prefix}_label_fr`) || "",
-        labelEn: settingsMap.get(`${prefix}_label_en`) || "",
-      });
-    }
-
-    return figures;
+    return figures.map((f) => ({
+      icon: f.icon,
+      value: f.value,
+      labelFr: f.labelFr,
+      labelEn: f.labelEn,
+    }));
   });
 
   // GET /api/settings/cfp — returns CFP configuration
