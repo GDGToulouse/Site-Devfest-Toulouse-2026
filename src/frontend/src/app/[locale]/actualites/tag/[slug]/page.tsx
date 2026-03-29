@@ -12,9 +12,14 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
+  const locale = await getLocale();
   const t = await getTranslations("articles");
   return {
     title: `${t("taggedWith")} ${slug}`,
+    alternates: {
+      canonical: `/${locale}/actualites/tag/${slug}`,
+      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}` },
+    },
   };
 }
 

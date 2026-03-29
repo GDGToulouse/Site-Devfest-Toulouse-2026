@@ -7,10 +7,15 @@ import ContactForm from "@/components/ContactForm";
 import SocialIcons from "@/components/SocialIcons";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("contact");
   return {
     title: t("title"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}/contact`,
+      languages: { fr: "/fr/contact", en: "/en/contact" },
+    },
   };
 }
 

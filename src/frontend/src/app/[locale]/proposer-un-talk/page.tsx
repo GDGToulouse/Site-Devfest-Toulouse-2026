@@ -5,10 +5,15 @@ import { getCfpSettings } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("cfp");
   return {
     title: t("pageTitle"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}/proposer-un-talk`,
+      languages: { fr: "/fr/proposer-un-talk", en: "/en/proposer-un-talk" },
+    },
   };
 }
 

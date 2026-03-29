@@ -7,10 +7,15 @@ import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("codeOfConduct");
   return {
     title: t("title"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}/code-de-conduite`,
+      languages: { fr: "/fr/code-de-conduite", en: "/en/code-de-conduite" },
+    },
   };
 }
 

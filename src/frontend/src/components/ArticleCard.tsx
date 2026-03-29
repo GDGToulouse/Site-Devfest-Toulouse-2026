@@ -38,9 +38,9 @@ export default function ArticleCard({ article, locale }: ArticleCardProps) {
       )}
 
       <div className="flex flex-col flex-1 px-4 py-4">
-        <h3 className="text-lg font-bold text-noir line-clamp-2 leading-tight">
+        <h2 className="text-lg font-bold text-noir line-clamp-2 leading-tight">
           {title}
-        </h3>
+        </h2>
 
         {excerpt && (
           <p className="mt-2 text-sm text-gris line-clamp-2">{excerpt}</p>

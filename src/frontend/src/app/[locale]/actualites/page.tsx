@@ -7,10 +7,15 @@ import ArticleCard from "@/components/ArticleCard";
 import Pagination from "@/components/Pagination";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("articles");
   return {
     title: t("title"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}/actualites`,
+      languages: { fr: "/fr/actualites", en: "/en/actualites" },
+    },
   };
 }
 

@@ -6,10 +6,15 @@ import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
   const t = await getTranslations("ticketing");
   return {
     title: t("pageTitle"),
     description: t("description"),
+    alternates: {
+      canonical: `/${locale}/billetterie`,
+      languages: { fr: "/fr/billetterie", en: "/en/billetterie" },
+    },
   };
 }
 
