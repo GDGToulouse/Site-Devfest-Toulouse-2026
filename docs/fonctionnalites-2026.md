@@ -212,10 +212,25 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
   - Compte local (email + mot de passe)
   - OAuth Google
   - OAuth GitHub
-- **Inscription sur invitation uniquement** : aucun visiteur ne peut créer de compte. Les comptes sont créés par un administrateur (via la gestion des utilisateurs ou `ADMIN_EMAILS`). La connexion via OAuth (Google/GitHub) ne crée pas de compte si l'email n'est pas déjà autorisé.
-- **Réconciliation de comptes** : un même compte est lié à l'adresse email. Un utilisateur peut se connecter indifféremment via son compte local, Google ou GitHub s'ils partagent la même adresse email.
+- **Inscription sur invitation uniquement** :
+  - Aucun visiteur ne peut créer de compte de lui-même. Pas de formulaire d'inscription public.
+  - Un administrateur autorise un utilisateur en ajoutant son email à la variable d'environnement `ADMIN_EMAILS` (liste séparée par virgules).
+  - Techniquement : un `databaseHook` (`user.create.before`) bloque toute création de compte dont l'email n'est pas dans `ADMIN_EMAILS`. Les providers OAuth ont `disableImplicitSignUp: true` pour empêcher la création implicite de compte.
+  - Si un utilisateur tente de se connecter via Google ou GitHub avec un email non autorisé, Better Auth refuse la connexion et l'utilisateur voit un message d'erreur.
+- **Workflow de première connexion (compte local)** :
+  1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS`.
+  2. L'utilisateur accède à la page de login (`/admin`) et clique « Mot de passe oublié ? ».
+  3. Il reçoit un email avec un lien de réinitialisation (via SMTP / MailHog en dev).
+  4. Il définit son mot de passe (minimum 10 caractères) via ce lien.
+  5. Il peut ensuite se connecter avec email + mot de passe.
+- **Workflow de première connexion (OAuth)** :
+  1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS`.
+  2. L'utilisateur accède à la page de login et clique « Google » ou « GitHub ».
+  3. Better Auth crée le compte automatiquement (l'email est autorisé) et établit la session.
+- **Réconciliation de comptes** : un même compte est lié à l'adresse email. Un utilisateur peut se connecter indifféremment via son compte local, Google ou GitHub s'ils partagent la même adresse email. Better Auth fusionne les providers sur un compte unique.
 - **Compte local — sécurité** :
   - Mot de passe : minimum 10 caractères, haché (géré par Better Auth)
-  - Réinitialisation de mot de passe par email (lien temporaire sécurisé)
-  - Protection contre le brute-force (rate limiting sur les endpoints de connexion)
-- **Account linking** : les providers OAuth de confiance (Google, GitHub) et le provider email-password sont liés automatiquement si l'adresse email correspond
+  - Réinitialisation de mot de passe par email (lien temporaire sécurisé, expire après 1 heure)
+  - Protection contre le brute-force (rate limiting intégré Better Auth)
+  - Pas de stockage de mot de passe en clair, pas de transmission en clair (HTTPS en production)
+- **Account linking** : les providers de confiance (`email-password`, `google`, `github`) sont liés automatiquement si l'adresse email correspond. Un utilisateur qui se connecte d'abord via Google puis via email/password avec le même email accède au même compte.
