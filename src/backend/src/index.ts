@@ -25,7 +25,9 @@ await app.register(cors, {
   credentials: true,
 });
 
-await app.register(helmet);
+await app.register(helmet, {
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+});
 await app.register(multipart);
 await app.register(fastifyStatic, {
   root: "/app/uploads",
