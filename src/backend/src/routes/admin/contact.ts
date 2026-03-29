@@ -152,4 +152,47 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     await prisma.contactMessage.delete({ where: { id } });
     return { success: true };
   });
+
+  // POST /api/admin/contact/messages/:id/forward — forward message to email addresses
+  app.post<{
+    Params: { id: string };
+    Body: { emails: string };
+  }>("/contact/messages/:id/forward", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const msg = await prisma.contactMessage.findUnique({ where: { id } });
+    if (!msg) return reply.status(404).send({ error: "Message not found" });
+
+    const emails = request.body.emails
+      .split(",")
+      .map((e: string) => e.trim())
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      return reply.status(400).send({ error: "No valid email addresses" });
+    }
+
+    try {
+      const { sendEmail } = await import("../../lib/email.js");
+      await sendEmail({
+        to: emails,
+        subject: `[Fwd] Message de contact — ${msg.firstName} ${msg.lastName}`,
+        text: `De: ${msg.firstName} ${msg.lastName}\nEmail: ${msg.email}${msg.phone ? `\nTel: ${msg.phone}` : ""}${msg.categoryLabel ? `\nCategorie: ${msg.categoryLabel}` : ""}\n\n${msg.message}`,
+        html: `
+        <h3>Message de contact transféré</h3>
+        <p><strong>De:</strong> ${msg.firstName} ${msg.lastName}</p>
+        <p><strong>Email:</strong> <a href="mailto:${msg.email}">${msg.email}</a></p>
+        ${msg.phone ? `<p><strong>Tel:</strong> ${msg.phone}</p>` : ""}
+        ${msg.categoryLabel ? `<p><strong>Categorie:</strong> ${msg.categoryLabel}</p>` : ""}
+        <p><strong>Date:</strong> ${new Date(msg.createdAt).toLocaleString("fr-FR")}</p>
+        <hr>
+        <p>${msg.message.replace(/\n/g, "<br>")}</p>
+        `,
+      });
+      return { success: true, forwardedTo: emails };
+    } catch {
+      return reply.status(500).send({ error: "Failed to send email" });
+    }
+  });
 }
