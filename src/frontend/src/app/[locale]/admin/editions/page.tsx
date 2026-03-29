@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface EditionData {
   id: number;
@@ -39,6 +40,10 @@ export default function EditionsPage() {
   const [isSavingFigures, setIsSavingFigures] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [expandedFigures, setExpandedFigures] = useState<number | null>(null);
+  const [newYear, setNewYear] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<EditionData | null>(null);
 
   async function loadEditions() {
     setIsLoading(true);
@@ -104,6 +109,37 @@ export default function EditionsPage() {
     setIsSavingFigures(false);
   }
 
+  async function handleCreate() {
+    const year = Number(newYear);
+    if (!year || year < 2016 || year > 2100) {
+      setCreateError("Annee invalide");
+      return;
+    }
+    setIsCreating(true);
+    setCreateError(null);
+    const { status } = await adminFetch("/editions", {
+      method: "POST",
+      body: JSON.stringify({ year }),
+    });
+    if (status === 409) {
+      setCreateError("Une edition pour cette annee existe deja");
+    } else {
+      setNewYear("");
+    }
+    setIsCreating(false);
+    loadEditions();
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const { status, data } = await adminFetch<{ error?: string }>(`/editions/${deleteTarget.id}`, { method: "DELETE" });
+    if (status === 409) {
+      setCreateError(data?.error || "Impossible de supprimer cette edition");
+    }
+    setDeleteTarget(null);
+    loadEditions();
+  }
+
   function updateFigure(index: number, field: keyof KeyFigureData, value: string) {
     setKeyFigures((prev) => prev.map((f, i) => (i === index ? { ...f, [field]: value } : f)));
   }
@@ -120,7 +156,29 @@ export default function EditionsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-noir mb-8">Editions</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-noir">Editions</h1>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            value={newYear}
+            onChange={(e) => setNewYear(e.target.value)}
+            placeholder="Annee"
+            className="w-24 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <button
+            onClick={handleCreate}
+            disabled={isCreating || !newYear}
+            className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+          >
+            {isCreating ? "Creation..." : "Nouvelle edition"}
+          </button>
+        </div>
+      </div>
+
+      {createError && (
+        <div className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{createError}</div>
+      )}
 
       <div className="space-y-4">
         {editions.map((edition) => (
@@ -142,6 +200,12 @@ export default function EditionsPage() {
                   className="text-sm text-bleu hover:underline"
                 >
                   {editing?.id === edition.id ? "Annuler" : "Modifier"}
+                </button>
+                <button
+                  onClick={() => setDeleteTarget(edition)}
+                  className="text-sm text-terre-cuite hover:underline"
+                >
+                  Supprimer
                 </button>
               </div>
             </div>
@@ -229,6 +293,16 @@ export default function EditionsPage() {
           </div>
         ))}
       </div>
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Supprimer l'edition"
+        message={`Supprimer l'edition DevFest ${deleteTarget?.year} ? Les chiffres cles et tarifs associes seront aussi supprimes. Les articles lies ne seront pas supprimes.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

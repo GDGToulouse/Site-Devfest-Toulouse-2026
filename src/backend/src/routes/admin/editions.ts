@@ -65,6 +65,15 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: "Edition not found" });
 
     const body = request.body;
+    const newStatus = body.status ?? existing.status;
+
+    // If setting to ANNOUNCEMENT, ensure no other edition is active
+    if (newStatus === "ANNOUNCEMENT" && existing.status !== "ANNOUNCEMENT") {
+      await prisma.edition.updateMany({
+        where: { status: "ANNOUNCEMENT", id: { not: id } },
+        data: { status: "SEE_YOU_NEXT_YEAR" },
+      });
+    }
 
     const edition = await prisma.edition.update({
       where: { id },
@@ -72,7 +81,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         year: body.year ?? existing.year,
         startDate: body.startDate ? new Date(body.startDate) : existing.startDate,
         endDate: body.endDate ? new Date(body.endDate) : existing.endDate,
-        status: body.status ?? existing.status,
+        status: newStatus,
         aftermovieUrl: body.aftermovieUrl !== undefined ? (body.aftermovieUrl || null) : existing.aftermovieUrl,
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
@@ -109,6 +118,29 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     return reply.status(201).send({ id: edition.id, year: edition.year });
   });
+
+  // DELETE /api/admin/editions/:id — delete edition (cascade deletes key figures + ticket tiers)
+  app.delete<{ Params: { id: string } }>(
+    "/editions/:id",
+    async (request, reply) => {
+      const id = Number(request.params.id);
+      if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+      const existing = await prisma.edition.findUnique({
+        where: { id },
+        include: { _count: { select: { articles: true } } },
+      });
+
+      if (!existing) return reply.status(404).send({ error: "Edition not found" });
+
+      if (existing._count.articles > 0) {
+        return reply.status(409).send({ error: "Cannot delete edition with linked articles" });
+      }
+
+      await prisma.edition.delete({ where: { id } });
+      return { success: true };
+    }
+  );
 
   // --- Key Figures per Edition ---
 
