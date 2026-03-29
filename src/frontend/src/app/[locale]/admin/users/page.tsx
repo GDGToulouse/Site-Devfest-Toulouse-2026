@@ -11,6 +11,7 @@ interface AdminUser {
   email: string;
   name: string | null;
   role: "ADMIN" | "EDITOR";
+  banned: boolean;
   emailVerified: boolean;
   createdAt: string;
   lastLogin: string | null;
@@ -57,6 +58,14 @@ export default function UsersAdminPage() {
       setForm({ email: "", name: "", role: "EDITOR" });
     }
     setIsSaving(false);
+    loadUsers();
+  }
+
+  async function handleToggleBan(userId: string) {
+    const { status, data } = await adminFetch<{ error?: string }>(`/users/${userId}/ban`, { method: "PUT" });
+    if (status === 400) {
+      setError(data?.error || "Impossible de bloquer cet utilisateur");
+    }
     loadUsers();
   }
 
@@ -141,8 +150,11 @@ export default function UsersAdminPage() {
           </thead>
           <tbody>
             {users.map((user) => (
-              <tr key={user.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
-                <td className="px-4 py-3 text-noir font-medium">{user.name || "-"}</td>
+              <tr key={user.id} className={`border-b border-gris/10 ${user.banned ? "opacity-50" : "hover:bg-blanc-casse/50"}`}>
+                <td className="px-4 py-3 text-noir font-medium">
+                  {user.name || "-"}
+                  {user.banned && <span className="ml-2 text-xs text-terre-cuite">(bloque)</span>}
+                </td>
                 <td className="px-4 py-3 text-gris">{user.email}</td>
                 <td className="px-4 py-3">
                   {editingRole?.id === user.id ? (
@@ -157,18 +169,28 @@ export default function UsersAdminPage() {
                       <option value="EDITOR">Editeur</option>
                     </select>
                   ) : (
-                    <button onClick={() => setEditingRole({ id: user.id, role: user.role })}>
-                      <StatusBadge
-                        status={user.role === "ADMIN" ? "Administrateur" : "Editeur"}
-                        variant={user.role === "ADMIN" ? "green" : "blue"}
-                      />
-                    </button>
+                    <StatusBadge
+                      status={user.role === "ADMIN" ? "Administrateur" : "Editeur"}
+                      variant={user.role === "ADMIN" ? "green" : "blue"}
+                    />
                   )}
                 </td>
                 <td className="px-4 py-3 text-gris text-xs">
                   {user.lastLogin ? new Date(user.lastLogin).toLocaleString("fr-FR") : "Jamais"}
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-right space-x-3">
+                  <button
+                    onClick={() => setEditingRole({ id: user.id, role: user.role })}
+                    className="text-bleu hover:underline text-sm"
+                  >
+                    Modifier role
+                  </button>
+                  <button
+                    onClick={() => handleToggleBan(user.id)}
+                    className={`hover:underline text-sm ${user.banned ? "text-malachite" : "text-orange"}`}
+                  >
+                    {user.banned ? "Debloquer" : "Bloquer"}
+                  </button>
                   <button
                     onClick={() => setDeleteTarget(user)}
                     className="text-terre-cuite hover:underline text-sm"

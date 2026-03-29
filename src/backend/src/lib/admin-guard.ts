@@ -13,12 +13,14 @@ async function getSessionUser(request: FastifyRequest) {
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
-    select: { role: true },
+    select: { role: true, banned: true },
   });
+
+  if (!user || user.banned) return null;
 
   return {
     ...session.user,
-    role: user?.role || "ADMIN",
+    role: user.role || "ADMIN",
   };
 }
 

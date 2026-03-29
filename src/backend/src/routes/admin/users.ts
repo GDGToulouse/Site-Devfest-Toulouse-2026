@@ -25,6 +25,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
         email: true,
         name: true,
         role: true,
+        banned: true,
         emailVerified: true,
         createdAt: true,
         updatedAt: true,
@@ -41,6 +42,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       email: u.email,
       name: u.name,
       role: u.role,
+      banned: u.banned,
       emailVerified: u.emailVerified,
       createdAt: u.createdAt,
       lastLogin: u.sessions[0]?.createdAt || null,
@@ -117,6 +119,34 @@ export default async function adminUserRoutes(app: FastifyInstance) {
 
     return { id: user.id, email: user.email, name: user.name, role: user.role };
   });
+
+  // PUT /api/admin/users/:id/ban — toggle ban status
+  app.put<{ Params: { id: string } }>(
+    "/users/:id/ban",
+    async (request, reply) => {
+      const { id } = request.params;
+      const adminUser = (request as unknown as { adminUser: { id: string } }).adminUser;
+
+      if (adminUser.id === id) {
+        return reply.code(400).send({ error: "You cannot ban yourself" });
+      }
+
+      const existing = await prisma.user.findUnique({ where: { id } });
+      if (!existing) return reply.code(404).send({ error: "User not found" });
+
+      const user = await prisma.user.update({
+        where: { id },
+        data: { banned: !existing.banned },
+      });
+
+      // If banning, delete all active sessions
+      if (user.banned) {
+        await prisma.session.deleteMany({ where: { userId: id } });
+      }
+
+      return { id: user.id, banned: user.banned };
+    }
+  );
 
   // DELETE /api/admin/users/:id — delete a user
   app.delete<{ Params: { id: string } }>(
