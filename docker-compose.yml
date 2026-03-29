@@ -11,7 +11,7 @@ services:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install && pnpm dev"
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
     depends_on:
       - backend
 

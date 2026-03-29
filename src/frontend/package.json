@@ -20,6 +20,11 @@
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@next/swc-linux-x64-musl"
+    ]
+  },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
