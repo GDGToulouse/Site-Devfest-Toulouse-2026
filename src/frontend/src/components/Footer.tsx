@@ -59,9 +59,9 @@ export default async function Footer() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {/* Navigation */}
             <div>
-              <h3 className="text-blanc text-xl font-bold mb-2 leading-snug">
+              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
                 {tFooter("navigation")}
-              </h3>
+              </p>
               <ul className="flex flex-col gap-1">
                 {NAV_LINKS.map((link) => (
                   <li key={link.key}>
@@ -78,9 +78,9 @@ export default async function Footer() {
 
             {/* Ecosystems */}
             <div>
-              <h3 className="text-blanc text-xl font-bold mb-2 leading-snug">
+              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
                 {tFooter("ecosystems")}
-              </h3>
+              </p>
               <ul className="flex flex-col gap-1">
                 {ECOSYSTEM_LINKS.map((link) => (
                   <li key={link.label}>
@@ -99,9 +99,9 @@ export default async function Footer() {
 
             {/* Previous editions */}
             <div>
-              <h3 className="text-blanc text-xl font-bold mb-2 leading-snug">
+              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
                 {tFooter("previousEditions")}
-              </h3>
+              </p>
               <ul className="flex flex-col gap-1">
                 {PREVIOUS_EDITIONS.map((link) => (
                   <li key={link.label}>
