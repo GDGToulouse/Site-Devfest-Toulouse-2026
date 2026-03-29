@@ -77,6 +77,17 @@ docker-compose.yml             # Dev environment: frontend + backend + db + mail
 
 - **`SUIVI-LOT-1.md`** — Lot 1 progress tracker: phases 1-8, task status, session journal, decisions, improvement backlog. **Read this file at the start of every session** to understand current progress and remaining work.
 
+## Dev Test Accounts
+
+Local dev accounts provisioned by `prisma/seed.ts` — use for browser testing:
+
+| Role | Email | Password |
+|------|-------|----------|
+| ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` |
+| EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` |
+
+Login at http://localhost:3000/fr/admin — Details in `docs/comptes-dev-local.md`.
+
 ## Specification Documents
 
 Always consult these documents before making assumptions about features or architecture:
@@ -89,6 +100,7 @@ Always consult these documents before making assumptions about features or archi
 - **`docs/maquettes-figma.md`** — Figma mockups: pages designed, shared components, structure ([Figma file](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499))
 - **`docs/design-system.md`** — Design system: brand guidelines, color palette (Google Sans), design tokens, UI kit (Font Awesome icons), content style guide
 - **`docs/variables-environnement.md`** — All environment variables: database, SMTP, OAuth, API keys, secrets — injected via Docker Compose
+- **`docs/comptes-dev-local.md`** — Dev test accounts (ADMIN + EDITOR), login instructions, MailHog setup
 
 ## Key Technical Decisions (from specs)
 
