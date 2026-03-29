@@ -1,6 +1,8 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import helmet from "@fastify/helmet";
+import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
@@ -24,6 +26,12 @@ await app.register(cors, {
 });
 
 await app.register(helmet);
+await app.register(multipart);
+await app.register(fastifyStatic, {
+  root: "/app/uploads",
+  prefix: "/uploads/",
+  decorateReply: false,
+});
 
 // Health check
 app.get("/api/health", async () => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import BilingualInput from "@/components/admin/BilingualInput";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 interface PageSummary {
   id: number;
@@ -71,7 +72,19 @@ export default function PagesAdminPage() {
 
           <BilingualInput label="Titre" nameFr="titleFr" nameEn="titleEn" valueFr={editing.titleFr} valueEn={editing.titleEn} onChangeFr={(v) => setEditing({ ...editing, titleFr: v })} onChangeEn={(v) => setEditing({ ...editing, titleEn: v })} required />
 
-          <BilingualInput label="Contenu (HTML)" nameFr="contentFr" nameEn="contentEn" valueFr={editing.contentFr} valueEn={editing.contentEn} onChangeFr={(v) => setEditing({ ...editing, contentFr: v })} onChangeEn={(v) => setEditing({ ...editing, contentEn: v })} multiline rows={15} />
+          <div>
+            <p className="text-sm font-medium text-noir mb-2">Contenu</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gris mb-1">Francais</p>
+                <RichTextEditor label="" name="contentFr" value={editing.contentFr} onChange={(v) => setEditing({ ...editing, contentFr: v })} minHeight="400px" />
+              </div>
+              <div>
+                <p className="text-xs text-gris mb-1">English</p>
+                <RichTextEditor label="" name="contentEn" value={editing.contentEn} onChange={(v) => setEditing({ ...editing, contentEn: v })} minHeight="400px" />
+              </div>
+            </div>
+          </div>
 
           <div className="flex justify-end">
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">

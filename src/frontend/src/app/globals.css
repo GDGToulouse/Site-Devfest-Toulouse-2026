@@ -72,3 +72,56 @@ body {
   color: var(--color-noir);
   font-family: var(--font-sans);
 }
+
+/* --- TipTap editor content — mirrors public prose styles --- */
+.tiptap-content {
+  min-height: inherit;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+}
+.tiptap-content h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content h5 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.tiptap-content p {
+  line-height: 1.625;
+  margin-bottom: 1rem;
+}
+.tiptap-content a {
+  color: var(--color-bismarck);
+  text-decoration: underline;
+}
+.tiptap-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content li {
+  margin-bottom: 0.25rem;
+}
+.tiptap-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+.tiptap-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-gris-placeholder);
+  pointer-events: none;
+  height: 0;
+}

@@ -1,0 +1,253 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Link from "@tiptap/extension-link";
+import Image from "@tiptap/extension-image";
+import Placeholder from "@tiptap/extension-placeholder";
+import ImagePickerDialog from "./ImagePickerDialog";
+
+interface RichTextEditorProps {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (html: string) => void;
+  required?: boolean;
+  placeholder?: string;
+  minHeight?: string;
+  showImageButton?: boolean;
+}
+
+export default function RichTextEditor({
+  label,
+  name,
+  value,
+  onChange,
+  required,
+  placeholder = "Ecrivez le contenu ici...",
+  minHeight = "280px",
+  showImageButton = true,
+}: RichTextEditorProps) {
+  const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  const editor = useEditor({
+    immediatelyRender: false,
+    extensions: [
+      StarterKit.configure({
+        codeBlock: false,
+        blockquote: false,
+        heading: {
+          levels: [4, 5],
+        },
+      }),
+      Link.configure({
+        openOnClick: false,
+        HTMLAttributes: { rel: "noopener noreferrer" },
+      }),
+      Image,
+      Placeholder.configure({ placeholder }),
+    ],
+    content: value,
+    onUpdate({ editor }) {
+      onChange(editor.getHTML());
+    },
+    editorProps: {
+      attributes: {
+        class: "tiptap-content",
+      },
+    },
+  });
+
+  // Sync external value changes (e.g. async API load)
+  const prevValueRef = useRef(value);
+  useEffect(() => {
+    if (!editor) return;
+    if (value !== prevValueRef.current) {
+      prevValueRef.current = value;
+      const currentHtml = editor.getHTML();
+      if (currentHtml !== value) {
+        editor.commands.setContent(value, false);
+      }
+    }
+  }, [editor, value]);
+
+  function handleImageSelect(url: string) {
+    if (editor) {
+      editor.chain().focus().setImage({ src: url }).run();
+    }
+  }
+
+  return (
+    <div>
+      {label && (
+        <label htmlFor={name} className="block text-sm font-medium text-noir mb-1">
+          {label}
+          {required && <span className="text-terre-cuite ml-1">*</span>}
+        </label>
+      )}
+      <div className="rounded-lg border border-gris/30 bg-blanc focus-within:ring-2 focus-within:ring-malachite/50 focus-within:border-malachite overflow-hidden">
+        <Toolbar
+          editor={editor}
+          onImageClick={showImageButton ? () => setImagePickerOpen(true) : undefined}
+        />
+        <div style={{ minHeight }}>
+          <EditorContent editor={editor} />
+        </div>
+      </div>
+      {showImageButton && (
+        <ImagePickerDialog
+          open={imagePickerOpen}
+          onClose={() => setImagePickerOpen(false)}
+          onSelect={handleImageSelect}
+        />
+      )}
+    </div>
+  );
+}
+
+// --- Toolbar ---
+
+import type { Editor } from "@tiptap/react";
+
+function Toolbar({
+  editor,
+  onImageClick,
+}: {
+  editor: Editor | null;
+  onImageClick?: () => void;
+}) {
+  const [showLinkInput, setShowLinkInput] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
+  if (!editor) return null;
+
+  function applyLink() {
+    if (!editor) return;
+    if (linkUrl.trim()) {
+      editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
+    } else {
+      editor.chain().focus().unsetLink().run();
+    }
+    setShowLinkInput(false);
+    setLinkUrl("");
+  }
+
+  function handleLinkClick() {
+    if (editor.isActive("link")) {
+      editor.chain().focus().unsetLink().run();
+    } else {
+      const existing = editor.getAttributes("link").href || "";
+      setLinkUrl(existing);
+      setShowLinkInput(true);
+    }
+  }
+
+  const btnBase = "px-2 py-1 rounded text-sm font-medium transition-colors";
+  const btnActive = "bg-malachite/10 text-malachite";
+  const btnInactive = "text-gris hover:text-noir hover:bg-gris/10";
+
+  function btnClass(active: boolean) {
+    return `${btnBase} ${active ? btnActive : btnInactive}`;
+  }
+
+  return (
+    <div className="border-b border-gris/20 bg-blanc-casse/50">
+      <div className="flex gap-1 flex-wrap p-2">
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 4 }).run()}
+          className={btnClass(editor.isActive("heading", { level: 4 }))}
+          title="Titre H4"
+        >
+          H4
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleHeading({ level: 5 }).run()}
+          className={btnClass(editor.isActive("heading", { level: 5 }))}
+          title="Titre H5"
+        >
+          H5
+        </button>
+
+        <span className="w-px bg-gris/20 mx-1" />
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBold().run()}
+          className={btnClass(editor.isActive("bold"))}
+          title="Gras"
+        >
+          <strong>B</strong>
+        </button>
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleItalic().run()}
+          className={btnClass(editor.isActive("italic"))}
+          title="Italique"
+        >
+          <em>I</em>
+        </button>
+
+        <span className="w-px bg-gris/20 mx-1" />
+
+        <button
+          type="button"
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
+          className={btnClass(editor.isActive("bulletList"))}
+          title="Liste a puces"
+        >
+          Liste
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLinkClick}
+          className={btnClass(editor.isActive("link"))}
+          title="Lien"
+        >
+          Lien
+        </button>
+
+        {onImageClick && (
+          <button
+            type="button"
+            onClick={onImageClick}
+            className={`${btnBase} ${btnInactive}`}
+            title="Inserer une image"
+          >
+            Image
+          </button>
+        )}
+      </div>
+
+      {showLinkInput && (
+        <div className="flex items-center gap-2 px-2 pb-2">
+          <input
+            type="url"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyLink()}
+            placeholder="https://..."
+            className="flex-1 rounded border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-1 focus:ring-malachite/50"
+            autoFocus
+          />
+          <button
+            type="button"
+            onClick={applyLink}
+            className="px-3 py-1 text-sm rounded bg-malachite text-blanc hover:bg-malachite/90"
+          >
+            OK
+          </button>
+          <button
+            type="button"
+            onClick={() => { setShowLinkInput(false); setLinkUrl(""); }}
+            className="px-2 py-1 text-sm text-gris hover:text-noir"
+          >
+            Annuler
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 interface ArticleForm {
   slug: string;
@@ -221,19 +222,16 @@ export default function ArticleEditorPage() {
             </button>
           </div>
 
-          {activeLang === "fr" ? (
-            <div className="space-y-4">
-              <FormField label="Titre" name="titleFr" value={form.titleFr} onChange={(v) => updateForm("titleFr", v)} required />
-              <FormField label="Extrait" name="excerptFr" value={form.excerptFr} onChange={(v) => updateForm("excerptFr", v)} multiline rows={2} />
-              <FormField label="Contenu" name="contentFr" value={form.contentFr} onChange={(v) => updateForm("contentFr", v)} multiline rows={12} />
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} required />
-              <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
-              <FormField label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} multiline rows={12} />
-            </div>
-          )}
+          <div className={activeLang === "fr" ? "space-y-4" : "hidden"}>
+            <FormField label="Titre" name="titleFr" value={form.titleFr} onChange={(v) => updateForm("titleFr", v)} required />
+            <FormField label="Extrait" name="excerptFr" value={form.excerptFr} onChange={(v) => updateForm("excerptFr", v)} multiline rows={2} />
+            <RichTextEditor label="Contenu" name="contentFr" value={form.contentFr} onChange={(v) => updateForm("contentFr", v)} minHeight="320px" />
+          </div>
+          <div className={activeLang === "en" ? "space-y-4" : "hidden"}>
+            <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} required />
+            <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
+            <RichTextEditor label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} minHeight="320px" />
+          </div>
         </div>
 
         <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">

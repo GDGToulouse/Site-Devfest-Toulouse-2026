@@ -8,6 +8,7 @@ import adminTicketRoutes from "./tickets.js";
 import adminSettingsRoutes from "./settings.js";
 import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
+import adminImageRoutes from "./images.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -19,6 +20,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminArticleRoutes);
     await editorApp.register(adminPageRoutes);
     await editorApp.register(adminContactRoutes);
+    await editorApp.register(adminImageRoutes);
   });
 
   // Routes restricted to ADMIN only

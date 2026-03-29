@@ -22,6 +22,7 @@ services:
       - ./src/backend:/app
       - backend_node_modules:/app/node_modules
       - ./prisma:/app/prisma
+      - ./uploads:/app/uploads
     ports:
       - "${BACKEND_PORT:-4000}:4000"
     environment:
