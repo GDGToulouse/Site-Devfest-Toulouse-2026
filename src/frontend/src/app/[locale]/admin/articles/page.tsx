@@ -102,6 +102,9 @@ export default function ArticlesListPage() {
                       {new Date(article.publishedAt || article.createdAt).toLocaleDateString("fr-FR")}
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
+                      <Link href={`/fr/actualites/${article.slug}`} target="_blank" className="text-gris hover:underline text-sm">
+                        Previsualiser
+                      </Link>
                       <Link href={`/fr/admin/articles/${article.id}`} className="text-bleu hover:underline text-sm">
                         Modifier
                       </Link>
