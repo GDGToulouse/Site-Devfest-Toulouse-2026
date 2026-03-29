@@ -204,11 +204,16 @@ export default function FilesAdminPage() {
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4"
+          className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 gap-3"
         >
           {filtered.map((file) => (
-            <div key={file.filename} className="bg-blanc rounded-xl shadow-card overflow-hidden">
-              <div className="aspect-square relative flex items-center justify-center bg-blanc-casse">
+            <div key={file.filename} className="bg-blanc rounded-lg shadow-card overflow-hidden">
+              <a
+                href={`${BACKEND_URL}${file.url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block aspect-square relative flex items-center justify-center bg-blanc-casse hover:opacity-80 transition-opacity cursor-pointer"
+              >
                 {file.isImage ? (
                   <img
                     src={`${BACKEND_URL}${file.url}`}
@@ -216,34 +221,24 @@ export default function FilesAdminPage() {
                     className="w-full h-full object-cover"
                   />
                 ) : (
-                  <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-lg font-bold ${fileIconColor(file.ext)}`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-bold ${fileIconColor(file.ext)}`}>
                     {fileIcon(file.ext)}
                   </div>
                 )}
-              </div>
-              <div className="p-3 space-y-1">
-                <p className="text-xs text-noir truncate font-medium" title={file.filename}>{file.filename}</p>
-                <p className="text-xs text-gris">{formatSize(file.size)}</p>
-                <div className="flex gap-2 pt-1">
+              </a>
+              <div className="p-2 space-y-0.5">
+                <p className="text-[10px] text-noir truncate font-medium" title={file.filename}>{file.filename}</p>
+                <p className="text-[10px] text-gris">{formatSize(file.size)}</p>
+                <div className="flex gap-2">
                   <button
                     onClick={() => copyUrl(file.url)}
-                    className="text-xs text-bleu hover:underline"
+                    className="text-[10px] text-bleu hover:underline"
                   >
-                    {copiedUrl === file.url ? "Copie !" : "Copier URL"}
+                    {copiedUrl === file.url ? "Copie !" : "URL"}
                   </button>
-                  {file.isImage ? null : (
-                    <a
-                      href={`${BACKEND_URL}${file.url}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-bleu hover:underline"
-                    >
-                      Ouvrir
-                    </a>
-                  )}
                   <button
                     onClick={() => setDeleteTarget(file.filename)}
-                    className="text-xs text-terre-cuite hover:underline"
+                    className="text-[10px] text-terre-cuite hover:underline"
                   >
                     Supprimer
                   </button>
