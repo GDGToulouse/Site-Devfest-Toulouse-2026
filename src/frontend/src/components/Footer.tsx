@@ -39,7 +39,7 @@ export default async function Footer() {
               <span className="text-2xl font-bold">
                 &lt;&gt; DevFest
               </span>
-              <div className="text-lg tracking-[0.3em]">TOULOUSE</div>
+              <div className="text-lg font-bold tracking-[0.3em]">TOULOUSE</div>
             </div>
 
             <div>

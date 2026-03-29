@@ -38,8 +38,8 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
                 <span
                   className={`mt-4 inline-block px-4 py-1 rounded-full text-sm font-bold ${
                     isSoldOut
-                      ? "bg-rouge/10 text-rouge"
-                      : "bg-malachite/10 text-malachite"
+                      ? "bg-rouge/10 text-bismarck"
+                      : "bg-malachite/10 text-[#0A6B4B]"
                   }`}
                 >
                   {isSoldOut ? t("soldOut") : t("available")}
