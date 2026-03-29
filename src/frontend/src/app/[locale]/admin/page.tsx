@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+
 interface DashboardStats {
   totalArticles: number;
   publishedArticles: number;
@@ -20,17 +22,17 @@ export default function AdminDashboard() {
       const [articlesRes, messagesRes, editionRes] = await Promise.all([
         adminFetch<{ total: number; articles: { publicationStatus: string }[] }>("/articles?limit=100"),
         adminFetch<{ total: number; messages: { isRead: boolean }[] }>("/contact/messages?limit=1"),
-        adminFetch<{ id: number; year: number; status: string }>("/editions/current"),
+        // Use public API for edition (accessible to all roles)
+        fetch(`${BACKEND_URL}/api/editions/current`).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
 
-      // For now, show basic counts from available data
       setStats({
         totalArticles: articlesRes.data?.total || 0,
         publishedArticles: 0,
         draftArticles: 0,
-        unreadMessages: 0,
-        editionStatus: editionRes.data?.status || "UNKNOWN",
-        editionYear: editionRes.data?.year || 2026,
+        unreadMessages: messagesRes.data?.total || 0,
+        editionStatus: editionRes?.status || "UNKNOWN",
+        editionYear: editionRes?.year || 2026,
       });
     }
 
