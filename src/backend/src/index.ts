@@ -23,6 +23,7 @@ const corsOrigins = [
 await app.register(cors, {
   origin: corsOrigins,
   credentials: true,
+  methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
 });
 
 await app.register(helmet, {

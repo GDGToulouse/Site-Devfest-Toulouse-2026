@@ -13,10 +13,15 @@ export async function adminFetch<T>(
   options: RequestInit = {},
 ): Promise<{ data: T | null; status: number }> {
   try {
+    const headers: Record<string, string> = {};
+    if (options.body) {
+      headers["Content-Type"] = "application/json";
+    }
+
     const res = await fetch(`${BACKEND_URL}/api/admin${path}`, {
       credentials: "include",
       headers: {
-        "Content-Type": "application/json",
+        ...headers,
         ...options.headers,
       },
       ...options,
