@@ -1,13 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { getAuthUrl, signInWithEmail, signUpWithEmail, forgotPassword } from "@/lib/admin-api";
+import { getAuthUrl, signInWithEmail, forgotPassword } from "@/lib/admin-api";
 
-type Mode = "login" | "signup" | "forgot";
+type Mode = "login" | "forgot";
 
 export default function AdminLogin() {
   const [mode, setMode] = useState<Mode>("login");
-  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -27,18 +26,10 @@ export default function AdminLogin() {
       } else {
         setError(result.error || "Erreur de connexion");
       }
-    } else if (mode === "signup") {
-      const result = await signUpWithEmail(name, email, password);
-      if (result.success) {
-        setSuccess("Compte créé ! Vérifiez votre email pour activer votre compte.");
-        setMode("login");
-      } else {
-        setError(result.error || "Erreur lors de l'inscription");
-      }
     } else {
       const result = await forgotPassword(email);
       if (result.success) {
-        setSuccess("Un email de réinitialisation a été envoyé.");
+        setSuccess("Si un compte existe avec cet email, un lien de réinitialisation a été envoyé.");
       } else {
         setError(result.error || "Erreur lors de l'envoi");
       }
@@ -56,7 +47,6 @@ export default function AdminLogin() {
         </h1>
         <p className="text-gris mb-6 text-center">
           {mode === "login" && "Connectez-vous pour accéder au back-office."}
-          {mode === "signup" && "Créez votre compte administrateur."}
           {mode === "forgot" && "Entrez votre email pour réinitialiser votre mot de passe."}
         </p>
 
@@ -69,21 +59,6 @@ export default function AdminLogin() {
 
         {/* Email/password form */}
         <form onSubmit={handleSubmit} className="space-y-4">
-          {mode === "signup" && (
-            <div>
-              <label htmlFor="name" className="block text-sm font-medium text-noir mb-1">Nom</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                className="w-full px-4 py-3 rounded-[12px] border-2 border-gris-clair text-noir focus:outline-none focus:ring-2 focus:ring-bleu focus:border-bleu"
-                placeholder="Votre nom"
-              />
-            </div>
-          )}
-
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-noir mb-1">Email</label>
             <input
@@ -97,21 +72,17 @@ export default function AdminLogin() {
             />
           </div>
 
-          {mode !== "forgot" && (
+          {mode === "login" && (
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-noir mb-1">
-                Mot de passe
-                {mode === "signup" && <span className="text-gris font-normal"> (min. 10 caractères)</span>}
-              </label>
+              <label htmlFor="password" className="block text-sm font-medium text-noir mb-1">Mot de passe</label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                minLength={mode === "signup" ? 10 : undefined}
                 className="w-full px-4 py-3 rounded-[12px] border-2 border-gris-clair text-noir focus:outline-none focus:ring-2 focus:ring-bleu focus:border-bleu"
-                placeholder={mode === "signup" ? "10 caractères minimum" : "Votre mot de passe"}
+                placeholder="Votre mot de passe"
               />
             </div>
           )}
@@ -121,30 +92,18 @@ export default function AdminLogin() {
             disabled={isLoading}
             className="w-full px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors disabled:opacity-50"
           >
-            {isLoading
-              ? "Chargement..."
-              : mode === "login"
-                ? "Se connecter"
-                : mode === "signup"
-                  ? "Créer mon compte"
-                  : "Envoyer le lien"}
+            {isLoading ? "Chargement..." : mode === "login" ? "Se connecter" : "Envoyer le lien"}
           </button>
         </form>
 
-        {/* Mode switchers */}
-        <div className="mt-4 text-center text-sm space-y-2">
-          {mode === "login" && (
-            <>
-              <button onClick={() => { setMode("forgot"); setError(null); setSuccess(null); }} className="text-bleu hover:underline block mx-auto">
-                Mot de passe oublié ?
-              </button>
-              <button onClick={() => { setMode("signup"); setError(null); setSuccess(null); }} className="text-bleu hover:underline block mx-auto">
-                Créer un compte
-              </button>
-            </>
-          )}
-          {(mode === "signup" || mode === "forgot") && (
-            <button onClick={() => { setMode("login"); setError(null); setSuccess(null); }} className="text-bleu hover:underline block mx-auto">
+        {/* Mode switcher */}
+        <div className="mt-4 text-center text-sm">
+          {mode === "login" ? (
+            <button onClick={() => { setMode("forgot"); setError(null); setSuccess(null); }} className="text-bleu hover:underline">
+              Mot de passe oublié ?
+            </button>
+          ) : (
+            <button onClick={() => { setMode("login"); setError(null); setSuccess(null); }} className="text-bleu hover:underline">
               Retour à la connexion
             </button>
           )}
@@ -181,6 +140,10 @@ export default function AdminLogin() {
             GitHub
           </a>
         </div>
+
+        <p className="mt-6 text-xs text-gris text-center">
+          Accès sur invitation uniquement. Contactez un administrateur.
+        </p>
       </div>
     </div>
   );

@@ -75,31 +75,6 @@ export async function signInWithEmail(email: string, password: string): Promise<
   }
 }
 
-export async function signUpWithEmail(
-  name: string,
-  email: string,
-  password: string,
-): Promise<{ success: boolean; error?: string }> {
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/sign-up/email`, {
-      method: "POST",
-      credentials: "include",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password }),
-    });
-
-    if (res.ok) return { success: true };
-
-    const body = await res.json().catch(() => null);
-    if (body?.message?.includes("already")) {
-      return { success: false, error: "Un compte existe déjà avec cet email" };
-    }
-    return { success: false, error: body?.message || "Erreur lors de l'inscription" };
-  } catch {
-    return { success: false, error: "Impossible de contacter le serveur" };
-  }
-}
-
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/auth/forget-password`, {

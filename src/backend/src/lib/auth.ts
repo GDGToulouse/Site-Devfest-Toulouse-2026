@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { APIError } from "better-auth/api";
 import { prisma } from "./prisma.js";
 import { sendEmail } from "./email.js";
 
@@ -8,19 +9,18 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim())
   .filter(Boolean);
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
   baseURL: process.env.BASE_URL || "http://localhost:4000",
   basePath: "/api/auth",
-  trustedOrigins: [FRONTEND_URL],
+  trustedOrigins: [
+    process.env.FRONTEND_URL || "http://localhost:3000",
+  ],
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
-    requireEmailVerification: true,
     sendResetPassword: async ({ user, url }) => {
       await sendEmail({
         to: [user.email],
@@ -37,37 +37,36 @@ export const auth = betterAuth({
       });
     },
   },
-  emailVerification: {
-    sendOnSignUp: true,
-    sendVerificationEmail: async ({ user, url }) => {
-      await sendEmail({
-        to: [user.email],
-        subject: "DevFest Toulouse — Vérification de votre email",
-        text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour vérifier votre adresse email :\n${url}\n\nCe lien expire dans 24 heures.`,
-        html: `
-          <h3>Vérification de votre email</h3>
-          <p>Bonjour ${user.name || ""},</p>
-          <p>Cliquez sur le lien ci-dessous pour vérifier votre adresse email :</p>
-          <p><a href="${url}">Vérifier mon email</a></p>
-          <p>Ce lien expire dans 24 heures.</p>
-        `,
-      });
-    },
-  },
   socialProviders: {
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || "",
+      disableImplicitSignUp: true,
     },
     github: {
       clientId: process.env.OAUTH_GITHUB_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET || "",
+      disableImplicitSignUp: true,
     },
   },
   account: {
     accountLinking: {
       enabled: true,
       trustedProviders: ["email-password", "google", "github"],
+    },
+  },
+  databaseHooks: {
+    user: {
+      create: {
+        before: async (user) => {
+          // Only allow account creation if the email is in ADMIN_EMAILS
+          if (!user.email || !isAdminEmail(user.email)) {
+            throw new APIError("FORBIDDEN", {
+              message: "Inscription sur invitation uniquement. Contactez un administrateur.",
+            });
+          }
+        },
+      },
     },
   },
 });

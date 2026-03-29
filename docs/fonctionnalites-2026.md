@@ -212,10 +212,10 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
   - Compte local (email + mot de passe)
   - OAuth Google
   - OAuth GitHub
+- **Inscription sur invitation uniquement** : aucun visiteur ne peut créer de compte. Les comptes sont créés par un administrateur (via la gestion des utilisateurs ou `ADMIN_EMAILS`). La connexion via OAuth (Google/GitHub) ne crée pas de compte si l'email n'est pas déjà autorisé.
 - **Réconciliation de comptes** : un même compte est lié à l'adresse email. Un utilisateur peut se connecter indifféremment via son compte local, Google ou GitHub s'ils partagent la même adresse email.
 - **Compte local — sécurité** :
-  - Mot de passe : minimum 10 caractères, haché avec bcrypt/argon2 (géré par Better Auth)
-  - Vérification email obligatoire à l'inscription (envoi d'un lien de confirmation par email)
+  - Mot de passe : minimum 10 caractères, haché (géré par Better Auth)
   - Réinitialisation de mot de passe par email (lien temporaire sécurisé)
   - Protection contre le brute-force (rate limiting sur les endpoints de connexion)
 - **Account linking** : les providers OAuth de confiance (Google, GitHub) et le provider email-password sont liés automatiquement si l'adresse email correspond
