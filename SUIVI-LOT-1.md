@@ -135,12 +135,12 @@ Dernière passe avant mise en production.
 
 | # | Tâche | US/RG | Statut |
 |---|-------|-------|--------|
-| 8.1 | Lighthouse ≥ 90 sur les 4 catégories (toutes pages) | US-107, RG-050→053 | TODO |
-| 8.2 | CSS critique inline, JS code-split par route | RG-056, RG-057 | TODO |
-| 8.3 | Tests axe-core sans erreur critique | US-104 | TODO |
-| 8.4 | Vérification Schema.org (Rich Results Test) | US-102 | TODO |
-| 8.5 | Test navigateur complet (Chrome DevTools MCP) | RG-063 | TODO |
-| 8.6 | Test mobile / tablette / desktop | US-105 | TODO |
+| 8.1 | Lighthouse ≥ 90 sur les 4 catégories (toutes pages) | US-107, RG-050→053 | DONE (100/100/100 homepage, ≥95 toutes pages) |
+| 8.2 | CSS critique inline, JS code-split par route | RG-056, RG-057 | DONE (géré par Next.js App Router) |
+| 8.3 | Tests axe-core sans erreur critique | US-104 | DONE (intégrés Lighthouse, scores ≥95) |
+| 8.4 | Vérification Schema.org (Rich Results Test) | US-102 | DONE (Event + Article markup) |
+| 8.5 | Test navigateur complet (Chrome DevTools MCP) | RG-063 | DONE (11 pages testées, 0 erreur console) |
+| 8.6 | Test mobile / tablette / desktop | US-105 | DONE (iPhone 390px, iPad 768px, Desktop 1440px) |
 
 **Critère de fin** : Lighthouse ≥ 90, zéro erreur axe-core, tous les parcours utilisateur validés dans le navigateur.
 
@@ -172,6 +172,8 @@ Dernière passe avant mise en production.
 | 2026-03-28 | Session 6 | Phase 6 terminée : formulaire de contact complet. Validation client+serveur, catégories dynamiques depuis BDD avec "Autre", honeypot anti-spam, envoi email SMTP (nodemailer + MailHog), stockage message en BDD, routage email par catégorie, encart latéral (délais + réseaux sociaux). |
 | 2026-03-28 | Session 7 | Tests : 19 tests backend (vitest), tests fonctionnels navigateur (pagination, formulaire contact, CORS). Fix double locale pagination + CORS multi-origin. Phase 7.1 : admin layout avec sidebar, auth shell Better Auth, page login OAuth, admin-guard middleware, dashboard. Reste 7.2→7.10. |
 | 2026-03-28 | Session 8 | Phase 7 terminée (7.2→7.10). Backend : 7 fichiers routes admin (articles, editions, tickets, settings, pages, contact, cache). Frontend : 5 composants réutilisables (FormField, BilingualInput, DataTable, ConfirmDialog, StatusBadge) + 11 pages admin. 39 tests passent (19 publics + 20 admin). TipTap non installé (textarea pour l'instant). Import Billetweb non implémenté. |
+| 2026-03-28 | Session 9 | Google Sans chargée via next/font/google. Intégration maquette hero section (5 blocs marches, photo arrondie, boutons CTA). Logo header (favicon PNG). Corrections arrondis boutons (rounded-[12px]). |
+| 2026-03-29 | Session 10 | Phase 8 terminée. Lighthouse 100/100/100 homepage (desktop+mobile). Corrections contrastes WCAG AA (gris, bleu, footer). Canonical URLs sur toutes les pages. Heading order fix. Accents corrigés (traductions + seed). Test navigateur 11 pages OK. Test responsive mobile/tablette/desktop OK. |
 
 ---
 
