@@ -93,7 +93,7 @@ export default function ArticlesListPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge
-                        status={article.publicationStatus === "PUBLISHED" ? "Publie" : "Brouillon"}
+                        status={article.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
                         variant={article.publicationStatus === "PUBLISHED" ? "green" : "gray"}
                       />
                     </td>

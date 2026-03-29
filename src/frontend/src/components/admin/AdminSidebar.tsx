@@ -16,10 +16,8 @@ interface AdminSidebarProps {
 
 const navItems = [
   { label: "Dashboard", href: "/fr/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
+  { label: "Editions", href: "/fr/admin/editions", icon: "calendar", roles: ["ADMIN"] },
   { label: "Articles", href: "/fr/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
-  { label: "Edition", href: "/fr/admin/editions", icon: "calendar", roles: ["ADMIN"] },
-  { label: "Billetterie", href: "/fr/admin/ticketing", icon: "ticket", roles: ["ADMIN"] },
-  { label: "CFP", href: "/fr/admin/cfp", icon: "mic", roles: ["ADMIN"] },
   { label: "Pages", href: "/fr/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
   { label: "Fichiers", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },

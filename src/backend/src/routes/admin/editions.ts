@@ -53,6 +53,35 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/admin/editions/:id — single edition by ID
+  app.get<{ Params: { id: string } }>(
+    "/editions/:id",
+    async (request, reply) => {
+      const id = Number(request.params.id);
+      if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+      const edition = await prisma.edition.findUnique({
+        where: { id },
+        include: { _count: { select: { ticketTiers: true, articles: true } } },
+      });
+
+      if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+      return {
+        id: edition.id,
+        year: edition.year,
+        startDate: edition.startDate,
+        endDate: edition.endDate,
+        status: edition.status,
+        aftermovieUrl: edition.aftermovieUrl,
+        galleryUrl: edition.galleryUrl,
+        archivedSiteUrl: edition.archivedSiteUrl,
+        ticketTiersCount: edition._count.ticketTiers,
+        articlesCount: edition._count.articles,
+      };
+    }
+  );
+
   // PUT /api/admin/editions/:id — update edition
   app.put<{
     Params: { id: string };
