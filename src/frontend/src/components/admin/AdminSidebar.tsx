@@ -23,6 +23,7 @@ const navItems = [
   { label: "Pages", href: "/fr/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
   { label: "Fichiers", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
+  { label: "Utilisateurs", href: "/fr/admin/users", icon: "users", roles: ["ADMIN"] },
   { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
 ];
 
