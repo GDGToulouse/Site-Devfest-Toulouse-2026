@@ -1,0 +1,71 @@
+services:
+  frontend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./src/frontend:/app
+    environment:
+      - NODE_ENV=development
+      - BASE_URL=${BASE_URL}
+      - BACKEND_URL=http://backend:4000
+    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
+    depends_on:
+      - backend
+
+  backend:
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./src/backend:/app
+      - ./prisma:/app/prisma
+      - ./uploads:/app/uploads
+    environment:
+      - NODE_ENV=development
+      - BASE_URL=${BASE_URL}
+      - FRONTEND_URL=http://frontend:3000
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@devj-db:5432/${POSTGRES_DB:-devfest}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
+      - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr,editor@devfesttoulouse.fr}
+      - SMTP_HOST=postfix
+      - SMTP_PORT=25
+      - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
+    command: >
+      sh -c "
+        corepack enable &&
+        corepack prepare pnpm@latest --activate &&
+        pnpm install --config.confirmModulesPurge=false &&
+        pnpm exec prisma generate --schema prisma/schema.prisma &&
+        pnpm dev
+      "
+    depends_on:
+      devj-db:
+        condition: service_healthy
+    networks:
+      - default
+      - coolify
+
+  devj-db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-devfest}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devfest}
+      - POSTGRES_DB=${POSTGRES_DB:-devfest}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devfest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  pgdata:
