@@ -13,4 +13,4 @@ COPY prisma/ ./prisma/
 
 RUN pnpm exec prisma generate --schema prisma/schema.prisma
 
-CMD ["pnpm", "dev"]
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy --schema prisma/schema.prisma && pnpm exec tsx prisma/seed.ts && pnpm dev"]

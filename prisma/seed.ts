@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 // Set BASE_URL before importing auth (Better Auth needs it at import time)
@@ -243,6 +244,37 @@ async function main() {
         await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
         console.log(`Dev account exists: ${account.email} (${existing.role})`);
       }
+    }
+  }
+
+  // --- Admin accounts from ADMIN_EMAILS ---
+  const devEmails = new Set(DEV_ACCOUNTS.map((a) => a.email));
+  const adminEmails = (process.env.ADMIN_EMAILS || "")
+    .split(",")
+    .map((e) => e.trim())
+    .filter((e) => e && !devEmails.has(e));
+
+  for (const email of adminEmails) {
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (!existing) {
+      const password = crypto.randomUUID().slice(0, 16);
+      try {
+        await auth.api.signUpEmail({
+          body: { name: email.split("@")[0], email, password },
+        });
+        await prisma.user.update({
+          where: { email },
+          data: { role: "ADMIN", emailVerified: true },
+        });
+        console.log(`Admin account created: ${email} — password: ${password}`);
+      } catch (err) {
+        await prisma.user.create({
+          data: { email, name: email.split("@")[0], role: "ADMIN" },
+        });
+        console.log(`Admin account created (no password): ${email} — use 'Mot de passe oublié'`);
+      }
+    } else {
+      console.log(`Admin account exists: ${email} (${existing.role})`);
     }
   }
 
