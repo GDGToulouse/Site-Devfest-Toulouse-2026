@@ -9,6 +9,9 @@ services:
       - BACKEND_URL=http://backend:4000
     depends_on:
       - backend
+    networks:
+      - default
+      - coolify
 
   backend:
     build:
