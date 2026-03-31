@@ -158,6 +158,7 @@ function Toolbar({
   }
 
   function handleLinkClick() {
+    if (!editor) return;
     if (editor.isActive("link")) {
       editor.chain().focus().unsetLink().run();
     } else {
