@@ -1,24 +1,21 @@
 services:
   frontend:
-    image: node:22-alpine
-    working_dir: /app
-    volumes:
-      - ./src/frontend:/app
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
     environment:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL}
       - BACKEND_URL=http://backend:4000
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
     depends_on:
       - backend
 
   backend:
-    image: node:22-alpine
-    working_dir: /app
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
     volumes:
-      - ./src/backend:/app
-      - ./prisma:/app/prisma
-      - ./uploads:/app/uploads
+      - uploads:/app/uploads
     environment:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL}
@@ -34,14 +31,6 @@ services:
       - SMTP_HOST=postfix
       - SMTP_PORT=25
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
-    command: >
-      sh -c "
-        corepack enable &&
-        corepack prepare pnpm@latest --activate &&
-        pnpm install --config.confirmModulesPurge=false &&
-        pnpm exec prisma generate --schema prisma/schema.prisma &&
-        pnpm dev
-      "
     depends_on:
       devj-db:
         condition: service_healthy
@@ -69,3 +58,4 @@ networks:
 
 volumes:
   pgdata:
+  uploads:
