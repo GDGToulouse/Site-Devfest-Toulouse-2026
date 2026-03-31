@@ -3,7 +3,21 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const isDev = process.env.NODE_ENV === "development";
 
+const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+
 const nextConfig: NextConfig = {
+  async rewrites() {
+    return [
+      {
+        source: "/api/admin/:path*",
+        destination: `${backendUrl}/api/admin/:path*`,
+      },
+      {
+        source: "/api/auth/:path*",
+        destination: `${backendUrl}/api/auth/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {
@@ -37,7 +51,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: http://localhost:4000",
-              `connect-src 'self' http://localhost:4000${isDev ? " ws://localhost:3000" : ""}`,
+              `connect-src 'self'${isDev ? " http://localhost:4000 ws://localhost:3000" : ""}`,
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
             ].join("; "),
