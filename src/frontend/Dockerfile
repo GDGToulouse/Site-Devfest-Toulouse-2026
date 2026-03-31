@@ -10,4 +10,9 @@ RUN pnpm install --config.confirmModulesPurge=false
 
 COPY src/frontend/ ./
 
-CMD ["pnpm", "dev"]
+ARG BACKEND_URL=http://backend:4000
+ENV BACKEND_URL=${BACKEND_URL}
+
+RUN pnpm build
+
+CMD ["pnpm", "start"]

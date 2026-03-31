@@ -4,7 +4,6 @@ services:
       context: .
       dockerfile: src/frontend/Dockerfile
     environment:
-      - NODE_ENV=development
       - BASE_URL=${BASE_URL}
       - BACKEND_URL=http://backend:4000
     expose:
@@ -22,7 +21,6 @@ services:
     volumes:
       - uploads:/app/uploads
     environment:
-      - NODE_ENV=development
       - BASE_URL=${BASE_URL}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000

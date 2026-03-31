@@ -12,5 +12,6 @@ COPY src/backend/ ./
 COPY prisma/ ./prisma/
 
 RUN pnpm exec prisma generate --schema prisma/schema.prisma
+RUN pnpm build
 
-CMD ["sh", "-c", "pnpm exec prisma db push --schema prisma/schema.prisma && pnpm exec tsx prisma/seed.ts && pnpm dev"]
+CMD ["sh", "-c", "pnpm exec prisma db push --schema prisma/schema.prisma && pnpm exec tsx prisma/seed.ts && node dist/index.js"]
