@@ -10,6 +10,7 @@ interface GeneralStats {
 }
 
 interface FeaturedEdition {
+  id: number;
   year: number;
   status: string;
   startDate: string | null;
@@ -18,8 +19,18 @@ interface FeaturedEdition {
   cfpUrl: string | null;
   partnerFormUrl: string | null;
   heroImageUrl: string | null;
-  ticketTiersCount?: number;
-  articlesCount?: number;
+}
+
+interface EditionDetail {
+  ticketTiersCount: number;
+  articlesCount: number;
+}
+
+interface KeyFigure {
+  icon: string;
+  value: string;
+  labelFr: string;
+  labelEn: string;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -31,6 +42,8 @@ const STATUS_LABELS: Record<string, string> = {
 export default function AdminDashboard() {
   const [general, setGeneral] = useState<GeneralStats | null>(null);
   const [featured, setFeatured] = useState<FeaturedEdition | null>(null);
+  const [editionDetail, setEditionDetail] = useState<EditionDetail | null>(null);
+  const [keyFigures, setKeyFigures] = useState<KeyFigure[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -50,6 +63,15 @@ export default function AdminDashboard() {
 
       if (editionRes.data) {
         setFeatured(editionRes.data);
+
+        // Load edition detail (counts) and key figures
+        const [detailRes, figuresRes] = await Promise.all([
+          adminFetch<EditionDetail>(`/editions/${editionRes.data.id}`),
+          adminFetch<KeyFigure[]>(`/editions/${editionRes.data.id}/key-figures`),
+        ]);
+
+        if (detailRes.data) setEditionDetail(detailRes.data);
+        if (figuresRes.data) setKeyFigures(figuresRes.data);
       }
 
       setIsLoading(false);
@@ -80,6 +102,8 @@ export default function AdminDashboard() {
           <h2 className="text-xl font-bold text-noir mb-4">
             Edition a la une — DevFest {featured.year}
           </h2>
+
+          {/* Info cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               label="Statut"
@@ -102,6 +126,21 @@ export default function AdminDashboard() {
               color={featured.heroImageUrl ? "malachite" : "terre-cuite"}
             />
           </div>
+
+          {/* Key figures + edition counts */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-6">
+            {keyFigures.map((fig) => (
+              <StatCard key={fig.labelFr} label={fig.labelFr} value={fig.value} color="bleu" />
+            ))}
+            {editionDetail && (
+              <>
+                <StatCard label="Articles" value={String(editionDetail.articlesCount)} color="bleu" />
+                <StatCard label="Tarifs billetterie" value={String(editionDetail.ticketTiersCount)} color="bleu" />
+              </>
+            )}
+          </div>
+
+          {/* URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
             <InfoCard label="URL CFP" value={featured.cfpUrl} />
             <InfoCard label="URL Partenaire" value={featured.partnerFormUrl} />
