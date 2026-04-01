@@ -81,7 +81,7 @@ export default function HeroSection() {
             <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
               <Link
                 href="/contact"
-                className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
+                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
               >
                 {t("ctaPartner")}
               </Link>

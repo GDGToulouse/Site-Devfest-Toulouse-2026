@@ -70,7 +70,7 @@ export default function Header() {
             href="https://sessionize.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="rounded-[12px] bg-bleu px-[18px] py-1.5 text-base font-bold text-blanc hover:bg-bleu/90 transition-colors"
+            className="rounded-[12px] border-2 border-bleu bg-bleu px-[18px] py-1.5 text-base font-bold text-blanc hover:bg-bleu/90 transition-colors"
           >
             {tCta("submitTalk")}
           </a>
