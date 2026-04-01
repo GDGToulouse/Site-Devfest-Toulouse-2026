@@ -62,7 +62,7 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
 
             {/* Block 2: Toulouse + subtitle line 1 */}
             <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
               style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
             >
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
@@ -75,10 +75,10 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
 
             {/* Block 3: subtitle line 2 */}
             <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-0 pb-[15px] -mt-[10px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
-              <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
+              <p className="text-lg leading-none sm:text-xl sm:leading-none lg:text-2xl lg:leading-none text-noir/80 pt-[3px]">
                 <strong>{t("subtitleLine2devs")}</strong>
                 {t("subtitleLine2end")}
                 <strong>{t("subtitleLine2devs2")}</strong>
