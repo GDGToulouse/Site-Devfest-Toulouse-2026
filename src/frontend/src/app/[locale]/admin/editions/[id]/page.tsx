@@ -29,16 +29,16 @@ interface EditionData {
 }
 
 const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
-  PREPARATION: { label: "Preparation", variant: "gray" },
+  PREPARATION: { label: "Préparation", variant: "gray" },
   ANNOUNCEMENT: { label: "Annonce", variant: "green" },
-  SEE_YOU_NEXT_YEAR: { label: "A l'annee prochaine", variant: "orange" },
+  SEE_YOU_NEXT_YEAR: { label: "À l'année prochaine", variant: "orange" },
 };
 
 const TABS = [
-  { key: "general", label: "General" },
+  { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
   { key: "cfp", label: "CFP" },
-  { key: "key-figures", label: "Chiffres cles" },
+  { key: "key-figures", label: "Chiffres clés" },
 ];
 
 export default function EditionDetailPage() {

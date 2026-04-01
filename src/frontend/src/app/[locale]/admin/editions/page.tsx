@@ -15,9 +15,9 @@ interface EditionData {
 }
 
 const STATUS_OPTIONS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
-  PREPARATION: { label: "Preparation", variant: "gray" },
+  PREPARATION: { label: "Préparation", variant: "gray" },
   ANNOUNCEMENT: { label: "Annonce", variant: "green" },
-  SEE_YOU_NEXT_YEAR: { label: "A l'annee prochaine", variant: "orange" },
+  SEE_YOU_NEXT_YEAR: { label: "À l'année prochaine", variant: "orange" },
 };
 
 export default function EditionsPage() {
@@ -48,7 +48,7 @@ export default function EditionsPage() {
   async function handleCreate() {
     const year = Number(newYear);
     if (!year || year < 2016 || year > 2100) {
-      setError("Annee invalide");
+      setError("Année invalide");
       return;
     }
     setIsCreating(true);
@@ -58,7 +58,7 @@ export default function EditionsPage() {
       body: JSON.stringify({ year }),
     });
     if (status === 409) {
-      setError("Une edition pour cette annee existe deja");
+      setError("Une édition pour cette année existe déjà");
     } else {
       setNewYear("");
     }
@@ -70,7 +70,7 @@ export default function EditionsPage() {
     if (!deleteTarget) return;
     const { status, data } = await adminFetch<{ error?: string }>(`/editions/${deleteTarget.id}`, { method: "DELETE" });
     if (status === 409) {
-      setError(data?.error || "Impossible de supprimer cette edition");
+      setError(data?.error || "Impossible de supprimer cette édition");
     }
     setDeleteTarget(null);
     loadEditions();
@@ -95,7 +95,7 @@ export default function EditionsPage() {
             type="number"
             value={newYear}
             onChange={(e) => setNewYear(e.target.value)}
-            placeholder="Annee"
+            placeholder="Année"
             className="w-24 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
           />
           <button
@@ -103,7 +103,7 @@ export default function EditionsPage() {
             disabled={isCreating || !newYear}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isCreating ? "Creation..." : "Nouvelle edition"}
+            {isCreating ? "Création..." : "Nouvelle édition"}
           </button>
         </div>
       </div>
@@ -121,7 +121,7 @@ export default function EditionsPage() {
               <div className="flex items-center gap-4 flex-wrap">
                 <h2 className="text-xl font-bold text-noir">DevFest {edition.year}</h2>
                 <StatusBadge status={statusInfo.label} variant={statusInfo.variant} />
-                {isFeatured && <StatusBadge status="A la une" variant="green" />}
+                {isFeatured && <StatusBadge status="À la une" variant="green" />}
                 <span className="text-xs text-gris">{edition.ticketTiersCount} tarif(s) · {edition.articlesCount} article(s)</span>
               </div>
               <div className="flex items-center gap-2">
@@ -129,7 +129,7 @@ export default function EditionsPage() {
                   <button
                     onClick={() => handleSetFeatured(edition.id)}
                     className="px-3 py-2 rounded-lg text-sm font-medium text-malachite border border-malachite hover:bg-malachite/10 transition-colors"
-                    title="Mettre a la une"
+                    title="Mettre à la une"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                   </button>
@@ -155,8 +155,8 @@ export default function EditionsPage() {
 
       <ConfirmDialog
         isOpen={!!deleteTarget}
-        title="Supprimer l'edition"
-        message={`Supprimer l'edition DevFest ${deleteTarget?.year} ? Les chiffres cles et tarifs associes seront aussi supprimes.`}
+        title="Supprimer l'édition"
+        message={`Supprimer l'édition DevFest ${deleteTarget?.year} ? Les chiffres clés et tarifs associés seront aussi supprimés.`}
         confirmLabel="Supprimer"
         variant="danger"
         onConfirm={handleDelete}

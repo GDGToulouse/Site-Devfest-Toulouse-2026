@@ -90,7 +90,7 @@ export default function KeyFiguresTab({ editionId }: KeyFiguresTabProps) {
         >
           {isSaving ? "Sauvegarde..." : "Sauvegarder les chiffres"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegarde !</span>}
+        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
       </div>
     </div>
   );

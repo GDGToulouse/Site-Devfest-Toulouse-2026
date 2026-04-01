@@ -21,9 +21,9 @@ interface EditionData {
 }
 
 const STATUS_OPTIONS = [
-  { value: "PREPARATION", label: "Preparation" },
+  { value: "PREPARATION", label: "Préparation" },
   { value: "ANNOUNCEMENT", label: "Annonce" },
-  { value: "SEE_YOU_NEXT_YEAR", label: "A l'annee prochaine" },
+  { value: "SEE_YOU_NEXT_YEAR", label: "À l'année prochaine" },
 ];
 
 interface GeneralTabProps {
@@ -109,8 +109,8 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Date debut" name="startDate" type="date" value={form.startDate} onChange={(v) => setForm({ ...form, startDate: v })} />
-        <FormField label="Date fin" name="endDate" type="date" value={form.endDate} onChange={(v) => setForm({ ...form, endDate: v })} />
+        <FormField label="Date de début" name="startDate" type="date" value={form.startDate} onChange={(v) => setForm({ ...form, startDate: v })} />
+        <FormField label="Date de fin" name="endDate" type="date" value={form.endDate} onChange={(v) => setForm({ ...form, endDate: v })} />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -157,7 +157,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         >
           {isSaving ? "Sauvegarde..." : "Sauvegarder"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegarde !</span>}
+        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
       </div>
     </div>
   );

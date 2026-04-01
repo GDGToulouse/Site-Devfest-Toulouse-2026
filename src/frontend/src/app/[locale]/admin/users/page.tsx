@@ -170,7 +170,7 @@ export default function UsersAdminPage() {
                     </select>
                   ) : (
                     <StatusBadge
-                      status={user.role === "ADMIN" ? "Administrateur" : "Editeur"}
+                      status={user.role === "ADMIN" ? "Administrateur" : "Éditeur"}
                       variant={user.role === "ADMIN" ? "green" : "blue"}
                     />
                   )}
@@ -183,7 +183,7 @@ export default function UsersAdminPage() {
                     <button
                       onClick={() => setEditingRole({ id: user.id, role: user.role })}
                       className="p-2 rounded-lg text-bleu hover:bg-bleu/10 transition-colors"
-                      title="Modifier le role"
+                      title="Modifier le rôle"
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                     </button>
@@ -216,7 +216,7 @@ export default function UsersAdminPage() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Supprimer l'utilisateur"
-        message={`Supprimer ${deleteTarget?.name || deleteTarget?.email} ? Cette action est irreversible.`}
+        message={`Supprimer ${deleteTarget?.name || deleteTarget?.email} ? Cette action est irréversible.`}
         confirmLabel="Supprimer"
         variant="danger"
         onConfirm={handleDelete}

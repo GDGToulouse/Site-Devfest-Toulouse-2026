@@ -62,15 +62,15 @@ export default function CfpTab() {
       <FormField label="URL Sessionize" name="sessionizeUrl" type="url" value={cfp.sessionizeUrl || ""} onChange={(v) => setCfp({ ...cfp, sessionizeUrl: v || null })} />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Date ouverture" name="openDate" type="date" value={cfp.openDate || ""} onChange={(v) => setCfp({ ...cfp, openDate: v || null })} />
-        <FormField label="Date fermeture" name="closeDate" type="date" value={cfp.closeDate || ""} onChange={(v) => setCfp({ ...cfp, closeDate: v || null })} />
+        <FormField label="Date d'ouverture" name="openDate" type="date" value={cfp.openDate || ""} onChange={(v) => setCfp({ ...cfp, openDate: v || null })} />
+        <FormField label="Date de fermeture" name="closeDate" type="date" value={cfp.closeDate || ""} onChange={(v) => setCfp({ ...cfp, closeDate: v || null })} />
       </div>
 
       <div className="flex items-center gap-4">
         <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
           {isSaving ? "Sauvegarde..." : "Sauvegarder"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegarde !</span>}
+        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
       </div>
     </div>
   );

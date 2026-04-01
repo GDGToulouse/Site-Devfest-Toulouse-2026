@@ -252,7 +252,7 @@ export default function FilesAdminPage() {
       <ConfirmDialog
         isOpen={deleteTarget !== null}
         title="Supprimer le fichier"
-        message="Cette action est irreversible. Le fichier sera supprime du serveur."
+        message="Cette action est irréversible. Le fichier sera supprimé du serveur."
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         variant="danger"

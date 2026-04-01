@@ -34,9 +34,9 @@ interface KeyFigure {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  PREPARATION: "Preparation",
+  PREPARATION: "Préparation",
   ANNOUNCEMENT: "Annonce",
-  SEE_YOU_NEXT_YEAR: "A l'annee prochaine",
+  SEE_YOU_NEXT_YEAR: "À l'année prochaine",
 };
 
 export default function AdminDashboard() {
@@ -88,7 +88,7 @@ export default function AdminDashboard() {
 
       {/* Section 1: General */}
       <section>
-        <h2 className="text-xl font-bold text-noir mb-4">Vue generale</h2>
+        <h2 className="text-xl font-bold text-noir mb-4">Vue générale</h2>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard label="Articles" value={String(general?.totalArticles || 0)} color="bleu" />
           <StatCard label="Messages non lus" value={String(general?.unreadMessages || 0)} color="terre-cuite" />
@@ -100,7 +100,7 @@ export default function AdminDashboard() {
       {featured && (
         <section>
           <h2 className="text-xl font-bold text-noir mb-4">
-            Edition a la une — DevFest {featured.year}
+            Édition à la une — DevFest {featured.year}
           </h2>
 
           {/* Info cards */}
@@ -112,17 +112,17 @@ export default function AdminDashboard() {
             />
             <StatCard
               label="Date"
-              value={featured.startDate ? formatDate(featured.startDate) : "Non definie"}
+              value={featured.startDate ? formatDate(featured.startDate) : "Non définie"}
               color="noir"
             />
             <StatCard
               label="Lieu"
-              value={featured.venueName ? `${featured.venueName}${featured.venueAddress ? `, ${featured.venueAddress}` : ""}` : "Non defini"}
+              value={featured.venueName ? `${featured.venueName}${featured.venueAddress ? `, ${featured.venueAddress}` : ""}` : "Non défini"}
               color="noir"
             />
             <StatCard
               label="Image hero"
-              value={featured.heroImageUrl ? "Definie" : "Non definie"}
+              value={featured.heroImageUrl ? "Définie" : "Non définie"}
               color={featured.heroImageUrl ? "malachite" : "terre-cuite"}
             />
           </div>
