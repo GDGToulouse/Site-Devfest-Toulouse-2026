@@ -9,10 +9,11 @@ import {
 
 import HeroSection from "@/components/home/HeroSection";
 import KeyFiguresSection from "@/components/home/KeyFiguresSection";
-import AboutSection from "@/components/home/AboutSection";
-import LatestNewsSection from "@/components/home/LatestNewsSection";
 import TicketingSection from "@/components/home/TicketingSection";
 import ReplaySection from "@/components/home/ReplaySection";
+import LatestNewsSection from "@/components/home/LatestNewsSection";
+import AboutSection from "@/components/home/AboutSection";
+import EcosystemSection from "@/components/home/EcosystemSection";
 
 function buildEventJsonLd(edition: {
   year: number;
@@ -84,14 +85,6 @@ export default async function HomePage() {
         <KeyFiguresSection figures={figures} locale={locale} />
       )}
 
-      {/* Sponsors section: hidden until Lot 2 — RG-141 */}
-
-      {isAnnouncement && <AboutSection />}
-
-      {isAnnouncement && articles.length > 0 && (
-        <LatestNewsSection articles={articles} locale={locale} />
-      )}
-
       {isAnnouncement && tiers.length > 0 && (
         <TicketingSection tiers={tiers} locale={locale} />
       )}
@@ -99,6 +92,14 @@ export default async function HomePage() {
       {edition?.aftermovieUrl && (
         <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
       )}
+
+      {isAnnouncement && articles.length > 0 && (
+        <LatestNewsSection articles={articles} locale={locale} />
+      )}
+
+      {isAnnouncement && <AboutSection />}
+
+      {isAnnouncement && <EcosystemSection />}
     </>
   );
 }
