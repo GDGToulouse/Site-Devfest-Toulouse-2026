@@ -15,6 +15,7 @@ interface ArticleSummary {
   publishedAt: string | null;
   createdAt: string;
   tags: { id: number; name: string }[];
+  editions: { id: number; year: number }[];
 }
 
 interface ArticlesResponse {
@@ -77,6 +78,7 @@ export default function ArticlesListPage() {
                 <tr className="bg-blanc-casse/60 border-b border-gris/20">
                   <th className="text-left px-4 py-3 font-medium text-gris">Titre</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Editions</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Auteur</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Date</th>
                   <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
@@ -96,6 +98,19 @@ export default function ArticlesListPage() {
                         status={article.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
                         variant={article.publicationStatus === "PUBLISHED" ? "green" : "gray"}
                       />
+                    </td>
+                    <td className="px-4 py-3">
+                      {article.editions.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {article.editions.map((ed) => (
+                            <span key={ed.id} className="inline-block px-2 py-0.5 text-xs rounded bg-malachite/10 text-malachite">
+                              {ed.year}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gris">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gris">{article.author || "-"}</td>
                     <td className="px-4 py-3 text-gris text-xs">
