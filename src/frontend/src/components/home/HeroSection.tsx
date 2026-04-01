@@ -89,7 +89,7 @@ export default function HeroSection() {
                 href="https://sessionize.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-5 rounded-[12px] bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors text-center"
+                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors text-center"
               >
                 {t("ctaTalk")}
               </a>
