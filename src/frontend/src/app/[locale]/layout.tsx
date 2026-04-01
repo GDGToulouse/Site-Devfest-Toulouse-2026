@@ -9,6 +9,7 @@ import { EditionProvider } from "@/contexts/EditionContext";
 import { getCurrentEdition } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+const isProduction = BASE_URL === "https://devfesttoulouse.fr";
 
 export async function generateMetadata({
   params,
@@ -40,6 +41,9 @@ export async function generateMetadata({
         en: "/en",
       },
     },
+    ...(!isProduction && {
+      robots: { index: false, follow: false },
+    }),
   };
 }
 
