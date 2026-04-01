@@ -136,6 +136,9 @@ export default async function Footer() {
           <a href="/sitemap.xml" className="text-link text-base hover:underline">
             {tFooter("sitemap")}
           </a>
+          <Link href="/admin" className="text-link text-base hover:underline">
+            Admin
+          </Link>
         </div>
       </div>
     </footer>
