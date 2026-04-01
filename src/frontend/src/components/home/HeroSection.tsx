@@ -75,7 +75,7 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
 
             {/* Block 3: subtitle line 2 */}
             <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
