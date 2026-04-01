@@ -68,6 +68,15 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/admin/editions/featured — get the featured edition ID
+  app.get("/editions/featured", async () => {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "featured_edition_id" },
+    });
+
+    return { editionId: setting ? Number(setting.value) : null };
+  });
+
   // GET /api/admin/editions/:id — single edition by ID
   app.get<{ Params: { id: string } }>(
     "/editions/:id",
@@ -115,14 +124,6 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     const body = request.body;
     const newStatus = body.status ?? existing.status;
-
-    // If setting to ANNOUNCEMENT, ensure no other edition is active
-    if (newStatus === "ANNOUNCEMENT" && existing.status !== "ANNOUNCEMENT") {
-      await prisma.edition.updateMany({
-        where: { status: "ANNOUNCEMENT", id: { not: id } },
-        data: { status: "SEE_YOU_NEXT_YEAR" },
-      });
-    }
 
     const edition = await prisma.edition.update({
       where: { id },
@@ -253,4 +254,25 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     return { success: true, count: figures.length };
   });
+
+  // --- Featured Edition ---
+
+  // PUT /api/admin/editions/featured — set the featured edition
+  app.put<{ Body: { editionId: number } }>(
+    "/editions/featured",
+    async (request, reply) => {
+      const { editionId } = request.body;
+
+      const edition = await prisma.edition.findUnique({ where: { id: editionId } });
+      if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+      await prisma.siteSetting.upsert({
+        where: { key: "featured_edition_id" },
+        update: { value: String(editionId) },
+        create: { key: "featured_edition_id", value: String(editionId) },
+      });
+
+      return { success: true, editionId };
+    }
+  );
 }

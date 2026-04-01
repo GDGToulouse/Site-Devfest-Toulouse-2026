@@ -1,21 +1,27 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 
-async function getFeaturedEdition() {
-  // Priority: edition with ANNOUNCEMENT status, fallback to latest by year
-  const edition =
-    (await prisma.edition.findFirst({
-      where: { status: "ANNOUNCEMENT" },
-    })) ??
-    (await prisma.edition.findFirst({
-      orderBy: { year: "desc" },
-    }));
+export async function getFeaturedEdition() {
+  // 1. Check SiteSetting for featured_edition_id
+  const setting = await prisma.siteSetting.findUnique({
+    where: { key: "featured_edition_id" },
+  });
 
-  return edition;
+  if (setting) {
+    const edition = await prisma.edition.findUnique({
+      where: { id: Number(setting.value) },
+    });
+    if (edition) return edition;
+  }
+
+  // 2. Fallback: latest edition by year
+  return prisma.edition.findFirst({
+    orderBy: { year: "desc" },
+  });
 }
 
 export default async function editionRoutes(app: FastifyInstance) {
-  // GET /api/editions/current — returns the featured edition (ANNOUNCEMENT first, then latest)
+  // GET /api/editions/current — returns the featured edition
   app.get("/editions/current", async (_request, reply) => {
     const edition = await getFeaturedEdition();
 

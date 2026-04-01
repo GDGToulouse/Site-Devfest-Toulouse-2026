@@ -28,11 +28,16 @@ export default function EditionsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<EditionData | null>(null);
+  const [featuredId, setFeaturedId] = useState<number | null>(null);
 
   async function loadEditions() {
     setIsLoading(true);
-    const { data } = await adminFetch<EditionData[]>("/editions");
+    const [{ data }, { data: featured }] = await Promise.all([
+      adminFetch<EditionData[]>("/editions"),
+      adminFetch<{ editionId: number | null }>("/editions/featured"),
+    ]);
     if (data) setEditions(data);
+    if (featured) setFeaturedId(featured.editionId);
     setIsLoading(false);
   }
 
@@ -71,6 +76,14 @@ export default function EditionsPage() {
     loadEditions();
   }
 
+  async function handleSetFeatured(editionId: number) {
+    await adminFetch("/editions/featured", {
+      method: "PUT",
+      body: JSON.stringify({ editionId }),
+    });
+    setFeaturedId(editionId);
+  }
+
   if (isLoading) return <p className="text-gris">Chargement...</p>;
 
   return (
@@ -102,14 +115,25 @@ export default function EditionsPage() {
       <div className="space-y-3">
         {editions.map((edition) => {
           const statusInfo = STATUS_OPTIONS[edition.status] || { label: edition.status, variant: "gray" as const };
+          const isFeatured = edition.id === featuredId;
           return (
-            <div key={edition.id} className="bg-blanc rounded-xl shadow-card p-5 flex items-center justify-between">
-              <div className="flex items-center gap-4">
+            <div key={edition.id} className={`bg-blanc rounded-xl shadow-card p-5 flex items-center justify-between ${isFeatured ? "ring-2 ring-malachite" : ""}`}>
+              <div className="flex items-center gap-4 flex-wrap">
                 <h2 className="text-xl font-bold text-noir">DevFest {edition.year}</h2>
                 <StatusBadge status={statusInfo.label} variant={statusInfo.variant} />
+                {isFeatured && <StatusBadge status="A la une" variant="green" />}
                 <span className="text-xs text-gris">{edition.ticketTiersCount} tarif(s) · {edition.articlesCount} article(s)</span>
               </div>
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                {!isFeatured && (
+                  <button
+                    onClick={() => handleSetFeatured(edition.id)}
+                    className="px-3 py-2 rounded-lg text-sm font-medium text-malachite border border-malachite hover:bg-malachite/10 transition-colors"
+                    title="Mettre a la une"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                  </button>
+                )}
                 <button
                   onClick={() => router.push(`/fr/admin/editions/${edition.id}`)}
                   className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90"

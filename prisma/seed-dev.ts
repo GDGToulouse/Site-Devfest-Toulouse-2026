@@ -31,6 +31,14 @@ async function seedDev() {
 
   console.log(`Edition created: ${edition.year} (${edition.status})`);
 
+  // --- Featured Edition Setting ---
+  await prisma.siteSetting.upsert({
+    where: { key: "featured_edition_id" },
+    update: { value: String(edition.id) },
+    create: { key: "featured_edition_id", value: String(edition.id) },
+  });
+  console.log(`Featured edition set to: ${edition.year}`);
+
   // --- Ticket Tiers ---
   const tiers = [
     {

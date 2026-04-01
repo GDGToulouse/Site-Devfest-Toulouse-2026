@@ -1,17 +1,11 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
+import { getFeaturedEdition } from "./editions.js";
 
 export default async function settingsRoutes(app: FastifyInstance) {
-  // GET /api/settings/key-figures — returns key figures for the current edition
+  // GET /api/settings/key-figures — returns key figures for the featured edition
   app.get("/settings/key-figures", async () => {
-    const currentEdition =
-      (await prisma.edition.findFirst({
-        where: { status: "ANNOUNCEMENT" },
-      })) ??
-      (await prisma.edition.findFirst({
-        orderBy: { year: "desc" },
-      }));
-
+    const currentEdition = await getFeaturedEdition();
     if (!currentEdition) return [];
 
     const figures = await prisma.keyFigure.findMany({
@@ -25,6 +19,15 @@ export default async function settingsRoutes(app: FastifyInstance) {
       labelFr: f.labelFr,
       labelEn: f.labelEn,
     }));
+  });
+
+  // GET /api/settings/featured-edition — returns the ID of the featured edition
+  app.get("/settings/featured-edition", async () => {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "featured_edition_id" },
+    });
+
+    return { editionId: setting ? Number(setting.value) : null };
   });
 
   // GET /api/settings/cfp — returns CFP configuration
