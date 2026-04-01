@@ -28,14 +28,23 @@ function mapArticleSummary(article: {
 }
 
 export default async function articleRoutes(app: FastifyInstance) {
-  // GET /api/articles/latest?limit=4 — returns the N most recent published articles
+  // GET /api/articles/latest?limit=4&editionId=1 — returns the N most recent published articles
+  // If editionId is provided, returns articles linked to that edition OR to no edition
   app.get<{
-    Querystring: { limit?: string };
+    Querystring: { limit?: string; editionId?: string };
   }>("/articles/latest", async (request) => {
     const limit = Math.min(Number(request.query.limit) || 4, 20);
+    const editionId = request.query.editionId ? Number(request.query.editionId) : null;
+
+    const where = {
+      publicationStatus: "PUBLISHED" as const,
+      ...(editionId
+        ? { OR: [{ editions: { some: { id: editionId } } }, { editions: { none: {} } }] }
+        : {}),
+    };
 
     const articles = await prisma.article.findMany({
-      where: { publicationStatus: "PUBLISHED" },
+      where,
       orderBy: { publishedAt: "desc" },
       take: limit,
       include: { tags: true },

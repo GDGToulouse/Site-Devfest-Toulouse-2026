@@ -126,7 +126,7 @@ async function seedDev() {
       create: {
         ...articleData,
         publicationStatus: "PUBLISHED",
-        editionId: edition.id,
+        editions: { connect: [{ id: edition.id }] },
         tags: { connect: connectTags },
       },
     });

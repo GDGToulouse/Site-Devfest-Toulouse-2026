@@ -57,12 +57,13 @@ function buildEventJsonLd(edition: {
 export default async function HomePage() {
   const locale = await getLocale();
 
-  const [edition, articles, tiers, figures] = await Promise.all([
+  const [edition, tiers, figures] = await Promise.all([
     getCurrentEdition(),
-    getLatestArticles(4),
     getCurrentTicketTiers(),
     getKeyFigures(),
   ]);
+
+  const articles = await getLatestArticles(4, edition?.id);
 
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
 

@@ -53,7 +53,7 @@ model Edition {
   updatedAt        DateTime        @updatedAt
 
   ticketTiers      TicketTier[]
-  articles         Article[]       @relation("EditionArticles")
+  articles         Article[]
   keyFigures       KeyFigure[]
 }
 
@@ -89,8 +89,7 @@ model Article {
   updatedAt        DateTime          @updatedAt
 
   tags             Tag[]
-  editionId        Int?
-  edition          Edition?          @relation("EditionArticles", fields: [editionId], references: [id])
+  editions         Edition[]
 }
 
 model Tag {

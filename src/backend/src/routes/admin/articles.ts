@@ -12,7 +12,7 @@ interface ArticleBody {
   imageUrl?: string;
   author?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
-  editionId?: number;
+  editionIds?: number[];
   tagIds?: number[];
 }
 
@@ -33,7 +33,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { tags: true, edition: true },
+        include: { tags: true, editions: true },
       }),
       prisma.article.count({ where }),
     ]);
@@ -52,7 +52,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         publishedAt: a.publishedAt,
         createdAt: a.createdAt,
         tags: a.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
-        edition: a.edition ? { id: a.edition.id, year: a.edition.year } : null,
+        editions: a.editions.map((e) => ({ id: e.id, year: e.year })),
       })),
       total,
       page,
@@ -69,7 +69,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
 
     const article = await prisma.article.findUnique({
       where: { id },
-      include: { tags: true, edition: true },
+      include: { tags: true, editions: true },
     });
 
     if (!article) return reply.status(404).send({ error: "Article not found" });
@@ -87,7 +87,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       author: article.author,
       publicationStatus: article.publicationStatus,
       publishedAt: article.publishedAt,
-      editionId: article.editionId,
+      editions: article.editions.map((e) => ({ id: e.id, year: e.year })),
       tags: article.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
     };
   });
@@ -120,7 +120,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         author: body.author?.trim() || null,
         publicationStatus: body.publicationStatus || "DRAFT",
         publishedAt: isPublished ? new Date() : null,
-        editionId: body.editionId || null,
+        editions: body.editionIds?.length ? { connect: body.editionIds.map((id) => ({ id })) } : undefined,
         tags: body.tagIds?.length ? { connect: body.tagIds.map((id) => ({ id })) } : undefined,
       },
       include: { tags: true },
@@ -158,7 +158,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         author: body.author?.trim() ?? existing.author,
         publicationStatus: body.publicationStatus || existing.publicationStatus,
         publishedAt: isPublished && !wasPublished ? new Date() : existing.publishedAt,
-        editionId: body.editionId !== undefined ? (body.editionId || null) : existing.editionId,
+        editions: body.editionIds !== undefined
+          ? { set: body.editionIds.map((editionId) => ({ id: editionId })) }
+          : undefined,
         tags: body.tagIds !== undefined
           ? { set: body.tagIds.map((tagId) => ({ id: tagId })) }
           : undefined,

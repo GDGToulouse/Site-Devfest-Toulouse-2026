@@ -30,8 +30,10 @@ export async function getCurrentEdition(): Promise<Edition | null> {
   return fetchAPI<Edition>("/api/editions/current");
 }
 
-export async function getLatestArticles(limit = 4): Promise<Article[]> {
-  return (await fetchAPI<Article[]>(`/api/articles/latest?limit=${limit}`)) || [];
+export async function getLatestArticles(limit = 4, editionId?: number): Promise<Article[]> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (editionId) params.set("editionId", String(editionId));
+  return (await fetchAPI<Article[]>(`/api/articles/latest?${params}`)) || [];
 }
 
 export async function getCurrentTicketTiers(): Promise<TicketTier[]> {

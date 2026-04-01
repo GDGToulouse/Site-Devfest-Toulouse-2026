@@ -19,7 +19,7 @@ interface ArticleForm {
   imageUrl: string;
   author: string;
   publicationStatus: "DRAFT" | "PUBLISHED";
-  editionId: string;
+  editionIds: number[];
   tagIds: number[];
 }
 
@@ -40,7 +40,7 @@ const emptyForm: ArticleForm = {
   imageUrl: "",
   author: "",
   publicationStatus: "DRAFT",
-  editionId: "",
+  editionIds: [],
   tagIds: [],
 };
 
@@ -69,7 +69,7 @@ export default function ArticleEditorPage() {
     });
 
     if (articleId) {
-      adminFetch<ArticleForm & { tags: TagOption[] }>(`/articles/${articleId}`).then(({ data, status }) => {
+      adminFetch<ArticleForm & { tags: TagOption[]; editions: { id: number; year: number }[] }>(`/articles/${articleId}`).then(({ data, status }) => {
         if (status === 404 || !data) {
           router.push("/fr/admin/articles");
           return;
@@ -85,7 +85,7 @@ export default function ArticleEditorPage() {
           imageUrl: data.imageUrl || "",
           author: data.author || "",
           publicationStatus: data.publicationStatus,
-          editionId: data.editionId ? String(data.editionId) : "",
+          editionIds: data.editions?.map((e: { id: number }) => e.id) || [],
           tagIds: data.tags.map((t) => t.id),
         });
         setIsLoading(false);
@@ -122,7 +122,7 @@ export default function ArticleEditorPage() {
       imageUrl: form.imageUrl || undefined,
       author: form.author || undefined,
       publicationStatus: form.publicationStatus,
-      editionId: form.editionId ? Number(form.editionId) : undefined,
+      editionIds: form.editionIds,
       tagIds: form.tagIds,
     };
 
@@ -277,17 +277,31 @@ export default function ArticleEditorPage() {
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-noir mb-1">Edition</label>
-              <select
-                value={form.editionId}
-                onChange={(e) => updateForm("editionId", e.target.value)}
-                className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-              >
-                <option value="">Aucune</option>
-                {editions.map((ed) => (
-                  <option key={ed.id} value={String(ed.id)}>DevFest {ed.year}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-noir mb-1">Editions</label>
+              <div className="flex flex-wrap gap-2">
+                {editions.map((ed) => {
+                  const isSelected = form.editionIds.includes(ed.id);
+                  return (
+                    <button
+                      key={ed.id}
+                      type="button"
+                      onClick={() => {
+                        const newIds = isSelected
+                          ? form.editionIds.filter((id) => id !== ed.id)
+                          : [...form.editionIds, ed.id];
+                        updateForm("editionIds", newIds);
+                      }}
+                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                        isSelected
+                          ? "bg-malachite text-blanc border-malachite"
+                          : "bg-blanc text-gris border-gris/30 hover:border-malachite hover:text-malachite"
+                      }`}
+                    >
+                      DevFest {ed.year}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 
