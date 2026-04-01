@@ -52,6 +52,7 @@ export default function ArticleEditorPage() {
 
   const [form, setForm] = useState<ArticleForm>(emptyForm);
   const [tags, setTags] = useState<TagOption[]>([]);
+  const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
@@ -61,6 +62,10 @@ export default function ArticleEditorPage() {
   useEffect(() => {
     adminFetch<TagOption[]>("/tags").then(({ data }) => {
       if (data) setTags(data);
+    });
+
+    adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
+      if (data) setEditions(data);
     });
 
     if (articleId) {
@@ -259,16 +264,31 @@ export default function ArticleEditorPage() {
             }}
           />
 
-          <div>
-            <label className="block text-sm font-medium text-noir mb-1">Statut</label>
-            <select
-              value={form.publicationStatus}
-              onChange={(e) => updateForm("publicationStatus", e.target.value as "DRAFT" | "PUBLISHED")}
-              className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-            >
-              <option value="DRAFT">Brouillon</option>
-              <option value="PUBLISHED">Publié</option>
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Statut</label>
+              <select
+                value={form.publicationStatus}
+                onChange={(e) => updateForm("publicationStatus", e.target.value as "DRAFT" | "PUBLISHED")}
+                className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              >
+                <option value="DRAFT">Brouillon</option>
+                <option value="PUBLISHED">Publié</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Edition</label>
+              <select
+                value={form.editionId}
+                onChange={(e) => updateForm("editionId", e.target.value)}
+                className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              >
+                <option value="">Aucune</option>
+                {editions.map((ed) => (
+                  <option key={ed.id} value={String(ed.id)}>DevFest {ed.year}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <TagInput
