@@ -22,7 +22,7 @@ export default function HeroSection() {
           <div className="flex flex-col items-start">
             {/* Block 1: DevFest — most indented, rounded top-right only */}
             <div
-              className="bg-blanc pl-8 lg:pl-[100px] pr-8 lg:pr-[45px] py-3"
+              className="bg-blanc pl-8 lg:pl-[150px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderTopRightRadius: "40px" }}
             >
               <h1>
@@ -34,7 +34,7 @@ export default function HeroSection() {
 
             {/* Block 2: Toulouse + "La conférence Toulousaine par" — wider, rounded top-right + bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-3"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
             >
               <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
@@ -47,7 +47,7 @@ export default function HeroSection() {
 
             {/* Block 3: "les devs et pour les devs." — no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-3"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
@@ -59,7 +59,7 @@ export default function HeroSection() {
 
             {/* Block 4: Date — narrower, no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-3"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir">
@@ -69,7 +69,7 @@ export default function HeroSection() {
 
             {/* Block 5: Venue — narrowest, no top-right, has bottom-right */}
             <div
-              className="bg-blanc pl-8 lg:pl-[175px] pr-8 lg:pr-[45px] py-3"
+              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderBottomRightRadius: "40px" }}
             >
               <p className="text-lg text-noir/70">
@@ -78,7 +78,7 @@ export default function HeroSection() {
             </div>
 
             {/* Buttons — inside the staircase area, separated by button height */}
-            <div className="mt-16 pl-8 lg:pl-[175px] flex flex-col sm:flex-row gap-4">
+            <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
               <Link
                 href="/contact"
                 className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-base hover:bg-bleu hover:text-blanc transition-colors text-center"
