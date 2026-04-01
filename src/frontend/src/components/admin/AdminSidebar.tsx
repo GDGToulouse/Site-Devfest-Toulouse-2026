@@ -12,6 +12,7 @@ interface AdminUser {
 interface AdminSidebarProps {
   user: AdminUser;
   onLogout: () => void;
+  onNavigate?: () => void;
 }
 
 const navItems = [
@@ -25,7 +26,7 @@ const navItems = [
   { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
 ];
 
-export default function AdminSidebar({ user, onLogout }: AdminSidebarProps) {
+export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
   const visibleItems = navItems.filter((item) => item.roles.includes(user.role));
 
@@ -45,6 +46,7 @@ export default function AdminSidebar({ user, onLogout }: AdminSidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={`block px-6 py-3 text-sm transition-colors ${
                 isActive
                   ? "bg-blanc/10 text-blanc font-bold border-l-4 border-malachite"
