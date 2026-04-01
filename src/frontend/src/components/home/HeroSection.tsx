@@ -5,17 +5,17 @@ export default function HeroSection() {
   const t = useTranslations("home.hero");
 
   return (
-    <section className="relative w-full overflow-hidden bg-blanc">
+    <section className="relative w-full bg-blanc">
+      {/* Background photo — starts at 1/3 of max-w container, extends to right edge of viewport */}
+      <div
+        className="absolute top-0 bottom-0 left-0 lg:left-[max(0px,calc(50%-240px))] right-0 bg-cover bg-center"
+        style={{
+          backgroundImage:
+            "linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('https://picsum.photos/1200/800?random=devfest')",
+          borderRadius: "64px 0px 0px 64px",
+        }}
+      />
       <div className="relative mx-auto max-w-[1440px] min-h-[600px] lg:min-h-[700px]">
-        {/* Background photo — starts at ~33% from left, flush right, rounded left corners */}
-        <div
-          className="absolute top-0 bottom-0 right-0 left-0 lg:left-1/3 bg-cover bg-center"
-          style={{
-            backgroundImage:
-              "linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('https://picsum.photos/1200/800?random=devfest')",
-            borderRadius: "64px 0px 0px 64px",
-          }}
-        />
 
         {/* 5 staircase blocks — pyramid effect */}
         <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
@@ -81,7 +81,7 @@ export default function HeroSection() {
             <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
               <Link
                 href="/contact"
-                className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-lg hover:bg-bleu hover:text-blanc transition-colors text-center"
+                className="px-8 py-5 rounded-[12px] border-3 border-bleu text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
               >
                 {t("ctaPartner")}
               </Link>
@@ -89,7 +89,7 @@ export default function HeroSection() {
                 href="https://sessionize.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors text-center"
+                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-2xl hover:bg-bleu/90 transition-colors text-center"
               >
                 {t("ctaTalk")}
               </a>
