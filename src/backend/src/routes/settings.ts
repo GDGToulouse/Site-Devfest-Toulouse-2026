@@ -4,9 +4,13 @@ import { prisma } from "../lib/prisma.js";
 export default async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings/key-figures — returns key figures for the current edition
   app.get("/settings/key-figures", async () => {
-    const currentEdition = await prisma.edition.findFirst({
-      orderBy: { year: "desc" },
-    });
+    const currentEdition =
+      (await prisma.edition.findFirst({
+        where: { status: "ANNOUNCEMENT" },
+      })) ??
+      (await prisma.edition.findFirst({
+        orderBy: { year: "desc" },
+      }));
 
     if (!currentEdition) return [];
 

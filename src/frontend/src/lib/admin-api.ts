@@ -14,7 +14,7 @@ export async function adminFetch<T>(
 ): Promise<{ data: T | null; status: number }> {
   try {
     const headers: Record<string, string> = {};
-    if (options.body) {
+    if (options.body && !(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
 

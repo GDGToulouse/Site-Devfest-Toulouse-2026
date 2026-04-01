@@ -21,6 +21,10 @@ async function seedDev() {
       startDate: new Date("2026-11-19T09:00:00Z"),
       endDate: new Date("2026-11-19T18:00:00Z"),
       status: "ANNOUNCEMENT",
+      venueName: "Diagora",
+      venueAddress: "Labège",
+      cfpUrl: "https://sessionize.com",
+      partnerFormUrl: "https://forms.gle/devfest-partenaire",
       aftermovieUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     },
   });

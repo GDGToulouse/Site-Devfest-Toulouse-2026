@@ -1,7 +1,7 @@
 {
   "site": {
     "title": "DevFest Toulouse 2026",
-    "description": "La plus grande conférence tech du bassin Toulousain — 19 novembre 2026"
+    "description": "La plus grande conférence tech du bassin Toulousain"
   },
   "nav": {
     "home": "Accueil",
@@ -22,8 +22,6 @@
       "subtitleLine2devs": "les devs",
       "subtitleLine2end": " et pour les ",
       "subtitleLine2devs2": "devs.",
-      "date": "19 novembre 2026",
-      "venue": "Diagora, Labège",
       "ctaPartner": "Devenir partenaire",
       "ctaTalk": "Proposer un talk"
     },

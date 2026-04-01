@@ -41,6 +41,11 @@ model Edition {
   startDate        DateTime?
   endDate          DateTime?
   status           EditionStatus   @default(PREPARATION)
+  venueName        String?
+  venueAddress     String?
+  heroImageUrl     String?
+  cfpUrl           String?
+  partnerFormUrl   String?
   aftermovieUrl    String?
   galleryUrl       String?
   archivedSiteUrl  String?

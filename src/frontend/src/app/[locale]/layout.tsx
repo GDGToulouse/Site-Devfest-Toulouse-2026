@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import { EditionProvider } from "@/contexts/EditionContext";
+import { getCurrentEdition } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -54,6 +56,8 @@ export default async function LocaleLayout({
     notFound();
   }
 
+  const edition = await getCurrentEdition();
+
   return (
     <>
       <a
@@ -63,11 +67,13 @@ export default async function LocaleLayout({
         {locale === "fr" ? "Aller au contenu" : "Skip to content"}
       </a>
       <NextIntlClientProvider>
-        <Header />
-        <main id="main-content" role="main" className="flex-1">
-          {children}
-        </main>
-        <Footer />
+        <EditionProvider edition={edition}>
+          <Header />
+          <main id="main-content" role="main" className="flex-1">
+            {children}
+          </main>
+          <Footer />
+        </EditionProvider>
       </NextIntlClientProvider>
     </>
   );

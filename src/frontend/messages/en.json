@@ -1,7 +1,7 @@
 {
   "site": {
     "title": "DevFest Toulouse 2026",
-    "description": "The largest tech conference in the Toulouse area — November 19, 2026"
+    "description": "The largest tech conference in the Toulouse area"
   },
   "nav": {
     "home": "Home",
@@ -22,8 +22,6 @@
       "subtitleLine2devs": "devs",
       "subtitleLine2end": ", for ",
       "subtitleLine2devs2": "devs.",
-      "date": "November 19, 2026",
-      "venue": "Diagora, Labège",
       "ctaPartner": "Become a partner",
       "ctaTalk": "Submit a talk"
     },

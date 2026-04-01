@@ -14,44 +14,45 @@ import LatestNewsSection from "@/components/home/LatestNewsSection";
 import TicketingSection from "@/components/home/TicketingSection";
 import ReplaySection from "@/components/home/ReplaySection";
 
-const eventJsonLd = {
-  "@context": "https://schema.org",
-  "@type": "Event",
-  name: "DevFest Toulouse 2026",
-  startDate: "2026-11-19",
-  endDate: "2026-11-19",
-  eventStatus: "https://schema.org/EventScheduled",
-  eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-  location: {
-    "@type": "Place",
-    name: "Diagora",
-    address: {
-      "@type": "PostalAddress",
-      addressLocality: "Labège",
-      addressRegion: "Occitanie",
-      addressCountry: "FR",
-    },
-  },
-  organizer: {
-    "@type": "Organization",
-    name: "GDG Toulouse",
-    url: "https://gdg.community.dev/gdg-toulouse/",
-  },
-  superEvent: {
+function buildEventJsonLd(edition: {
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+}) {
+  return {
+    "@context": "https://schema.org",
     "@type": "Event",
-    name: "DevFest",
-    url: "https://developers.google.com/community/devfest",
-  },
-  previousStartDate: [
-    "2025-11-20",
-    "2024-11-07",
-    "2023-11-16",
-    "2019-10-03",
-    "2018-11-08",
-    "2017-09-28",
-    "2016-11-03",
-  ],
-};
+    name: `DevFest Toulouse ${edition.year}`,
+    startDate: edition.startDate?.split("T")[0] ?? undefined,
+    endDate: edition.endDate?.split("T")[0] ?? undefined,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: edition.venueName
+      ? {
+          "@type": "Place",
+          name: edition.venueName,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: edition.venueAddress ?? undefined,
+            addressRegion: "Occitanie",
+            addressCountry: "FR",
+          },
+        }
+      : undefined,
+    organizer: {
+      "@type": "Organization",
+      name: "GDG Toulouse",
+      url: "https://gdg.community.dev/gdg-toulouse/",
+    },
+    superEvent: {
+      "@type": "Event",
+      name: "DevFest",
+      url: "https://developers.google.com/community/devfest",
+    },
+  };
+}
 
 export default async function HomePage() {
   const locale = await getLocale();
@@ -67,12 +68,16 @@ export default async function HomePage() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
-      />
+      {edition && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(buildEventJsonLd(edition)),
+          }}
+        />
+      )}
 
-      <HeroSection />
+      <HeroSection edition={edition} locale={locale} />
 
       {isAnnouncement && figures.length > 0 && (
         <KeyFiguresSection figures={figures} locale={locale} />

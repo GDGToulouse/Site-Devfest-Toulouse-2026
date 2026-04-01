@@ -6,6 +6,11 @@ interface EditionBody {
   startDate?: string;
   endDate?: string;
   status?: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  venueName?: string;
+  venueAddress?: string;
+  heroImageUrl?: string;
+  cfpUrl?: string;
+  partnerFormUrl?: string;
   aftermovieUrl?: string;
   galleryUrl?: string;
   archivedSiteUrl?: string;
@@ -25,6 +30,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       startDate: e.startDate,
       endDate: e.endDate,
       status: e.status,
+      venueName: e.venueName,
+      venueAddress: e.venueAddress,
+      heroImageUrl: e.heroImageUrl,
+      cfpUrl: e.cfpUrl,
+      partnerFormUrl: e.partnerFormUrl,
       aftermovieUrl: e.aftermovieUrl,
       galleryUrl: e.galleryUrl,
       archivedSiteUrl: e.archivedSiteUrl,
@@ -47,6 +57,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       startDate: edition.startDate,
       endDate: edition.endDate,
       status: edition.status,
+      venueName: edition.venueName,
+      venueAddress: edition.venueAddress,
+      heroImageUrl: edition.heroImageUrl,
+      cfpUrl: edition.cfpUrl,
+      partnerFormUrl: edition.partnerFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
@@ -73,6 +88,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         startDate: edition.startDate,
         endDate: edition.endDate,
         status: edition.status,
+        venueName: edition.venueName,
+        venueAddress: edition.venueAddress,
+        heroImageUrl: edition.heroImageUrl,
+        cfpUrl: edition.cfpUrl,
+        partnerFormUrl: edition.partnerFormUrl,
         aftermovieUrl: edition.aftermovieUrl,
         galleryUrl: edition.galleryUrl,
         archivedSiteUrl: edition.archivedSiteUrl,
@@ -111,6 +131,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         startDate: body.startDate ? new Date(body.startDate) : existing.startDate,
         endDate: body.endDate ? new Date(body.endDate) : existing.endDate,
         status: newStatus,
+        venueName: body.venueName !== undefined ? (body.venueName || null) : existing.venueName,
+        venueAddress: body.venueAddress !== undefined ? (body.venueAddress || null) : existing.venueAddress,
+        heroImageUrl: body.heroImageUrl !== undefined ? (body.heroImageUrl || null) : existing.heroImageUrl,
+        cfpUrl: body.cfpUrl !== undefined ? (body.cfpUrl || null) : existing.cfpUrl,
+        partnerFormUrl: body.partnerFormUrl !== undefined ? (body.partnerFormUrl || null) : existing.partnerFormUrl,
         aftermovieUrl: body.aftermovieUrl !== undefined ? (body.aftermovieUrl || null) : existing.aftermovieUrl,
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
@@ -139,6 +164,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         startDate: body.startDate ? new Date(body.startDate) : null,
         endDate: body.endDate ? new Date(body.endDate) : null,
         status: body.status || "PREPARATION",
+        venueName: body.venueName || null,
+        venueAddress: body.venueAddress || null,
+        heroImageUrl: body.heroImageUrl || null,
+        cfpUrl: body.cfpUrl || null,
+        partnerFormUrl: body.partnerFormUrl || null,
         aftermovieUrl: body.aftermovieUrl || null,
         galleryUrl: body.galleryUrl || null,
         archivedSiteUrl: body.archivedSiteUrl || null,

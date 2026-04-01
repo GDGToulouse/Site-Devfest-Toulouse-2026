@@ -1,8 +1,37 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import type { Edition } from "@/lib/types";
 
-export default function HeroSection() {
+function formatDate(dateStr: string, locale: string): string {
+  const date = new Date(dateStr);
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+interface HeroSectionProps {
+  edition: Edition | null;
+  locale: string;
+}
+
+export default function HeroSection({ edition, locale }: HeroSectionProps) {
   const t = useTranslations("home.hero");
+
+  const heroImageUrl = edition?.heroImageUrl || null;
+  const dateLabel = edition?.startDate ? formatDate(edition.startDate, locale) : null;
+  const venueLabel =
+    edition?.venueName && edition?.venueAddress
+      ? `${edition.venueName}, ${edition.venueAddress}`
+      : edition?.venueName || null;
+
+  const partnerUrl = edition?.partnerFormUrl || "/contact";
+  const cfpUrl = edition?.cfpUrl || "#";
+
+  const backgroundImage = heroImageUrl
+    ? `linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('${heroImageUrl}')`
+    : "linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('https://picsum.photos/1200/800?random=devfest')";
 
   return (
     <section className="relative w-full bg-blanc">
@@ -10,8 +39,7 @@ export default function HeroSection() {
       <div
         className="absolute top-0 bottom-0 left-0 lg:left-[max(0px,calc(50%-240px))] right-0 bg-cover bg-center"
         style={{
-          backgroundImage:
-            "linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('https://picsum.photos/1200/800?random=devfest')",
+          backgroundImage,
           borderRadius: "64px 0px 0px 64px",
         }}
       />
@@ -32,7 +60,7 @@ export default function HeroSection() {
               </h1>
             </div>
 
-            {/* Block 2: Toulouse + "La conférence Toulousaine par" — wider, rounded top-right + bottom-right */}
+            {/* Block 2: Toulouse + subtitle line 1 */}
             <div
               className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
@@ -45,7 +73,7 @@ export default function HeroSection() {
               </p>
             </div>
 
-            {/* Block 3: "les devs et pour les devs." — no top-right, has bottom-right */}
+            {/* Block 3: subtitle line 2 */}
             <div
               className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
               style={{ borderBottomRightRadius: "40px" }}
@@ -57,36 +85,40 @@ export default function HeroSection() {
               </p>
             </div>
 
-            {/* Block 4: Date — narrower, no top-right, has bottom-right */}
-            <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
-              style={{ borderBottomRightRadius: "40px" }}
-            >
-              <p className="text-lg text-noir">
-                <strong>{t("date")}</strong>
-              </p>
-            </div>
+            {/* Block 4: Date */}
+            {dateLabel && (
+              <div
+                className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
+                style={{ borderBottomRightRadius: "40px" }}
+              >
+                <p className="text-lg text-noir">
+                  <strong>{dateLabel}</strong>
+                </p>
+              </div>
+            )}
 
-            {/* Block 5: Venue — narrowest, no top-right, has bottom-right */}
-            <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
-              style={{ borderBottomRightRadius: "40px" }}
-            >
-              <p className="text-lg text-noir/70">
-                {t("venue")}
-              </p>
-            </div>
+            {/* Block 5: Venue */}
+            {venueLabel && (
+              <div
+                className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
+                style={{ borderBottomRightRadius: "40px" }}
+              >
+                <p className="text-lg text-noir/70">
+                  {venueLabel}
+                </p>
+              </div>
+            )}
 
-            {/* Buttons — inside the staircase area, separated by button height */}
+            {/* Buttons */}
             <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
               <Link
-                href="/contact"
+                href={partnerUrl}
                 className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
               >
                 {t("ctaPartner")}
               </Link>
               <a
-                href="https://sessionize.com"
+                href={cfpUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-2xl hover:bg-bleu/90 transition-colors text-center"
