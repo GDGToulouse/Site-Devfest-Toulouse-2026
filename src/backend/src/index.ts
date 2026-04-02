@@ -12,7 +12,8 @@ import contactRoutes from "./routes/contact.js";
 import adminRoutes from "./routes/admin/index.js";
 
 const port = Number(process.env.PORT) || 4000;
-const host = process.env.HOST || "0.0.0.0";
+// Always bind to 0.0.0.0 in Docker — Coolify injects HOST=127.0.0.1 which blocks container networking
+const host = "0.0.0.0";
 
 const app = Fastify({ logger: true });
 
