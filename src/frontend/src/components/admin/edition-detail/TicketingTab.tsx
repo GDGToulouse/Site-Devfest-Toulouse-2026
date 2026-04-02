@@ -12,6 +12,9 @@ interface TicketTier {
   nameFr: string;
   nameEn: string;
   price: number;
+  isVisible: boolean;
+  saleStartDate: string | null;
+  saleEndDate: string | null;
   status: string;
   externalUrl: string | null;
   sortOrder: number;
@@ -30,11 +33,18 @@ const TICKET_STATUS = [
   { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
 ];
 
+function toInputDate(isoDate: string | null): string {
+  if (!isoDate) return "";
+  return isoDate.substring(0, 10);
+}
+
 const emptyTier = {
   nameFr: "",
   nameEn: "",
   price: "",
-  status: "COMING_SOON",
+  isVisible: true,
+  saleStartDate: "",
+  saleEndDate: "",
   externalUrl: "",
   sortOrder: "0",
 };
@@ -77,7 +87,9 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       nameFr: tier.nameFr,
       nameEn: tier.nameEn,
       price: String(tier.price),
-      status: tier.status,
+      isVisible: tier.isVisible,
+      saleStartDate: toInputDate(tier.saleStartDate),
+      saleEndDate: toInputDate(tier.saleEndDate),
       externalUrl: tier.externalUrl || "",
       sortOrder: String(tier.sortOrder),
     });
@@ -96,7 +108,9 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       nameFr: form.nameFr,
       nameEn: form.nameEn,
       price: Number(form.price) || 0,
-      status: form.status,
+      isVisible: form.isVisible,
+      saleStartDate: form.saleStartDate || null,
+      saleEndDate: form.saleEndDate || null,
       externalUrl: form.externalUrl || undefined,
       sortOrder: Number(form.sortOrder) || 0,
       editionId,
@@ -185,16 +199,25 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField label="Prix (EUR)" name="price" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} required />
-            <div>
-              <label className="block text-sm font-medium text-noir mb-1">Statut</label>
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} className="w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50">
-                {TICKET_STATUS.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
-            </div>
-            <FormField label="Ordre" name="sortOrder" type="number" value={form.sortOrder} onChange={(v) => setForm({ ...form, sortOrder: v })} />
+            <FormField label="Debut des ventes" name="saleStartDate" type="date" value={form.saleStartDate} onChange={(v) => setForm({ ...form, saleStartDate: v })} />
+            <FormField label="Fin des ventes" name="saleEndDate" type="date" value={form.saleEndDate} onChange={(v) => setForm({ ...form, saleEndDate: v })} />
           </div>
 
-          <FormField label="URL externe" name="externalUrl" type="url" value={form.externalUrl} onChange={(v) => setForm({ ...form, externalUrl: v })} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField label="Ordre" name="sortOrder" type="number" value={form.sortOrder} onChange={(v) => setForm({ ...form, sortOrder: v })} />
+            <FormField label="URL externe" name="externalUrl" type="url" value={form.externalUrl} onChange={(v) => setForm({ ...form, externalUrl: v })} />
+            <div className="flex items-center pt-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isVisible}
+                  onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
+                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                />
+                <span className="text-sm text-noir">Visible sur le site</span>
+              </label>
+            </div>
+          </div>
 
           <div className="flex gap-3 justify-end">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse">Annuler</button>
@@ -215,6 +238,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                 <th className="text-left px-4 py-3 font-medium text-gris">Nom</th>
                 <th className="text-left px-4 py-3 font-medium text-gris">Prix</th>
                 <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Visible</th>
                 <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
               </tr>
             </thead>
@@ -226,6 +250,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                   <td className="px-4 py-3">
                     <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
                   </td>
+                  <td className="px-4 py-3 text-noir">{tier.isVisible ? "Oui" : "Non"}</td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button onClick={() => startEdit(tier)} className="text-bleu hover:underline text-sm">Modifier</button>
                     <button onClick={() => setDeleteTarget(tier)} className="text-terre-cuite hover:underline text-sm">Supprimer</button>

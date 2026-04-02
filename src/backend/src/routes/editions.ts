@@ -1,6 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 
+export function computeTicketStatus(
+  saleStartDate: Date | null,
+  saleEndDate: Date | null,
+  now: Date,
+): "AVAILABLE" | "SOLD_OUT" | "COMING_SOON" {
+  if (saleEndDate && saleEndDate < now) return "SOLD_OUT";
+  if (saleStartDate && saleStartDate > now) return "COMING_SOON";
+  return "AVAILABLE";
+}
+
 export async function getFeaturedEdition() {
   // 1. Check SiteSetting for featured_edition_id
   const setting = await prisma.siteSetting.findUnique({
@@ -55,7 +65,7 @@ export default async function editionRoutes(app: FastifyInstance) {
     };
   });
 
-  // GET /api/editions/current/ticket-tiers — returns active tiers for the featured edition
+  // GET /api/editions/current/ticket-tiers — returns visible tiers for the featured edition
   app.get("/editions/current/ticket-tiers", async (_request, reply) => {
     const edition = await getFeaturedEdition();
 
@@ -66,17 +76,19 @@ export default async function editionRoutes(app: FastifyInstance) {
     const tiers = await prisma.ticketTier.findMany({
       where: {
         editionId: edition.id,
-        status: { in: ["AVAILABLE", "SOLD_OUT"] },
+        isVisible: true,
       },
       orderBy: { sortOrder: "asc" },
     });
+
+    const now = new Date();
 
     return tiers.map((tier) => ({
       id: tier.id,
       nameFr: tier.nameFr,
       nameEn: tier.nameEn,
       price: Number(tier.price),
-      status: tier.status,
+      status: computeTicketStatus(tier.saleStartDate, tier.saleEndDate, now),
       externalUrl: tier.externalUrl,
       sortOrder: tier.sortOrder,
     }));

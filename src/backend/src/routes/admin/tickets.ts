@@ -1,11 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { computeTicketStatus } from "../editions.js";
 
 interface TicketTierBody {
   nameFr: string;
   nameEn: string;
   price: number;
-  status?: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
+  isVisible?: boolean;
+  saleStartDate?: string | null;
+  saleEndDate?: string | null;
   externalUrl?: string;
   sortOrder?: number;
   editionId: number;
@@ -18,6 +21,19 @@ function getBilletwebParams(): URLSearchParams | null {
   const key = process.env.BILLETWEB_KEY;
   if (!user || !key) return null;
   return new URLSearchParams({ user, key, version: "1" });
+}
+
+function unixToDate(ts: unknown): Date | null {
+  if (!ts || ts === "") return null;
+  const n = Number(ts);
+  if (isNaN(n) || n === 0) return null;
+  return new Date(n * 1000);
+}
+
+function toDateOrNull(value: string | null | undefined): Date | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
 }
 
 export default async function adminTicketRoutes(app: FastifyInstance) {
@@ -92,13 +108,17 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       const t = tickets[i];
       const name = String(t.name || "");
       const price = Number(t.price) || 0;
+      const visibility = Number(t.visibility);
+      const isVisible = visibility === 0 || visibility === 1;
 
       await prisma.ticketTier.create({
         data: {
           nameFr: name,
           nameEn: name,
           price,
-          status: "AVAILABLE",
+          isVisible,
+          saleStartDate: unixToDate(t.start_time),
+          saleEndDate: unixToDate(t.end_time),
           externalUrl: shopUrl || null,
           sortOrder: i,
           editionId,
@@ -108,6 +128,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
     return reply.status(201).send({ imported: tickets.length });
   });
+
   // GET /api/admin/tickets — list all ticket tiers
   app.get<{
     Querystring: { editionId?: string };
@@ -121,12 +142,17 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       include: { edition: { select: { year: true } } },
     });
 
+    const now = new Date();
+
     return tiers.map((t) => ({
       id: t.id,
       nameFr: t.nameFr,
       nameEn: t.nameEn,
       price: Number(t.price),
-      status: t.status,
+      isVisible: t.isVisible,
+      saleStartDate: t.saleStartDate,
+      saleEndDate: t.saleEndDate,
+      status: computeTicketStatus(t.saleStartDate, t.saleEndDate, now),
       externalUrl: t.externalUrl,
       sortOrder: t.sortOrder,
       editionId: t.editionId,
@@ -147,7 +173,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         nameFr: body.nameFr.trim(),
         nameEn: body.nameEn.trim(),
         price: body.price || 0,
-        status: body.status || "COMING_SOON",
+        isVisible: body.isVisible ?? true,
+        saleStartDate: toDateOrNull(body.saleStartDate),
+        saleEndDate: toDateOrNull(body.saleEndDate),
         externalUrl: body.externalUrl?.trim() || null,
         sortOrder: body.sortOrder ?? 0,
         editionId: body.editionId,
@@ -176,7 +204,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         nameFr: body.nameFr?.trim() ?? existing.nameFr,
         nameEn: body.nameEn?.trim() ?? existing.nameEn,
         price: body.price ?? Number(existing.price),
-        status: body.status ?? existing.status,
+        isVisible: body.isVisible ?? existing.isVisible,
+        saleStartDate: body.saleStartDate !== undefined ? toDateOrNull(body.saleStartDate) : existing.saleStartDate,
+        saleEndDate: body.saleEndDate !== undefined ? toDateOrNull(body.saleEndDate) : existing.saleEndDate,
         externalUrl: body.externalUrl !== undefined ? (body.externalUrl?.trim() || null) : existing.externalUrl,
         sortOrder: body.sortOrder ?? existing.sortOrder,
       },

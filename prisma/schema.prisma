@@ -22,11 +22,6 @@ enum PublicationStatus {
   PUBLISHED
 }
 
-enum TicketTierStatus {
-  AVAILABLE
-  SOLD_OUT
-  COMING_SOON
-}
 
 enum UserRole {
   ADMIN
@@ -106,7 +101,9 @@ model TicketTier {
   nameFr           String
   nameEn           String
   price            Decimal          @db.Decimal(8, 2)
-  status           TicketTierStatus @default(COMING_SOON)
+  isVisible        Boolean          @default(true)
+  saleStartDate    DateTime?
+  saleEndDate      DateTime?
   externalUrl      String?
   sortOrder        Int              @default(0)
   createdAt        DateTime         @default(now())
