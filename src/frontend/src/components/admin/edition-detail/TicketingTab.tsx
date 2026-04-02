@@ -17,6 +17,13 @@ interface TicketTier {
   sortOrder: number;
 }
 
+interface BilletwebEvent {
+  id: string;
+  name: string;
+  date: string;
+  shop: string;
+}
+
 const TICKET_STATUS = [
   { value: "COMING_SOON", label: "Bientot disponible", variant: "gray" as const },
   { value: "AVAILABLE", label: "Disponible", variant: "green" as const },
@@ -44,6 +51,14 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
   const [form, setForm] = useState(emptyTier);
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<TicketTier | null>(null);
+
+  // Billetweb import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [bwEvents, setBwEvents] = useState<BilletwebEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<BilletwebEvent | null>(null);
 
   async function loadTiers() {
     setIsLoading(true);
@@ -105,15 +120,61 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
     loadTiers();
   }
 
+  // Billetweb import
+  async function openImportModal() {
+    setShowImportModal(true);
+    setImportError(null);
+    setSelectedEvent(null);
+    setIsLoadingEvents(true);
+
+    const { data, status } = await adminFetch<BilletwebEvent[]>("/tickets/billetweb/events");
+    if (status === 200 && data) {
+      setBwEvents(data);
+    } else {
+      setImportError("Impossible de charger les evenements Billetweb. Verifiez la configuration API.");
+      setBwEvents([]);
+    }
+    setIsLoadingEvents(false);
+  }
+
+  async function handleImport() {
+    if (!selectedEvent) return;
+    setIsImporting(true);
+    setImportError(null);
+
+    const { data, status } = await adminFetch<{ imported: number }>("/tickets/import/billetweb", {
+      method: "POST",
+      body: JSON.stringify({ editionId, billetwebEventId: selectedEvent.id }),
+    });
+
+    setIsImporting(false);
+
+    if (status === 201 && data) {
+      setShowImportModal(false);
+      setSelectedEvent(null);
+      loadTiers();
+    } else {
+      setImportError("Erreur lors de l'import des tarifs.");
+    }
+  }
+
   if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-noir">Tarifs</h3>
-        <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">
-          Nouveau tarif
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={openImportModal}
+            className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90"
+          >
+            Importer depuis Billetweb
+          </button>
+          <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">
+            Nouveau tarif
+          </button>
+        </div>
       </div>
 
       {showForm && (
@@ -177,6 +238,67 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       )}
 
       <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer le tarif" message={`Supprimer "${deleteTarget?.nameFr}" ?`} confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+
+      {/* Billetweb import modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50">
+          <div className="bg-blanc rounded-xl shadow-card w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gris/20">
+              <h3 className="text-lg font-bold text-noir">Importer depuis Billetweb</h3>
+              <p className="text-sm text-gris mt-1">
+                Selectionnez un evenement. Les tarifs existants seront remplaces.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {isLoadingEvents && <p className="text-gris text-sm">Chargement des evenements...</p>}
+
+              {importError && (
+                <div className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
+                  {importError}
+                </div>
+              )}
+
+              {!isLoadingEvents && bwEvents.length === 0 && !importError && (
+                <p className="text-gris text-sm">Aucun evenement trouve.</p>
+              )}
+
+              {bwEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => setSelectedEvent(event)}
+                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 border transition-colors ${
+                    selectedEvent?.id === event.id
+                      ? "border-malachite bg-malachite/5"
+                      : "border-gris/20 hover:bg-blanc-casse"
+                  }`}
+                >
+                  <p className="font-medium text-noir text-sm">{event.name}</p>
+                  <p className="text-xs text-gris mt-0.5">
+                    {event.date ? new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Date non definie"}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gris/20 flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowImportModal(false); setSelectedEvent(null); }}
+                className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!selectedEvent || isImporting}
+                className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
+              >
+                {isImporting ? "Import en cours..." : "Importer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

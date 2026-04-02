@@ -61,7 +61,8 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `BILLETWEB_API_KEY` | non | Clé API Billetweb pour l'import automatique des paliers de billetterie. Facultative : l'import manuel reste possible sans cette clé. | `bw_live_...` |
+| `BILLETWEB_USER` | non | Identifiant utilisateur API Billetweb (email du compte). Facultatif : l'import manuel des tarifs reste possible sans. | `contact@devfesttoulouse.fr` |
+| `BILLETWEB_KEY` | non | Clé API Billetweb (générée dans le back-office Billetweb > API). | `abc123def456...` |
 
 ---
 
@@ -77,7 +78,7 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Lot | Variables nécessaires |
 |-----|----------------------|
-| **Lot 1 — Fondations** | `NODE_ENV`, `BASE_URL`, `PORT`, `DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `BILLETWEB_API_KEY` |
+| **Lot 1 — Fondations** | `NODE_ENV`, `BASE_URL`, `PORT`, `DATABASE_URL`, `SESSION_SECRET`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM`, `BILLETWEB_USER`, `BILLETWEB_KEY` |
 | **Lot 2 — Speakers & Sponsors** | + `MAGIC_LINK_SECRET`, `OAUTH_GOOGLE_CLIENT_ID`, `OAUTH_GOOGLE_CLIENT_SECRET`, `OAUTH_GITHUB_CLIENT_ID`, `OAUTH_GITHUB_CLIENT_SECRET` |
 | **Lot 3 — Programme** | aucune variable supplémentaire |
 | **Lot 4 — Contenu** | aucune variable supplémentaire |

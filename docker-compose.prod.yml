@@ -37,7 +37,8 @@ services:
       - SMTP_HOST=postfix
       - SMTP_PORT=25
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
-      - BILLETWEB_API_KEY=${BILLETWEB_API_KEY:-}
+      - BILLETWEB_USER=${BILLETWEB_USER:-}
+      - BILLETWEB_KEY=${BILLETWEB_KEY:-}
     depends_on:
       db:
         condition: service_healthy
