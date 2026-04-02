@@ -40,7 +40,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
     return (events as Array<Record<string, unknown>>).map((e) => ({
       id: e.id,
-      name: e.event,
+      name: e.name,
       date: e.start,
       shop: e.shop,
     }));
