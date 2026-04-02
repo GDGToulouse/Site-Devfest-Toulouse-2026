@@ -122,7 +122,7 @@ export default async function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="mx-4 mb-4 rounded-l bg-blanc/75 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div className="mx-4 mb-4 rounded-[12px] bg-blanc/75 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
         <p className="text-noir/70 text-base italic">
           {tFooter("tagline")}
         </p>
