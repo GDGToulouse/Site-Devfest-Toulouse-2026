@@ -49,6 +49,65 @@ const emptyTier = {
   sortOrder: "0",
 };
 
+function TierTable({
+  title,
+  tiers,
+  onEdit,
+  onDelete,
+  collapsed,
+}: {
+  title: string;
+  tiers: TicketTier[];
+  onEdit: (tier: TicketTier) => void;
+  onDelete: (tier: TicketTier) => void;
+  collapsed?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(!collapsed);
+
+  if (tiers.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm font-bold text-noir mb-2 hover:text-malachite transition-colors"
+      >
+        <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>&#9654;</span>
+        {title} ({tiers.length})
+      </button>
+      {isOpen && (
+        <div className="overflow-x-auto rounded-xl border border-gris/20">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-blanc-casse/60 border-b border-gris/20">
+                <th className="text-left px-4 py-3 font-medium text-gris">Nom</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Prix</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
+                <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers.map((tier) => (
+                <tr key={tier.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
+                  <td className="px-4 py-3 text-noir font-medium">{tier.nameFr}</td>
+                  <td className="px-4 py-3 text-noir">{tier.price} EUR</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
+                  </td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button onClick={() => onEdit(tier)} className="text-bleu hover:underline text-sm">Modifier</button>
+                    <button onClick={() => onDelete(tier)} className="text-terre-cuite hover:underline text-sm">Supprimer</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface TicketingTabProps {
   editionId: number;
 }
@@ -231,35 +290,21 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       {tiers.length === 0 ? (
         <p className="text-gris text-sm">Aucun tarif pour cette edition.</p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gris/20">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-blanc-casse/60 border-b border-gris/20">
-                <th className="text-left px-4 py-3 font-medium text-gris">Nom</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Prix</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Visible</th>
-                <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {tiers.map((tier) => (
-                <tr key={tier.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
-                  <td className="px-4 py-3 text-noir font-medium">{tier.nameFr}</td>
-                  <td className="px-4 py-3 text-noir">{tier.price} EUR</td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
-                  </td>
-                  <td className="px-4 py-3 text-noir">{tier.isVisible ? "Oui" : "Non"}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => startEdit(tier)} className="text-bleu hover:underline text-sm">Modifier</button>
-                    <button onClick={() => setDeleteTarget(tier)} className="text-terre-cuite hover:underline text-sm">Supprimer</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <>
+          <TierTable
+            title="Tarifs visibles sur le site"
+            tiers={tiers.filter((t) => t.isVisible)}
+            onEdit={startEdit}
+            onDelete={setDeleteTarget}
+          />
+          <TierTable
+            title="Tarifs masques"
+            tiers={tiers.filter((t) => !t.isVisible)}
+            onEdit={startEdit}
+            onDelete={setDeleteTarget}
+            collapsed
+          />
+        </>
       )}
 
       <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer le tarif" message={`Supprimer "${deleteTarget?.nameFr}" ?`} confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
