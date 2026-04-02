@@ -14,6 +14,13 @@ export interface Edition {
   archivedSiteUrl: string | null;
 }
 
+export interface EditionSummary {
+  id: number;
+  year: number;
+  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  archivedSiteUrl: string | null;
+}
+
 export interface Article {
   id: number;
   slug: string;

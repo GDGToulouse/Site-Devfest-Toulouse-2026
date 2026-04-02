@@ -1,5 +1,6 @@
 import type {
   Edition,
+  EditionSummary,
   Article,
   ArticleDetail,
   TicketTier,
@@ -28,6 +29,10 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
 
 export async function getCurrentEdition(): Promise<Edition | null> {
   return fetchAPI<Edition>("/api/editions/current");
+}
+
+export async function getEditions(): Promise<EditionSummary[]> {
+  return (await fetchAPI<EditionSummary[]>("/api/editions")) || [];
 }
 
 export async function getLatestArticles(limit = 4, editionId?: number): Promise<Article[]> {

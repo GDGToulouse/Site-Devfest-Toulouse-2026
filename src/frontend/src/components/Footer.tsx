@@ -1,5 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
+
+import { getCurrentEdition, getEditions } from "@/lib/api";
 import SocialIcons from "./SocialIcons";
 
 const NAV_LINKS = [
@@ -14,16 +16,22 @@ const ECOSYSTEM_LINKS = [
   { label: "CloudToulouse", href: "https://www.cloudtoulouse.com/" },
 ];
 
-const PREVIOUS_EDITIONS = [
-  { label: "DevFest Toulouse 2025", href: "https://2025.devfesttoulouse.fr" },
-  { label: "DevFest Toulouse 2024", href: "https://2024.devfesttoulouse.fr" },
-  { label: "DevFest Toulouse 2023", href: "https://2023.devfesttoulouse.fr" },
-];
-
 export default async function Footer() {
-  const tNav = await getTranslations("nav");
-  const tFooter = await getTranslations("footer");
-  const tCta = await getTranslations("cta");
+  const [tNav, tFooter, tCta, edition, editions] = await Promise.all([
+    getTranslations("nav"),
+    getTranslations("footer"),
+    getTranslations("cta"),
+    getCurrentEdition(),
+    getEditions(),
+  ]);
+
+  const isAnnouncement = edition?.status === "ANNOUNCEMENT";
+
+  const previousEditions = edition
+    ? editions
+        .filter((e) => e.year < edition.year && e.archivedSiteUrl)
+        .sort((a, b) => b.year - a.year)
+    : [];
 
   return (
     <footer
@@ -57,24 +65,26 @@ export default async function Footer() {
 
           {/* Right columns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {/* Navigation */}
-            <div>
-              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
-                {tFooter("navigation")}
-              </p>
-              <ul className="flex flex-col gap-1">
-                {NAV_LINKS.map((link) => (
-                  <li key={link.key}>
-                    <Link
-                      href={link.href}
-                      className="text-blanc text-base hover:text-blanc-casse transition-colors"
-                    >
-                      {tNav(link.key)}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Navigation — only when edition is in ANNOUNCEMENT */}
+            {isAnnouncement && (
+              <div>
+                <p className="text-blanc text-xl font-bold mb-2 leading-snug">
+                  {tFooter("navigation")}
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {NAV_LINKS.map((link) => (
+                    <li key={link.key}>
+                      <Link
+                        href={link.href}
+                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                      >
+                        {tNav(link.key)}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Ecosystems */}
             <div>
@@ -97,26 +107,28 @@ export default async function Footer() {
               </ul>
             </div>
 
-            {/* Previous editions */}
-            <div>
-              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
-                {tFooter("previousEditions")}
-              </p>
-              <ul className="flex flex-col gap-1">
-                {PREVIOUS_EDITIONS.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blanc text-base hover:text-blanc-casse transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Previous editions — from database */}
+            {previousEditions.length > 0 && (
+              <div>
+                <p className="text-blanc text-xl font-bold mb-2 leading-snug">
+                  {tFooter("previousEditions")}
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {previousEditions.map((e) => (
+                    <li key={e.id}>
+                      <a
+                        href={e.archivedSiteUrl!}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                      >
+                        DevFest Toulouse {e.year}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       </div>

@@ -21,6 +21,15 @@ export async function getFeaturedEdition() {
 }
 
 export default async function editionRoutes(app: FastifyInstance) {
+  // GET /api/editions — returns all editions (summary)
+  app.get("/editions", async () => {
+    const editions = await prisma.edition.findMany({
+      orderBy: { year: "desc" },
+      select: { id: true, year: true, status: true, archivedSiteUrl: true },
+    });
+    return editions;
+  });
+
   // GET /api/editions/current — returns the featured edition
   app.get("/editions/current", async (_request, reply) => {
     const edition = await getFeaturedEdition();
