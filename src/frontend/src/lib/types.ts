@@ -21,6 +21,13 @@ export interface EditionSummary {
   archivedSiteUrl: string | null;
 }
 
+export interface SocialLinks {
+  social_linkedin?: string;
+  social_youtube?: string;
+  social_x?: string;
+  social_bluesky?: string;
+}
+
 export interface Article {
   id: number;
   slug: string;

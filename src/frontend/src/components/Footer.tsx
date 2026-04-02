@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
-import { getCurrentEdition, getEditions } from "@/lib/api";
+import { getCurrentEdition, getEditions, getSocialLinks } from "@/lib/api";
 import SocialIcons from "./SocialIcons";
 
 const NAV_LINKS = [
@@ -17,12 +17,13 @@ const ECOSYSTEM_LINKS = [
 ];
 
 export default async function Footer() {
-  const [tNav, tFooter, tCta, edition, editions] = await Promise.all([
+  const [tNav, tFooter, tCta, edition, editions, socialLinks] = await Promise.all([
     getTranslations("nav"),
     getTranslations("footer"),
     getTranslations("cta"),
     getCurrentEdition(),
     getEditions(),
+    getSocialLinks(),
   ]);
 
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
@@ -52,7 +53,7 @@ export default async function Footer() {
 
             <div>
               <p className="text-blanc text-sm mb-2">{tFooter("followUs")}</p>
-              <SocialIcons size={48} className="text-blanc" />
+              <SocialIcons size={48} className="text-blanc" links={socialLinks} />
             </div>
 
             <Link

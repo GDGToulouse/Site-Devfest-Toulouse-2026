@@ -1,6 +1,7 @@
 import type {
   Edition,
   EditionSummary,
+  SocialLinks,
   Article,
   ArticleDetail,
   TicketTier,
@@ -91,4 +92,8 @@ export async function getCfpSettings(): Promise<CfpSettings> {
 
 export async function getContactCategories(): Promise<ContactCategory[]> {
   return (await fetchAPI<ContactCategory[]>("/api/contact/categories")) || [];
+}
+
+export async function getSocialLinks(): Promise<SocialLinks> {
+  return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
 }

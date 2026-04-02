@@ -23,7 +23,7 @@ const navItems = [
   { label: "Fichiers", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
   { label: "Utilisateurs", href: "/fr/admin/users", icon: "users", roles: ["ADMIN"] },
-  { label: "Cache", href: "/fr/admin/cache", icon: "refresh", roles: ["ADMIN"] },
+  { label: "Parametres", href: "/fr/admin/settings", icon: "settings", roles: ["ADMIN"] },
 ];
 
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {

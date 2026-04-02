@@ -30,6 +30,18 @@ export default async function settingsRoutes(app: FastifyInstance) {
     return { editionId: setting ? Number(setting.value) : null };
   });
 
+  // GET /api/settings/social — returns social media links
+  app.get("/settings/social", async () => {
+    const settings = await prisma.siteSetting.findMany({
+      where: { key: { startsWith: "social_" } },
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  });
+
   // GET /api/settings/cfp — returns CFP configuration
   app.get("/settings/cfp", async () => {
     const settings = await prisma.siteSetting.findMany({

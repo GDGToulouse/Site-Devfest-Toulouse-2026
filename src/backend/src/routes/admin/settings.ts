@@ -8,7 +8,38 @@ interface CfpBody {
   closeDate?: string;
 }
 
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_"];
+
 export default async function adminSettingsRoutes(app: FastifyInstance) {
+  // GET /api/admin/settings/general
+  app.get("/settings/general", async () => {
+    const settings = await prisma.siteSetting.findMany({
+      where: {
+        OR: GENERAL_PREFIXES.map((prefix) => ({ key: { startsWith: prefix } })),
+      },
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  });
+
+  // PUT /api/admin/settings/general
+  app.put<{ Body: Record<string, string> }>("/settings/general", async (request) => {
+    const body = request.body;
+
+    for (const [key, value] of Object.entries(body)) {
+      if (!GENERAL_PREFIXES.some((p) => key.startsWith(p))) continue;
+      await prisma.siteSetting.upsert({
+        where: { key },
+        update: { value },
+        create: { key, value },
+      });
+    }
+
+    return { success: true };
+  });
   // GET /api/admin/settings/cfp
   app.get("/settings/cfp", async () => {
     const settings = await prisma.siteSetting.findMany({
