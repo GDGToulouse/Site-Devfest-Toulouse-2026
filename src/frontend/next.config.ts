@@ -9,12 +9,8 @@ const nextConfig: NextConfig = {
   async rewrites() {
     return [
       {
-        source: "/api/admin/:path*",
-        destination: `${backendUrl}/api/admin/:path*`,
-      },
-      {
-        source: "/api/auth/:path*",
-        destination: `${backendUrl}/api/auth/:path*`,
+        source: "/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
       {
         source: "/uploads/:path*",
