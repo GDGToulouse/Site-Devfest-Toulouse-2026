@@ -50,7 +50,9 @@ export default async function TicketingPage() {
             <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
               {tiers.map((tier) => {
                 const name = localizedField(tier, "name", locale);
+                const isAvailable = tier.status === "AVAILABLE";
                 const isSoldOut = tier.status === "SOLD_OUT";
+                const isComingSoon = tier.status === "COMING_SOON";
 
                 return (
                   <div
@@ -67,12 +69,14 @@ export default async function TicketingPage() {
                       className={`mt-4 inline-block px-4 py-1 rounded-full text-sm font-bold ${
                         isSoldOut
                           ? "bg-rouge/10 text-bismarck"
-                          : "bg-malachite/10 text-[#0A6B4B]"
+                          : isComingSoon
+                            ? "bg-bleu/10 text-bleu"
+                            : "bg-malachite/10 text-[#0A6B4B]"
                       }`}
                     >
-                      {isSoldOut ? t("soldOut") : t("available")}
+                      {isSoldOut ? t("soldOut") : isComingSoon ? t("comingSoon") : t("available")}
                     </span>
-                    {tier.externalUrl && !isSoldOut && (
+                    {tier.externalUrl && isAvailable && (
                       <a
                         href={tier.externalUrl}
                         target="_blank"

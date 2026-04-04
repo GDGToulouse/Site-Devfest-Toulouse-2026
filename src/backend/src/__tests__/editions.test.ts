@@ -26,7 +26,7 @@ describe("GET /api/editions/current/ticket-tiers", () => {
     for (const tier of body) {
       expect(tier).toHaveProperty("nameFr");
       expect(tier).toHaveProperty("price");
-      expect(["AVAILABLE", "SOLD_OUT"]).toContain(tier.status);
+      expect(["AVAILABLE", "SOLD_OUT", "COMING_SOON"]).toContain(tier.status);
     }
     await app.close();
   });

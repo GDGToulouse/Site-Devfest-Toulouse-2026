@@ -41,6 +41,7 @@
     "ticketing": {
       "title": "Billetterie",
       "available": "Disponible",
+      "comingSoon": "Bientôt",
       "soldOut": "Épuisé",
       "buy": "Acheter",
       "viewAll": "Voir la billetterie"
@@ -91,6 +92,7 @@
     "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
     "home": "Accueil",
     "available": "Disponible",
+    "comingSoon": "Bientôt",
     "soldOut": "Épuisé",
     "buy": "Acheter",
     "notOpenYet": "La billetterie n'est pas encore ouverte.",

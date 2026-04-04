@@ -41,6 +41,7 @@
     "ticketing": {
       "title": "Tickets",
       "available": "Available",
+      "comingSoon": "Coming soon",
       "soldOut": "Sold out",
       "buy": "Buy",
       "viewAll": "View all tickets"
@@ -91,6 +92,7 @@
     "description": "Buy your tickets for DevFest Toulouse 2026.",
     "home": "Home",
     "available": "Available",
+    "comingSoon": "Coming soon",
     "soldOut": "Sold out",
     "buy": "Buy",
     "notOpenYet": "Ticketing is not yet open.",

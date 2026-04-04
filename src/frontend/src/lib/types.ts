@@ -46,7 +46,7 @@ export interface TicketTier {
   nameFr: string;
   nameEn: string;
   price: number;
-  status: "AVAILABLE" | "SOLD_OUT";
+  status: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
   externalUrl: string | null;
   sortOrder: number;
 }
