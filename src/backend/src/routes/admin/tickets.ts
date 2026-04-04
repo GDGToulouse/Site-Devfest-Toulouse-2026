@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
+import { revalidateHome } from "../../lib/revalidate.js";
 
 interface TicketTierBody {
   nameFr: string;
@@ -126,6 +127,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       });
     }
 
+    revalidateHome();
     return reply.status(201).send({ imported: tickets.length });
   });
 
@@ -182,6 +184,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       },
     });
 
+    revalidateHome();
     return reply.status(201).send({ id: tier.id });
   });
 
@@ -212,6 +215,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       },
     });
 
+    revalidateHome();
     return { id: tier.id };
   });
 
@@ -223,6 +227,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
     await prisma.ticketTier.delete({ where: { id } });
+    revalidateHome();
     return { success: true };
   });
 }

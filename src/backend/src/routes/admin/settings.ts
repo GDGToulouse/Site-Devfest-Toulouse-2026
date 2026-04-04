@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { revalidateHome } from "../../lib/revalidate.js";
 
 interface CfpBody {
   isOpen: boolean;
@@ -74,6 +75,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
       });
     }
 
+    revalidateHome();
     return { success: true };
   });
 
