@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
+import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 
 interface EditionData {
   id: number;
@@ -47,26 +48,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-
-  async function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-
-    const { data: res } = await adminFetch<{ url: string }>("/images", {
-      method: "POST",
-      body: formData,
-    });
-
-    if (res?.url) {
-      setForm((prev) => ({ ...prev, heroImageUrl: res.url }));
-    }
-    setIsUploading(false);
-  }
+  const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
   async function handleSave() {
     setIsSaving(true);
@@ -121,14 +103,22 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
       <div>
         <label className="block text-sm font-medium text-noir mb-1">Image hero</label>
         <div className="flex items-center gap-4">
-          <input
-            type="file"
-            accept="image/*"
-            onChange={handleImageUpload}
-            disabled={isUploading}
-            className="text-sm text-gris"
-          />
-          {isUploading && <span className="text-sm text-gris">Upload...</span>}
+          <button
+            type="button"
+            onClick={() => setIsImagePickerOpen(true)}
+            className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+          >
+            {form.heroImageUrl ? "Changer l'image" : "Choisir une image"}
+          </button>
+          {form.heroImageUrl && (
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, heroImageUrl: "" })}
+              className="text-sm text-terre-cuite hover:underline"
+            >
+              Supprimer
+            </button>
+          )}
         </div>
         {form.heroImageUrl && (
           <div className="mt-2">
@@ -136,6 +126,11 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
             <p className="text-xs text-gris mt-1">{form.heroImageUrl}</p>
           </div>
         )}
+        <ImagePickerDialog
+          open={isImagePickerOpen}
+          onClose={() => setIsImagePickerOpen(false)}
+          onSelect={(url) => setForm({ ...form, heroImageUrl: url })}
+        />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
