@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
         source: "/api/auth/:path*",
         destination: `${backendUrl}/api/auth/:path*`,
       },
+      {
+        source: "/uploads/:path*",
+        destination: `${backendUrl}/uploads/:path*`,
+      },
     ];
   },
   async headers() {
@@ -50,7 +54,7 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https: http://localhost:4000",
+              "img-src 'self' data: https:",
               `connect-src 'self'${isDev ? " http://localhost:4000 ws://localhost:3000" : ""}`,
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
