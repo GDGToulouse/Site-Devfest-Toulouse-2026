@@ -50,20 +50,17 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/images`, {
+      const { data, status } = await adminFetch<{ url: string }>("/images", {
         method: "POST",
-        credentials: "include",
         body: formData,
       });
 
-      if (!res.ok) {
-        const body = await res.json().catch(() => null);
-        setError(body?.error || "Erreur lors de l'upload");
+      if (!data?.url) {
+        setError(status === 413 ? "Fichier trop volumineux" : "Erreur lors de l'upload");
         setIsUploading(false);
         return;
       }
 
-      const data = await res.json();
       // Auto-select the uploaded image and switch to library
       await loadImages();
       setSelected(`${BACKEND_URL}${data.url}`);
