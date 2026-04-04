@@ -11,7 +11,7 @@ interface ContactFormProps {
   locale: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:4000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
 export default function ContactForm({ categories, locale }: ContactFormProps) {
   const t = useTranslations("contact.form");
