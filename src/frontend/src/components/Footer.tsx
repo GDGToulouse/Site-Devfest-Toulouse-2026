@@ -67,25 +67,34 @@ export default async function Footer() {
           {/* Right columns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {/* Navigation — only when edition is in ANNOUNCEMENT */}
-            {isAnnouncement && (
-              <div>
-                <p className="text-blanc text-xl font-bold mb-2 leading-snug">
-                  {tFooter("navigation")}
-                </p>
-                <ul className="flex flex-col gap-1">
-                  {NAV_LINKS.map((link) => (
-                    <li key={link.key}>
-                      <Link
-                        href={link.href}
-                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
-                      >
-                        {tNav(link.key)}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            {isAnnouncement && (() => {
+              const footerLinks = NAV_LINKS.filter((link) => {
+                if (link.key === "program" && !edition?.isProgramPublished) return false;
+                if (link.key === "speakers" && !edition?.hasSpeakers) return false;
+                if (link.key === "partners" && !edition?.hasSponsors) return false;
+                return true;
+              });
+              if (footerLinks.length === 0) return null;
+              return (
+                <div>
+                  <p className="text-blanc text-xl font-bold mb-2 leading-snug">
+                    {tFooter("navigation")}
+                  </p>
+                  <ul className="flex flex-col gap-1">
+                    {footerLinks.map((link) => (
+                      <li key={link.key}>
+                        <Link
+                          href={link.href}
+                          className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                        >
+                          {tNav(link.key)}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
 
             {/* Ecosystems */}
             <div>
