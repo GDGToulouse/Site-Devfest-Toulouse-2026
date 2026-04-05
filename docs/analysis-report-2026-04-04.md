@@ -144,7 +144,8 @@ Spec RG-145, RG-146 require automatic import of ticket tiers from the Billetweb 
 - Spec: `docs/specs/lot-1-fondations.md` RG-145, RG-146; `SUIVI-LOT-1.md` task 7.4
 
 **HIGH-05 — Analytics / Real User Monitoring (RUM) not implemented**
-Spec RG-148 and `docs/objectifs-techniques.md` §Monitoring require analytics tracking and Core Web Vitals monitoring in real conditions. No analytics tool (Google Analytics, Plausible, web-vitals library, etc.) is present anywhere in the frontend code.
+Spec RG-148 and `docs/objectifs-techniques.md` §Monitoring require analytics tracking and Core Web Vitals monitoring in real conditions. No analytics tool is present in the frontend code.
+> **Décision (revue du 05/04/2026)** : solution retenue = **Plausible Analytics** (self-hosted via Coolify). RGPD-friendly (pas de cookies), script < 1 KB, plugin Web Vitals disponible. Déployer Plausible dans Coolify puis intégrer le script dans le frontend.
 - Files: `src/frontend/src/app/layout.tsx`, `src/frontend/src/app/[locale]/layout.tsx`
 - Spec: `docs/objectifs-techniques.md` §Monitoring et observabilité; `docs/specs/lot-1-fondations.md` RG-148; `SUIVI-LOT-1.md` task 1.19
 
@@ -602,10 +603,11 @@ Use Context7 MCP to fetch the latest @fastify/compress documentation. Then:
 
 ---
 
-#### TASK-010: Implement analytics / Real User Monitoring
+#### TASK-010: Implement analytics / Real User Monitoring with Plausible
 **Severity**: High
 **Category**: Missing feature
 **Impact**: No visibility into real-world performance (Core Web Vitals, page views, user flows). Cannot validate production Lighthouse targets.
+**Solution retenue**: **Plausible Analytics** (self-hosted via Coolify)
 
 **Specification Reference**:
 - Document: `docs/objectifs-techniques.md`
@@ -615,33 +617,48 @@ Use Context7 MCP to fetch the latest @fastify/compress documentation. Then:
 **Current State**:
 No analytics or RUM tool installed. `SUIVI-LOT-1.md` task 1.19 is marked TODO.
 
+**Why Plausible**:
+- Open source (AGPL), self-hostable
+- Template Coolify disponible (déploiement 1 clic)
+- Script < 1 KB, pas d'impact sur les Core Web Vitals
+- RGPD-friendly : pas de cookies, pas de bannière de consentement requise
+- Plugin Web Vitals disponible pour monitorer LCP/CLS/INP
+
 **Required Changes**:
-- Choose and install a privacy-friendly analytics tool (recommended: Plausible or a lightweight web-vitals + custom endpoint approach)
-- File: `src/frontend/src/app/layout.tsx` or `src/frontend/src/app/[locale]/layout.tsx` — inject analytics script
+1. **Infra** : déployer Plausible dans Coolify via le template one-click (PostgreSQL + ClickHouse inclus)
+2. **Env** : ajouter `NEXT_PUBLIC_PLAUSIBLE_URL` (URL de l'instance Plausible) et `NEXT_PUBLIC_PLAUSIBLE_DOMAIN` (domaine du site à tracker) aux variables d'environnement
+3. **Frontend** : intégrer le script Plausible dans le layout
 
 **Ready-to-Use Prompt**:
 ```
-Add analytics and Core Web Vitals Real User Monitoring (RUM) per `docs/objectifs-techniques.md` §Monitoring.
+Integrate Plausible Analytics into the DevFest Toulouse 2026 frontend.
 
-Use the `web-vitals` npm package to report Core Web Vitals (LCP, INP, CLS, FCP, TTFB) to a lightweight endpoint or external service.
+Prerequisites: Plausible is already deployed and accessible at the URL in NEXT_PUBLIC_PLAUSIBLE_URL env var.
 
-1. In `src/frontend/`, install: `web-vitals` using pnpm.
+1. In `src/frontend/`, install: `next-plausible` using pnpm. Use Context7 MCP to fetch the latest next-plausible documentation.
 
-2. Create `src/frontend/src/components/WebVitals.tsx` as a client component that:
-   - Imports `onCLS`, `onINP`, `onLCP`, `onFCP`, `onTTFB` from `web-vitals`
-   - Sends metrics to a simple logging endpoint (either console.log in dev, or the backend `/api/metrics` endpoint if one exists, or a third-party service)
-   
-3. Add the `WebVitals` component to `src/frontend/src/app/[locale]/layout.tsx`.
+2. In `src/frontend/src/app/[locale]/layout.tsx`, add the PlausibleProvider from next-plausible:
+   - domain: process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "devfesttoulouse.fr"
+   - customDomain: process.env.NEXT_PUBLIC_PLAUSIBLE_URL (the self-hosted instance URL)
+   - selfHosted: true
+   - enabled: true (in production only, disable in dev)
 
-4. For basic page analytics, use the Next.js built-in `useReportWebVitals` hook if preferred, or integrate Plausible Analytics (self-hosted or cloud) which is GDPR-compliant and does not require cookie banners.
+3. Add the environment variables to `docs/variables-environnement.md`:
+   - NEXT_PUBLIC_PLAUSIBLE_URL: URL of the self-hosted Plausible instance
+   - NEXT_PUBLIC_PLAUSIBLE_DOMAIN: domain to track (e.g. devfesttoulouse.fr)
 
-Consult `docs/variables-environnement.md` for any analytics-related environment variables that may need to be added.
+4. Update the CSP in `src/frontend/next.config.ts` to allow the Plausible script:
+   - Add the Plausible instance URL to `script-src` and `connect-src`
+
+5. Optionally enable the Plausible Web Vitals plugin (pageview-props extension) for LCP/CLS/INP tracking.
 ```
 
 **Verification Criteria**:
-- [ ] Core Web Vitals reported to at least one collection endpoint
-- [ ] Page views tracked
-- [ ] No cookie consent banner required (privacy-first analytics)
+- [ ] Plausible script loaded on production pages (check view-source)
+- [ ] Page views tracked in Plausible dashboard
+- [ ] No cookie consent banner required
+- [ ] No impact on Lighthouse performance score (script < 1 KB)
+- [ ] CSP does not block the Plausible script
 
 ---
 
@@ -1027,7 +1044,7 @@ Update the `GeneralStats` interface and the dashboard display to show both count
 | [TASK-007](#task-007-add-article-urls-to-sitemap) | Dynamic sitemap (articles + tags) | Add article and tag URLs to the XML sitemap | High | Not Started |
 | [TASK-008](#task-008-add-default-ogimage-and-twitterimage-to-global-metadata) | OG image on all pages | Add default og:image and twitter:image to global metadata | High | Not Started |
 | [TASK-009](#task-009-implement-brotligzip-compression-on-backend) | Brotli/Gzip compression | Enable compression on Fastify backend | High | Not Started |
-| [TASK-010](#task-010-implement-analytics--real-user-monitoring) | Analytics / RUM | Implement analytics and Core Web Vitals monitoring | High | Not Started |
+| [TASK-010](#task-010-implement-analytics--real-user-monitoring-with-plausible) | Analytics / RUM (Plausible) | Deploy Plausible in Coolify + integrate script | High | Not Started |
 | [TASK-011](#task-011-fix-hardcoded-langfr-on-root-html-element) | Fix lang attribute on html | Dynamic lang attribute per locale on root html element | Medium | Not Started |
 | [TASK-012](#task-012-replace-footer-text-logo-with-actual-svg-logo) | Footer SVG logo | Replace text placeholder with actual DevFest Toulouse logo | Medium | Not Started |
 | [TASK-013](#task-013-add-breadcrumblist-schemaorg-markup-to-breadcrumb-component) | BreadcrumbList Schema.org | Add structured data JSON-LD to Breadcrumb component | Medium | Not Started |
