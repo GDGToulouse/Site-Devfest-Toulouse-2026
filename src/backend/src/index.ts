@@ -1,5 +1,6 @@
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import compress from "@fastify/compress";
 import helmet from "@fastify/helmet";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
@@ -26,6 +27,7 @@ await app.register(cors, {
   methods: ["GET", "HEAD", "PUT", "PATCH", "POST", "DELETE", "OPTIONS"],
 });
 
+await app.register(compress);
 await app.register(helmet, {
   crossOriginResourcePolicy: { policy: "cross-origin" },
 });
