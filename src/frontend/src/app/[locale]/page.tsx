@@ -66,7 +66,9 @@ export default async function HomePage() {
 
   const articles = await getLatestArticles(4, edition?.id);
 
+  const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
+  const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
 
   return (
     <>
@@ -81,6 +83,12 @@ export default async function HomePage() {
 
       <HeroSection edition={edition} locale={locale} />
 
+      {/* PREPARATION: teasing + replay + socials */}
+      {isPreparation && edition?.aftermovieUrl && (
+        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+      )}
+
+      {/* ANNOUNCEMENT: full content */}
       {isAnnouncement && figures.length > 0 && (
         <KeyFiguresSection figures={figures} locale={locale} />
       )}
@@ -89,7 +97,7 @@ export default async function HomePage() {
         <TicketingSection tiers={tiers} locale={locale} />
       )}
 
-      {edition?.aftermovieUrl && (
+      {isAnnouncement && edition?.aftermovieUrl && (
         <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
       )}
 
@@ -100,6 +108,33 @@ export default async function HomePage() {
       {isAnnouncement && <AboutSection />}
 
       {isAnnouncement && <EcosystemSection />}
+
+      {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
+      {isSeeYouNextYear && edition?.aftermovieUrl && (
+        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+      )}
+
+      {isSeeYouNextYear && edition?.galleryUrl && (
+        <section className="px-6 py-16 lg:py-24 bg-blanc-casse">
+          <div className="mx-auto max-w-6xl text-center">
+            <h2 className="text-3xl lg:text-5xl font-bold text-noir mb-6">
+              {locale === "fr" ? "Galerie photos" : "Photo gallery"}
+            </h2>
+            <a
+              href={edition.galleryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-[12px] bg-bleu px-8 py-3 text-lg font-bold text-blanc hover:bg-bleu/90 transition-colors"
+            >
+              {locale === "fr" ? "Voir les photos" : "View photos"}
+            </a>
+          </div>
+        </section>
+      )}
+
+      {isSeeYouNextYear && articles.length > 0 && (
+        <LatestNewsSection articles={articles} locale={locale} />
+      )}
     </>
   );
 }
