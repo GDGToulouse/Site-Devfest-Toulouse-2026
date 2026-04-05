@@ -12,6 +12,9 @@ export interface Edition {
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  isProgramPublished: boolean;
+  hasSpeakers: boolean;
+  hasSponsors: boolean;
 }
 
 export interface EditionSummary {

@@ -62,6 +62,10 @@ export default async function editionRoutes(app: FastifyInstance) {
       aftermovieUrl: edition.aftermovieUrl,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
+      // TODO: compute from actual data when Speaker/Session/Sponsor models exist
+      isProgramPublished: false,
+      hasSpeakers: false,
+      hasSponsors: false,
     };
   });
 

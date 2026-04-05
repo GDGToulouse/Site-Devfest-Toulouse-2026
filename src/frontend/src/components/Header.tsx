@@ -8,7 +8,7 @@ import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useEdition } from "@/contexts/EditionContext";
 
-const NAV_LINKS = [
+const ALL_NAV_LINKS = [
   { key: "program", href: "/conferences" },
   { key: "speakers", href: "/speakers" },
   { key: "partners", href: "/partners" },
@@ -24,6 +24,13 @@ export default function Header() {
 
   const partnerUrl = edition?.partnerFormUrl || "https://forms.gle/devfest-partenaire";
   const cfpUrl = edition?.cfpUrl || "https://sessionize.com";
+
+  const navLinks = ALL_NAV_LINKS.filter((link) => {
+    if (link.key === "program" && !edition?.isProgramPublished) return false;
+    if (link.key === "speakers" && !edition?.hasSpeakers) return false;
+    if (link.key === "partners" && !edition?.hasSponsors) return false;
+    return true;
+  });
 
   return (
     <header
@@ -45,7 +52,7 @@ export default function Header() {
 
           {/* Desktop nav — right of logo */}
           <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
@@ -108,7 +115,7 @@ export default function Header() {
           aria-label="Mobile navigation"
         >
           <div className="flex flex-col gap-4">
-            {NAV_LINKS.map((link) => (
+            {navLinks.map((link) => (
               <Link
                 key={link.key}
                 href={link.href}
