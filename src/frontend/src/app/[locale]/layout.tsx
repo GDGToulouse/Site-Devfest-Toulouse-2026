@@ -37,9 +37,18 @@ export async function generateMetadata({
       siteName: t("title"),
       type: "website",
       locale: locale === "fr" ? "fr_FR" : "en_US",
+      images: [
+        {
+          url: "/images/og-default.png",
+          width: 1200,
+          height: 630,
+          alt: t("title"),
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
+      images: ["/images/og-default.png"],
     },
     alternates: {
       canonical: `/${locale}`,
