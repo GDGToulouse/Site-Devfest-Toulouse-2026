@@ -23,7 +23,7 @@ const googleSans = Google_Sans({
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
-const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
+const plausibleDomain = process.env.SERVICE_FQDN_FRONTEND || "";
 const plausibleUrl = process.env.NEXT_PUBLIC_PLAUSIBLE_URL || "";
 
 export async function generateMetadata({
