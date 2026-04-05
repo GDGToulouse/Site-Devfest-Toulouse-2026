@@ -16,29 +16,32 @@ interface AdminSidebarProps {
 }
 
 const navItems = [
-  { label: "Dashboard", href: "/fr/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
-  { label: "Editions", href: "/fr/admin/editions", icon: "calendar", roles: ["ADMIN"] },
-  { label: "Articles", href: "/fr/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
-  { label: "Pages", href: "/fr/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
-  { label: "Fichiers", href: "/fr/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
-  { label: "Messages", href: "/fr/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
-  { label: "Utilisateurs", href: "/fr/admin/users", icon: "users", roles: ["ADMIN"] },
-  { label: "Parametres", href: "/fr/admin/settings", icon: "settings", roles: ["ADMIN"] },
+  { label: "Dashboard", path: "/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
+  { label: "Editions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
+  { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
+  { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
+  { label: "Fichiers", path: "/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
+  { label: "Messages", path: "/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
+  { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
+  { label: "Parametres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
 ];
 
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const visibleItems = navItems.filter((item) => item.roles.includes(user.role));
+  const locale = pathname.startsWith("/en") ? "en" : "fr";
+  const visibleItems = navItems
+    .filter((item) => item.roles.includes(user.role))
+    .map((item) => ({ ...item, href: `/${locale}${item.path}` }));
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
       <div className="p-6 border-b border-blanc/10 flex items-center justify-between">
-        <Link href="/fr/admin" className="text-xl font-bold">
+        <Link href={`/${locale}/admin`} className="text-xl font-bold">
           <span className="text-malachite">DevFest</span>{" "}
           <span className="text-terre-cuite">Admin</span>
         </Link>
         <Link
-          href="/fr"
+          href={`/${locale}`}
           className="text-blanc/50 hover:text-blanc transition-colors"
           title="Voir le site"
         >
@@ -48,7 +51,8 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
 
       <nav className="flex-1 py-4 overflow-y-auto">
         {visibleItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/fr/admin" && pathname.startsWith(item.href));
+          const adminRoot = `/${locale}/admin`;
+          const isActive = pathname === item.href || (item.href !== adminRoot && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
