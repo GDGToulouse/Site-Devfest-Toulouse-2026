@@ -32,6 +32,28 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
+      // Cache-Control: admin pages — no cache
+      {
+        source: "/:locale(fr|en)/admin/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
+      // Cache-Control: homepage — short cache (5 min)
+      {
+        source: "/:locale(fr|en)",
+        headers: [
+          { key: "Cache-Control", value: "s-maxage=300, stale-while-revalidate=60" },
+        ],
+      },
+      // Cache-Control: all other public pages — 1 hour
+      {
+        source: "/:locale(fr|en)/:path+",
+        headers: [
+          { key: "Cache-Control", value: "s-maxage=3600, stale-while-revalidate=60" },
+        ],
+      },
+      // Security headers on all pages
       {
         source: "/:path*",
         headers: [
