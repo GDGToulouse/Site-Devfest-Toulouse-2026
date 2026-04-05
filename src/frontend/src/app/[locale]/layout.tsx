@@ -6,6 +6,7 @@ import { Google_Sans } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
 import { getCurrentEdition } from "@/lib/api";
 
@@ -88,6 +89,7 @@ export default async function LocaleLayout({
           {locale === "fr" ? "Aller au contenu" : "Skip to content"}
         </a>
         <NextIntlClientProvider>
+          <LanguageSuggestionBanner />
           <EditionProvider edition={edition}>
             <Header />
             <main id="main-content" role="main" className="flex-1">

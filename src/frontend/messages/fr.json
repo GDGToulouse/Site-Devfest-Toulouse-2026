@@ -3,6 +3,11 @@
     "title": "DevFest Toulouse 2026",
     "description": "La plus grande conférence tech du bassin Toulousain"
   },
+  "langBanner": {
+    "message": "This page is available in your language.",
+    "switch": "Switch to {lang}",
+    "dismiss": "Fermer"
+  },
   "nav": {
     "home": "Accueil",
     "program": "Programme",
