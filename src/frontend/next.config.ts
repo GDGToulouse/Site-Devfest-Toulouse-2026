@@ -4,6 +4,7 @@ import createNextIntlPlugin from "next-intl/plugin";
 const isDev = process.env.NODE_ENV === "development";
 
 const backendUrl = process.env.BACKEND_URL || "http://localhost:4000";
+const plausibleUrl = process.env.NEXT_PUBLIC_PLAUSIBLE_URL || "";
 
 const nextConfig: NextConfig = {
   async rewrites() {
@@ -81,11 +82,11 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${plausibleUrl ? ` ${plausibleUrl}` : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https:",
-              `connect-src 'self'${isDev ? " http://localhost:4000 ws://localhost:3000" : ""}`,
+              `connect-src 'self'${isDev ? " http://localhost:4000 ws://localhost:3000" : ""}${plausibleUrl ? ` ${plausibleUrl}` : ""}`,
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
             ].join("; "),

@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { Google_Sans } from "next/font/google";
 import { routing } from "@/i18n/routing";
+import PlausibleProvider from "next-plausible";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
@@ -22,6 +23,8 @@ const googleSans = Google_Sans({
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
+const plausibleDomain = process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN || "";
+const plausibleUrl = process.env.NEXT_PUBLIC_PLAUSIBLE_URL || "";
 
 export async function generateMetadata({
   params,
@@ -85,6 +88,15 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} className={`h-full antialiased ${googleSans.variable}`} suppressHydrationWarning>
+      {plausibleDomain && plausibleUrl && (
+        <head>
+          <PlausibleProvider
+            domain={plausibleDomain}
+            customDomain={plausibleUrl}
+            selfHosted
+          />
+        </head>
+      )}
       <body className="min-h-full flex flex-col">
         <a
           href="#main-content"
