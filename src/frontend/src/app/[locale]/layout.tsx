@@ -2,11 +2,18 @@ import type { Metadata } from "next";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { Google_Sans } from "next/font/google";
 import { routing } from "@/i18n/routing";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { EditionProvider } from "@/contexts/EditionContext";
 import { getCurrentEdition } from "@/lib/api";
+
+const googleSans = Google_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-google-sans",
+});
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
@@ -63,22 +70,24 @@ export default async function LocaleLayout({
   const edition = await getCurrentEdition();
 
   return (
-    <>
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
-      >
-        {locale === "fr" ? "Aller au contenu" : "Skip to content"}
-      </a>
-      <NextIntlClientProvider>
-        <EditionProvider edition={edition}>
-          <Header />
-          <main id="main-content" role="main" className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </EditionProvider>
-      </NextIntlClientProvider>
-    </>
+    <html lang={locale} className={`h-full antialiased ${googleSans.variable}`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
+        >
+          {locale === "fr" ? "Aller au contenu" : "Skip to content"}
+        </a>
+        <NextIntlClientProvider>
+          <EditionProvider edition={edition}>
+            <Header />
+            <main id="main-content" role="main" className="flex-1">
+              {children}
+            </main>
+            <Footer />
+          </EditionProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
   );
 }
