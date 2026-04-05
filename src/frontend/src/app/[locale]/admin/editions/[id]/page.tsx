@@ -37,6 +37,9 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 const TABS = [
   { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
+  { key: "speakers", label: "Speakers (0)" },
+  { key: "conferences", label: "Conférences (0)" },
+  { key: "sponsors", label: "Sponsors (0)" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
 ];
@@ -90,6 +93,24 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "ticketing" && (
           <TicketingTab editionId={edition.id} />
+        )}
+        {activeTab === "speakers" && (
+          <div className="py-12 text-center text-gris">
+            <p className="text-lg font-medium">Speakers</p>
+            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des speakers de l&apos;édition.</p>
+          </div>
+        )}
+        {activeTab === "conferences" && (
+          <div className="py-12 text-center text-gris">
+            <p className="text-lg font-medium">Conférences</p>
+            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des conférences de l&apos;édition.</p>
+          </div>
+        )}
+        {activeTab === "sponsors" && (
+          <div className="py-12 text-center text-gris">
+            <p className="text-lg font-medium">Sponsors</p>
+            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des sponsors de l&apos;édition.</p>
+          </div>
         )}
         {activeTab === "cfp" && (
           <CfpTab />
