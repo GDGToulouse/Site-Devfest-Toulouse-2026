@@ -40,7 +40,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     venueName: edition.venueName || "",
     venueAddress: edition.venueAddress || "",
     heroImageUrl: edition.heroImageUrl || "",
-    cfpUrl: edition.cfpUrl || "",
     partnerFormUrl: edition.partnerFormUrl || "",
     aftermovieUrl: edition.aftermovieUrl || "",
     galleryUrl: edition.galleryUrl || "",
@@ -62,7 +61,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         venueName: form.venueName || undefined,
         venueAddress: form.venueAddress || undefined,
         heroImageUrl: form.heroImageUrl || undefined,
-        cfpUrl: form.cfpUrl || undefined,
         partnerFormUrl: form.partnerFormUrl || undefined,
         aftermovieUrl: form.aftermovieUrl || undefined,
         galleryUrl: form.galleryUrl || undefined,
@@ -133,10 +131,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="URL CFP (Sessionize)" name="cfpUrl" type="url" value={form.cfpUrl} onChange={(v) => setForm({ ...form, cfpUrl: v })} />
-        <FormField label="URL formulaire partenaire" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
-      </div>
+      <FormField label="URL formulaire partenaire" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={form.aftermovieUrl} onChange={(v) => setForm({ ...form, aftermovieUrl: v })} />
