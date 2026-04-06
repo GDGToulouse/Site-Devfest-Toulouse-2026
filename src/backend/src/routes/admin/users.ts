@@ -37,7 +37,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       },
     });
 
-    return users.map((u) => ({
+    return users.map((u: (typeof users)[number]) => ({
       id: u.id,
       email: u.email,
       name: u.name,

@@ -25,7 +25,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       include: { _count: { select: { ticketTiers: true, articles: true } } },
     });
 
-    return editions.map((e) => ({
+    return editions.map((e: (typeof editions)[number]) => ({
       id: e.id,
       year: e.year,
       startDate: e.startDate,
@@ -220,7 +220,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         orderBy: { sortOrder: "asc" },
       });
 
-      return figures.map((f) => ({
+      return figures.map((f: (typeof figures)[number]) => ({
         id: f.id,
         icon: f.icon,
         value: f.value,

@@ -24,7 +24,7 @@ export default async function contactRoutes(app: FastifyInstance) {
       orderBy: { sortOrder: "asc" },
     });
 
-    return categories.map((cat) => ({
+    return categories.map((cat: (typeof categories)[number]) => ({
       id: cat.id,
       nameFr: cat.nameFr,
       nameEn: cat.nameEn,
@@ -61,7 +61,7 @@ export default async function contactRoutes(app: FastifyInstance) {
         where: { id: categoryId },
       });
       if (category) {
-        recipients = category.emailRecipients.split(",").map((e) => e.trim());
+        recipients = category.emailRecipients.split(",").map((e: string) => e.trim());
         categoryLabel = category.nameFr;
       }
     }

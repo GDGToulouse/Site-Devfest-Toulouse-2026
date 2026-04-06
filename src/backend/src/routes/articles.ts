@@ -23,7 +23,7 @@ function mapArticleSummary(article: {
     imageUrl: article.imageUrl,
     author: article.author,
     publishedAt: article.publishedAt,
-    tags: article.tags.map((tag) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
+    tags: article.tags.map((tag: (typeof article.tags)[number]) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
   };
 }
 
@@ -110,7 +110,7 @@ export default async function articleRoutes(app: FastifyInstance) {
       imageUrl: article.imageUrl,
       author: article.author,
       publishedAt: article.publishedAt,
-      tags: article.tags.map((tag) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
+      tags: article.tags.map((tag: (typeof article.tags)[number]) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
     };
   });
 

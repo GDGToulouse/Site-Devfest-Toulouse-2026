@@ -13,7 +13,7 @@ export default async function settingsRoutes(app: FastifyInstance) {
       orderBy: { sortOrder: "asc" },
     });
 
-    return figures.map((f) => ({
+    return figures.map((f: (typeof figures)[number]) => ({
       icon: f.icon,
       value: f.value,
       labelFr: f.labelFr,
@@ -48,7 +48,7 @@ export default async function settingsRoutes(app: FastifyInstance) {
       where: { key: { startsWith: "cfp_" } },
     });
 
-    const map = new Map(settings.map((s) => [s.key, s.value]));
+    const map = new Map(settings.map((s: (typeof settings)[number]) => [s.key, s.value]));
 
     return {
       isOpen: map.get("cfp_is_open") === "true",

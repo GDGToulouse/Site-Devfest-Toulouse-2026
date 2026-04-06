@@ -146,7 +146,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
     const now = new Date();
 
-    return tiers.map((t) => ({
+    return tiers.map((t: (typeof tiers)[number]) => ({
       id: t.id,
       nameFr: t.nameFr,
       nameEn: t.nameEn,

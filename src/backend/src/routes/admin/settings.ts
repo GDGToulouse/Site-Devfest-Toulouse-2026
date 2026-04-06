@@ -46,7 +46,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     const settings = await prisma.siteSetting.findMany({
       where: { key: { startsWith: "cfp_" } },
     });
-    const map = new Map(settings.map((s) => [s.key, s.value]));
+    const map = new Map(settings.map((s: (typeof settings)[number]) => [s.key, s.value]));
 
     return {
       isOpen: map.get("cfp_is_open") === "true",

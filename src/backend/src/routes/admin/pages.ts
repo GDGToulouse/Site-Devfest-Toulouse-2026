@@ -16,7 +16,7 @@ export default async function adminPageRoutes(app: FastifyInstance) {
       orderBy: { slug: "asc" },
     });
 
-    return pages.map((p) => ({
+    return pages.map((p: (typeof pages)[number]) => ({
       id: p.id,
       slug: p.slug,
       titleFr: p.titleFr,

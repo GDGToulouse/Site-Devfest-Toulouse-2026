@@ -95,7 +95,7 @@ export default async function editionRoutes(app: FastifyInstance) {
 
     const now = new Date();
 
-    return tiers.map((tier) => ({
+    return tiers.map((tier: (typeof tiers)[number]) => ({
       id: tier.id,
       nameFr: tier.nameFr,
       nameEn: tier.nameEn,

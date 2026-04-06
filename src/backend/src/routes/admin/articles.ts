@@ -52,7 +52,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         publishedAt: a.publishedAt,
         createdAt: a.createdAt,
         tags: a.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
-        editions: a.editions.map((e) => ({ id: e.id, year: e.year })),
+        editions: a.editions.map((e: { id: number; year: number }) => ({ id: e.id, year: e.year })),
       })),
       total,
       page,
@@ -87,7 +87,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       author: article.author,
       publicationStatus: article.publicationStatus,
       publishedAt: article.publishedAt,
-      editions: article.editions.map((e) => ({ id: e.id, year: e.year })),
+      editions: article.editions.map((e: { id: number; year: number }) => ({ id: e.id, year: e.year })),
       tags: article.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
     };
   });
