@@ -83,9 +83,9 @@ export default async function HomePage() {
 
       <HeroSection edition={edition} locale={locale} />
 
-      {/* PREPARATION: teasing + replay + socials */}
-      {isPreparation && edition?.aftermovieUrl && (
-        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+      {/* PREPARATION: teasing + replay from previous edition */}
+      {isPreparation && edition?.previousAfterMovieUrl && (
+        <ReplaySection aftermovieUrl={edition.previousAfterMovieUrl} />
       )}
 
       {/* ANNOUNCEMENT: full content */}
@@ -97,8 +97,8 @@ export default async function HomePage() {
         <TicketingSection tiers={tiers} locale={locale} />
       )}
 
-      {isAnnouncement && edition?.aftermovieUrl && (
-        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+      {isAnnouncement && edition?.previousAfterMovieUrl && (
+        <ReplaySection aftermovieUrl={edition.previousAfterMovieUrl} />
       )}
 
       {isAnnouncement && articles.length > 0 && (

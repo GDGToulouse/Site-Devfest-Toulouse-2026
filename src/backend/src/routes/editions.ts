@@ -48,6 +48,13 @@ export default async function editionRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "No edition found" });
     }
 
+    // Fetch previous edition's aftermovie
+    const previousEdition = await prisma.edition.findFirst({
+      where: { year: { lt: edition.year } },
+      orderBy: { year: "desc" },
+      select: { aftermovieUrl: true },
+    });
+
     return {
       id: edition.id,
       year: edition.year,
@@ -60,6 +67,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       cfpUrl: edition.cfpUrl,
       partnerFormUrl: edition.partnerFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
+      previousAfterMovieUrl: previousEdition?.aftermovieUrl || null,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
       // TODO: compute from actual data when Speaker/Session/Sponsor models exist

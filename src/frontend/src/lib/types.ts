@@ -10,6 +10,7 @@ export interface Edition {
   cfpUrl: string | null;
   partnerFormUrl: string | null;
   aftermovieUrl: string | null;
+  previousAfterMovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   isProgramPublished: boolean;
