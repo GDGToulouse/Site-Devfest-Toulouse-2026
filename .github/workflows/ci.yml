@@ -45,13 +45,8 @@ jobs:
           cache-dependency-path: src/backend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
 
-      # Generate Prisma client (needed for typecheck)
-      - name: Install root deps for Prisma
-        working-directory: .
-        run: pnpm install --frozen-lockfile
       - name: Generate Prisma client
-        working-directory: .
-        run: pnpm db:generate
+        run: pnpm exec prisma generate --schema ../../prisma/schema.prisma
         env:
           DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
 
