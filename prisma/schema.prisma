@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Lot 1 — Fondations
+// ============================================
+
+enum EditionStatus {
+  PREPARATION
+  ANNOUNCEMENT
+  SEE_YOU_NEXT_YEAR
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+// --- Edition ---
+
+model Edition {
+  id               Int             @id @default(autoincrement())
+  year             Int             @unique
+  startDate        DateTime?
+  endDate          DateTime?
+  status           EditionStatus   @default(PREPARATION)
+  venueName        String?
+  venueAddress     String?
+  heroImageUrl     String?
+  cfpUrl           String?
+  partnerFormUrl   String?
+  aftermovieUrl    String?
+  galleryUrl       String?
+  archivedSiteUrl  String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  ticketTiers      TicketTier[]
+  articles         Article[]
+  keyFigures       KeyFigure[]
+}
+
+// --- Key Figures ---
+
+model KeyFigure {
+  id        Int     @id @default(autoincrement())
+  icon      String
+  value     String
+  labelFr   String
+  labelEn   String
+  sortOrder Int     @default(0)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+}
+
+// --- Blog / Articles ---
+
+model Article {
+  id               Int               @id @default(autoincrement())
+  slug             String            @unique
+  titleFr          String
+  titleEn          String
+  contentFr        String
+  contentEn        String
+  excerptFr        String?
+  excerptEn        String?
+  imageUrl         String?
+  author           String?
+  publicationStatus PublicationStatus @default(DRAFT)
+  publishedAt      DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  tags             Tag[]
+  editions         Edition[]
+}
+
+model Tag {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  slug             String    @unique
+  articles         Article[]
+}
+
+// --- Ticketing ---
+
+model TicketTier {
+  id               Int              @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  price            Decimal          @db.Decimal(8, 2)
+  isVisible        Boolean          @default(true)
+  saleStartDate    DateTime?
+  saleEndDate      DateTime?
+  externalUrl      String?
+  sortOrder        Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  editionId        Int
+  edition          Edition          @relation(fields: [editionId], references: [id])
+}
+
+// --- Contact ---
+
+model ContactCategory {
+  id               Int       @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  emailRecipients  String
+  sortOrder        Int       @default(0)
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  messages         ContactMessage[]
+}
+
+model ContactMessage {
+  id               Int              @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  categoryLabel    String?
+  message          String
+  isRead           Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+
+  categoryId       Int?
+  category         ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+}
+
+// --- Content Pages (CoC, Legal) ---
+
+model ContentPage {
+  id               Int       @id @default(autoincrement())
+  slug             String    @unique
+  titleFr          String
+  titleEn          String
+  contentFr        String
+  contentEn        String
+  updatedAt        DateTime  @updatedAt
+}
+
+// --- Auth (Better Auth compatible) ---
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  emailVerified    Boolean   @default(false)
+  image            String?
+  role             UserRole  @default(ADMIN)
+  banned           Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sessions         Session[]
+  accounts         Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  expiresAt        DateTime
+  token            String    @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  ipAddress        String?
+  userAgent        String?
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id               String    @id @default(cuid())
+  identifier       String
+  value            String
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// --- Site Settings ---
+
+model SiteSetting {
+  id               Int       @id @default(autoincrement())
+  key              String    @unique
+  value            String
+  updatedAt        DateTime  @updatedAt
+}

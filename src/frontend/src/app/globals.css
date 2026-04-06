@@ -1,0 +1,196 @@
+@import "tailwindcss";
+
+@theme inline {
+  /* ========================================
+   * DevFest Toulouse 2026 — Design Tokens
+   * Source: docs/design-system.md
+   * ======================================== */
+
+  /* --- Colors: Primary --- */
+  --color-bismarck: #B94420;
+  --color-terre-cuite: #EC6839;
+  --color-incarnadin: #F4A598;
+  --color-malachite: #109E6E;
+  --color-emeraude: #41B38E;
+  --color-menthe: #8BCBB7;
+  --color-eau: #C0E1D7;
+
+  /* --- Colors: Secondary --- */
+  --color-bleu: #507BBD;
+  --color-bleu-2: #63C6F2;
+  --color-bleu-3: #C4E6F1;
+  --color-vert-1: #31A853;
+  --color-vert-2: #72BA69;
+  --color-vert-3: #CDE3C0;
+  --color-orange: #F8AB06;
+  --color-jaune: #FFD428;
+  --color-jaune-clair: #FFE8A5;
+  --color-rouge: #E84336;
+  --color-rose: #EE7CAD;
+  --color-rose-clair: #F8D8D8;
+
+  /* --- Colors: Neutrals --- */
+  --color-noir: #1D1D1B;
+  --color-gris: #737372;
+  --color-gris-clair: #767675;
+  --color-gris-placeholder: #808080;
+  --color-blanc: #FFFFFF;
+  --color-blanc-casse: #FDF0EB;
+
+  /* --- Colors: Semantic --- */
+  --color-link: #703B27;
+  --color-link-footer: #FDF0EB;
+
+  /* --- Typography --- */
+  --font-sans: var(--font-google-sans), system-ui, sans-serif;
+
+  /* --- Shadows --- */
+  --shadow-header: 0 4px 12px rgba(29, 29, 27, 0.10);
+  --shadow-card: 0 12px 16px 4px rgba(29, 29, 27, 0.14);
+  --shadow-section: 0 4px 64px 4px rgba(29, 29, 27, 0.12);
+
+  /* --- Border Radius --- */
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-l: 18px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-4xl: 40px;
+  --radius-5xl: 56px;
+  --radius-hero: 64px;
+}
+
+/* --- Focus visible (accessibility) --- */
+:focus-visible {
+  outline: 3px solid var(--color-bleu);
+  outline-offset: 2px;
+}
+
+body {
+  background: var(--color-blanc);
+  color: var(--color-noir);
+  font-family: var(--font-sans);
+}
+
+/* --- TipTap editor content — mirrors public prose styles --- */
+.tiptap-content {
+  min-height: inherit;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+}
+.tiptap-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content h5 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.tiptap-content p {
+  line-height: 1.625;
+  margin-bottom: 1rem;
+}
+.tiptap-content a {
+  color: var(--color-bismarck);
+  text-decoration: underline;
+}
+.tiptap-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.tiptap-content li {
+  margin-bottom: 0.25rem;
+}
+.tiptap-content blockquote {
+  border-left: 4px solid var(--color-gris-placeholder);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--color-gris);
+  font-style: italic;
+}
+.tiptap-content code {
+  background: var(--color-blanc-casse);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.9em;
+  font-family: ui-monospace, monospace;
+}
+.tiptap-content pre {
+  background: var(--color-noir);
+  color: var(--color-blanc);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+.tiptap-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.tiptap-content mark {
+  background-color: var(--color-jaune);
+  border-radius: 2px;
+  padding: 0.1rem 0.2rem;
+}
+.tiptap-content hr {
+  border: none;
+  border-top: 2px solid var(--color-gris-placeholder);
+  margin: 2rem 0;
+}
+.tiptap-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  cursor: pointer;
+}
+.tiptap-content img.ProseMirror-selectednode {
+  outline: 3px solid var(--color-malachite);
+  outline-offset: 2px;
+}
+.tiptap-content img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+.tiptap-content img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+  display: block;
+}
+.tiptap-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-gris-placeholder);
+  pointer-events: none;
+  height: 0;
+}

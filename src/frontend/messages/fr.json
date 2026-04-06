@@ -1,0 +1,171 @@
+{
+  "site": {
+    "title": "DevFest Toulouse 2026",
+    "description": "La plus grande conférence tech du bassin Toulousain"
+  },
+  "langBanner": {
+    "message": "This page is available in your language.",
+    "switch": "Switch to {lang}",
+    "dismiss": "Fermer"
+  },
+  "nav": {
+    "home": "Accueil",
+    "program": "Programme",
+    "speakers": "Speakers",
+    "partners": "Partenaires",
+    "blog": "Actus"
+  },
+  "cta": {
+    "becomePartner": "Devenir partenaire",
+    "submitTalk": "Proposer un talk",
+    "contactUs": "Contactez-nous"
+  },
+  "home": {
+    "title": "DevFest Toulouse",
+    "hero": {
+      "subtitleLine1": "La conférence Toulousaine par",
+      "subtitleLine2devs": "les devs",
+      "subtitleLine2end": " et pour les ",
+      "subtitleLine2devs2": "devs.",
+      "ctaPartner": "Devenir partenaire",
+      "ctaTalk": "Proposer un talk"
+    },
+    "stats": {
+      "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
+    },
+    "about": {
+      "behindTitle": "Derrière le #DevFestToulouse",
+      "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
+      "ecosystemTitle": "Plongez dans notre écosystème"
+    },
+    "news": {
+      "title": "Dernières actualités",
+      "readMore": "Lire plus d'articles",
+      "readArticle": "Lire"
+    },
+    "ticketing": {
+      "title": "Billetterie",
+      "available": "Disponible",
+      "comingSoon": "Bientôt",
+      "soldOut": "Épuisé",
+      "buy": "Acheter",
+      "viewAll": "Voir la billetterie"
+    },
+    "replay": {
+      "title": "Résumé de l'année dernière"
+    }
+  },
+  "footer": {
+    "tagline": "Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse",
+    "navigation": "Navigation",
+    "ecosystems": "Nos écosystèmes tech",
+    "previousEditions": "Éditions précédentes",
+    "followUs": "Suivez l'aventure en ligne :",
+    "legalNotice": "Mentions légales",
+    "codeOfConduct": "Code de conduite",
+    "sitemap": "Plan du site"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "backHome": "Retour à l'accueil"
+  },
+  "header": {
+    "menu": "Menu",
+    "close": "Fermer"
+  },
+  "lang": {
+    "switchTo": "Switch to English",
+    "suggestion": "This page is also available in English."
+  },
+  "articles": {
+    "title": "Actualités",
+    "description": "Toutes les actualités du DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "noArticles": "Aucun article pour le moment.",
+    "by": "par",
+    "backToList": "Retour aux actualités",
+    "taggedWith": "Articles tagués"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "ticketing": {
+    "pageTitle": "Billetterie",
+    "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "available": "Disponible",
+    "comingSoon": "Bientôt",
+    "soldOut": "Épuisé",
+    "buy": "Acheter",
+    "notOpenYet": "La billetterie n'est pas encore ouverte.",
+    "allSoldOut": "Billetterie complète — tous les billets sont épuisés.",
+    "externalNote": "La vente de billets est gérée par Billetweb. Vous serez redirigé vers la plateforme de paiement."
+  },
+  "cfp": {
+    "pageTitle": "Proposer un talk",
+    "description": "Soumettez votre présentation pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse accueille des speakers de tous horizons. Que vous soyez débutant ou expert, votre expérience et votre passion comptent. Proposez un talk et partagez vos connaissances avec la communauté.",
+    "statusOpen": "Le CFP est actuellement ouvert !",
+    "statusClosed": "Le CFP est fermé. Merci pour vos soumissions !",
+    "dates": "Du {open} au {close}",
+    "ctaSubmit": "Proposer un talk",
+    "formatsTitle": "Formats acceptés",
+    "formats": {
+      "conference": "Conférence",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plénière"
+    },
+    "topicsTitle": "Quels sujets ?",
+    "topicsDescription": "Web, Cloud, Mobile, IA, Sécurité, DevOps, Data, IoT... Tous les sujets tech sont les bienvenus. Nous recherchons aussi des retours d'expérience, des talks inspirants et des sujets transverses (culture, diversité, green IT)."
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Contactez l'équipe du DevFest Toulouse.",
+    "home": "Accueil",
+    "form": {
+      "firstName": "Prénom",
+      "firstNamePlaceholder": "Votre prénom",
+      "firstNameError": "Le prénom est obligatoire",
+      "lastName": "Nom",
+      "lastNamePlaceholder": "Votre nom",
+      "lastNameError": "Le nom est obligatoire",
+      "email": "Email",
+      "emailPlaceholder": "vous@example.com",
+      "emailError": "Email invalide",
+      "phone": "Téléphone (optionnel)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "category": "Objet",
+      "categoryPlaceholder": "Sélectionnez une catégorie",
+      "categoryError": "Veuillez sélectionner une catégorie",
+      "categoryOther": "Autre",
+      "message": "Message",
+      "messagePlaceholder": "Votre message...",
+      "messageError": "Le message doit contenir au moins 10 caractères",
+      "submit": "Envoyer",
+      "sending": "Envoi en cours...",
+      "success": "Merci ! Nous avons reçu votre message et vous répondrons dans les meilleurs délais.",
+      "error": "Une erreur s'est produite. Veuillez réessayer."
+    },
+    "sidebar": {
+      "responseTime": "Nous sommes bénévoles, merci pour votre patience. Nous faisons de notre mieux pour répondre sous 48h.",
+      "followUs": "Suivez-nous :"
+    }
+  },
+  "codeOfConduct": {
+    "title": "Code de conduite",
+    "description": "Code de conduite du DevFest Toulouse.",
+    "home": "Accueil"
+  },
+  "legalNotice": {
+    "title": "Mentions légales",
+    "description": "Mentions légales du site DevFest Toulouse.",
+    "home": "Accueil"
+  }
+}

@@ -1,0 +1,75 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
+    environment:
+      - BASE_URL=${BASE_URL}
+      - BACKEND_URL=http://backend:4000
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    networks:
+      - default
+      - coolify
+
+  backend:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      args:
+        - SEED_SCRIPT=prisma/seed-dev.ts
+    volumes:
+      - uploads:/app/uploads
+    environment:
+      - BASE_URL=${BASE_URL}
+      - FRONTEND_URL=http://frontend:3000
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
+      - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr,editor@devfesttoulouse.fr}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
+      - BILLETWEB_USER=${BILLETWEB_USER:-}
+      - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    networks:
+      - default
+      - coolify
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-devfest}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devfest}
+      - POSTGRES_DB=${POSTGRES_DB:-devfest}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devfest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025:8025"
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  pgdata:
+  uploads:

@@ -1,0 +1,46 @@
+{
+  "name": "devfest-toulouse-backend",
+  "version": "0.1.0",
+  "description": "DevFest Toulouse 2026 — REST API backend",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
+    "db:generate": "prisma generate --schema ../../prisma/schema.prisma",
+    "db:push": "prisma db push --schema ../../prisma/schema.prisma",
+    "db:studio": "prisma studio --schema ../../prisma/schema.prisma",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@fastify/compress": "^8.3.1",
+    "@fastify/cors": "^11.2.0",
+    "@fastify/helmet": "^13.0.2",
+    "@fastify/multipart": "^9.0.0",
+    "@fastify/static": "^8.2.0",
+    "@prisma/client": "6",
+    "better-auth": "^1.5.6",
+    "fastify": "^5.8.4",
+    "nodemailer": "^8.0.4",
+    "prisma": "6"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "esbuild"
+    ]
+  },
+  "prisma": {
+    "seed": "tsx ../../prisma/seed.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "@types/nodemailer": "^7.0.11",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2",
+    "vitest": "^4.1.2"
+  }
+}

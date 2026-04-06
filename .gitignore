@@ -1,6 +1,41 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+package-lock.json
+
+# Build outputs
+.next/
+dist/
+out/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Debug
+pnpm-debug.log*
+npm-debug.log*
+
 # Claude Code local settings
 .claude/settings.local.json
 .claude/worktrees/
+.claude/agent-memory/
+
+# Uploaded files
+uploads/
 
 # Source documents (content captured in design-system.md)
 docs/CharteGraphique_Devfest2024.pdf

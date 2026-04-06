@@ -1,0 +1,61 @@
+import Image from "next/image";
+import { useTranslations } from "next-intl";
+
+import StatIcon from "./StatIcon";
+import { localizedField } from "@/lib/i18n-helpers";
+import type { KeyFigure } from "@/lib/types";
+
+interface KeyFiguresSectionProps {
+  figures: KeyFigure[];
+  locale: string;
+}
+
+export default function KeyFiguresSection({ figures, locale }: KeyFiguresSectionProps) {
+  const t = useTranslations("home.stats");
+
+  if (figures.length === 0) return null;
+
+  return (
+    <section className="relative px-6 py-16 lg:py-24">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-12 lg:mb-20">
+          {t.rich("title", {
+            tech: (chunks) => <span className="text-malachite">{chunks}</span>,
+            toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
+          })}
+        </h2>
+
+        <div className="relative bg-blanc rounded-4xl shadow-section p-8 lg:p-12">
+          {/* La Grave illustration */}
+          <div className="hidden lg:block absolute left-0 bottom-0 w-48 h-64 opacity-20 pointer-events-none">
+            <Image
+              src="/images/illustrations/la-grave.png"
+              alt=""
+              fill
+              className="object-contain object-left-bottom"
+              sizes="192px"
+              loading="lazy"
+            />
+          </div>
+
+          <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12">
+            {figures.map((figure) => (
+              <div
+                key={figure.icon}
+                className="flex flex-col items-center text-center p-6 rounded-xl bg-blanc"
+              >
+                <StatIcon name={figure.icon} className="w-8 h-8 lg:w-10 lg:h-10" />
+                <span className="mt-3 text-4xl lg:text-[56px] lg:leading-[140%] font-bold text-noir">
+                  {figure.value}
+                </span>
+                <span className="mt-2 text-lg lg:text-2xl text-gris">
+                  {localizedField(figure, "label", locale)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

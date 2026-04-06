@@ -1,0 +1,171 @@
+{
+  "site": {
+    "title": "DevFest Toulouse 2026",
+    "description": "The largest tech conference in the Toulouse area"
+  },
+  "langBanner": {
+    "message": "Cette page est disponible dans votre langue.",
+    "switch": "Passer en {lang}",
+    "dismiss": "Close"
+  },
+  "nav": {
+    "home": "Home",
+    "program": "Schedule",
+    "speakers": "Speakers",
+    "partners": "Partners",
+    "blog": "News"
+  },
+  "cta": {
+    "becomePartner": "Become a partner",
+    "submitTalk": "Submit a talk",
+    "contactUs": "Contact us"
+  },
+  "home": {
+    "title": "DevFest Toulouse",
+    "hero": {
+      "subtitleLine1": "The Toulouse conference by",
+      "subtitleLine2devs": "devs",
+      "subtitleLine2end": ", for ",
+      "subtitleLine2devs2": "devs.",
+      "ctaPartner": "Become a partner",
+      "ctaTalk": "Submit a talk"
+    },
+    "stats": {
+      "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
+    },
+    "about": {
+      "behindTitle": "Behind #DevFestToulouse",
+      "gdgDescription": "DevFest Toulouse is organized by GDG Toulouse, a passionate developer community. Since 2016, we bring together the Toulouse tech community every year around talks, workshops, and networking.",
+      "ecosystemTitle": "Dive into our ecosystem"
+    },
+    "news": {
+      "title": "Latest news",
+      "readMore": "Read more articles",
+      "readArticle": "Read"
+    },
+    "ticketing": {
+      "title": "Tickets",
+      "available": "Available",
+      "comingSoon": "Coming soon",
+      "soldOut": "Sold out",
+      "buy": "Buy",
+      "viewAll": "View all tickets"
+    },
+    "replay": {
+      "title": "Last year's recap"
+    }
+  },
+  "footer": {
+    "tagline": "Bug-free since 2016 - DevFest Toulouse by GDG Toulouse",
+    "navigation": "Navigation",
+    "ecosystems": "Our tech ecosystems",
+    "previousEditions": "Previous editions",
+    "followUs": "Follow the adventure online:",
+    "legalNotice": "Legal notice",
+    "codeOfConduct": "Code of conduct",
+    "sitemap": "Sitemap"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "header": {
+    "menu": "Menu",
+    "close": "Close"
+  },
+  "lang": {
+    "switchTo": "Passer en français",
+    "suggestion": "Cette page est aussi disponible en français."
+  },
+  "articles": {
+    "title": "News",
+    "description": "All the latest news from DevFest Toulouse 2026.",
+    "home": "Home",
+    "noArticles": "No articles yet.",
+    "by": "by",
+    "backToList": "Back to news",
+    "taggedWith": "Articles tagged"
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "ticketing": {
+    "pageTitle": "Tickets",
+    "description": "Buy your tickets for DevFest Toulouse 2026.",
+    "home": "Home",
+    "available": "Available",
+    "comingSoon": "Coming soon",
+    "soldOut": "Sold out",
+    "buy": "Buy",
+    "notOpenYet": "Ticketing is not yet open.",
+    "allSoldOut": "All tickets are sold out.",
+    "externalNote": "Ticket sales are handled by Billetweb. You will be redirected to their payment platform."
+  },
+  "cfp": {
+    "pageTitle": "Submit a talk",
+    "description": "Submit your presentation for DevFest Toulouse 2026.",
+    "home": "Home",
+    "intro": "DevFest Toulouse welcomes speakers from all backgrounds. Whether you're a beginner or an expert, your experience and passion matter. Submit a talk and share your knowledge with the community.",
+    "statusOpen": "The CFP is currently open!",
+    "statusClosed": "The CFP is now closed. Thank you for your submissions!",
+    "dates": "From {open} to {close}",
+    "ctaSubmit": "Submit a talk",
+    "formatsTitle": "Accepted formats",
+    "formats": {
+      "conference": "Conference",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plenary session"
+    },
+    "topicsTitle": "What topics?",
+    "topicsDescription": "Web, Cloud, Mobile, AI, Security, DevOps, Data, IoT... All tech topics are welcome. We also look for experience reports, inspiring talks and cross-cutting topics (culture, diversity, green IT)."
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Contact the DevFest Toulouse team.",
+    "home": "Home",
+    "form": {
+      "firstName": "First name",
+      "firstNamePlaceholder": "Your first name",
+      "firstNameError": "First name is required",
+      "lastName": "Last name",
+      "lastNamePlaceholder": "Your last name",
+      "lastNameError": "Last name is required",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "emailError": "Invalid email",
+      "phone": "Phone (optional)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "category": "Subject",
+      "categoryPlaceholder": "Select a category",
+      "categoryError": "Please select a category",
+      "categoryOther": "Other",
+      "message": "Message",
+      "messagePlaceholder": "Your message...",
+      "messageError": "Message must be at least 10 characters",
+      "submit": "Send",
+      "sending": "Sending...",
+      "success": "Thank you! We received your message and will respond as soon as possible.",
+      "error": "An error occurred. Please try again."
+    },
+    "sidebar": {
+      "responseTime": "We are volunteers, thank you for your patience. We do our best to respond within 48 hours.",
+      "followUs": "Follow us:"
+    }
+  },
+  "codeOfConduct": {
+    "title": "Code of Conduct",
+    "description": "DevFest Toulouse Code of Conduct.",
+    "home": "Home"
+  },
+  "legalNotice": {
+    "title": "Legal Notice",
+    "description": "DevFest Toulouse legal notice.",
+    "home": "Home"
+  }
+}

@@ -27,7 +27,7 @@ Article de blog ──── Étiquette (0 à N)
 
 Page de contenu (FAQ, Code de conduite, À propos, Mentions légales)
 
-Utilisateur ──── Rôle (admin, speaker, sponsor)
+Utilisateur ──── Rôle (admin, editor, speaker, sponsor)
 ```
 
 ---
@@ -257,13 +257,14 @@ Personne disposant d'un compte sur le site.
 |-------------|-------------|---------|
 | Nom | Nom complet | Marie Dupont |
 | Email | Adresse email (identifiant) | marie@example.com |
-| Rôle | Permissions sur le site | Admin, Speaker, Sponsor |
+| Rôle | Permissions sur le site | Admin, Editor, Speaker, Sponsor |
 
 ### Rôles et permissions
 
 | Rôle | Peut faire |
 |------|------------|
-| Admin | Tout gérer : éditions, sessions, speakers, sponsors, articles, statut annuel, purge du cache |
+| Admin | Tout gérer : éditions, sessions, speakers, sponsors, articles, billetterie, CFP, contact, chiffres clés, cache, utilisateurs |
+| Editor | Rédiger et publier des articles, éditer les pages de contenu, consulter les messages de contact (lecture seule) |
 | Speaker | Éditer sa propre fiche (bio, photo, liens sociaux) |
 | Sponsor | Éditer sa propre fiche (description, logo, liens sociaux) |
 
