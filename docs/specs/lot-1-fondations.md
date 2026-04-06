@@ -121,8 +121,9 @@
 | RG-080 | La page d'accueil affiche un contenu conditionnel selon le statut annuel de l'édition courante. |
 | RG-081 | Les trois statuts possibles sont : « Édition en préparation », « Annonce de l'édition », « Rendez-vous l'année prochaine ». |
 | RG-082 | En mode « Édition en préparation » : hero teasing, newsletter, réseaux sociaux, replay édition précédente. |
-| RG-083 | En mode « Annonce de l'édition » : hero complet, chiffres clés, sponsors (si disponibles), billetterie (si active), speakers en vedette (si disponibles), dernières actualités, replay. |
-| RG-084 | En mode « Rendez-vous l'année prochaine » : bilan, aftermovie, galerie photos, replays, lien éditions précédentes. |
+| RG-083 | En mode « Annonce de l'édition » : hero complet, chiffres clés, sponsors (si disponibles), billetterie (si active), speakers en vedette (si disponibles), dernières actualités, aftermovie de l'édition précédente (si disponible). |
+| RG-084 | En mode « Rendez-vous l'année prochaine » : bilan, aftermovie de l'édition courante, galerie photos, replays, lien éditions précédentes. |
+| RG-085 | La section replay/aftermovie affiche toujours l'aftermovie de l'édition précédente en modes PREPARATION et ANNOUNCEMENT. En mode SEE_YOU_NEXT_YEAR, elle affiche l'aftermovie de l'édition courante. Si aucun aftermovie n'est disponible, la section est masquée. |
 | RG-140 | La bascule de statut par un admin déclenche une purge immédiate du cache de la page d'accueil. |
 | RG-141 | Pour le Lot 1, seul le mode « Annonce de l'édition » est implémenté (les sections Speakers et Sponsors sont masquées tant que les données ne sont pas disponibles). |
 
@@ -423,9 +424,11 @@
 **afin de** me donner envie de participer.
 
 **Critères d'acceptation :**
-- [ ] Vidéo YouTube intégrée (aftermovie de l'édition 2025).
+- [ ] En modes PREPARATION et ANNOUNCEMENT, la section affiche l'aftermovie de l'édition précédente (année N-1).
+- [ ] En mode SEE_YOU_NEXT_YEAR, la section affiche l'aftermovie de l'édition courante.
+- [ ] Vidéo YouTube intégrée via iframe.
 - [ ] L'intégration YouTube utilise un chargement différé (façade légère ou lazy loading) pour ne pas pénaliser le LCP.
-- [ ] Si aucun aftermovie n'est configuré, la section est masquée.
+- [ ] Si aucun aftermovie n'est disponible pour l'édition concernée, la section est masquée.
 
 ---
 
