@@ -7,6 +7,7 @@ import { adminFetch } from "@/lib/admin-api";
 const TABS = [
   { key: "contacts", label: "Contacts" },
   { key: "seo", label: "SEO" },
+  { key: "analytics", label: "Analytics" },
   { key: "cache", label: "Cache" },
 ] as const;
 
@@ -404,6 +405,72 @@ function SeoTab({
   );
 }
 
+// ─── Analytics tab ────────────────────────────────────────────────
+
+function AnalyticsTab({
+  settings,
+  onSave,
+}: {
+  settings: Record<string, string>;
+  onSave: (data: Record<string, string>) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    analytics_plausible_src: settings.analytics_plausible_src || "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function handleChange(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSaving(true);
+    await onSave(form);
+    setIsSaving(false);
+    setSaved(true);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
+        <h2 className="text-lg font-bold text-noir mb-4">Plausible Analytics</h2>
+        <p className="text-sm text-gris mb-4">
+          Configurez le suivi analytique avec Plausible. Laissez vide pour desactiver le tracking.
+        </p>
+        <div>
+          <label className="block text-sm font-medium text-noir mb-1">
+            URL du script Plausible
+          </label>
+          <input
+            type="url"
+            value={form.analytics_plausible_src}
+            onChange={(e) => handleChange("analytics_plausible_src", e.target.value)}
+            placeholder="https://plausible.example.com/js/pa-XXXXX.js"
+            className="w-full max-w-lg rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            URL du script site-specific depuis le dashboard Plausible (onglet Script).
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer"}
+        </button>
+        {saved && <span className="text-sm text-malachite">Enregistre !</span>}
+      </div>
+    </form>
+  );
+}
+
 // ─── Main page ─────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -462,6 +529,7 @@ export default function SettingsPage() {
       {/* Tab content */}
       {activeTab === "contacts" && <ContactsTab settings={settings} onSave={handleSave} />}
       {activeTab === "seo" && <SeoTab settings={settings} onSave={handleSave} />}
+      {activeTab === "analytics" && <AnalyticsTab settings={settings} onSave={handleSave} />}
       {activeTab === "cache" && <CacheTab />}
     </div>
   );
