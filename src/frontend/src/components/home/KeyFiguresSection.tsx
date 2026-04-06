@@ -44,8 +44,8 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
                 key={figure.icon}
                 className="flex flex-col items-center text-center p-6 rounded-xl bg-blanc"
               >
-                <StatIcon name={figure.icon} className="w-10 h-10 lg:w-12 lg:h-12" />
-                <span className="mt-4 text-4xl lg:text-[64px] lg:leading-[140%] font-bold text-noir">
+                <StatIcon name={figure.icon} className="w-8 h-8 lg:w-10 lg:h-10" />
+                <span className="mt-3 text-4xl lg:text-[56px] lg:leading-[140%] font-bold text-noir">
                   {figure.value}
                 </span>
                 <span className="mt-2 text-lg lg:text-2xl text-gris">
