@@ -26,8 +26,8 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition?.venueName || null;
 
-  const partnerUrl = edition?.partnerFormUrl || "/contact";
-  const cfpUrl = edition?.cfpUrl || "#";
+  const partnerUrl = edition?.partnerFormUrl || null;
+  const cfpUrl = edition?.cfpUrl || null;
 
   const backgroundImage = heroImageUrl
     ? `linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('${heroImageUrl}')`
@@ -110,22 +110,28 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
             )}
 
             {/* Buttons */}
-            <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
-              <Link
-                href={partnerUrl}
-                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
-              >
-                {t("ctaPartner")}
-              </Link>
-              <a
-                href={cfpUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-2xl hover:bg-bleu/90 transition-colors text-center"
-              >
-                {t("ctaTalk")}
-              </a>
-            </div>
+            {(partnerUrl || cfpUrl) && (
+              <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
+                {partnerUrl && (
+                  <Link
+                    href={partnerUrl}
+                    className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
+                  >
+                    {t("ctaPartner")}
+                  </Link>
+                )}
+                {cfpUrl && (
+                  <a
+                    href={cfpUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-2xl hover:bg-bleu/90 transition-colors text-center"
+                  >
+                    {t("ctaTalk")}
+                  </a>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

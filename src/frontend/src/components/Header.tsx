@@ -22,8 +22,8 @@ export default function Header() {
   const tHeader = useTranslations("header");
   const edition = useEdition();
 
-  const partnerUrl = edition?.partnerFormUrl || "https://forms.gle/devfest-partenaire";
-  const cfpUrl = edition?.cfpUrl || "https://sessionize.com";
+  const partnerUrl = edition?.partnerFormUrl || null;
+  const cfpUrl = edition?.cfpUrl || null;
 
   const navLinks = ALL_NAV_LINKS.filter((link) => {
     if (link.key === "program" && !edition?.isProgramPublished) return false;
@@ -70,22 +70,26 @@ export default function Header() {
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-4">
           <SocialIcons size={20} className="text-gris" />
-          <a
-            href={partnerUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
-          >
-            {tCta("becomePartner")}
-          </a>
-          <a
-            href={cfpUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="rounded-[12px] border-2 border-bleu bg-bleu px-[18px] py-1.5 text-base font-bold text-blanc hover:bg-bleu/90 transition-colors"
-          >
-            {tCta("submitTalk")}
-          </a>
+          {partnerUrl && (
+            <a
+              href={partnerUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
+            >
+              {tCta("becomePartner")}
+            </a>
+          )}
+          {cfpUrl && (
+            <a
+              href={cfpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-[12px] border-2 border-bleu bg-bleu px-[18px] py-1.5 text-base font-bold text-blanc hover:bg-bleu/90 transition-colors"
+            >
+              {tCta("submitTalk")}
+            </a>
+          )}
           <LanguageSwitcher />
         </div>
 
@@ -125,23 +129,27 @@ export default function Header() {
                 {t(link.key)}
               </Link>
             ))}
-            <hr className="border-gray-100" />
-            <a
-              href={partnerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
-            >
-              {tCta("becomePartner")}
-            </a>
-            <a
-              href={cfpUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-[12px] bg-bleu px-[18px] py-3 text-base font-bold text-blanc text-center"
-            >
-              {tCta("submitTalk")}
-            </a>
+            {(partnerUrl || cfpUrl) && <hr className="border-gray-100" />}
+            {partnerUrl && (
+              <a
+                href={partnerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
+              >
+                {tCta("becomePartner")}
+              </a>
+            )}
+            {cfpUrl && (
+              <a
+                href={cfpUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-[12px] bg-bleu px-[18px] py-3 text-base font-bold text-blanc text-center"
+              >
+                {tCta("submitTalk")}
+              </a>
+            )}
             <div className="flex items-center justify-between">
               <SocialIcons size={24} className="text-gris" />
               <LanguageSwitcher />
