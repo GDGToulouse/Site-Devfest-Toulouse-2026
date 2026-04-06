@@ -9,7 +9,7 @@ interface CfpBody {
   closeDate?: string;
 }
 
-const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "analytics_"];
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_"];
 
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/general

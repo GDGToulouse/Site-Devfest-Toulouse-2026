@@ -14,7 +14,7 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `BASE_URL` | oui | URL publique du site (utilisée pour les images OG, sitemap, canonical) | `https://devfesttoulouse.fr` |
 | `BACKEND_URL` | oui | URL interne du backend (réseau Docker) | `http://backend:4000` |
 | `PORT` | non | Port d'écoute du frontend (défaut : `3000`) | `3000` |
-| `NEXT_PUBLIC_PLAUSIBLE_SRC` | non | URL du script Plausible — utilisé uniquement pour autoriser le domaine dans le CSP. L'URL du script elle-même est gérée dans le backoffice (Paramètres > Analytics). | `https://plausible.example.com/js/pa-XXXXX.js` |
+| `NEXT_PUBLIC_PLAUSIBLE_SRC` | non | URL du script Plausible (depuis le dashboard Plausible, active le tracking si défini) | `https://plausible.example.com/js/pa-XXXXX.js` |
 
 ## Backend (API)
 

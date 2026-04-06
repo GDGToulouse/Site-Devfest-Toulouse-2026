@@ -42,18 +42,6 @@ export default async function settingsRoutes(app: FastifyInstance) {
     return result;
   });
 
-  // GET /api/settings/analytics — returns analytics configuration
-  app.get("/settings/analytics", async () => {
-    const settings = await prisma.siteSetting.findMany({
-      where: { key: { startsWith: "analytics_" } },
-    });
-    const result: Record<string, string> = {};
-    for (const s of settings) {
-      result[s.key] = s.value;
-    }
-    return result;
-  });
-
   // GET /api/settings/cfp — returns CFP configuration
   app.get("/settings/cfp", async () => {
     const settings = await prisma.siteSetting.findMany({

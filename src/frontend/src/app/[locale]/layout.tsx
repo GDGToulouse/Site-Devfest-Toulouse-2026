@@ -13,7 +13,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCurrentEdition, getAnalyticsSettings } from "@/lib/api";
+import { getCurrentEdition } from "@/lib/api";
 
 const googleSans = Google_Sans({
   subsets: ["latin"],
@@ -23,7 +23,7 @@ const googleSans = Google_Sans({
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
-// plausibleSrc is loaded from the database at render time (see LocaleLayout)
+const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 
 export async function generateMetadata({
   params,
@@ -83,12 +83,7 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, analyticsSettings] = await Promise.all([
-    getCurrentEdition(),
-    getAnalyticsSettings(),
-  ]);
-
-  const plausibleSrc = analyticsSettings.analytics_plausible_src || "";
+  const edition = await getCurrentEdition();
 
   return (
     <html lang={locale} className={`h-full antialiased ${googleSans.variable}`} suppressHydrationWarning>
