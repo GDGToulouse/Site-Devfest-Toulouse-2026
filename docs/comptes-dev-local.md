@@ -19,12 +19,25 @@ ADMIN_EMAILS=admin@devfesttoulouse.fr,editor@devfesttoulouse.fr
 
 Les comptes sont créés dans la table `User` par `prisma/seed.ts`.
 
+## Seed
+
+Le seed de développement **n'est pas exécuté automatiquement** au démarrage. Il faut le lancer manuellement :
+
+```bash
+docker compose -f docker-compose.local.yml exec backend pnpm exec tsx prisma/seed-dev.ts
+```
+
+Cela crée les comptes de test, les éditions, les articles, les tarifs et les chiffres clés de démo.
+
+> **Note** : le seed de base (`prisma/seed.ts`) est exécuté automatiquement à chaque démarrage du container backend (en dev comme en prod). Il crée uniquement les catégories de contact et les comptes admin à partir de `ADMIN_EMAILS` — il est idempotent et ne recrée rien si les données existent déjà.
+
 ## Connexion
 
-1. Lancer `docker compose up`
-2. Aller sur http://localhost:3000/fr/admin
-3. Entrer l'email et le mot de passe du tableau ci-dessus
-4. Cliquer **« Se connecter »**
+1. Lancer `docker compose -f docker-compose.local.yml up`
+2. Lancer le seed dev si c'est la première fois (voir ci-dessus)
+3. Aller sur http://localhost:3000/fr/admin
+4. Entrer l'email et le mot de passe du tableau ci-dessus
+5. Cliquer **« Se connecter »**
 
 > Si les mots de passe n'ont pas pu être provisionnés par le seed (tables Better Auth pas encore créées), utiliser le flow **« Mot de passe oublié ? »** → MailHog (http://localhost:8025) pour en définir un.
 
@@ -48,8 +61,9 @@ Tous les emails (vérification, réinitialisation) sont capturés par MailHog :
 Pour repartir de zéro (supprime toutes les données) :
 
 ```bash
-docker compose down -v
-docker compose up
+docker compose -f docker-compose.local.yml down -v
+docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.local.yml exec backend pnpm exec tsx prisma/seed-dev.ts
 ```
 
-Le seed recréera les comptes et les données de test.
+Le seed de base est exécuté automatiquement au démarrage. Le seed dev doit être relancé manuellement pour recréer les données de test.

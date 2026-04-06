@@ -79,7 +79,7 @@ docker-compose.yml             # Dev environment: frontend + backend + db + mail
 
 ## Dev Test Accounts
 
-Local dev accounts provisioned by `prisma/seed.ts` — use for browser testing:
+Local dev accounts provisioned by `prisma/seed-dev.ts` (run manually) — use for browser testing:
 
 | Role | Email | Password |
 |------|-------|----------|
