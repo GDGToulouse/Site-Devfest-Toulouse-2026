@@ -30,7 +30,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
         skip: (page - 1) * limit,
         take: limit,
         include: { tags: true, editions: true },
