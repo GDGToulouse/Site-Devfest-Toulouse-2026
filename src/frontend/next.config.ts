@@ -98,6 +98,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    localPatterns: [
+      { pathname: "/images/**" },
+      { pathname: "/uploads/**" },
+    ],
     remotePatterns: [
       {
         protocol: "https",
