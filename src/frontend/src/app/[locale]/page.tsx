@@ -15,13 +15,29 @@ import LatestNewsSection from "@/components/home/LatestNewsSection";
 import AboutSection from "@/components/home/AboutSection";
 import EcosystemSection from "@/components/home/EcosystemSection";
 
-function buildEventJsonLd(edition: {
-  year: number;
-  startDate: string | null;
-  endDate: string | null;
-  venueName: string | null;
-  venueAddress: string | null;
-}) {
+function buildEventJsonLd(
+  edition: {
+    year: number;
+    startDate: string | null;
+    endDate: string | null;
+    venueName: string | null;
+    venueAddress: string | null;
+  },
+  tiers: { nameFr: string; price: number; status: string; externalUrl: string | null }[],
+) {
+  const offers = tiers
+    .filter((t) => t.status !== "SOLD_OUT")
+    .map((t) => ({
+      "@type": "Offer" as const,
+      name: t.nameFr,
+      price: t.price,
+      priceCurrency: "EUR",
+      availability: t.status === "AVAILABLE"
+        ? "https://schema.org/InStock"
+        : "https://schema.org/PreOrder",
+      url: t.externalUrl ?? undefined,
+    }));
+
   return {
     "@context": "https://schema.org",
     "@type": "Event",
@@ -52,6 +68,7 @@ function buildEventJsonLd(edition: {
       name: "DevFest",
       url: "https://developers.google.com/community/devfest",
     },
+    ...(offers.length > 0 && { offers }),
   };
 }
 
@@ -76,7 +93,7 @@ export default async function HomePage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildEventJsonLd(edition)),
+            __html: JSON.stringify(buildEventJsonLd(edition, tiers)),
           }}
         />
       )}
