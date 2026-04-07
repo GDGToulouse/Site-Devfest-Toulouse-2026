@@ -71,8 +71,10 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
       </nav>
 
       <div className="p-4 border-t border-blanc/10">
-        <p className="text-xs text-blanc/50 truncate">{user.email}</p>
-        <p className="text-xs text-blanc/30">{user.role === "ADMIN" ? "Administrateur" : "Éditeur"}</p>
+        <Link href={`/${locale}/admin/profile`} onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
+          <p className="text-xs text-blanc/50 truncate">{user.email}</p>
+          <p className="text-xs text-blanc/30">{user.role === "ADMIN" ? "Administrateur" : "Éditeur"}</p>
+        </Link>
         <button
           onClick={onLogout}
           className="mt-2 text-sm text-blanc/70 hover:text-blanc transition-colors"
