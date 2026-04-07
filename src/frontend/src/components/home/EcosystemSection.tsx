@@ -14,7 +14,7 @@ export default function EcosystemSection() {
             href="https://www.toulousetechhub.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="px-8 py-3 rounded-[12px] bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
+            className="px-8 py-3 rounded-[12px] border-2 border-bleu bg-bleu text-blanc font-bold text-base hover:bg-bleu/90 transition-colors"
           >
             Toulouse Tech Hub
           </a>
