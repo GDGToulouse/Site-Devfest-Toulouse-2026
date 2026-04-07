@@ -28,4 +28,26 @@ export default async function adminAuthRoutes(app: FastifyInstance) {
       },
     };
   });
+
+  // PUT /api/admin/profile — update current user's name
+  app.put<{ Body: { name?: string } }>("/profile", async (request, reply) => {
+    const session = await auth.api.getSession({
+      headers: request.headers as unknown as Headers,
+    });
+
+    if (!session || !isAdminEmail(session.user.email)) {
+      return reply.status(403).send({ error: "Forbidden" });
+    }
+
+    const { name } = request.body;
+
+    const updated = await prisma.user.update({
+      where: { id: session.user.id },
+      data: {
+        ...(name !== undefined && { name: name.trim() || null }),
+      },
+    });
+
+    return { id: updated.id, name: updated.name, email: updated.email };
+  });
 }
