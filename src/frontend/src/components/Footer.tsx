@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
@@ -43,13 +44,13 @@ export default async function Footer() {
         <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
           {/* Left column — Logo + socials + CTA */}
           <div className="flex flex-col gap-6">
-            {/* Logo placeholder */}
-            <div className="text-blanc">
-              <span className="text-2xl font-bold">
-                &lt;&gt; DevFest
-              </span>
-              <div className="text-lg font-bold tracking-[0.3em]">TOULOUSE</div>
-            </div>
+            <Image
+              src="/images/logo-devfest-white.svg"
+              alt="DevFest Toulouse"
+              width={180}
+              height={80}
+              className="h-auto"
+            />
 
             <div>
               <p className="text-blanc text-sm mb-2">{tFooter("followUs")}</p>
