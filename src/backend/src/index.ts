@@ -43,6 +43,14 @@ app.get("/api/health", async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
 });
 
+// Auth providers availability
+app.get("/api/auth/providers", async () => {
+  return {
+    google: !!(process.env.OAUTH_GOOGLE_CLIENT_ID && process.env.OAUTH_GOOGLE_CLIENT_SECRET),
+    github: !!(process.env.OAUTH_GITHUB_CLIENT_ID && process.env.OAUTH_GITHUB_CLIENT_SECRET),
+  };
+});
+
 // Auth routes — delegate to Better Auth handler
 app.route({
   method: ["GET", "POST"],
