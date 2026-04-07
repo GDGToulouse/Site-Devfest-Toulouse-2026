@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, getAdminSession } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ContactCategories from "@/components/admin/ContactCategories";
@@ -34,6 +34,13 @@ export default function ContactMessagesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<Message | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    getAdminSession().then((session) => {
+      if (session?.role === "ADMIN") setIsAdmin(true);
+    });
+  }, []);
 
   // Filters
   const [filterEmail, setFilterEmail] = useState("");
@@ -213,13 +220,15 @@ export default function ContactMessagesPage() {
                       {msg.categoryLabel && <StatusBadge status={msg.categoryLabel} variant="blue" />}
                     </div>
                   </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setDeleteTarget(msg); }}
-                    className="text-gris/40 hover:text-terre-cuite shrink-0 p-1"
-                    title="Supprimer"
-                  >
-                    &times;
-                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setDeleteTarget(msg); }}
+                      className="text-gris/40 hover:text-terre-cuite shrink-0 p-1"
+                      title="Supprimer"
+                    >
+                      &times;
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
@@ -246,9 +255,11 @@ export default function ContactMessagesPage() {
                   <button onClick={() => setShowForward(!showForward)} className="text-sm text-bleu hover:underline">
                     Transferer
                   </button>
-                  <button onClick={() => setDeleteTarget(selected)} className="text-sm text-terre-cuite hover:underline">
-                    Supprimer
-                  </button>
+                  {isAdmin && (
+                    <button onClick={() => setDeleteTarget(selected)} className="text-sm text-terre-cuite hover:underline">
+                      Supprimer
+                    </button>
+                  )}
                 </div>
               </div>
 
