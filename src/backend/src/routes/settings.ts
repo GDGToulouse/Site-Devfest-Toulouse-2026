@@ -57,4 +57,16 @@ export default async function settingsRoutes(app: FastifyInstance) {
       closeDate: map.get("cfp_close_date") || null,
     };
   });
+
+  // GET /api/settings/seo — returns SEO settings
+  app.get("/settings/seo", async () => {
+    const settings = await prisma.siteSetting.findMany({
+      where: { key: { startsWith: "seo_" } },
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings as (typeof settings)[number][]) {
+      result[s.key] = s.value;
+    }
+    return result;
+  });
 }

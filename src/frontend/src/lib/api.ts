@@ -97,3 +97,7 @@ export async function getContactCategories(): Promise<ContactCategory[]> {
 export async function getSocialLinks(): Promise<SocialLinks> {
   return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
 }
+
+export async function getSeoSettings(): Promise<Record<string, string>> {
+  return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+}

@@ -12,7 +12,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCurrentEdition } from "@/lib/api";
+import { getCurrentEdition, getSeoSettings } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
@@ -24,7 +24,12 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const t = await getTranslations({ locale, namespace: "site" });
+  const [t, seoSettings] = await Promise.all([
+    getTranslations({ locale, namespace: "site" }),
+    getSeoSettings(),
+  ]);
+
+  const ogImage = seoSettings.seo_og_image || "/images/og-default.png";
 
   return {
     metadataBase: new URL(BASE_URL),
@@ -39,7 +44,7 @@ export async function generateMetadata({
       locale: locale === "fr" ? "fr_FR" : "en_US",
       images: [
         {
-          url: "/images/og-default.png",
+          url: ogImage,
           width: 1200,
           height: 630,
           alt: t("title"),
@@ -48,7 +53,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: "summary_large_image",
-      images: ["/images/og-default.png"],
+      images: [ogImage],
     },
     alternates: {
       canonical: `/${locale}`,
