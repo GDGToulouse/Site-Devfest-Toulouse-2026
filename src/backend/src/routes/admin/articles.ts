@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { revalidateHome } from "../../lib/revalidate.js";
 
 interface ArticleBody {
   slug: string;
@@ -126,6 +127,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       include: { tags: true },
     });
 
+    revalidateHome();
     return reply.status(201).send({ id: article.id, slug: article.slug });
   });
 
@@ -168,6 +170,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       include: { tags: true },
     });
 
+    revalidateHome();
     return { id: article.id, slug: article.slug };
   });
 
@@ -182,6 +185,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: "Article not found" });
 
     await prisma.article.delete({ where: { id } });
+    revalidateHome();
     return { success: true };
   });
 
