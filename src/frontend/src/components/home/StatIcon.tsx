@@ -14,13 +14,13 @@ const icons: Record<string, IconDefinition> = {
   handshake: faHandshake,
 };
 
-export default function StatIcon({ name, className = "w-12 h-12" }: StatIconProps) {
+export default function StatIcon({ name, className = "" }: StatIconProps) {
   const icon = icons[name];
   if (!icon) return null;
 
   return (
-    <span className={`inline-block text-malachite ${className}`}>
-      <FontAwesomeIcon icon={icon} className="w-full h-full" aria-hidden="true" />
+    <span className={`text-malachite ${className}`}>
+      <FontAwesomeIcon icon={icon} aria-hidden="true" />
     </span>
   );
 }
