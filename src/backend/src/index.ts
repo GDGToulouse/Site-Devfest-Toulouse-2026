@@ -2,6 +2,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import compress from "@fastify/compress";
 import helmet from "@fastify/helmet";
+import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
@@ -30,7 +31,20 @@ await app.register(cors, {
 await app.register(compress);
 await app.register(helmet, {
   crossOriginResourcePolicy: { policy: "cross-origin" },
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  xFrameOptions: { action: "deny" },
+  xContentTypeOptions: true,
+  strictTransportSecurity: { maxAge: 63072000, includeSubDomains: true },
+  xPermittedCrossDomainPolicies: { permittedPolicies: "none" },
 });
+
+// Global rate limit: 200 requests per minute per IP
+await app.register(rateLimit, {
+  max: 200,
+  timeWindow: "1 minute",
+  addHeadersOnExceeding: { "x-ratelimit-limit": true, "x-ratelimit-remaining": true, "x-ratelimit-reset": true },
+});
+
 await app.register(multipart);
 await app.register(fastifyStatic, {
   root: "/app/uploads",
@@ -52,9 +66,16 @@ app.get("/api/auth/providers", async () => {
 });
 
 // Auth routes — delegate to Better Auth handler
+// Strict rate limit on auth: 10 requests per minute per IP (covers login, signup, password reset)
 app.route({
   method: ["GET", "POST"],
   url: "/api/auth/*",
+  config: {
+    rateLimit: {
+      max: 10,
+      timeWindow: "1 minute",
+    },
+  },
   async handler(request, reply) {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
@@ -70,6 +91,14 @@ app.route({
     });
 
     const response = await auth.handler(req);
+
+    // Log failed auth attempts for security monitoring
+    if (response.status >= 400 && request.url.includes("sign-in")) {
+      app.log.warn(
+        { ip: request.ip, url: request.url, status: response.status },
+        "Failed login attempt"
+      );
+    }
 
     reply.status(response.status);
     response.headers.forEach((value, key) => reply.header(key, value));

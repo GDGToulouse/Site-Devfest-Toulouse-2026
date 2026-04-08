@@ -32,7 +32,15 @@ export default async function contactRoutes(app: FastifyInstance) {
   });
 
   // POST /api/contact/send — submit a contact message
-  app.post<{ Body: ContactBody }>("/contact/send", async (request, reply) => {
+  // Rate limit: 5 messages per 15 minutes per IP
+  app.post<{ Body: ContactBody }>("/contact/send", {
+    config: {
+      rateLimit: {
+        max: 5,
+        timeWindow: "15 minutes",
+      },
+    },
+  }, async (request, reply) => {
     const { firstName, lastName, email, phone, categoryId, message, website } = request.body;
 
     // Honeypot check — bots fill this hidden field

@@ -159,9 +159,6 @@ export default async function Footer() {
           <a href="/sitemap.xml" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
           </a>
-          <Link href="/admin" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
-            Admin
-          </Link>
         </div>
       </div>
     </footer>
