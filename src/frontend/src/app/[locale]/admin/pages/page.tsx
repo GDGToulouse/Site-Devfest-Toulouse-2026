@@ -21,6 +21,11 @@ interface PageDetail extends PageSummary {
 export default function PagesAdminPage() {
   const [pages, setPages] = useState<PageSummary[]>([]);
   const [editing, setEditing] = useState<PageDetail | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newSlug, setNewSlug] = useState("");
+  const [newTitleFr, setNewTitleFr] = useState("");
+  const [newTitleEn, setNewTitleEn] = useState("");
+  const [createError, setCreateError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -34,6 +39,37 @@ export default function PagesAdminPage() {
   useEffect(() => {
     loadPages();
   }, []);
+
+  async function handleCreate() {
+    if (!newSlug.trim() || !newTitleFr.trim() || !newTitleEn.trim()) {
+      setCreateError("Slug, titre FR et titre EN sont requis");
+      return;
+    }
+    setCreateError("");
+    setIsSaving(true);
+    const { status, data } = await adminFetch<{ id: number }>("/pages", {
+      method: "POST",
+      body: JSON.stringify({
+        slug: newSlug.trim(),
+        titleFr: newTitleFr.trim(),
+        titleEn: newTitleEn.trim(),
+        contentFr: "",
+        contentEn: "",
+      }),
+    });
+    setIsSaving(false);
+    if (status === 409) {
+      setCreateError("Une page avec ce slug existe déjà");
+      return;
+    }
+    if (data) {
+      setIsCreating(false);
+      setNewSlug("");
+      setNewTitleFr("");
+      setNewTitleEn("");
+      loadPages();
+    }
+  }
 
   async function startEdit(page: PageSummary) {
     const { data } = await adminFetch<PageDetail>(`/pages/${page.id}`);
@@ -61,7 +97,73 @@ export default function PagesAdminPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-noir mb-8">Pages de contenu</h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-noir">Pages de contenu</h1>
+        {!editing && !isCreating && (
+          <button
+            onClick={() => setIsCreating(true)}
+            className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
+          >
+            Nouvelle page
+          </button>
+        )}
+      </div>
+
+      {isCreating && (
+        <div className="bg-blanc rounded-xl shadow-card p-6 mb-6 space-y-4">
+          <h2 className="text-lg font-bold text-noir">Nouvelle page</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Slug</label>
+              <input
+                type="text"
+                value={newSlug}
+                onChange={(e) => setNewSlug(e.target.value)}
+                placeholder="ma-page"
+                className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Titre (FR)</label>
+              <input
+                type="text"
+                value={newTitleFr}
+                onChange={(e) => setNewTitleFr(e.target.value)}
+                placeholder="Ma page"
+                className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Title (EN)</label>
+              <input
+                type="text"
+                value={newTitleEn}
+                onChange={(e) => setNewTitleEn(e.target.value)}
+                placeholder="My page"
+                className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              />
+            </div>
+          </div>
+          {createError && (
+            <p className="text-sm text-terre-cuite">{createError}</p>
+          )}
+          <div className="flex gap-3">
+            <button
+              onClick={handleCreate}
+              disabled={isSaving}
+              className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+            >
+              {isSaving ? "Création..." : "Créer"}
+            </button>
+            <button
+              onClick={() => { setIsCreating(false); setCreateError(""); }}
+              className="px-4 py-2 text-sm text-gris hover:text-noir"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing ? (
         <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
