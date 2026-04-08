@@ -19,7 +19,7 @@ const PREDEFINED_PATHS = [
   { label: "Articles", path: "/fr/actualites" },
   { label: "Billetterie", path: "/fr/billetterie" },
   { label: "Code de conduite", path: "/fr/code-de-conduite" },
-  { label: "Mentions legales", path: "/fr/mentions-legales" },
+  { label: "Mentions légales", path: "/fr/mentions-legales" },
   { label: "Contact", path: "/fr/contact" },
   { label: "CFP", path: "/fr/proposer-un-talk" },
 ];
@@ -42,7 +42,7 @@ function CacheTab() {
       paths.push(customPath.trim());
     }
     if (paths.length === 0) {
-      setResult({ success: false, message: "Selectionnez au moins un chemin" });
+      setResult({ success: false, message: "Sélectionnez au moins un chemin" });
       return;
     }
 
@@ -57,7 +57,7 @@ function CacheTab() {
     setIsPurging(false);
 
     if (status === 200 && data?.revalidated) {
-      setResult({ success: true, message: `Cache purge pour ${paths.length} chemin(s)` });
+      setResult({ success: true, message: `Cache purgé pour ${paths.length} chemin(s)` });
       setSelectedPaths([]);
       setCustomPath("");
     } else {
@@ -78,7 +78,7 @@ function CacheTab() {
     setIsPurging(false);
 
     if (status === 200 && data?.revalidated) {
-      setResult({ success: true, message: "Cache complet purge" });
+      setResult({ success: true, message: "Cache complet purgé" });
     } else {
       setResult({ success: false, message: "Erreur lors du purge" });
     }
@@ -87,7 +87,7 @@ function CacheTab() {
   return (
     <>
       <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
-        <h2 className="text-lg font-bold text-noir mb-4">Purger des pages specifiques</h2>
+        <h2 className="text-lg font-bold text-noir mb-4">Purger des pages spécifiques</h2>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
           {PREDEFINED_PATHS.map((item) => (
@@ -108,7 +108,7 @@ function CacheTab() {
             type="text"
             value={customPath}
             onChange={(e) => setCustomPath(e.target.value)}
-            placeholder="Chemin personnalise (ex: /fr/actualites/mon-article)"
+            placeholder="Chemin personnalisé (ex: /fr/actualites/mon-article)"
             className="flex-1 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
           />
         </div>
@@ -119,7 +119,7 @@ function CacheTab() {
             disabled={isPurging}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isPurging ? "Purge en cours..." : "Purger la selection"}
+            {isPurging ? "Purge en cours..." : "Purger la sélection"}
           </button>
           <button
             onClick={handlePurgeAll}
@@ -192,11 +192,11 @@ function ContactsTab({
             className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
           />
           <p className="mt-1 text-xs text-gris">
-            Utilise quand aucune categorie de contact n&apos;est definie ou n&apos;a de destinataire.
+            Utilisé quand aucune catégorie de contact n&apos;est définie ou n&apos;a de destinataire.
           </p>
         </div>
 
-        <h2 className="text-lg font-bold text-noir mb-4">Reseaux sociaux</h2>
+        <h2 className="text-lg font-bold text-noir mb-4">Réseaux sociaux</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-noir mb-1">LinkedIn</label>
@@ -249,7 +249,7 @@ function ContactsTab({
         >
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </button>
-        {saved && <span className="text-sm text-malachite">Enregistre !</span>}
+        {saved && <span className="text-sm text-malachite">Enregistré !</span>}
       </div>
     </form>
   );
@@ -293,8 +293,8 @@ function SeoTab({
     <form onSubmit={handleSubmit}>
       <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
         <p className="text-sm text-gris mb-6">
-          Ces valeurs sont utilisees par defaut quand une page, un article ou un sponsor ne definit
-          pas ses propres metadonnees.
+          Ces valeurs sont utilisées par défaut quand une page, un article ou un sponsor ne définit
+          pas ses propres métadonnées.
         </p>
 
         <h2 className="text-lg font-bold text-noir mb-4">Titre du site</h2>
@@ -328,7 +328,7 @@ function SeoTab({
             <textarea
               value={form.seo_description_fr}
               onChange={(e) => handleChange("seo_description_fr", e.target.value)}
-              placeholder="La plus grande conference tech du bassin toulousain..."
+              placeholder="La plus grande conférence tech du bassin toulousain..."
               rows={3}
               className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
             />
@@ -348,7 +348,7 @@ function SeoTab({
         <h2 className="text-lg font-bold text-noir mb-4">Image Open Graph</h2>
         <div className="mb-6">
           <label className="block text-sm font-medium text-noir mb-1">
-            URL de l&apos;image par defaut
+            URL de l&apos;image par défaut
           </label>
           <input
             type="url"
@@ -358,8 +358,8 @@ function SeoTab({
             className="w-full max-w-lg rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
           />
           <p className="mt-1 text-xs text-gris">
-            Dimensions recommandees : 1200x630 pixels. Utilisee sur les reseaux sociaux quand aucune image
-            specifique n&apos;est definie.
+            Dimensions recommandées : 1200x630 pixels. Utilisée sur les réseaux sociaux quand aucune image
+            spécifique n&apos;est définie.
           </p>
         </div>
 
@@ -398,7 +398,7 @@ function SeoTab({
         >
           {isSaving ? "Enregistrement..." : "Enregistrer"}
         </button>
-        {saved && <span className="text-sm text-malachite">Enregistre !</span>}
+        {saved && <span className="text-sm text-malachite">Enregistré !</span>}
       </div>
     </form>
   );

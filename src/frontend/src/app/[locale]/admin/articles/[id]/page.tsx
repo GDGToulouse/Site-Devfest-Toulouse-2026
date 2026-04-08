@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -47,6 +47,8 @@ const emptyForm: ArticleForm = {
 export default function ArticleEditorPage() {
   const params = useParams();
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const isNew = params.id === "new";
   const articleId = isNew ? null : Number(params.id);
 
@@ -71,7 +73,7 @@ export default function ArticleEditorPage() {
     if (articleId) {
       adminFetch<ArticleForm & { tags: TagOption[]; editions: { id: number; year: number }[] }>(`/articles/${articleId}`).then(({ data, status }) => {
         if (status === 404 || !data) {
-          router.push("/fr/admin/articles");
+          router.push(`/${locale}/admin/articles`);
           return;
         }
         setForm({
@@ -149,7 +151,7 @@ export default function ArticleEditorPage() {
     }
 
     if (isNew) {
-      router.push(`/fr/admin/articles/${data.id}`);
+      router.push(`/${locale}/admin/articles/${data.id}`);
     }
   }
 
@@ -165,7 +167,7 @@ export default function ArticleEditorPage() {
         </h1>
         <div className="flex gap-3">
           <button
-            onClick={() => router.push("/fr/admin/articles")}
+            onClick={() => router.push(`/${locale}/admin/articles`)}
             className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse"
           >
             Retour

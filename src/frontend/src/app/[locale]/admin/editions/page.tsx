@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -22,6 +22,8 @@ const STATUS_OPTIONS: Record<string, { label: string; variant: "green" | "orange
 
 export default function EditionsPage() {
   const router = useRouter();
+  const pathname = usePathname();
+  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const [editions, setEditions] = useState<EditionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newYear, setNewYear] = useState("");
@@ -89,7 +91,7 @@ export default function EditionsPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold text-noir">Editions</h1>
+        <h1 className="text-3xl font-bold text-noir">Éditions</h1>
         <div className="flex items-center gap-3">
           <input
             type="number"
@@ -135,10 +137,10 @@ export default function EditionsPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => router.push(`/fr/admin/editions/${edition.id}`)}
+                  onClick={() => router.push(`/${locale}/admin/editions/${edition.id}`)}
                   className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90"
                 >
-                  Gerer
+                  Gérer
                 </button>
                 <button
                   onClick={() => setDeleteTarget(edition)}
