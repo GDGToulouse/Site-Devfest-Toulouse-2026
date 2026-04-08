@@ -158,6 +158,30 @@
       "followUs": "Suivez-nous :"
     }
   },
+  "sponsor": {
+    "pageTitle": "Devenir sponsor",
+    "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse est l'opportunité de vous rendre visible auprès de milliers de passionnés de technologie. Rejoignez-nous en tant que sponsor et bénéficiez d'une visibilité unique auprès de la communauté tech toulousaine.",
+    "whyTitle": "Pourquoi devenir sponsor ?",
+    "whyVisibility": "Visibilité auprès de la communauté tech",
+    "whyVisibilityDesc": "Rendez-vous visible auprès de nos participants, développeurs, ingénieurs, décideurs techniques et étudiants.",
+    "whyBrand": "Marque employeur",
+    "whyBrandDesc": "Montrez votre engagement pour l'innovation et attirez les meilleurs talents de la tech.",
+    "whyProducts": "Promotion de vos produits",
+    "whyProductsDesc": "Présentez vos solutions et technologies directement à votre public cible.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Échangez avec les acteurs de la tech toulousaine dans un cadre convivial et professionnel.",
+    "plansTitle": "Nos formules",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Avantages inclus",
+    "ctaContact": "Nous contacter",
+    "ctaDownload": "Recevoir le dossier de sponsoring",
+    "noPlans": "Les formules de sponsoring seront bientôt disponibles.",
+    "visible": "Visible",
+    "hidden": "Masqué"
+  },
   "codeOfConduct": {
     "title": "Code de conduite",
     "description": "Code de conduite du DevFest Toulouse.",

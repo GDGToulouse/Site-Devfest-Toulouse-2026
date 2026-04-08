@@ -83,6 +83,20 @@ export interface ContentPage {
   updatedAt: string;
 }
 
+export interface SponsorPlan {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+  subtitleFr: string | null;
+  subtitleEn: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  price: string | null;
+  standSize: string | null;
+  advantages: { fr: string; en: string }[];
+  color: string;
+}
+
 export interface CfpSettings {
   isOpen: boolean;
   sessionizeUrl: string | null;

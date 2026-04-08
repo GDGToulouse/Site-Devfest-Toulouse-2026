@@ -77,6 +77,37 @@ export default async function editionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/editions/current/sponsor-plans — returns visible plans for the featured edition
+  app.get("/editions/current/sponsor-plans", async (_request, reply) => {
+    const edition = await getFeaturedEdition();
+
+    if (!edition) {
+      return reply.status(404).send({ error: "No edition found" });
+    }
+
+    const plans = await prisma.sponsorPlan.findMany({
+      where: {
+        editionId: edition.id,
+        isVisible: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return plans.map((p) => ({
+      id: p.id,
+      nameFr: p.nameFr,
+      nameEn: p.nameEn,
+      subtitleFr: p.subtitleFr,
+      subtitleEn: p.subtitleEn,
+      descriptionFr: p.descriptionFr,
+      descriptionEn: p.descriptionEn,
+      price: p.price,
+      standSize: p.standSize,
+      advantages: p.advantages ? JSON.parse(p.advantages) : [],
+      color: p.color,
+    }));
+  });
+
   // GET /api/editions/current/ticket-tiers — returns visible tiers for the featured edition
   app.get("/editions/current/ticket-tiers", async (_request, reply) => {
     const edition = await getFeaturedEdition();

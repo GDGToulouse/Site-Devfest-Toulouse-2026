@@ -11,6 +11,7 @@ import type {
   CfpSettings,
   ContactCategory,
   PaginatedArticles,
+  SponsorPlan,
 } from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -100,4 +101,8 @@ export async function getSocialLinks(): Promise<SocialLinks> {
 
 export async function getSeoSettings(): Promise<Record<string, string>> {
   return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+}
+
+export async function getSponsorPlans(): Promise<SponsorPlan[]> {
+  return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
 }

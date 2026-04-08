@@ -9,6 +9,7 @@ import GeneralTab from "@/components/admin/edition-detail/GeneralTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
+import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 
 interface EditionData {
   id: number;
@@ -40,6 +41,7 @@ const TABS = [
   { key: "speakers", label: "Speakers (0)" },
   { key: "conferences", label: "Conférences (0)" },
   { key: "sponsors", label: "Sponsors (0)" },
+  { key: "sponsoring", label: "Sponsoring" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
 ];
@@ -113,6 +115,9 @@ export default function EditionDetailPage() {
             <p className="text-lg font-medium">Sponsors</p>
             <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des sponsors de l&apos;édition.</p>
           </div>
+        )}
+        {activeTab === "sponsoring" && (
+          <SponsoringTab editionId={edition.id} />
         )}
         {activeTab === "cfp" && (
           <CfpTab />

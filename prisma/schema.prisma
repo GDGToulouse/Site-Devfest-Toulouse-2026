@@ -50,6 +50,7 @@ model Edition {
   ticketTiers      TicketTier[]
   articles         Article[]
   keyFigures       KeyFigure[]
+  sponsorPlans     SponsorPlan[]
 }
 
 // --- Key Figures ---
@@ -92,6 +93,29 @@ model Tag {
   name             String    @unique
   slug             String    @unique
   articles         Article[]
+}
+
+// --- Sponsor Plans ---
+
+model SponsorPlan {
+  id               Int       @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  subtitleFr       String?
+  subtitleEn       String?
+  descriptionFr    String?
+  descriptionEn    String?
+  price            String?
+  standSize        String?
+  advantages       String?   // JSON array of { fr: string, en: string }
+  color            String    @default("#109E6E")
+  isVisible        Boolean   @default(true)
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  editionId        Int
+  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
 }
 
 // --- Ticketing ---

@@ -71,14 +71,12 @@ export default function Header() {
         <div className="hidden lg:flex items-center gap-4">
           <SocialIcons size={20} className="text-gris" />
           {partnerUrl && (
-            <a
-              href={partnerUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/devenir-sponsor"
               className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
             >
               {tCta("becomePartner")}
-            </a>
+            </Link>
           )}
           {cfpUrl && (
             <a
@@ -131,14 +129,13 @@ export default function Header() {
             ))}
             {(partnerUrl || cfpUrl) && <hr className="border-gray-100" />}
             {partnerUrl && (
-              <a
-                href={partnerUrl}
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/devenir-sponsor"
                 className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
+                onClick={() => setIsMenuOpen(false)}
               >
                 {tCta("becomePartner")}
-              </a>
+              </Link>
             )}
             {cfpUrl && (
               <a

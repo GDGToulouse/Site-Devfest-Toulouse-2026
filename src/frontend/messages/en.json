@@ -158,6 +158,30 @@
       "followUs": "Follow us:"
     }
   },
+  "sponsor": {
+    "pageTitle": "Become a sponsor",
+    "description": "Discover our sponsorship packages for DevFest Toulouse 2026.",
+    "home": "Home",
+    "intro": "DevFest Toulouse is the opportunity to gain visibility among thousands of tech enthusiasts. Join us as a sponsor and benefit from unique exposure to the Toulouse tech community.",
+    "whyTitle": "Why become a sponsor?",
+    "whyVisibility": "Visibility within the tech community",
+    "whyVisibilityDesc": "Get noticed by our attendees: developers, engineers, technical decision-makers and students.",
+    "whyBrand": "Employer branding",
+    "whyBrandDesc": "Show your commitment to innovation and attract top tech talent.",
+    "whyProducts": "Product promotion",
+    "whyProductsDesc": "Present your solutions and technologies directly to your target audience.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Connect with the Toulouse tech community in a friendly and professional setting.",
+    "plansTitle": "Our packages",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Included benefits",
+    "ctaContact": "Contact us",
+    "ctaDownload": "Receive sponsorship package",
+    "noPlans": "Sponsorship packages will be available soon.",
+    "visible": "Visible",
+    "hidden": "Hidden"
+  },
   "codeOfConduct": {
     "title": "Code of Conduct",
     "description": "DevFest Toulouse Code of Conduct.",
