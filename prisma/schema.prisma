@@ -109,6 +109,7 @@ model SponsorPlan {
   standSize        String?
   advantages       String?   // JSON array of { fr: string, en: string }
   color            String    @default("#109E6E")
+  isFeatured       Boolean   @default(false)
   isVisible        Boolean   @default(true)
   sortOrder        Int       @default(0)
   createdAt        DateTime  @default(now())

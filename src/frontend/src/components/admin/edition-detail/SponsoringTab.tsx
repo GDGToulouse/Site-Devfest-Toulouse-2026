@@ -18,6 +18,7 @@ interface SponsorPlan {
   standSize: string | null;
   advantages: { fr: string; en: string }[];
   color: string;
+  isFeatured: boolean;
   isVisible: boolean;
   sortOrder: number;
 }
@@ -42,6 +43,7 @@ const emptyForm = {
   standSize: "",
   advantages: [] as { fr: string; en: string }[],
   color: "#41B38E",
+  isFeatured: false,
   isVisible: true,
   sortOrder: "0",
 };
@@ -91,6 +93,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
       standSize: plan.standSize || "",
       advantages: plan.advantages || [],
       color: plan.color,
+      isFeatured: plan.isFeatured,
       isVisible: plan.isVisible,
       sortOrder: String(plan.sortOrder),
     });
@@ -110,6 +113,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
       standSize: form.standSize || undefined,
       advantages: form.advantages,
       color: form.color,
+      isFeatured: form.isFeatured,
       isVisible: form.isVisible,
       sortOrder: Number(form.sortOrder) || 0,
       editionId,
@@ -266,7 +270,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
               </div>
             </div>
 
-            <div className="flex items-center pt-6">
+            <div className="flex items-center gap-6 pt-6">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="checkbox"
@@ -277,6 +281,17 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
                   className="rounded border-gris/30 text-malachite focus:ring-malachite"
                 />
                 <span className="text-sm text-noir">Visible sur le site</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isFeatured}
+                  onChange={(e) =>
+                    setForm({ ...form, isFeatured: e.target.checked })
+                  }
+                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                />
+                <span className="text-sm text-noir">Formule à la une</span>
               </label>
             </div>
           </div>

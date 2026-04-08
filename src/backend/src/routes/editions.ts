@@ -105,6 +105,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       standSize: p.standSize,
       advantages: p.advantages ? JSON.parse(p.advantages) : [],
       color: p.color,
+      isFeatured: p.isFeatured,
     }));
   });
 

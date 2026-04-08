@@ -33,6 +33,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
       standSize?: string;
       advantages?: { fr: string; en: string }[];
       color?: string;
+      isFeatured?: boolean;
       isVisible?: boolean;
       sortOrder?: number;
     };
@@ -54,6 +55,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
         standSize: body.standSize || null,
         advantages: body.advantages ? JSON.stringify(body.advantages) : null,
         color: body.color || "#109E6E",
+        isFeatured: body.isFeatured ?? false,
         isVisible: body.isVisible ?? true,
         sortOrder: body.sortOrder ?? 0,
       },
@@ -77,6 +79,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
       standSize?: string;
       advantages?: { fr: string; en: string }[];
       color?: string;
+      isFeatured?: boolean;
       isVisible?: boolean;
       sortOrder?: number;
     };
@@ -94,6 +97,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
         ...(body.standSize !== undefined && { standSize: body.standSize || null }),
         ...(body.advantages !== undefined && { advantages: JSON.stringify(body.advantages) }),
         ...(body.color !== undefined && { color: body.color }),
+        ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.isVisible !== undefined && { isVisible: body.isVisible }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
       },

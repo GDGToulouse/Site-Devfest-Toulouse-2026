@@ -95,6 +95,7 @@ export interface SponsorPlan {
   standSize: string | null;
   advantages: { fr: string; en: string }[];
   color: string;
+  isFeatured: boolean;
 }
 
 export interface CfpSettings {
