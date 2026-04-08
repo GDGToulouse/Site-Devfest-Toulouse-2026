@@ -38,7 +38,7 @@ export default async function Footer() {
   return (
     <footer
       role="contentinfo"
-      className="bg-[#0B7350] rounded-[28px] shadow-section mx-4 mb-4 mt-8 overflow-hidden"
+      className="bg-[#0B7350] rounded-3xl shadow-section mx-4 mb-4 mt-8 overflow-hidden"
     >
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-[84px] lg:py-8">
         <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
@@ -145,21 +145,21 @@ export default async function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="mx-4 mb-4 rounded-[12px] bg-blanc/75 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-noir/70 text-base italic">
+      <div className="mx-6 lg:mx-[84px] border-t border-blanc/20 px-0 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p className="text-blanc/60 text-sm italic">
           {tFooter("tagline")}
         </p>
         <div className="flex items-center gap-4">
-          <Link href="/mentions-legales" className="text-link text-base hover:underline">
+          <Link href="/mentions-legales" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("legalNotice")}
           </Link>
-          <Link href="/code-de-conduite" className="text-link text-base hover:underline">
+          <Link href="/code-de-conduite" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("codeOfConduct")}
           </Link>
-          <a href="/sitemap.xml" className="text-link text-base hover:underline">
+          <a href="/sitemap.xml" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
           </a>
-          <Link href="/admin" className="text-link text-base hover:underline">
+          <Link href="/admin" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             Admin
           </Link>
         </div>
