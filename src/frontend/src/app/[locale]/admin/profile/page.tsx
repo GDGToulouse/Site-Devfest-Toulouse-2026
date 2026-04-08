@@ -112,7 +112,7 @@ export default function ProfilePage() {
   }
 
   if (!user) {
-    return <div className="text-terre-cuite py-20 text-center">Non connecte</div>;
+    return <div className="text-terre-cuite py-20 text-center">Non connecté</div>;
   }
 
   return (

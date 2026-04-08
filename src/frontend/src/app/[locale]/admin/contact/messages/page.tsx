@@ -140,7 +140,7 @@ export default function ContactMessagesPage() {
               : "text-gris hover:text-noir"
           }`}
         >
-          Categories
+          Catégories
         </button>
       </div>
 
@@ -168,7 +168,7 @@ export default function ContactMessagesPage() {
           onChange={(e) => setFilterCategory(e.target.value)}
           className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
         >
-          <option value="">Toutes categories</option>
+          <option value="">Toutes catégories</option>
           {categories.map((cat) => (
             <option key={cat} value={cat}>{cat}</option>
           ))}
@@ -253,7 +253,7 @@ export default function ContactMessagesPage() {
                 <h3 className="text-lg font-bold text-noir">{selected.firstName} {selected.lastName}</h3>
                 <div className="flex gap-3">
                   <button onClick={() => setShowForward(!showForward)} className="text-sm text-bleu hover:underline">
-                    Transferer
+                    Transférer
                   </button>
                   {isAdmin && (
                     <button onClick={() => setDeleteTarget(selected)} className="text-sm text-terre-cuite hover:underline">
@@ -265,14 +265,14 @@ export default function ContactMessagesPage() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
                 <p><span className="text-gris">Email :</span> <a href={`mailto:${selected.email}`} className="text-bleu hover:underline">{selected.email}</a></p>
-                {selected.phone && <p><span className="text-gris">Telephone :</span> {selected.phone}</p>}
-                {selected.categoryLabel && <p><span className="text-gris">Categorie :</span> <StatusBadge status={selected.categoryLabel} variant="blue" /></p>}
+                {selected.phone && <p><span className="text-gris">Téléphone :</span> {selected.phone}</p>}
+                {selected.categoryLabel && <p><span className="text-gris">Catégorie :</span> <StatusBadge status={selected.categoryLabel} variant="blue" /></p>}
                 <p><span className="text-gris">Date :</span> {new Date(selected.createdAt).toLocaleString("fr-FR")}</p>
               </div>
 
               {showForward && (
                 <div className="mb-4 p-4 bg-blanc-casse rounded-lg">
-                  <p className="text-sm font-medium text-noir mb-2">Transferer a :</p>
+                  <p className="text-sm font-medium text-noir mb-2">Transférer à :</p>
                   <div className="flex gap-2">
                     <input
                       type="text"
@@ -294,7 +294,7 @@ export default function ContactMessagesPage() {
 
               {forwardSuccess && (
                 <div className="mb-4 p-3 rounded-lg bg-malachite/10 text-malachite text-sm">
-                  Message transfere avec succes.
+                  Message transféré avec succès.
                 </div>
               )}
 
@@ -304,7 +304,7 @@ export default function ContactMessagesPage() {
             </div>
           ) : (
             <div className="bg-blanc rounded-xl shadow-card p-6 text-center text-gris">
-              Selectionnez un message
+              Sélectionnez un message
             </div>
           )}
         </div>

@@ -363,10 +363,10 @@ function SeoTab({
           </p>
         </div>
 
-        <h2 className="text-lg font-bold text-noir mb-4">Mots-cles</h2>
+        <h2 className="text-lg font-bold text-noir mb-4">Mots-clés</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-noir mb-1">Mots-cles (FR)</label>
+            <label className="block text-sm font-medium text-noir mb-1">Mots-clés (FR)</label>
             <input
               type="text"
               value={form.seo_keywords_fr}
@@ -374,7 +374,7 @@ function SeoTab({
               placeholder="devfest, toulouse, conference, tech, google"
               className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
             />
-            <p className="mt-1 text-xs text-gris">Separes par des virgules.</p>
+            <p className="mt-1 text-xs text-gris">Séparés par des virgules.</p>
           </div>
           <div>
             <label className="block text-sm font-medium text-noir mb-1">Keywords (EN)</label>
@@ -440,7 +440,7 @@ export default function SettingsPage() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-noir mb-8">Parametres generaux</h1>
+      <h1 className="text-3xl font-bold text-noir mb-8">Paramètres généraux</h1>
 
       {/* Tabs */}
       <div className="flex gap-1 mb-6 border-b border-gris/20">

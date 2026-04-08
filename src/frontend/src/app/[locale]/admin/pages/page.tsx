@@ -76,7 +76,7 @@ export default function PagesAdminPage() {
             <p className="text-sm font-medium text-noir mb-2">Contenu</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <p className="text-xs text-gris mb-1">Francais</p>
+                <p className="text-xs text-gris mb-1">Français</p>
                 <RichTextEditor label="" name="contentFr" value={editing.contentFr} onChange={(v) => setEditing({ ...editing, contentFr: v })} minHeight="400px" />
               </div>
               <div>
@@ -99,7 +99,7 @@ export default function PagesAdminPage() {
               <tr className="bg-blanc-casse/60 border-b border-gris/20">
                 <th className="text-left px-4 py-3 font-medium text-gris">Slug</th>
                 <th className="text-left px-4 py-3 font-medium text-gris">Titre (FR)</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Mis a jour</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Mis à jour</th>
                 <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
               </tr>
             </thead>

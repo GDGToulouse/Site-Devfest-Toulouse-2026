@@ -234,7 +234,7 @@ export default function FilesAdminPage() {
                     onClick={() => copyUrl(file.url)}
                     className="text-[10px] text-bleu hover:underline"
                   >
-                    {copiedUrl === file.url ? "Copie !" : "URL"}
+                    {copiedUrl === file.url ? "Copié !" : "URL"}
                   </button>
                   <button
                     onClick={() => setDeleteTarget(file.filename)}

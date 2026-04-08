@@ -56,12 +56,12 @@ export default function KeyFiguresTab({ editionId }: KeyFiguresTabProps) {
   return (
     <div>
       {figures.length === 0 ? (
-        <p className="text-gris text-sm mb-4">Aucun chiffre cle pour cette edition.</p>
+        <p className="text-gris text-sm mb-4">Aucun chiffre clé pour cette édition.</p>
       ) : (
         <div className="space-y-3 mb-4">
           {figures.map((fig, i) => (
             <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
-              <FormField label={i === 0 ? "Icone" : ""} name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
+              <FormField label={i === 0 ? "Icône" : ""} name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
               <FormField label={i === 0 ? "Valeur" : ""} name={`value-${i}`} value={fig.value} onChange={(v) => updateFigure(i, "value", v)} placeholder="3000" />
               <FormField label={i === 0 ? "Label FR" : ""} name={`labelFr-${i}`} value={fig.labelFr} onChange={(v) => updateFigure(i, "labelFr", v)} placeholder="Participants" />
               <FormField label={i === 0 ? "Label EN" : ""} name={`labelEn-${i}`} value={fig.labelEn} onChange={(v) => updateFigure(i, "labelEn", v)} placeholder="Attendees" />

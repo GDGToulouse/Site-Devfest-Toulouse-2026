@@ -41,7 +41,7 @@ export default function CfpTab() {
   return (
     <div className="space-y-6">
       <p className="text-sm text-gris bg-blanc-casse/60 rounded-lg px-4 py-3">
-        Les parametres du CFP sont globaux et s&apos;appliquent a l&apos;edition active.
+        Les paramètres du CFP sont globaux et s&apos;appliquent à l&apos;édition active.
       </p>
 
       <div className="flex items-center gap-3">
@@ -55,7 +55,7 @@ export default function CfpTab() {
           <div className="w-11 h-6 bg-gris/30 peer-focus:ring-2 peer-focus:ring-malachite/50 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-blanc after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-malachite"></div>
         </label>
         <span className="text-sm font-medium text-noir">
-          CFP {cfp.isOpen ? "ouvert" : "ferme"}
+          CFP {cfp.isOpen ? "ouvert" : "fermé"}
         </span>
       </div>
 

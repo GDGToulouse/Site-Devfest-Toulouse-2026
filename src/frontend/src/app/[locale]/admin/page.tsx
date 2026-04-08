@@ -92,7 +92,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           <StatCard label="Articles" value={String(general?.totalArticles || 0)} color="bleu" />
           <StatCard label="Messages non lus" value={String(general?.unreadMessages || 0)} color="terre-cuite" />
-          <StatCard label="Editions" value={String(general?.totalEditions || 0)} color="gris" />
+          <StatCard label="Éditions" value={String(general?.totalEditions || 0)} color="gris" />
         </div>
       </section>
 
@@ -169,7 +169,7 @@ function InfoCard({ label, value }: { label: string; value: string | null }) {
           {value}
         </a>
       ) : (
-        <p className="mt-2 text-sm text-gris/50">Non defini</p>
+        <p className="mt-2 text-sm text-gris/50">Non défini</p>
       )}
     </div>
   );

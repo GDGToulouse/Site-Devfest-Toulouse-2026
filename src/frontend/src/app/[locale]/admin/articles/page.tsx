@@ -81,7 +81,7 @@ export default function ArticlesListPage() {
                 <tr className="bg-blanc-casse/60 border-b border-gris/20">
                   <th className="text-left px-4 py-3 font-medium text-gris">Titre</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
-                  <th className="text-left px-4 py-3 font-medium text-gris">Editions</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Éditions</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Auteur</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Date</th>
                   <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
@@ -121,7 +121,7 @@ export default function ArticlesListPage() {
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
                       <Link href={`/${locale}/actualites/${article.slug}`} target="_blank" className="text-gris hover:underline text-sm">
-                        Previsualiser
+                        Prévisualiser
                       </Link>
                       <Link href={`/${locale}/admin/articles/${article.id}`} className="text-bleu hover:underline text-sm">
                         Modifier
