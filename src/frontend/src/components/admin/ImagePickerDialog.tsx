@@ -97,7 +97,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       <div className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
-          <h2 className="text-lg font-bold text-noir">Bibliotheque d&apos;images</h2>
+          <h2 className="text-lg font-bold text-noir">Bibliothèque d&apos;images</h2>
           <button onClick={onClose} className="text-gris hover:text-noir text-xl leading-none">&times;</button>
         </div>
 
@@ -111,7 +111,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                 : "text-gris hover:text-noir"
             }`}
           >
-            Bibliotheque
+            Bibliothèque
           </button>
           <button
             onClick={() => setTab("upload")}
@@ -171,7 +171,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                 <p className="text-gris">Upload en cours...</p>
               ) : (
                 <>
-                  <p className="text-gris mb-4">Glissez une image ici ou cliquez pour selectionner</p>
+                  <p className="text-gris mb-4">Glissez une image ici ou cliquez pour sélectionner</p>
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
@@ -205,7 +205,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
             disabled={!selected}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            Inserer
+            Insérer
           </button>
         </div>
       </div>

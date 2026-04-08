@@ -28,7 +28,7 @@ interface BilletwebEvent {
 }
 
 const TICKET_STATUS = [
-  { value: "COMING_SOON", label: "Bientot disponible", variant: "gray" as const },
+  { value: "COMING_SOON", label: "Bientôt disponible", variant: "gray" as const },
   { value: "AVAILABLE", label: "Disponible", variant: "green" as const },
   { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
 ];
