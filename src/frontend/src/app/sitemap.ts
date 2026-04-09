@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getArticles } from "@/lib/api";
+import { getArticles, getEditions } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -20,6 +20,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           languages: {
             fr: `${BASE_URL}/fr${route}`,
             en: `${BASE_URL}/en${route}`,
+          },
+        },
+      });
+    }
+  }
+
+  // Dynamic edition bilan pages
+  const editions = await getEditions();
+  for (const edition of editions) {
+    for (const locale of locales) {
+      entries.push({
+        url: `${BASE_URL}/${locale}/editions/${edition.year}`,
+        lastModified: new Date(),
+        changeFrequency: "yearly",
+        priority: 0.5,
+        alternates: {
+          languages: {
+            fr: `${BASE_URL}/fr/editions/${edition.year}`,
+            en: `${BASE_URL}/en/editions/${edition.year}`,
           },
         },
       });

@@ -31,7 +31,7 @@ export default async function Footer() {
 
   const previousEditions = edition
     ? editions
-        .filter((e) => e.year < edition.year && e.archivedSiteUrl)
+        .filter((e) => e.year < edition.year)
         .sort((a, b) => b.year - a.year)
     : [];
 
@@ -127,14 +127,12 @@ export default async function Footer() {
                 <ul className="flex flex-col gap-1">
                   {previousEditions.map((e) => (
                     <li key={e.id}>
-                      <a
-                        href={e.archivedSiteUrl!}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={`/editions/${e.year}`}
                         className="text-blanc text-base hover:text-blanc-casse transition-colors"
                       >
                         DevFest Toulouse {e.year}
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>

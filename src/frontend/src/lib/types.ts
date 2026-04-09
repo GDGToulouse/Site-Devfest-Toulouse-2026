@@ -98,6 +98,22 @@ export interface SponsorPlan {
   isFeatured: boolean;
 }
 
+export interface EditionDetail {
+  id: number;
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  venueName: string | null;
+  venueAddress: string | null;
+  heroImageUrl: string | null;
+  aftermovieUrl: string | null;
+  galleryUrl: string | null;
+  archivedSiteUrl: string | null;
+  keyFigures: KeyFigure[];
+  articles: Article[];
+}
+
 export interface CfpSettings {
   isOpen: boolean;
   sessionizeUrl: string | null;

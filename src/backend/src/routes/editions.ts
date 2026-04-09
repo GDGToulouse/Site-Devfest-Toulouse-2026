@@ -40,6 +40,60 @@ export default async function editionRoutes(app: FastifyInstance) {
     return editions;
   });
 
+  // GET /api/editions/:year — returns full edition data by year
+  app.get("/editions/:year", async (request, reply) => {
+    const { year } = request.params as { year: string };
+    const yearNum = Number(year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findUnique({
+      where: { year: yearNum },
+      include: {
+        keyFigures: { orderBy: { sortOrder: "asc" } },
+        articles: {
+          where: { publicationStatus: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          take: 4,
+          include: { tags: true },
+        },
+      },
+    });
+
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    return {
+      id: edition.id,
+      year: edition.year,
+      startDate: edition.startDate,
+      endDate: edition.endDate,
+      status: edition.status,
+      venueName: edition.venueName,
+      venueAddress: edition.venueAddress,
+      heroImageUrl: edition.heroImageUrl,
+      aftermovieUrl: edition.aftermovieUrl,
+      galleryUrl: edition.galleryUrl,
+      archivedSiteUrl: edition.archivedSiteUrl,
+      keyFigures: edition.keyFigures.map((kf) => ({
+        icon: kf.icon,
+        value: kf.value,
+        labelFr: kf.labelFr,
+        labelEn: kf.labelEn,
+      })),
+      articles: edition.articles.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        titleFr: a.titleFr,
+        titleEn: a.titleEn,
+        excerptFr: a.excerptFr,
+        excerptEn: a.excerptEn,
+        imageUrl: a.imageUrl,
+        author: a.author,
+        publishedAt: a.publishedAt,
+        tags: a.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+      })),
+    };
+  });
+
   // GET /api/editions/current — returns the featured edition
   app.get("/editions/current", async (_request, reply) => {
     const edition = await getFeaturedEdition();

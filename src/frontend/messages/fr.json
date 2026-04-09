@@ -158,6 +158,22 @@
       "followUs": "Suivez-nous :"
     }
   },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Bilan de l'édition {year} du DevFest Toulouse.",
+    "home": "Accueil",
+    "editions": "Éditions",
+    "keyFigures": "L'édition en chiffres",
+    "aftermovie": "Aftermovie",
+    "gallery": "Galerie photos",
+    "galleryLink": "Voir la galerie",
+    "news": "Actualités de cette édition",
+    "venue": "Lieu",
+    "date": "Date",
+    "archivedSite": "Voir le site archivé",
+    "noEdition": "Aucune édition trouvée pour cette année.",
+    "allEditions": "Toutes les éditions"
+  },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
     "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",

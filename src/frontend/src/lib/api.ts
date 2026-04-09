@@ -1,5 +1,6 @@
 import type {
   Edition,
+  EditionDetail,
   EditionSummary,
   SocialLinks,
   Article,
@@ -35,6 +36,10 @@ export async function getCurrentEdition(): Promise<Edition | null> {
 
 export async function getEditions(): Promise<EditionSummary[]> {
   return (await fetchAPI<EditionSummary[]>("/api/editions")) || [];
+}
+
+export async function getEditionByYear(year: number): Promise<EditionDetail | null> {
+  return fetchAPI<EditionDetail>(`/api/editions/${year}`);
 }
 
 export async function getLatestArticles(limit = 4, editionId?: number): Promise<Article[]> {

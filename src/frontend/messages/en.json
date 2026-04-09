@@ -158,6 +158,22 @@
       "followUs": "Follow us:"
     }
   },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Recap of DevFest Toulouse {year} edition.",
+    "home": "Home",
+    "editions": "Editions",
+    "keyFigures": "The edition in numbers",
+    "aftermovie": "Aftermovie",
+    "gallery": "Photo gallery",
+    "galleryLink": "View gallery",
+    "news": "News from this edition",
+    "venue": "Venue",
+    "date": "Date",
+    "archivedSite": "View archived site",
+    "noEdition": "No edition found for this year.",
+    "allEditions": "All editions"
+  },
   "sponsor": {
     "pageTitle": "Become a sponsor",
     "description": "Discover our sponsorship packages for DevFest Toulouse 2026.",
