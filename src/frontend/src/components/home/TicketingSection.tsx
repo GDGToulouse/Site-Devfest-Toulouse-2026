@@ -1,5 +1,4 @@
 import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
 
 import { localizedField } from "@/lib/i18n-helpers";
 import type { TicketTier } from "@/lib/types";
@@ -13,6 +12,8 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
   const t = useTranslations("home.ticketing");
 
   if (tiers.length === 0) return null;
+
+  const billetwebUrl = tiers.find((t) => t.externalUrl)?.externalUrl || null;
 
   return (
     <section className="px-6 py-16 lg:py-24 bg-blanc-casse">
@@ -63,12 +64,16 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
           })}
         </div>
 
-        <Link
-          href="/billetterie"
-          className="text-link hover:underline font-bold text-lg"
-        >
-          {t("viewAll")}
-        </Link>
+        {billetwebUrl && (
+          <a
+            href={billetwebUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-link hover:underline font-bold text-lg"
+          >
+            {t("viewAll")}
+          </a>
+        )}
       </div>
     </section>
   );
