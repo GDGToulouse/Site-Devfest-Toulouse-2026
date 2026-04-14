@@ -1,5 +1,6 @@
 services:
   frontend:
+    container_name: devfest-${ENV_NAME:-prod}-frontend
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
@@ -15,6 +16,7 @@ services:
       - coolify
 
   backend:
+    container_name: devfest-${ENV_NAME:-prod}-backend
     build:
       context: .
       dockerfile: src/backend/Dockerfile
@@ -49,6 +51,7 @@ services:
       - coolify
 
   db:
+    container_name: devfest-${ENV_NAME:-prod}-db
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -63,6 +66,7 @@ services:
       retries: 5
 
   postfix:
+    container_name: devfest-${ENV_NAME:-prod}-postfix
     image: boky/postfix:latest
     environment:
       - ALLOWED_SENDER_DOMAINS=${SMTP_DOMAIN:-devfesttoulouse.fr}

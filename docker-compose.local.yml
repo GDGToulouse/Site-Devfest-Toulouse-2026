@@ -1,5 +1,6 @@
 services:
   frontend:
+    container_name: devfest-local-frontend
     image: node:22-alpine
     working_dir: /app
     volumes:
@@ -16,6 +17,7 @@ services:
       - backend
 
   backend:
+    container_name: devfest-local-backend
     image: node:22-alpine
     working_dir: /app
     volumes:
@@ -57,6 +59,7 @@ services:
         condition: service_started
 
   db:
+    container_name: devfest-local-db
     image: postgres:16-alpine
     ports:
       - "${DB_PORT:-5432}:5432"
@@ -73,6 +76,7 @@ services:
       retries: 5
 
   mailhog:
+    container_name: devfest-local-mailhog
     image: mailhog/mailhog:latest
     ports:
       - "1025:1025"

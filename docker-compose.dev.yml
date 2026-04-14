@@ -1,5 +1,6 @@
 services:
   frontend:
+    container_name: devfest-${ENV_NAME:-dev}-frontend
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
@@ -15,6 +16,7 @@ services:
       - coolify
 
   backend:
+    container_name: devfest-${ENV_NAME:-dev}-backend
     build:
       context: .
       dockerfile: src/backend/Dockerfile
@@ -48,6 +50,7 @@ services:
       - coolify
 
   db:
+    container_name: devfest-${ENV_NAME:-dev}-db
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-devfest}
@@ -62,9 +65,13 @@ services:
       retries: 5
 
   mailhog:
+    container_name: devfest-${ENV_NAME:-dev}-mailhog
     image: mailhog/mailhog:latest
-    ports:
-      - "8025:8025"
+    expose:
+      - "8025"
+    networks:
+      - default
+      - coolify
 
 networks:
   coolify:

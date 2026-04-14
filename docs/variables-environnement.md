@@ -6,6 +6,12 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 
 ---
 
+## Docker Compose (tous les services)
+
+| Variable | Obligatoire | Description | Exemple |
+|----------|:-----------:|-------------|---------|
+| `ENV_NAME` | oui (prod/beta/dev-x) | Nom de l'environnement, utilisé comme suffixe des noms de conteneurs (`devfest-${ENV_NAME}-{service}`). Injecté par Coolify. Par défaut `prod` dans `docker-compose.prod.yml`, `dev` dans `docker-compose.dev.yml`, `local` en dur dans `docker-compose.local.yml`. | `beta`, `dev-j`, `prod` |
+
 ## Frontend (Next.js)
 
 | Variable | Obligatoire | Description | Exemple |
