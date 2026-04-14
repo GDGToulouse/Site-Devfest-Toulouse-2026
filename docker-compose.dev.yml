@@ -1,9 +1,5 @@
 services:
   frontend:
-    labels:
-      - "com.devfest.project=site"
-      - "com.devfest.env=${ENV_NAME:-dev}"
-      - "com.devfest.service=frontend"
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
@@ -19,10 +15,6 @@ services:
       - coolify
 
   backend:
-    labels:
-      - "com.devfest.project=site"
-      - "com.devfest.env=${ENV_NAME:-dev}"
-      - "com.devfest.service=backend"
     build:
       context: .
       dockerfile: src/backend/Dockerfile
@@ -56,10 +48,6 @@ services:
       - coolify
 
   db:
-    labels:
-      - "com.devfest.project=site"
-      - "com.devfest.env=${ENV_NAME:-dev}"
-      - "com.devfest.service=db"
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-devfest}
@@ -74,10 +62,6 @@ services:
       retries: 5
 
   mailhog:
-    labels:
-      - "com.devfest.project=site"
-      - "com.devfest.env=${ENV_NAME:-dev}"
-      - "com.devfest.service=mailhog"
     image: mailhog/mailhog:latest
     expose:
       - "8025"
