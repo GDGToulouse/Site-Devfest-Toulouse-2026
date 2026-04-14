@@ -10,7 +10,29 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `ENV_NAME` | oui (prod/beta/dev-x) | Nom de l'environnement, utilisé comme suffixe des noms de conteneurs (`devfest-${ENV_NAME}-{service}`). Injecté par Coolify. Par défaut `prod` dans `docker-compose.prod.yml`, `dev` dans `docker-compose.dev.yml`, `local` en dur dans `docker-compose.local.yml`. | `beta`, `dev-j`, `prod` |
+| `ENV_NAME` | oui (prod/beta/dev-x) | Nom de l'environnement utilisé dans les labels Docker des conteneurs (`com.devfest.env`). Permet d'identifier les conteneurs par environnement (`docker ps --filter "label=com.devfest.env=beta"`). Injecté par Coolify. Par défaut `prod` dans `docker-compose.prod.yml`, `dev` dans `docker-compose.dev.yml`. | `beta`, `dev-j`, `prod` |
+
+### Labels Docker
+
+Chaque service porte les labels suivants (définis dans les `docker-compose.*.yml`) :
+
+| Label | Valeur | Usage |
+|-------|--------|-------|
+| `com.devfest.project` | `site` | Identifie l'application (utile si d'autres apps tournent sur le même serveur). |
+| `com.devfest.env` | `${ENV_NAME}` | Identifie l'environnement (`beta`, `dev-j`, `prod`). |
+| `com.devfest.service` | `frontend` / `backend` / `db` / `mailhog` / `postfix` | Identifie le rôle du conteneur. |
+
+Exemples d'utilisation :
+```bash
+# Tous les conteneurs du projet
+docker ps --filter "label=com.devfest.project=site"
+
+# Tous les conteneurs de beta
+docker ps --filter "label=com.devfest.env=beta"
+
+# Le backend de dev-j
+docker ps --filter "label=com.devfest.env=dev-j" --filter "label=com.devfest.service=backend"
+```
 
 ## Frontend (Next.js)
 
