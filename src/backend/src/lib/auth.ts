@@ -9,28 +9,58 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .map((e) => e.trim())
   .filter(Boolean);
 
+function normalizeUrl(url: string): string {
+  return url.replace(/\/$/, "");
+}
+
+// Build a wildcard origin from the public base URL so we don't have to list
+// each environment subdomain (dev-j, beta, prod). Returns null for non-FQDN
+// hostnames (e.g. localhost) to avoid accidental wildcards in local dev.
+function buildWildcardOrigin(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.hostname.split(".");
+    if (parts.length >= 2 && !/^\d+\.\d+\.\d+\.\d+$/.test(parsed.hostname)) {
+      return `${parsed.protocol}//*.${parts.slice(-2).join(".")}`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const baseUrl = normalizeUrl(process.env.BASE_URL || "http://localhost:4000");
+const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3000");
+const wildcardOrigin = buildWildcardOrigin(baseUrl);
+const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrigin] : [])].filter(
+  (v, i, arr) => arr.indexOf(v) === i,
+);
+
 export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  baseURL: process.env.BASE_URL || "http://localhost:4000",
+  baseURL: baseUrl,
   basePath: "/api/auth",
-  trustedOrigins: [
-    process.env.FRONTEND_URL || "http://localhost:3000",
-  ],
+  trustedOrigins,
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
-    sendResetPassword: async ({ user, url }) => {
+    sendResetPassword: async ({ user, token }) => {
+      // Build the reset URL manually pointing to the frontend page (not the
+      // Better Auth callback endpoint, which is an API route and not
+      // navigable). baseUrl is the public BASE_URL injected by Coolify or
+      // overridden locally.
+      const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
       await sendEmail({
         to: [user.email],
         subject: "DevFest Toulouse — Réinitialisation de mot de passe",
-        text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${url}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.`,
+        text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${resetUrl}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.`,
         html: `
           <h3>Réinitialisation de mot de passe</h3>
           <p>Bonjour ${user.name || ""},</p>
           <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
-          <p><a href="${url}">Réinitialiser mon mot de passe</a></p>
+          <p><a href="${resetUrl}">Réinitialiser mon mot de passe</a></p>
           <p>Ce lien expire dans 1 heure.</p>
           <p><em>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</em></p>
         `,
