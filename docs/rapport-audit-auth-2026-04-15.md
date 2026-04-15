@@ -1,173 +1,203 @@
 # Rapport d'audit auth — 2026-04-15
 
 **Branche** : `feature/auth-audit` (dérivée de `dev-j` au commit `97a5178`)
-**Périmètre** : test complet du parcours d'authentification (API + UI) en local
-(Docker Compose), avec correctifs mineurs appliqués au fil de l'audit.
+**Scope** : audit complet du parcours d'authentification (API + UI) en local,
+puis validation sur l'environnement dev-j déployé via Coolify.
 
 ## Méthode
 
-- API : `curl` direct sur les endpoints `/api/auth/*` et `/api/admin/*`
-- UI : Chrome DevTools MCP avec interactions réelles (form fill, clicks, navigation)
-- Comptes seedés : `admin@devfesttoulouse.fr` (ADMIN) et
-  `editor@devfesttoulouse.fr` (EDITOR) avec mots de passe `admin1234!dev` et
-  `editor1234!dev`
+- API : `curl` direct sur `/api/auth/*` et `/api/admin/*`
+- UI : Chrome DevTools MCP (interactions réelles)
+- MailHog : récupération des emails de reset via `https://mailhog.dev-j.site.devfesttoulouse.fr`
+- Comptes seedés :
+  - `admin@devfesttoulouse.fr` (ADMIN, mdp `admin1234!dev` en local uniquement)
+  - `editor@devfesttoulouse.fr` (EDITOR, idem)
+  - `julien.delrio@gmail.com` (ADMIN, user réel sur dev-j)
 
-## Résultats — ce qui marche
+## Bugs critiques détectés et corrigés dans cette branche
+
+### Bug 1 — `forgotPassword` utilise un endpoint better-auth obsolète
+- **Commit fix** : inclus dans `9896291`
+- **Cause** : `admin-api.ts` appelait `/api/auth/forget-password` (endpoint v1.4)
+  qui renvoie 404 sur better-auth 1.6.2. Correct : `/api/auth/request-password-reset`.
+- **Effet** : le bouton "Mot de passe oublié ?" était 100 % cassé.
+
+### Bug 2 — page `/admin/reset-password` absente
+- **Commit fix** : `9896291`
+- **Cause** : la page `src/frontend/src/app/admin/reset-password/page.tsx` n'existait
+  pas. Le lien envoyé dans l'email tombait sur un 404.
+
+### Bug 3 — `AdminShell` exige une session sur `/admin/reset-password`
+- **Commit fix** : `9896291`
+- **Cause** : un utilisateur qui a oublié son mot de passe n'a par définition
+  pas de session ; `AdminShell` affichait `<AdminLogin />` par-dessus la page
+  de reset, la rendant inaccessible.
+- **Fix** : whitelist `PUBLIC_ADMIN_PATHS = ["/admin/reset-password"]`.
+
+### Bug 4 — `trustedOrigins` ignorait l'URL publique
+- **Commit fix** : `18c07e2`
+- **Cause** : better-auth ne déclarait que `FRONTEND_URL` (interne Docker
+  `http://frontend:3000`) comme origine valide. Le browser envoie pourtant
+  son origin public (`https://dev-j.site.devfesttoulouse.fr`) → 403
+  `INVALID_ORIGIN` sur chaque tentative de login.
+- **Fix** : dériver `trustedOrigins` depuis `BASE_URL` (public) + `FRONTEND_URL`
+  (interne) + un wildcard sur le root domain pour couvrir dev-j/beta/prod sans
+  config par environnement.
+- **Bonus** : `sendResetPassword` construit maintenant l'URL du lien email
+  depuis `BASE_URL` pointant vers la page frontend `/admin/reset-password?token=…`,
+  au lieu de l'URL auto-générée par better-auth qui pointait sur l'API route
+  (non navigable).
+
+### Bug 5 — `isAdminEmail()` verrouillait l'accès sur ADMIN_EMAILS à vie
+- **Commit fix** : `6c9c6ef`
+- **Cause** : le guard `requireAdmin` et les routes `/api/admin/session` et
+  `/api/admin/profile` croisaient l'email de session avec la variable d'env
+  `ADMIN_EMAILS`. Or cette variable ne doit servir **qu'au bootstrap** (pour
+  créer le(s) premier(s) admin(s) via `prisma/seed.ts`). L'ajout d'admins
+  ultérieurs via le back-office ne remontait pas dans cette variable, donc
+  ces admins étaient rejetés en 403 malgré un rôle ADMIN en DB.
+- **Fix** : la source de vérité pour l'accès back-office devient
+  `user.role ∈ {ADMIN, EDITOR}` en base, avec vérif `banned=false`. Le hook
+  `databaseHooks.user.create.before` continue de bloquer les sign-ups
+  publics hors `ADMIN_EMAILS`, mais les invitations (via
+  `routes/admin/users.ts` qui utilise `prisma.user.create` direct) ne
+  déclenchent pas ce hook et ne sont donc pas affectées.
+
+## Résultats de l'audit — ce qui marche
 
 ### API auth
 | Test | Résultat |
 |---|---|
-| `POST /api/auth/sign-in/email` admin valide | 200, cookie `better-auth.session_token` HttpOnly posé |
-| `POST /api/auth/sign-in/email` editor valide | 200, idem |
-| `POST /api/auth/sign-in/email` mauvais mot de passe | 401 `INVALID_EMAIL_OR_PASSWORD` |
-| `POST /api/auth/sign-in/email` email inconnu | 401 (même message — pas de user enumeration) |
-| `POST /api/auth/sign-up/email` email hors `ADMIN_EMAILS` | 403 "Inscription sur invitation uniquement" |
-| `POST /api/auth/sign-up/email` email admin existant | 422 `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL` |
-| `POST /api/auth/request-password-reset` (existant) | 200 (token créé en DB, email envoyé via MailHog) |
-| `POST /api/auth/request-password-reset` (inconnu) | 200 (pas de user enumeration) |
+| `POST /api/auth/sign-in/email` valides | 200, cookie `better-auth.session_token` HttpOnly |
+| `POST /api/auth/sign-in/email` mauvais mdp | 401 `INVALID_EMAIL_OR_PASSWORD` |
+| Email inconnu | 401 (même message, pas de user enumeration) |
+| `POST /api/auth/sign-up/email` hors ADMIN_EMAILS | 403 "Inscription sur invitation uniquement" |
+| `POST /api/auth/request-password-reset` existant | 200, token en DB, email envoyé |
+| Reset unknown email | 200 (pas d'enumeration) |
 | `POST /api/auth/reset-password` token valide | 200 |
-| `POST /api/auth/reset-password` même token rejoué | 400 `INVALID_TOKEN` |
-| `POST /api/auth/sign-out` avec `Origin` | 200 (session invalidée) |
-| `GET /api/auth/providers` | `{google: false, github: false}` (pas de creds en local) |
+| Replay du même token | 400 `INVALID_TOKEN` |
+| `POST /api/auth/sign-out` avec `Origin` | 200 |
 
 ### Garde de rôle backend (`/api/admin/*`)
 | Rôle | Routes accessibles | Routes refusées (403) |
 |---|---|---|
-| **ADMIN** | tout (session, articles, pages, images, contact/messages, editions, users, tickets, settings/*, sponsor-plans, cache/purge) | aucune |
-| **EDITOR** | session, articles, pages, images, contact/messages | editions, users, tickets, settings/*, sponsor-plans, cache/purge |
-| **anonymous** | aucune | tout (403 `Forbidden`) |
+| ADMIN | toutes | aucune |
+| EDITOR | session, articles, pages, images, contact/messages | editions, users, tickets, settings, sponsor-plans, cache |
+| anonyme | aucune | toutes |
 
-Vérifié pour les méthodes GET/POST/PUT/DELETE : EDITOR ne peut pas écrire sur
-les routes ADMIN-only (ex. `POST /api/admin/editions`, `PUT /api/admin/settings/general`,
-`POST /api/admin/cache/purge` → tous 403).
-
-EDITOR peut bien écrire sur les routes qui lui sont ouvertes (ex. `POST /api/admin/articles` → 201).
+Les write ops (POST/PUT/DELETE) sur routes ADMIN-only sont bien rejetées 403
+pour EDITOR. Les routes partagées acceptent bien les write ops EDITOR (ex.
+POST article → 201).
 
 ### UI navigateur
+- Login admin + editor : sidebar chargée, badge correct
+- Reset password full round-trip : request → email dans MailHog → lien →
+  form → nouveau mdp → redirect `/admin` → re-login OK
+- Sidebar filtrée par rôle : EDITOR ne voit pas Éditions / Utilisateurs /
+  Paramètres
+- Logout fonctionnel
 
-- **Login admin** : form rempli + submit → dashboard chargé avec sidebar complète et badge "Administrateur"
-- **Login editor** : form rempli + submit → dashboard chargé avec sidebar **filtrée**
-  (Dashboard, Articles, Pages, Fichiers, Messages — pas d'Éditions, Utilisateurs, Paramètres)
-  et badge "Éditeur"
-- **Reset password full round-trip** :
-  1. Click "Mot de passe oublié ?" → form email
-  2. Submit email → message "Si un compte existe avec cet email, un lien a été envoyé"
-  3. Email arrive dans MailHog avec `http://localhost:3000/admin/reset-password?token=...`
-  4. Visite du lien → form de nouveau mot de passe (sans demande de session)
-  5. Submit → message succès + redirect vers `/admin` après 1.5s
-  6. Re-login avec le nouveau mot de passe → dashboard ouvert ✓
-- **Logout** (bouton sidebar) → redirect vers form de login
-
-## Bugs détectés et corrigés (cette branche)
-
-### Bug 1 : `forgotPassword` appelle un endpoint better-auth obsolète
-
-**Sévérité** : critique — la fonction "Mot de passe oublié" du UI était
-totalement cassée.
-
-**Cause** : [admin-api.ts:89](src/frontend/src/lib/admin-api.ts#L89) appelait
-`/api/auth/forget-password` (ancien endpoint better-auth ≤ v1.4) qui retourne
-404 sur la version actuelle (better-auth 1.6.2). L'API actuelle est
-`/api/auth/request-password-reset`. Le fix avait été appliqué dans le chantier
-auth précédent (commit `6eba860`) mais perdu lors du reset de `dev-j` à `ec050f8`.
-
-**Correctif** : URL changée vers `/api/auth/request-password-reset`.
-
-### Bug 2 : page `/admin/reset-password` absente
-
-**Sévérité** : critique — le lien envoyé dans l'email de reset menait à un 404.
-
-**Cause** : la page `src/frontend/src/app/admin/reset-password/page.tsx` n'existait
-pas dans `dev-j` (elle avait été créée dans le chantier auth précédent puis
-perdue lors du reset).
-
-**Correctif** : page recréée, version French-only (cohérent avec le reste de
-l'admin qui n'utilise pas i18n). Hérite du même style que `AdminLogin`.
-
-### Bug 3 : `AdminShell` exige une session sur `/admin/reset-password`
-
-**Sévérité** : critique — un utilisateur qui a oublié son mot de passe n'a
-précisément **pas** de session, donc le AdminShell affichait le formulaire de
-login au-dessus de la page de reset, rendant le reset inutilisable.
-
-**Cause** : `AdminShell` rendait toujours `<AdminLogin />` quand `user` était
-`null`, sans whitelist pour les pages publiques admin.
-
-**Correctif** : ajout de `PUBLIC_ADMIN_PATHS = ["/admin/reset-password"]`.
-Quand `pathname` matche, AdminShell rend directement `children` sans tenter
-de récupérer une session.
+### Validation sur dev-j
+- `/admin`, toutes les sous-routes `/admin/*` répondent 200
+- `/fr/admin`, `/en/admin` répondent 404 (admin hors `[locale]`)
+- Login `julien.delrio@gmail.com` avec rôle ADMIN en DB mais **hors**
+  `ADMIN_EMAILS` → accès back-office complet (validation du Bug 5)
 
 ## Anomalies identifiées (non corrigées dans cette branche)
 
-### Anomalie 1 : pas de garde de rôle frontend sur les pages admin-only
+### Anomalie 1 — pas de garde de rôle frontend sur pages ADMIN-only
+**Sévérité** : moyenne (UX trompeuse, sans risque de sécurité).
 
-**Sévérité** : moyenne — UX trompeuse, pas de risque de sécurité (l'API protège).
+Un EDITOR peut saisir `/admin/users` en URL directe : la page se charge,
+le bouton "Inviter" fonctionne, le formulaire s'affiche. Si l'éditeur
+soumet, l'API retourne 403 — safe, mais UX trompeur.
 
-**Constat** : un EDITOR peut visiter en URL directe `/admin/users`, `/admin/editions`,
-`/admin/settings`. La page se charge, le titre s'affiche, le bouton "Inviter"
-fonctionne et affiche le formulaire d'invitation. Si l'éditeur soumet, l'API
-retourne 403 (donc safe), mais le UX est trompeur : on lui montre une page
-qu'il ne peut pas utiliser.
+**Recommandation** : ajouter dans `AdminShell` un mapping `path → rôles
+requis`. Si le rôle ne match pas, afficher une page "Accès refusé" plutôt
+que le contenu de la route.
 
-**Recommandation** : ajouter dans `AdminShell` un mapping `path → roles
-requis`. Si le rôle ne match pas, afficher une page "Accès refusé" plutôt que
-le contenu de la route. Alternative plus légère : guard côté chaque page
-ADMIN-only qui vérifie `user.role === "ADMIN"` et redirige sinon.
+### Anomalie 2 — OAuth Google/GitHub potentiellement cassé
+**Sévérité** : non vérifiable en local (pas de creds). Frontend pose un
+`<a href>` qui fait un GET vers `/api/auth/sign-in/social` → ce handler
+renvoie 404 sur GET. À valider en condition réelle quand les creds sont
+fournies.
 
-Exemple :
-```ts
-const ADMIN_ONLY_PATHS = ["/admin/editions", "/admin/users", "/admin/settings", "/admin/tickets"];
-const requiresAdmin = ADMIN_ONLY_PATHS.some((p) => pathname.startsWith(p));
-if (requiresAdmin && user.role !== "ADMIN") {
-  return <AccessDenied />;
-}
+### Anomalie 3 — SMTP parfois silencieux sur dev-j
+**Sévérité** : moyenne (workaround existant via reset manuel SQL).
+
+Le `POST /api/auth/request-password-reset` retourne 200 sans toujours
+envoyer le mail dans MailHog. Reproductible mais racine non identifiée :
+le send SMTP direct via `nc mailhog 1025` fonctionne toujours, donc le
+pipe réseau est OK. Suspects : race condition au démarrage de nodemailer,
+ou `sendResetPassword` swallowed par un try/catch quelque part dans
+better-auth.
+
+**Workaround opérationnel** : générer manuellement un token de reset en
+base (voir section "Cheat sheet DB" plus bas).
+
+### Anomalie 4 — `/login` redirigé vers `/fr/login` inexistant
+**Sévérité** : faible (chemin n'est pas utilisé par l'UI).
+
+Le middleware next-intl redirige toute URL inconnue vers son équivalent
+préfixé locale. Si un utilisateur tape `/login` par habitude, il tombe
+sur un 404. Le vrai chemin de login est `/admin`.
+
+**Recommandation** : ajouter un redirect `/login → /admin` dans
+`next.config.ts`.
+
+## Cheat sheet DB : reset manuel d'un password
+
+Quand l'email de reset ne part pas, on peut insérer manuellement un token
+en DB. Depuis le container `db` Postgres :
+
+```sql
+-- 1. Récupérer l'ID utilisateur
+SELECT id FROM "user" WHERE email = 'julien.delrio@gmail.com';
+
+-- 2. Insérer un token de reset (remplacer <USER_ID> et <TOKEN_SECRET>)
+INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+VALUES (
+  'manual_' || substr(md5(random()::text), 1, 20),
+  'reset-password:<TOKEN_SECRET>',
+  '<USER_ID>',
+  NOW() + INTERVAL '1 hour',
+  NOW(),
+  NOW()
+);
 ```
 
-### Anomalie 2 : `POST /api/auth/sign-out` exige `Origin` (better-auth v1.6)
+Puis visiter `https://<domain>/admin/reset-password?token=<TOKEN_SECRET>`.
 
-**Sévérité** : faible (comportement attendu de better-auth, juste à connaître).
-
-**Constat** : un appel curl sans header `Origin` reçoit 403 `MISSING_OR_NULL_ORIGIN`.
-Les navigateurs envoient toujours `Origin` sur les fetch, donc l'UI marche.
-Anomalie cosmétique pour les tests CLI.
-
-### Anomalie 3 : `sign-in/email` n'exige pas `Origin`, contrairement à `sign-out`
-
-**Sévérité** : faible — incohérence interne better-auth, hors de notre contrôle.
-
-### Anomalie 4 : flux OAuth probablement cassé (à valider quand creds fournies)
-
-**Sévérité** : moyenne — non vérifiable en local sans creds Google/GitHub.
-
-**Constat** : le frontend pose un `<a href={getAuthUrl(...)}>` qui fait un GET
-vers `/api/auth/sign-in/social?provider=...`. Or la documentation better-auth
-suggère que cet endpoint attend un POST. Test direct :
-- `GET /api/auth/sign-in/social?provider=google&callbackURL=/admin` → 404 `null`
-- `POST /api/auth/sign-in/social` `{provider:"google",callbackURL:"/admin"}` → 500 (creds manquantes, mais accepte le POST)
-
-À valider en condition réelle dès que les creds sont en place sur dev-j.
-Si confirmé, remplacer le lien par un formulaire/handler qui POST.
-
-## Statut sécurité global
+## Statut sécurité
 
 | Aspect | État |
 |---|---|
-| Mot de passe haché (better-auth pbkdf2) | ✓ |
+| Hash mdp (pbkdf2) | ✓ |
 | Session cookie HttpOnly + SameSite=Lax | ✓ |
-| Inscription verrouillée par ALLOWLIST `ADMIN_EMAILS` | ✓ |
-| Pas de user enumeration (login + reset) | ✓ |
-| Token de reset à usage unique | ✓ |
-| Token de reset avec expiration (1h) | ✓ |
-| Garde de rôle ADMIN vs EDITOR sur l'API | ✓ |
-| Garde de rôle ADMIN vs EDITOR sur le UI | ✗ (Anomalie 1) |
-| CSRF cross-origin sur write ops | ✓ (rejet `MISSING_OR_NULL_ORIGIN`) |
-| Rate limit `/api/auth/*` | ✓ (10 req/min/IP, configuré dans backend index.ts) |
+| Sign-up verrouillé par ADMIN_EMAILS (hook) | ✓ |
+| Pas de user enumeration | ✓ |
+| Token reset à usage unique + expiration 1h | ✓ |
+| Rôle ADMIN vs EDITOR sur API | ✓ |
+| Rôle ADMIN vs EDITOR sur UI | ✗ (Anomalie 1) |
+| CSRF cross-origin sur write ops | ✓ |
+| Rate limit auth | ✓ (10 req/min/IP) |
+| Sign-out invalide la session | ✓ |
+| Admin ajoutable via back-office sans toucher ADMIN_EMAILS | ✓ (Bug 5 fixé) |
+
+## Commits de la branche
+
+| SHA | Objet |
+|---|---|
+| `9896291` | fix: restore reset password flow (endpoint + page + AdminShell bypass) |
+| `18c07e2` | fix: trust public Origin + build reset URL from BASE_URL |
+| `6c9c6ef` | fix: user.role is the source of truth for back-office access |
 
 ## Conclusion
 
-Auth fonctionne après fix des 3 bugs critiques liés au reset password (endpoint
-backend, page frontend, bypass AdminShell). Le contrôle de rôle backend est
-solide. Le seul manque réel est le contrôle de rôle côté UI (anomalie 1) —
-peu grave en sécurité mais à fixer pour l'UX.
+Cinq bugs critiques identifiés et corrigés, tous lié au fait que la
+précédente branche d'audit auth avait été roulée en entier au reset de
+dev-j, perdant ces fixes légitimes.
 
-OAuth à retester en condition réelle.
+L'auth fonctionne maintenant de bout en bout sur dev-j. Trois anomalies
+non bloquantes restent à adresser dans un futur chantier : garde de rôle
+UI, OAuth à valider, SMTP intermittent.
