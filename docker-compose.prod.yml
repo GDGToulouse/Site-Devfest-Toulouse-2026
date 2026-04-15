@@ -44,9 +44,13 @@ services:
         condition: service_healthy
       postfix:
         condition: service_started
+    # Intentionally NOT on the shared `coolify` network. The backend isn't
+    # exposed via Traefik — the frontend proxies /api/* to it through the
+    # Next.js rewrites. Joining `coolify` would put it side-by-side with the
+    # backend of every other Coolify project that uses the same service name,
+    # and Docker DNS would round-robin between them.
     networks:
       - default
-      - coolify
 
   db:
     image: postgres:16-alpine
