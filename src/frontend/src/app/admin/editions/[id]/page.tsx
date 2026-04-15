@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter, usePathname } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import Tabs from "@/components/admin/Tabs";
@@ -49,8 +49,6 @@ const TABS = [
 export default function EditionDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
-  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const editionId = Number(params.id);
 
   const [edition, setEdition] = useState<EditionData | null>(null);
@@ -60,7 +58,7 @@ export default function EditionDetailPage() {
   async function loadEdition() {
     const { data, status } = await adminFetch<EditionData>(`/editions/${editionId}`);
     if (status === 404 || !data) {
-      router.push(`/${locale}/admin/editions`);
+      router.push(`/admin/editions`);
       return;
     }
     setEdition(data);
@@ -79,7 +77,7 @@ export default function EditionDetailPage() {
     <div>
       <div className="flex items-center gap-4 mb-6">
         <button
-          onClick={() => router.push(`/${locale}/admin/editions`)}
+          onClick={() => router.push(`/admin/editions`)}
           className="text-gris hover:text-noir transition-colors"
           title="Retour"
         >

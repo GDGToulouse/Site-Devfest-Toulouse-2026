@@ -74,7 +74,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
 
     // Send invitation email with password reset link
     try {
-      const resetUrl = `${BASE_URL}/fr/admin`;
+      const resetUrl = `${BASE_URL}/admin`;
       await sendEmail({
         to: [email],
         subject: "Invitation DevFest Toulouse — Acces admin",

@@ -51,20 +51,19 @@ const navItems = [
 
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const visibleItems = navItems
     .filter((item) => item.roles.includes(user.role))
-    .map((item) => ({ ...item, href: `/${locale}${item.path}` }));
+    .map((item) => ({ ...item, href: item.path }));
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
       <div className="p-6 border-b border-blanc/10 flex items-center justify-between">
-        <Link href={`/${locale}/admin`} className="text-xl font-bold">
+        <Link href="/admin" className="text-xl font-bold">
           <span className="text-malachite">DevFest</span>{" "}
           <span className="text-terre-cuite">Admin</span>
         </Link>
         <Link
-          href={`/${locale}`}
+          href="/"
           className="text-blanc/50 hover:text-blanc transition-colors"
           title="Voir le site"
         >
@@ -74,8 +73,7 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
 
       <nav className="flex-1 py-4 overflow-y-auto">
         {visibleItems.map((item) => {
-          const adminRoot = `/${locale}/admin`;
-          const isActive = pathname === item.href || (item.href !== adminRoot && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
@@ -97,7 +95,7 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
       </nav>
 
       <div className="p-4 border-t border-blanc/10">
-        <Link href={`/${locale}/admin/profile`} onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
+        <Link href="/admin/profile" onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
           {user.name && <p className="text-sm text-blanc truncate">{user.name}</p>}
           <p className="text-xs text-blanc/50 truncate">{user.email}</p>
           <p className="text-xs text-blanc/30">{user.role === "ADMIN" ? "Administrateur" : "Éditeur"}</p>

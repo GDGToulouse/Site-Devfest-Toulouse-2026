@@ -34,9 +34,9 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      // Cache-Control: admin pages — no cache
+      // Cache-Control: admin pages — no cache (admin is not i18n-prefixed)
       {
-        source: "/:locale(fr|en)/admin/:path*",
+        source: "/admin/:path*",
         headers: [
           { key: "Cache-Control", value: "no-store" },
         ],

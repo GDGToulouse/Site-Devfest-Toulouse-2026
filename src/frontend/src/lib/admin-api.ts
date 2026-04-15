@@ -49,7 +49,7 @@ export async function getAdminSession(): Promise<AdminUser | null> {
 }
 
 export function getAuthUrl(provider: "google" | "github"): string {
-  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/fr/admin` : "/fr/admin";
+  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/admin` : "/admin";
   return `${BACKEND_URL}/api/auth/sign-in/social?provider=${provider}&callbackURL=${encodeURIComponent(callbackURL)}`;
 }
 
@@ -89,7 +89,7 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
     const res = await fetch(`${BACKEND_URL}/api/auth/forget-password`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/fr/admin` }),
+      body: JSON.stringify({ email, redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/admin` }),
     });
 
     if (res.ok) return { success: true };

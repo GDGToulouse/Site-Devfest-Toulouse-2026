@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -22,8 +22,6 @@ const STATUS_OPTIONS: Record<string, { label: string; variant: "green" | "orange
 
 export default function EditionsPage() {
   const router = useRouter();
-  const pathname = usePathname();
-  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const [editions, setEditions] = useState<EditionData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [newYear, setNewYear] = useState("");
@@ -137,7 +135,7 @@ export default function EditionsPage() {
                   </button>
                 )}
                 <button
-                  onClick={() => router.push(`/${locale}/admin/editions/${edition.id}`)}
+                  onClick={() => router.push(`/admin/editions/${edition.id}`)}
                   className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90"
                 >
                   Gérer

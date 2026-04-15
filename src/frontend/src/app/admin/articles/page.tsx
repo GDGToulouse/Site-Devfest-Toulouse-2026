@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -27,8 +26,6 @@ interface ArticlesResponse {
 }
 
 export default function ArticlesListPage() {
-  const pathname = usePathname();
-  const locale = pathname.startsWith("/en") ? "en" : "fr";
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -62,7 +59,7 @@ export default function ArticlesListPage() {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold text-noir">Articles</h1>
         <Link
-          href={`/${locale}/admin/articles/new`}
+          href={`/admin/articles/new`}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
         >
           Nouvel article
@@ -91,7 +88,7 @@ export default function ArticlesListPage() {
                 {articles.map((article) => (
                   <tr key={article.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
                     <td className="px-4 py-3">
-                      <Link href={`/${locale}/admin/articles/${article.id}`} className="text-noir font-medium hover:text-malachite">
+                      <Link href={`/admin/articles/${article.id}`} className="text-noir font-medium hover:text-malachite">
                         {article.titleFr}
                       </Link>
                       <p className="text-xs text-gris mt-1">/{article.slug}</p>
@@ -120,10 +117,10 @@ export default function ArticlesListPage() {
                       {new Date(article.publishedAt || article.createdAt).toLocaleDateString("fr-FR")}
                     </td>
                     <td className="px-4 py-3 text-right space-x-2">
-                      <Link href={`/${locale}/actualites/${article.slug}`} target="_blank" className="text-gris hover:underline text-sm">
+                      <Link href={`/fr/actualites/${article.slug}`} target="_blank" className="text-gris hover:underline text-sm">
                         Prévisualiser
                       </Link>
-                      <Link href={`/${locale}/admin/articles/${article.id}`} className="text-bleu hover:underline text-sm">
+                      <Link href={`/admin/articles/${article.id}`} className="text-bleu hover:underline text-sm">
                         Modifier
                       </Link>
                       <button onClick={() => setDeleteTarget(article)} className="text-terre-cuite hover:underline text-sm">
