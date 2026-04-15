@@ -5,7 +5,10 @@ services:
       dockerfile: src/frontend/Dockerfile
     environment:
       - BASE_URL=${BASE_URL}
-      - BACKEND_URL=http://backend:4000
+      # Pinned to the env-scoped backend container name. Resolving the bare
+      # `backend` hostname picks up other Coolify projects' backends via the
+      # shared `coolify` network (IPv6 priority), causing cross-env requests.
+      - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
     expose:
       - "3000"
     depends_on:
@@ -20,6 +23,7 @@ services:
       dockerfile: src/backend/Dockerfile
       args:
         - SEED_SCRIPT=prisma/seed.ts
+    container_name: devfest-${ENV_NAME:-local}-backend
     volumes:
       - uploads:/app/uploads
     environment:
