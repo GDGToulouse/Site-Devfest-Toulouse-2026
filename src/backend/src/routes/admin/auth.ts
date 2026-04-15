@@ -1,24 +1,12 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "../../lib/auth.js";
 import { prisma } from "../../lib/prisma.js";
-
-function toWebHeaders(request: FastifyRequest): Headers {
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(request.headers)) {
-    if (value === undefined || value === null) continue;
-    if (Array.isArray(value)) {
-      for (const v of value) headers.append(key, v);
-    } else {
-      headers.append(key, String(value));
-    }
-  }
-  return headers;
-}
 
 // Helper — same rule as admin-guard: rely on user.role in DB, not on the
 // ADMIN_EMAILS env var (which is only used at bootstrap).
 async function getSessionWithRole(request: FastifyRequest) {
-  const session = await auth.api.getSession({ headers: toWebHeaders(request) });
+  const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
