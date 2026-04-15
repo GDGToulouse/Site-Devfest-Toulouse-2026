@@ -16,19 +16,21 @@ export const dynamic = "force-dynamic";
 // The next-intl middleware forwards the resolved locale through the
 // X-NEXT-INTL-LOCALE request header (see next-intl source: shared/constants.js
 // exports HEADER_LOCALE_NAME = "X-NEXT-INTL-LOCALE"). Admin routes are
-// excluded from the middleware and therefore lack this header; they fall back
-// to the default locale.
+// excluded from the middleware and are always served in the default locale
+// (the admin back-office is mono-language).
 async function resolveLang(): Promise<string> {
   const headerList = await headers();
+
+  // Admin is always in the default locale, ignoring any lingering NEXT_LOCALE
+  // cookie from a previous visit to a public page.
+  const path = headerList.get("x-pathname") || "";
+  if (path.startsWith("/admin")) {
+    return routing.defaultLocale;
+  }
+
   const fromMiddleware = headerList.get("x-next-intl-locale");
   if (fromMiddleware && (routing.locales as readonly string[]).includes(fromMiddleware)) {
     return fromMiddleware;
-  }
-  // Fallback: look at NEXT_LOCALE cookie if present.
-  const cookie = headerList.get("cookie") || "";
-  const match = cookie.match(/(?:^|;\s*)NEXT_LOCALE=([^;]+)/);
-  if (match && (routing.locales as readonly string[]).includes(match[1])) {
-    return match[1];
   }
   return routing.defaultLocale;
 }
