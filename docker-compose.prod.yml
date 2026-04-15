@@ -23,7 +23,6 @@ services:
       dockerfile: src/backend/Dockerfile
       args:
         - SEED_SCRIPT=prisma/seed.ts
-    container_name: devfest-${ENV_NAME:-local}-backend
     volumes:
       - uploads:/app/uploads
     environment:
@@ -53,8 +52,16 @@ services:
     # Next.js rewrites. Joining `coolify` would put it side-by-side with the
     # backend of every other Coolify project that uses the same service name,
     # and Docker DNS would round-robin between them.
+    #
+    # Network alias gives the backend a unique, env-scoped hostname inside
+    # the project's `default` network. The frontend points BACKEND_URL at
+    # this alias instead of the bare `backend` to avoid resolving against
+    # other projects' backends through the shared `coolify` network (Coolify
+    # ignores `container_name` so we can't rely on that).
     networks:
-      - default
+      default:
+        aliases:
+          - devfest-${ENV_NAME:-local}-backend
 
   db:
     image: postgres:16-alpine
