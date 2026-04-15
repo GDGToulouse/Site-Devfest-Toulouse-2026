@@ -33,6 +33,7 @@ npm-debug.log*
 .claude/settings.local.json
 .claude/worktrees/
 .claude/agent-memory/
+.claude/scheduled_tasks.lock
 
 # Uploaded files
 uploads/
