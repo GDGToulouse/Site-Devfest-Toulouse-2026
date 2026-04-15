@@ -2,13 +2,31 @@ import type { FastifyRequest, FastifyReply } from "fastify";
 import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 
+// Convert Fastify's plain-object request headers into a Web API Headers object,
+// which Better Auth's getSession expects (it calls .get("cookie") on it).
+// Without this conversion, the cast `as unknown as Headers` compiles but
+// silently fails at runtime — getSession returns null and every admin route
+// answers 403 even with a valid cookie.
+function toWebHeaders(request: FastifyRequest): Headers {
+  const headers = new Headers();
+  for (const [key, value] of Object.entries(request.headers)) {
+    if (value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) headers.append(key, v);
+    } else {
+      headers.append(key, String(value));
+    }
+  }
+  return headers;
+}
+
 // Source of truth for back-office access: the user.role column in DB.
 // ADMIN_EMAILS is only used at bootstrap (prisma/seed.ts) to create the very
 // first admin account. After that, admins grant / revoke access through the
 // back-office (Utilisateurs page) which writes to user.role.
 async function getSessionUser(request: FastifyRequest) {
   const session = await auth.api.getSession({
-    headers: request.headers as unknown as Headers,
+    headers: toWebHeaders(request),
   });
 
   if (!session) return null;
