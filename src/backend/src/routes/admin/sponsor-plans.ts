@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateHome } from "../../lib/revalidate.js";
+import { revalidateSponsors } from "../../lib/revalidate.js";
 
 export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   // GET /api/admin/sponsor-plans?editionId=X
@@ -61,7 +61,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateHome();
+    revalidateSponsors();
     return reply.code(201).send(plan);
   });
 
@@ -103,7 +103,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateHome();
+    revalidateSponsors();
     return plan;
   });
 
@@ -111,7 +111,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   app.delete("/sponsor-plans/:id", async (request, reply) => {
     const { id } = request.params as { id: string };
     await prisma.sponsorPlan.delete({ where: { id: Number(id) } });
-    revalidateHome();
+    revalidateSponsors();
     return reply.code(204).send();
   });
 }

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateHome } from "../../lib/revalidate.js";
+import { revalidateHome, revalidateEdition } from "../../lib/revalidate.js";
 
 interface EditionBody {
   year: number;
@@ -144,7 +144,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateHome();
+    // Revalidate the edition bilan page (both years if year changed) + home
+    revalidateEdition(edition.year);
+    if (existing.year !== edition.year) revalidateEdition(existing.year);
 
     return {
       id: edition.id,
@@ -201,7 +203,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       }
 
       await prisma.edition.delete({ where: { id } });
-      revalidateHome();
+      revalidateEdition(existing.year);
       return { success: true };
     }
   );
@@ -256,7 +258,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       })),
     });
 
-    revalidateHome();
+    revalidateEdition(edition.year);
     return { success: true, count: figures.length };
   });
 
