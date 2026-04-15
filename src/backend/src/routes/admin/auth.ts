@@ -6,14 +6,27 @@ import { prisma } from "../../lib/prisma.js";
 // Helper — same rule as admin-guard: rely on user.role in DB, not on the
 // ADMIN_EMAILS env var (which is only used at bootstrap).
 async function getSessionWithRole(request: FastifyRequest) {
+  request.log.debug({ authPhase: "adminAuth.enter", url: request.url, hasCookie: !!request.headers.cookie });
   const session = await auth.api.getSession({ headers: fromNodeHeaders(request.headers) });
+  request.log.debug({
+    authPhase: "adminAuth.session",
+    session: session ? { userId: session.user.id, email: session.user.email } : null,
+  });
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
     select: { role: true, banned: true },
   });
-  if (!user || user.banned) return null;
-  if (user.role !== "ADMIN" && user.role !== "EDITOR") return null;
+  request.log.debug({ authPhase: "adminAuth.dbUser", user });
+  if (!user || user.banned) {
+    request.log.debug({ authPhase: "adminAuth.reject", reason: !user ? "no_user" : "banned" });
+    return null;
+  }
+  if (user.role !== "ADMIN" && user.role !== "EDITOR") {
+    request.log.debug({ authPhase: "adminAuth.reject", reason: "bad_role", role: user.role });
+    return null;
+  }
+  request.log.debug({ authPhase: "adminAuth.accept", role: user.role });
   return { session, role: user.role };
 }
 

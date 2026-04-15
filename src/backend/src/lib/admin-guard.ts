@@ -8,8 +8,15 @@ import { prisma } from "./prisma.js";
 // first admin account. After that, admins grant / revoke access through the
 // back-office (Utilisateurs page) which writes to user.role.
 async function getSessionUser(request: FastifyRequest) {
+  request.log.debug({ authPhase: "guard.enter", url: request.url, method: request.method, hasCookie: !!request.headers.cookie });
+
   const session = await auth.api.getSession({
     headers: fromNodeHeaders(request.headers),
+  });
+
+  request.log.debug({
+    authPhase: "guard.session",
+    session: session ? { userId: session.user.id, email: session.user.email } : null,
   });
 
   if (!session) return null;
@@ -19,9 +26,18 @@ async function getSessionUser(request: FastifyRequest) {
     select: { role: true, banned: true },
   });
 
-  if (!user || user.banned) return null;
-  if (user.role !== "ADMIN" && user.role !== "EDITOR") return null;
+  request.log.debug({ authPhase: "guard.dbUser", user });
 
+  if (!user || user.banned) {
+    request.log.debug({ authPhase: "guard.reject", reason: !user ? "no_user" : "banned" });
+    return null;
+  }
+  if (user.role !== "ADMIN" && user.role !== "EDITOR") {
+    request.log.debug({ authPhase: "guard.reject", reason: "bad_role", role: user.role });
+    return null;
+  }
+
+  request.log.debug({ authPhase: "guard.accept", role: user.role });
   return {
     ...session.user,
     role: user.role,
@@ -32,6 +48,7 @@ async function getSessionUser(request: FastifyRequest) {
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   const user = await getSessionUser(request);
   if (!user) {
+    request.log.debug({ authPhase: "requireAdmin.deny" });
     reply.status(403).send({ error: "Forbidden" });
     return;
   }
@@ -42,6 +59,7 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
 export async function requireAdminRole(request: FastifyRequest, reply: FastifyReply) {
   const user = await getSessionUser(request);
   if (!user || user.role !== "ADMIN") {
+    request.log.debug({ authPhase: "requireAdminRole.deny", role: user?.role ?? null });
     reply.status(403).send({ error: "Forbidden — admin only" });
     return;
   }
