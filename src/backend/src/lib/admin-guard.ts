@@ -1,15 +1,17 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import { auth, isAdminEmail } from "./auth.js";
+import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 
+// Source of truth for back-office access: the user.role column in DB.
+// ADMIN_EMAILS is only used at bootstrap (prisma/seed.ts) to create the very
+// first admin account. After that, admins grant / revoke access through the
+// back-office (Utilisateurs page) which writes to user.role.
 async function getSessionUser(request: FastifyRequest) {
   const session = await auth.api.getSession({
     headers: request.headers as unknown as Headers,
   });
 
-  if (!session || !isAdminEmail(session.user.email)) {
-    return null;
-  }
+  if (!session) return null;
 
   const user = await prisma.user.findUnique({
     where: { email: session.user.email },
@@ -17,14 +19,15 @@ async function getSessionUser(request: FastifyRequest) {
   });
 
   if (!user || user.banned) return null;
+  if (user.role !== "ADMIN" && user.role !== "EDITOR") return null;
 
   return {
     ...session.user,
-    role: user.role || "ADMIN",
+    role: user.role,
   };
 }
 
-/** Requires any authenticated admin (ADMIN or EDITOR) */
+/** Requires any authenticated back-office user (ADMIN or EDITOR) */
 export async function requireAdmin(request: FastifyRequest, reply: FastifyReply) {
   const user = await getSessionUser(request);
   if (!user) {
