@@ -12,7 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/proposer-un-talk`,
-      languages: { fr: "/fr/proposer-un-talk", en: "/en/proposer-un-talk" },
+      languages: { fr: "/fr/proposer-un-talk", en: "/en/proposer-un-talk", "x-default": "/fr/proposer-un-talk" },
     },
   };
 }

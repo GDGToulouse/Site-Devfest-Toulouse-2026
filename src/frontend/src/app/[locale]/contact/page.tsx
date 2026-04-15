@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/contact`,
-      languages: { fr: "/fr/contact", en: "/en/contact" },
+      languages: { fr: "/fr/contact", en: "/en/contact", "x-default": "/fr/contact" },
     },
   };
 }

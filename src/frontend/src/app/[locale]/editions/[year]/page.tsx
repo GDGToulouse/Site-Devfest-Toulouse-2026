@@ -25,6 +25,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       languages: {
         fr: `/fr/editions/${year}`,
         en: `/en/editions/${year}`,
+        "x-default": `/fr/editions/${year}`,
       },
     },
   };

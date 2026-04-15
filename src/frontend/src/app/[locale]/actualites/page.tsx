@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/actualites`,
-      languages: { fr: "/fr/actualites", en: "/en/actualites" },
+      languages: { fr: "/fr/actualites", en: "/en/actualites", "x-default": "/fr/actualites" },
     },
   };
 }

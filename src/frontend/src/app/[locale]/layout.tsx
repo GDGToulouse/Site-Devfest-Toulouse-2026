@@ -60,6 +60,7 @@ export async function generateMetadata({
       languages: {
         fr: "/fr",
         en: "/en",
+        "x-default": "/fr",
       },
     },
     ...(!isProduction && {

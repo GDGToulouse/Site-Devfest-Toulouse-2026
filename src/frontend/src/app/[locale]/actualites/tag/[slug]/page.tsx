@@ -18,7 +18,7 @@ export async function generateMetadata({
     title: `${t("taggedWith")} ${slug}`,
     alternates: {
       canonical: `/${locale}/actualites/tag/${slug}`,
-      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}` },
+      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}`, "x-default": `/fr/actualites/tag/${slug}` },
     },
   };
 }

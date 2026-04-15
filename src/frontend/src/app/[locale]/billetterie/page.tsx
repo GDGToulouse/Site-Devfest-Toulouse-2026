@@ -13,7 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/billetterie`,
-      languages: { fr: "/fr/billetterie", en: "/en/billetterie" },
+      languages: { fr: "/fr/billetterie", en: "/en/billetterie", "x-default": "/fr/billetterie" },
     },
   };
 }

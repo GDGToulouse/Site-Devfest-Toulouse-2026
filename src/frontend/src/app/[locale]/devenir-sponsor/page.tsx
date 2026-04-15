@@ -22,7 +22,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/devenir-sponsor`,
-      languages: { fr: "/fr/devenir-sponsor", en: "/en/devenir-sponsor" },
+      languages: { fr: "/fr/devenir-sponsor", en: "/en/devenir-sponsor", "x-default": "/fr/devenir-sponsor" },
     },
   };
 }
