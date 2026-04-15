@@ -6,7 +6,7 @@
   "langBanner": {
     "message": "This page is available in your language.",
     "switch": "Switch to {lang}",
-    "dismiss": "Fermer"
+    "dismiss": "Dismiss"
   },
   "nav": {
     "home": "Accueil",
