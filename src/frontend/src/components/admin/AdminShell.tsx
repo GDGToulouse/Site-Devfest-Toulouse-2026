@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 import { getAdminSession, signOut } from "@/lib/admin-api";
 import AdminLogin from "./AdminLogin";
@@ -14,12 +15,20 @@ interface AdminUser {
   role: "ADMIN" | "EDITOR";
 }
 
+// Public admin paths that render their own content without requiring a session.
+// A user resetting their password precisely does NOT have a valid session.
+const PUBLIC_ADMIN_PATHS = ["/admin/reset-password"];
+
 export default function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isPublicPath = PUBLIC_ADMIN_PATHS.some((p) => pathname.startsWith(p));
+
   const [user, setUser] = useState<AdminUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(!isPublicPath);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
+    if (isPublicPath) return;
     getAdminSession()
       .then((session) => {
         setUser(session);
@@ -28,7 +37,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       .catch(() => {
         setIsLoading(false);
       });
-  }, []);
+  }, [isPublicPath]);
+
+  if (isPublicPath) {
+    return <>{children}</>;
+  }
 
   async function handleLogout() {
     await signOut();

@@ -86,7 +86,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/forget-password`, {
+    const res = await fetch(`${BACKEND_URL}/api/auth/request-password-reset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/admin` }),
