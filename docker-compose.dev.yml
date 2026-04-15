@@ -68,6 +68,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
+    container_name: devfest-${ENV_NAME:-local}-mailhog
     expose:
       - "8025"
     networks:
