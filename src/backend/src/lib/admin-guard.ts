@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 
-import { getAuthContext, type AuthContext } from "./auth-context.js";
+import { getAuthContext } from "./auth-context.js";
 
 // Source of truth for back-office access: the user.role column in DB.
 // ADMIN_EMAILS is only used at bootstrap (prisma/seed.ts) to create the very
@@ -24,7 +24,7 @@ export async function requireAdmin(request: FastifyRequest, reply: FastifyReply)
     reply.status(403).send({ error: "Forbidden" });
     return;
   }
-  (request as FastifyRequest & { adminUser?: AuthContext["user"] }).adminUser = ctx.user;
+  request.adminUser = ctx.user;
 }
 
 /** Requires ADMIN role specifically (not EDITOR) */
@@ -35,5 +35,5 @@ export async function requireAdminRole(request: FastifyRequest, reply: FastifyRe
     reply.status(403).send({ error: "Forbidden — admin only" });
     return;
   }
-  (request as FastifyRequest & { adminUser?: AuthContext["user"] }).adminUser = ctx.user;
+  request.adminUser = ctx.user;
 }
