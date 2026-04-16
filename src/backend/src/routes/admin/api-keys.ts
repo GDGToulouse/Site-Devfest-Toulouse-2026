@@ -11,7 +11,35 @@ interface ListQuery {
 
 export default async function adminApiKeysRoutes(app: FastifyInstance) {
   // GET /api/admin/api-keys — global list with filters
-  app.get<{ Querystring: ListQuery }>("/api-keys", async (request) => {
+  app.get<{ Querystring: ListQuery }>("/api-keys", {
+    schema: {
+      tags: ["admin-api-keys"],
+      summary: "Vue d'ensemble admin des jetons (tous utilisateurs)",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      querystring: {
+        type: "object",
+        properties: {
+          userId: { type: "string" },
+          status: { type: "string", enum: ["active", "revoked", "all"] },
+          page: { type: "string" },
+          limit: { type: "string" },
+        },
+      },
+      response: {
+        200: {
+          type: "object",
+          required: ["page", "limit", "total", "items"],
+          properties: {
+            page: { type: "integer" },
+            limit: { type: "integer" },
+            total: { type: "integer" },
+            items: { type: "array", items: { $ref: "ApiKeyWithUser#" } },
+          },
+        },
+        403: { $ref: "Error#" },
+      },
+    },
+  }, async (request) => {
     const { userId, status = "all" } = request.query;
     const page = Math.max(1, Number(request.query.page) || 1);
     const limit = Math.min(100, Math.max(1, Number(request.query.limit) || 20));
@@ -52,7 +80,26 @@ export default async function adminApiKeysRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/api-keys/:id — revoke any key
-  app.delete<{ Params: { id: string } }>("/api-keys/:id", async (request, reply) => {
+  app.delete<{ Params: { id: string } }>("/api-keys/:id", {
+    schema: {
+      tags: ["admin-api-keys"],
+      summary: "Révoquer n'importe quelle clé (ADMIN)",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" } },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: { ok: { type: "boolean" }, alreadyRevoked: { type: "boolean" } },
+        },
+        403: { $ref: "Error#" },
+        404: { $ref: "Error#" },
+      },
+    },
+  }, async (request, reply) => {
     const key = await prisma.apiKey.findUnique({ where: { id: request.params.id } });
     if (!key) return reply.status(404).send({ error: "not_found" });
     if (key.revokedAt) return reply.send({ ok: true, alreadyRevoked: true });
