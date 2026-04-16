@@ -17,4 +17,4 @@ RUN pnpm build
 ARG SEED_SCRIPT=prisma/seed.ts
 ENV SEED_SCRIPT=${SEED_SCRIPT}
 
-CMD ["sh", "-c", "pnpm exec prisma db push --schema prisma/schema.prisma && pnpm exec tsx prisma/seed.ts && node dist/index.js"]
+CMD ["sh", "-c", "pnpm exec prisma db push --schema prisma/schema.prisma --accept-data-loss && pnpm exec tsx prisma/seed.ts && node dist/index.js"]
