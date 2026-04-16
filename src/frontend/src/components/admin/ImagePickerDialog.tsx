@@ -37,7 +37,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
   async function loadImages() {
     setIsLoading(true);
-    const { data } = await adminFetch<ImageInfo[]>("/images");
+    const { data } = await adminFetch<ImageInfo[]>("/files");
     if (data) setImages(data);
     setIsLoading(false);
   }
@@ -50,7 +50,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     formData.append("file", file);
 
     try {
-      const { data, status } = await adminFetch<{ url: string }>("/images", {
+      const { data, status } = await adminFetch<{ url: string }>("/files", {
         method: "POST",
         body: formData,
       });
@@ -185,7 +185,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF — max 5 Mo</p>
+                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF — max 20 Mo</p>
                 </>
               )}
             </div>

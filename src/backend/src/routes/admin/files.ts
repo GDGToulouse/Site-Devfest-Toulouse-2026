@@ -19,9 +19,9 @@ const ALLOWED_MIMES = [
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
 
-export default async function adminImageRoutes(app: FastifyInstance) {
-  // POST /api/admin/images — upload a single image
-  app.post("/images", async (request, reply) => {
+export default async function adminFileRoutes(app: FastifyInstance) {
+  // POST /api/admin/files — upload a single file (image or document)
+  app.post("/files", async (request, reply) => {
     const data = await request.file({
       limits: { fileSize: MAX_FILE_SIZE },
     });
@@ -62,8 +62,8 @@ export default async function adminImageRoutes(app: FastifyInstance) {
     };
   });
 
-  // GET /api/admin/images — list all uploaded files
-  app.get("/images", async () => {
+  // GET /api/admin/files — list all uploaded files (images and documents)
+  app.get("/files", async () => {
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
 
     const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
@@ -92,9 +92,9 @@ export default async function adminImageRoutes(app: FastifyInstance) {
     return items;
   });
 
-  // DELETE /api/admin/images/:filename — delete an image
+  // DELETE /api/admin/files/:filename — delete a file
   app.delete<{ Params: { filename: string } }>(
-    "/images/:filename",
+    "/files/:filename",
     async (request, reply) => {
       const { filename } = request.params;
 
