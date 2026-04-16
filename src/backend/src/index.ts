@@ -6,11 +6,15 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
+import { registerSwagger } from "./plugins/swagger.js";
+import { registerCommonSchemas } from "./schemas/common.js";
+import { registerApiKeySchemas } from "./schemas/api-key.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import contactRoutes from "./routes/contact.js";
+import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
 
 const port = Number(process.env.PORT) || 4000;
@@ -62,13 +66,48 @@ await app.register(fastifyStatic, {
   decorateReply: false,
 });
 
+// OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
+// Exposes /api/docs (UI) and /api/docs/json (raw spec).
+await registerSwagger(app);
+registerCommonSchemas(app);
+registerApiKeySchemas(app);
+
 // Health check
-app.get("/api/health", async () => {
+app.get("/api/health", {
+  schema: {
+    tags: ["health"],
+    summary: "Sonde de santé du service",
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["ok"] },
+          timestamp: { type: "string", format: "date-time" },
+        },
+        required: ["status", "timestamp"],
+      },
+    },
+  },
+}, async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
 });
 
 // Auth providers availability
-app.get("/api/auth/providers", async () => {
+app.get("/api/auth/providers", {
+  schema: {
+    tags: ["auth"],
+    summary: "Fournisseurs OAuth activés",
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          google: { type: "boolean" },
+          github: { type: "boolean" },
+        },
+      },
+    },
+  },
+}, async () => {
   return {
     google: !!(process.env.OAUTH_GOOGLE_CLIENT_ID && process.env.OAUTH_GOOGLE_CLIENT_SECRET),
     github: !!(process.env.OAUTH_GITHUB_CLIENT_ID && process.env.OAUTH_GITHUB_CLIENT_SECRET),
@@ -135,6 +174,9 @@ await app.register(articleRoutes, { prefix: "/api" });
 await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });
 await app.register(contactRoutes, { prefix: "/api" });
+
+// Per-user routes (any authenticated back-office user — own resources only)
+await app.register(myApiKeysRoutes, { prefix: "/api/me" });
 
 // Admin routes (protected by requireAdmin hook)
 await app.register(adminRoutes, { prefix: "/api/admin" });

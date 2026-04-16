@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { adminFetch, getAdminSession } from "@/lib/admin-api";
+import ApiKeysSection from "@/components/admin/ApiKeysSection";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -172,6 +173,11 @@ export default function ProfilePage() {
           </div>
         </div>
       </form>
+
+      {/* API keys */}
+      <div className="mb-6">
+        <ApiKeysSection />
+      </div>
 
       {/* Password change */}
       <form onSubmit={handleChangePassword}>

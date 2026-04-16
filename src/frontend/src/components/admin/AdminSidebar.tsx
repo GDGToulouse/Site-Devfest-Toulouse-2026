@@ -12,6 +12,7 @@ import {
   faEnvelope,
   faUsers,
   faGear,
+  faKey,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -38,6 +39,7 @@ const iconMap: Record<string, IconDefinition> = {
   mail: faEnvelope,
   users: faUsers,
   settings: faGear,
+  key: faKey,
 };
 
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
