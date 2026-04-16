@@ -15,10 +15,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
+import { adminNavItems, type AdminRole } from "./nav-items";
+
 interface AdminUser {
   email: string;
   name: string | null;
-  role: "ADMIN" | "EDITOR";
+  role: AdminRole;
 }
 
 interface AdminSidebarProps {
@@ -38,20 +40,9 @@ const iconMap: Record<string, IconDefinition> = {
   settings: faGear,
 };
 
-const navItems = [
-  { label: "Dashboard", path: "/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
-  { label: "\u00c9ditions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
-  { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
-  { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
-  { label: "Fichiers", path: "/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
-  { label: "Messages", path: "/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
-  { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
-  { label: "Param\u00e8tres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
-];
-
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const visibleItems = navItems
+  const visibleItems = adminNavItems
     .filter((item) => item.roles.includes(user.role))
     .map((item) => ({ ...item, href: item.path }));
 

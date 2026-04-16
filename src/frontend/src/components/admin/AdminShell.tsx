@@ -2,17 +2,19 @@
 
 import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 import { getAdminSession, signOut } from "@/lib/admin-api";
 import AdminLogin from "./AdminLogin";
 import AdminSidebar from "./AdminSidebar";
+import { isAdminPathAllowed, type AdminRole } from "./nav-items";
 
 interface AdminUser {
   id: string;
   email: string;
   name: string | null;
   image: string | null;
-  role: "ADMIN" | "EDITOR";
+  role: AdminRole;
 }
 
 // Public admin paths that render their own content without requiring a session.
@@ -107,9 +109,27 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         <div className="p-4 lg:p-8">
-          {children}
+          {isAdminPathAllowed(pathname, user.role) ? children : <ForbiddenSection />}
         </div>
       </main>
+    </div>
+  );
+}
+
+function ForbiddenSection() {
+  return (
+    <div className="mx-auto max-w-xl rounded-[12px] border border-gris/20 bg-blanc p-8 text-center">
+      <h1 className="text-2xl font-bold text-noir">Accès réservé</h1>
+      <p className="mt-3 text-gris">
+        Cette section est réservée aux administrateurs. Contactez un administrateur si vous pensez
+        avoir besoin d&apos;y accéder.
+      </p>
+      <Link
+        href="/admin"
+        className="mt-6 inline-block rounded-[8px] bg-malachite px-5 py-2 text-sm font-bold text-blanc hover:opacity-90"
+      >
+        Retour au tableau de bord
+      </Link>
     </div>
   );
 }
