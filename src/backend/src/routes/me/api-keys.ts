@@ -47,7 +47,18 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAnyAuthenticated);
 
   // GET /api/me/api-keys — list caller's own keys (never exposes raw/hash)
-  app.get("/api-keys", async (request) => {
+  app.get("/api-keys", {
+    schema: {
+      tags: ["api-keys"],
+      summary: "Lister ses propres jetons d'API",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      response: {
+        200: { type: "array", items: { $ref: "ApiKey#" } },
+        401: { $ref: "Error#" },
+        403: { $ref: "Error#" },
+      },
+    },
+  }, async (request) => {
     const user = getCurrentUser(request);
     const keys = await prisma.apiKey.findMany({
       where: { userId: user.id },
@@ -57,7 +68,33 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
   });
 
   // POST /api/me/api-keys — create a new key. The raw value is returned ONCE.
-  app.post<{ Body: CreateApiKeyBody }>("/api-keys", async (request, reply) => {
+  app.post<{ Body: CreateApiKeyBody }>("/api-keys", {
+    schema: {
+      tags: ["api-keys"],
+      summary: "Créer un nouveau jeton d'API",
+      description: "La valeur complète de la clé (`key`) n'est retournée qu'à la création. Stockez-la immédiatement.",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      body: {
+        type: "object",
+        required: ["name"],
+        properties: {
+          name: { type: "string", minLength: 1, maxLength: 80, description: "Nom libre identifiant la clé" },
+          expiresAt: {
+            type: "string",
+            format: "date-time",
+            nullable: true,
+            description: "Date d'expiration ISO 8601 (optionnelle)",
+          },
+        },
+      },
+      response: {
+        201: { $ref: "CreatedApiKey#" },
+        400: { $ref: "Error#" },
+        401: { $ref: "Error#" },
+        403: { $ref: "Error#" },
+      },
+    },
+  }, async (request, reply) => {
     const user = getCurrentUser(request);
     const { name, expiresAt } = request.body ?? {};
 
@@ -107,7 +144,27 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/me/api-keys/:id — revoke caller's own key
-  app.delete<{ Params: { id: string } }>("/api-keys/:id", async (request, reply) => {
+  app.delete<{ Params: { id: string } }>("/api-keys/:id", {
+    schema: {
+      tags: ["api-keys"],
+      summary: "Révoquer un de ses propres jetons",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" } },
+      },
+      response: {
+        200: {
+          type: "object",
+          properties: { ok: { type: "boolean" }, alreadyRevoked: { type: "boolean" } },
+        },
+        401: { $ref: "Error#" },
+        403: { $ref: "Error#" },
+        404: { $ref: "Error#" },
+      },
+    },
+  }, async (request, reply) => {
     const user = getCurrentUser(request);
     const key = await prisma.apiKey.findUnique({ where: { id: request.params.id } });
     if (!key || key.userId !== user.id) {

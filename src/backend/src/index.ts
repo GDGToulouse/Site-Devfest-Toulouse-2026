@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
+import { registerApiKeySchemas } from "./schemas/api-key.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
@@ -69,14 +70,44 @@ await app.register(fastifyStatic, {
 // Exposes /api/docs (UI) and /api/docs/json (raw spec).
 await registerSwagger(app);
 registerCommonSchemas(app);
+registerApiKeySchemas(app);
 
 // Health check
-app.get("/api/health", async () => {
+app.get("/api/health", {
+  schema: {
+    tags: ["health"],
+    summary: "Sonde de santé du service",
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          status: { type: "string", enum: ["ok"] },
+          timestamp: { type: "string", format: "date-time" },
+        },
+        required: ["status", "timestamp"],
+      },
+    },
+  },
+}, async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
 });
 
 // Auth providers availability
-app.get("/api/auth/providers", async () => {
+app.get("/api/auth/providers", {
+  schema: {
+    tags: ["auth"],
+    summary: "Fournisseurs OAuth activés",
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          google: { type: "boolean" },
+          github: { type: "boolean" },
+        },
+      },
+    },
+  },
+}, async () => {
   return {
     google: !!(process.env.OAUTH_GOOGLE_CLIENT_ID && process.env.OAUTH_GOOGLE_CLIENT_SECRET),
     github: !!(process.env.OAUTH_GITHUB_CLIENT_ID && process.env.OAUTH_GITHUB_CLIENT_SECRET),
