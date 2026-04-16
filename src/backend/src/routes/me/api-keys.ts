@@ -1,10 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import { prisma } from "../../lib/prisma.js";
-import {
-  requireAnyAuthenticated,
-  type AuthContext,
-} from "../../lib/auth-context.js";
+import { requireAnyAuthenticated } from "../../lib/auth-context.js";
 import { generateApiKey, resolveApiKeyEnv } from "../../lib/api-key.js";
 
 // Soft cap on active keys per user. Meant as a sanity safeguard, not a
@@ -18,7 +15,7 @@ interface CreateApiKeyBody {
 }
 
 function getCurrentUser(request: FastifyRequest) {
-  const ctx = (request as FastifyRequest & { authContext?: AuthContext }).authContext;
+  const ctx = request.authContext;
   if (!ctx) throw new Error("authContext missing — requireAnyAuthenticated must run first");
   return ctx.user;
 }

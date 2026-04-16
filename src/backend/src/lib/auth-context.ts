@@ -134,5 +134,5 @@ export async function requireAnyAuthenticated(request: FastifyRequest, reply: Fa
     reply.status(403).send({ error: "Forbidden" });
     return;
   }
-  (request as FastifyRequest & { authContext?: AuthContext }).authContext = ctx;
+  request.authContext = ctx;
 }
