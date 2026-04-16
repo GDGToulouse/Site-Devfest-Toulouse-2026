@@ -15,6 +15,7 @@ export const adminNavItems: AdminNavItem[] = [
   { label: "Fichiers", path: "/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", path: "/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
   { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
+  { label: "Clés API", path: "/admin/api-keys", icon: "key", roles: ["ADMIN"] },
   { label: "Paramètres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
 ];
 

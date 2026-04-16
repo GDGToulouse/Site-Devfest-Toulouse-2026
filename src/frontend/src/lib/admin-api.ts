@@ -98,3 +98,86 @@ export async function forgotPassword(email: string): Promise<{ success: boolean;
     return { success: false, error: "Impossible de contacter le serveur" };
   }
 }
+
+// --- API Keys ---
+
+export interface ApiKey {
+  id: string;
+  name: string;
+  prefix: string;
+  lastUsedAt: string | null;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface ApiKeyWithUser extends ApiKey {
+  user: { id: string; email: string; name: string | null; role: "ADMIN" | "EDITOR" };
+}
+
+export interface CreatedApiKey extends ApiKey {
+  key: string;
+}
+
+async function meFetch<T>(path: string, options: RequestInit = {}): Promise<{ data: T | null; status: number }> {
+  try {
+    const headers: Record<string, string> = {};
+    if (options.body && !(options.body instanceof FormData)) {
+      headers["Content-Type"] = "application/json";
+    }
+    const res = await fetch(`${BACKEND_URL}/api/me${path}`, {
+      credentials: "include",
+      headers: { ...headers, ...options.headers },
+      ...options,
+    });
+    if (!res.ok) return { data: null, status: res.status };
+    const data = await res.json();
+    return { data, status: res.status };
+  } catch {
+    return { data: null, status: 0 };
+  }
+}
+
+export async function listMyApiKeys(): Promise<ApiKey[]> {
+  const { data } = await meFetch<ApiKey[]>("/api-keys");
+  return data ?? [];
+}
+
+export async function createApiKey(name: string, expiresAt?: string | null): Promise<{ data: CreatedApiKey | null; status: number }> {
+  return meFetch<CreatedApiKey>("/api-keys", {
+    method: "POST",
+    body: JSON.stringify({ name, expiresAt: expiresAt ?? null }),
+  });
+}
+
+export async function revokeMyApiKey(id: string): Promise<boolean> {
+  const { status } = await meFetch(`/api-keys/${id}`, { method: "DELETE" });
+  return status === 200;
+}
+
+export interface AdminApiKeysList {
+  page: number;
+  limit: number;
+  total: number;
+  items: ApiKeyWithUser[];
+}
+
+export async function adminListApiKeys(params: {
+  userId?: string;
+  status?: "active" | "revoked" | "all";
+  page?: number;
+  limit?: number;
+} = {}): Promise<AdminApiKeysList | null> {
+  const q = new URLSearchParams();
+  if (params.userId) q.set("userId", params.userId);
+  if (params.status) q.set("status", params.status);
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  const { data } = await adminFetch<AdminApiKeysList>(`/api-keys${q.toString() ? `?${q}` : ""}`);
+  return data;
+}
+
+export async function adminRevokeApiKey(id: string): Promise<boolean> {
+  const { status } = await adminFetch(`/api-keys/${id}`, { method: "DELETE" });
+  return status === 200;
+}
