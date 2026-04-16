@@ -195,8 +195,31 @@ model User {
 
   sessions         Session[]
   accounts         Account[]
+  apiKeys          ApiKey[]
 
   @@map("user")
+}
+
+// --- API Keys ---
+// Personal API tokens. Inherit their owner's role dynamically (no scopes in v1).
+// The raw key is shown once at creation, then only its argon2 hash is stored.
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String    @unique
+  hashedKey   String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([prefix])
+  @@map("api_key")
 }
 
 model Session {
