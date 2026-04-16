@@ -6,6 +6,8 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
+import { registerSwagger } from "./plugins/swagger.js";
+import { registerCommonSchemas } from "./schemas/common.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
@@ -61,6 +63,11 @@ await app.register(fastifyStatic, {
   prefix: "/uploads/",
   decorateReply: false,
 });
+
+// OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
+// Exposes /api/docs (UI) and /api/docs/json (raw spec).
+await registerSwagger(app);
+registerCommonSchemas(app);
 
 // Health check
 app.get("/api/health", async () => {
