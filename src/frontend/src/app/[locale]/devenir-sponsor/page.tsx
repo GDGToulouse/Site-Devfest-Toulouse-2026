@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getCurrentEdition, getSponsorPlans } from "@/lib/api";
+import { getCurrentEdition, getSponsorPlans, getContactCategories } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
-import { Link } from "@/i18n/navigation";
+import ContactForm from "@/components/ContactForm";
 
 function localizedField(
   obj: Record<string, unknown>,
@@ -30,10 +30,13 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SponsorPage() {
   const locale = await getLocale();
   const t = await getTranslations("sponsor");
-  const [edition, plans] = await Promise.all([
+  const [edition, plans, categories] = await Promise.all([
     getCurrentEdition(),
     getSponsorPlans(),
+    getContactCategories(),
   ]);
+
+  const sponsoringCategory = categories.find((c) => c.slug === "sponsoring");
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -175,13 +178,13 @@ export default async function SponsorPage() {
 
                       {/* CTA button */}
                       <div className="px-6 pb-6">
-                        <Link
-                          href="/contact"
+                        <a
+                          href="#contact"
                           className="block w-full text-center py-3 rounded-lg font-bold text-blanc transition-opacity hover:opacity-90"
                           style={{ backgroundColor: plan.color }}
                         >
                           {t("ctaContact")}
-                        </Link>
+                        </a>
                       </div>
                     </div>
                   );
@@ -190,15 +193,25 @@ export default async function SponsorPage() {
             )}
           </div>
 
-          {/* Bottom CTA */}
-          <div className="mt-16 text-center">
-            <Link
-              href="/contact"
-              className="inline-block px-8 py-4 rounded-[12px] bg-bleu text-blanc font-bold text-xl hover:bg-bleu/90 transition-colors"
-            >
-              {t("ctaContact")}
-            </Link>
-          </div>
+          {/* Contact form */}
+          {sponsoringCategory && (
+            <div id="contact" className="mt-16 scroll-mt-8">
+              <h2 className="text-2xl lg:text-4xl font-bold text-noir">
+                {t("formTitle")}
+              </h2>
+              <p className="mt-4 text-gris leading-relaxed max-w-3xl">
+                {t("formIntro")}
+              </p>
+              <div className="mt-8 max-w-2xl">
+                <ContactForm
+                  categories={categories}
+                  locale={locale}
+                  forceCategoryId={sponsoringCategory.id}
+                  submitLabel={t("formSubmit")}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
