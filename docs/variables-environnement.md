@@ -53,17 +53,28 @@ Utilisé pour l'authentification des admins (Lot 2) et des participants au passp
 
 Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modification speakers/sponsors (Lot 2).
 
-| Variable | Obligatoire | Description | Exemple |
-|----------|:-----------:|-------------|---------|
-| `SMTP_HOST` | oui | Hôte du serveur SMTP. En prod/beta : nom DNS du service Postfix Coolify standalone (ex. `postfix`). En dev : `mailhog`. | `postfix` |
-| `SMTP_PORT` | non | Port SMTP (défaut : `25`) | `25` |
-| `SMTP_SECURE` | non | `true` pour forcer TLS au handshake (port 465). Défaut `false`. | `false` |
-| `SMTP_AUTH` | non | `true` pour activer l'auth SMTP via `SMTP_USER` / `SMTP_PASSWORD`. Défaut `false`. | `false` |
-| `SMTP_USER` | si `SMTP_AUTH=true` | Identifiant SMTP | `noreply@devfesttoulouse.fr` |
-| `SMTP_PASSWORD` | si `SMTP_AUTH=true` | Mot de passe SMTP | `…` |
+### Variables disponibles
+
+| Variable | Obligatoire | Description | Défaut |
+|----------|:-----------:|-------------|--------|
+| `SMTP_HOST` | oui | Hôte du serveur SMTP. | `localhost` |
+| `SMTP_PORT` | non | Port SMTP. | `1025` |
+| `SMTP_SECURE` | non | `true` pour forcer TLS au handshake (port 465). | `false` |
+| `SMTP_AUTH` | non | `true` pour activer l'auth SMTP via `SMTP_USER` / `SMTP_PASSWORD`. | `false` |
+| `SMTP_USER` | si `SMTP_AUTH=true` | Identifiant SMTP | — |
+| `SMTP_PASSWORD` | si `SMTP_AUTH=true` | Mot de passe SMTP | — |
 | `SMTP_FROM` | oui | Adresse expéditeur des emails | `contact@devfesttoulouse.fr` |
 
-> ⚠️ **Prod/beta** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend doit être joint au réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre `postfix`.
+### Profil par environnement
+
+| Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
+|---|---|---|---|---|---|---|
+| **Local / dev-j** | `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`) |
+| **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
+
+> ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
+
+> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
 
 ## API tierces (backend uniquement)
 
