@@ -9,10 +9,6 @@ const googleSans = Google_Sans({
   variable: "--font-google-sans",
 });
 
-// Root layout must render per-request so <html lang> reflects the locale
-// resolved by the next-intl middleware.
-export const dynamic = "force-dynamic";
-
 // The next-intl middleware forwards the resolved locale through the
 // X-NEXT-INTL-LOCALE request header (see next-intl source: shared/constants.js
 // exports HEADER_LOCALE_NAME = "X-NEXT-INTL-LOCALE"). Admin routes are
