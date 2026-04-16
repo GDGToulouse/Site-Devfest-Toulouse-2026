@@ -19,6 +19,8 @@ interface EditionData {
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  sponsorBrochureUrl: string | null;
+  contactWebhookUrl: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -44,10 +46,14 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     aftermovieUrl: edition.aftermovieUrl || "",
     galleryUrl: edition.galleryUrl || "",
     archivedSiteUrl: edition.archivedSiteUrl || "",
+    sponsorBrochureUrl: edition.sponsorBrochureUrl || "",
+    contactWebhookUrl: edition.contactWebhookUrl || "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+  const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
 
   async function handleSave() {
     setIsSaving(true);
@@ -65,6 +71,8 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         aftermovieUrl: form.aftermovieUrl || undefined,
         galleryUrl: form.galleryUrl || undefined,
         archivedSiteUrl: form.archivedSiteUrl || undefined,
+        sponsorBrochureUrl: form.sponsorBrochureUrl || undefined,
+        contactWebhookUrl: form.contactWebhookUrl || undefined,
       }),
     });
     setIsSaving(false);
@@ -132,6 +140,67 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
       </div>
 
       <FormField label="URL formulaire partenaire" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
+
+      {/* Sponsor brochure */}
+      <div>
+        <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() => setIsBrochurePickerOpen(true)}
+            className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+          >
+            {form.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
+          </button>
+          {form.sponsorBrochureUrl && (
+            <button
+              type="button"
+              onClick={() => setForm({ ...form, sponsorBrochureUrl: "" })}
+              className="text-sm text-terre-cuite hover:underline"
+            >
+              Supprimer
+            </button>
+          )}
+        </div>
+        {form.sponsorBrochureUrl && (
+          <p className="text-xs text-gris mt-1">{form.sponsorBrochureUrl}</p>
+        )}
+        <ImagePickerDialog
+          open={isBrochurePickerOpen}
+          onClose={() => setIsBrochurePickerOpen(false)}
+          onSelect={(url) => setForm({ ...form, sponsorBrochureUrl: url })}
+        />
+      </div>
+
+      {/* Webhook */}
+      <div>
+        <FormField label="URL webhook contact" name="contactWebhookUrl" type="url" value={form.contactWebhookUrl} onChange={(v) => setForm({ ...form, contactWebhookUrl: v })} helpText="URL appelée en POST à chaque soumission de formulaire de contact (toutes catégories)." />
+        {form.contactWebhookUrl && (
+          <div className="mt-2 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={async () => {
+                setWebhookTestResult(null);
+                const { data } = await adminFetch<{ status: string; responseStatus?: number; responseBody?: string }>(`/editions/${edition.id}/test-webhook`, { method: "POST" });
+                if (data) {
+                  setWebhookTestResult(data.status === "sent" ? `✓ ${data.responseStatus}` : `✗ ${data.responseBody?.slice(0, 100)}`);
+                } else {
+                  setWebhookTestResult("✗ Erreur");
+                }
+                setTimeout(() => setWebhookTestResult(null), 5000);
+              }}
+              className="px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              Tester le webhook
+            </button>
+            {webhookTestResult && (
+              <span className={`text-xs ${webhookTestResult.startsWith("✓") ? "text-malachite" : "text-terre-cuite"}`}>
+                {webhookTestResult}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={form.aftermovieUrl} onChange={(v) => setForm({ ...form, aftermovieUrl: v })} />

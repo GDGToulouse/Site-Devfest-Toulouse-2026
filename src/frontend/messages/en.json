@@ -196,7 +196,10 @@
     "ctaDownload": "Receive sponsorship package",
     "noPlans": "Sponsorship packages will be available soon.",
     "visible": "Visible",
-    "hidden": "Hidden"
+    "hidden": "Hidden",
+    "formTitle": "Contact us",
+    "formIntro": "Fill out the form below and we will send you our sponsorship brochure. We will get back to you shortly.",
+    "formSubmit": "Receive the sponsorship brochure"
   },
   "codeOfConduct": {
     "title": "Code of Conduct",

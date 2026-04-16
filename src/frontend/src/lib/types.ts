@@ -125,6 +125,7 @@ export interface ContactCategory {
   id: number;
   nameFr: string;
   nameEn: string;
+  slug: string | null;
 }
 
 export interface ContactFormData {
