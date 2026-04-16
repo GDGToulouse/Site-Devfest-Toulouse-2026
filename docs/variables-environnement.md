@@ -55,9 +55,15 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `SMTP_HOST` | oui | Hôte du serveur SMTP | `postfix` (container Docker) ou `localhost` |
+| `SMTP_HOST` | oui | Hôte du serveur SMTP. En prod/beta : nom DNS du service Postfix Coolify standalone (ex. `postfix`). En dev : `mailhog`. | `postfix` |
 | `SMTP_PORT` | non | Port SMTP (défaut : `25`) | `25` |
+| `SMTP_SECURE` | non | `true` pour forcer TLS au handshake (port 465). Défaut `false`. | `false` |
+| `SMTP_AUTH` | non | `true` pour activer l'auth SMTP via `SMTP_USER` / `SMTP_PASSWORD`. Défaut `false`. | `false` |
+| `SMTP_USER` | si `SMTP_AUTH=true` | Identifiant SMTP | `noreply@devfesttoulouse.fr` |
+| `SMTP_PASSWORD` | si `SMTP_AUTH=true` | Mot de passe SMTP | `…` |
 | `SMTP_FROM` | oui | Adresse expéditeur des emails | `contact@devfesttoulouse.fr` |
+
+> ⚠️ **Prod/beta** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend doit être joint au réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre `postfix`.
 
 ## API tierces (backend uniquement)
 
