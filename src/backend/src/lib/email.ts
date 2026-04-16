@@ -38,3 +38,11 @@ export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
     html,
   });
 }
+
+/**
+ * Simple string template interpolation: replaces `{key}` tokens with
+ * the corresponding value from `vars`. Unknown tokens are left as-is.
+ */
+export function interpolate(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key) => vars[key] ?? match);
+}

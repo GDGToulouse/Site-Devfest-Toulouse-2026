@@ -1,4 +1,4 @@
-import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
+import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
 
@@ -8,6 +8,11 @@ interface ContactCategoryBody {
   emailRecipients: string;
   sortOrder?: number;
   isActive?: boolean;
+  slug?: string;
+  confirmationSubjectFr?: string;
+  confirmationSubjectEn?: string;
+  confirmationBodyFr?: string;
+  confirmationBodyEn?: string;
 }
 
 export default async function adminContactRoutes(app: FastifyInstance) {
@@ -25,6 +30,12 @@ export default async function adminContactRoutes(app: FastifyInstance) {
       emailRecipients: c.emailRecipients,
       sortOrder: c.sortOrder,
       isActive: c.isActive,
+      slug: c.slug,
+      isSystem: c.isSystem,
+      confirmationSubjectFr: c.confirmationSubjectFr,
+      confirmationSubjectEn: c.confirmationSubjectEn,
+      confirmationBodyFr: c.confirmationBodyFr,
+      confirmationBodyEn: c.confirmationBodyEn,
       messagesCount: c._count.messages,
     }));
   });
@@ -44,6 +55,11 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         emailRecipients: body.emailRecipients.trim(),
         sortOrder: body.sortOrder ?? 0,
         isActive: body.isActive ?? true,
+        slug: body.slug?.trim() || null,
+        confirmationSubjectFr: body.confirmationSubjectFr?.trim() || null,
+        confirmationSubjectEn: body.confirmationSubjectEn?.trim() || null,
+        confirmationBodyFr: body.confirmationBodyFr?.trim() || null,
+        confirmationBodyEn: body.confirmationBodyEn?.trim() || null,
       },
     });
 
@@ -71,6 +87,11 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         emailRecipients: body.emailRecipients?.trim() ?? existing.emailRecipients,
         sortOrder: body.sortOrder ?? existing.sortOrder,
         isActive: body.isActive ?? existing.isActive,
+        ...(existing.isSystem ? {} : { slug: body.slug !== undefined ? (body.slug?.trim() || null) : existing.slug }),
+        confirmationSubjectFr: body.confirmationSubjectFr !== undefined ? (body.confirmationSubjectFr?.trim() || null) : existing.confirmationSubjectFr,
+        confirmationSubjectEn: body.confirmationSubjectEn !== undefined ? (body.confirmationSubjectEn?.trim() || null) : existing.confirmationSubjectEn,
+        confirmationBodyFr: body.confirmationBodyFr !== undefined ? (body.confirmationBodyFr?.trim() || null) : existing.confirmationBodyFr,
+        confirmationBodyEn: body.confirmationBodyEn !== undefined ? (body.confirmationBodyEn?.trim() || null) : existing.confirmationBodyEn,
       },
     });
 
@@ -83,6 +104,13 @@ export default async function adminContactRoutes(app: FastifyInstance) {
   }>("/contact/categories/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const existing = await prisma.contactCategory.findUnique({ where: { id } });
+    if (!existing) return reply.status(404).send({ error: "Category not found" });
+
+    if (existing.isSystem) {
+      return reply.status(409).send({ error: "System categories cannot be deleted" });
+    }
 
     await prisma.contactCategory.delete({ where: { id } });
     return { success: true };
@@ -118,6 +146,7 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         phone: m.phone,
         categoryLabel: m.category?.nameFr || m.categoryLabel,
         message: m.message,
+        locale: m.locale,
         isRead: m.isRead,
         createdAt: m.createdAt,
       })),

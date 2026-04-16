@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { sendEmail } from "../lib/email.js";
+import { sendEmail, interpolate } from "../lib/email.js";
+import { getFeaturedEdition } from "./editions.js";
 
 interface ContactBody {
   firstName: string;
@@ -9,6 +10,7 @@ interface ContactBody {
   phone?: string;
   categoryId?: number;
   message: string;
+  locale?: string;
   website?: string; // honeypot
 }
 
@@ -28,6 +30,7 @@ export default async function contactRoutes(app: FastifyInstance) {
       id: cat.id,
       nameFr: cat.nameFr,
       nameEn: cat.nameEn,
+      slug: cat.slug,
     }));
   });
 
@@ -41,11 +44,10 @@ export default async function contactRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { firstName, lastName, email, phone, categoryId, message, website } = request.body;
+    const { firstName, lastName, email, phone, categoryId, message, locale, website } = request.body;
 
     // Honeypot check — bots fill this hidden field
     if (website) {
-      // Silently accept but don't process
       return { success: true };
     }
 
@@ -60,12 +62,13 @@ export default async function contactRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, errors });
     }
 
-    // Resolve email recipients
+    // Resolve category + recipients
     let recipients: string[] = [];
     let categoryLabel: string | null = null;
+    let category: Awaited<ReturnType<typeof prisma.contactCategory.findUnique>> = null;
 
     if (categoryId) {
-      const category = await prisma.contactCategory.findUnique({
+      category = await prisma.contactCategory.findUnique({
         where: { id: categoryId },
       });
       if (category) {
@@ -83,7 +86,7 @@ export default async function contactRoutes(app: FastifyInstance) {
     }
 
     // Store message in DB
-    await prisma.contactMessage.create({
+    const stored = await prisma.contactMessage.create({
       data: {
         firstName: firstName.trim(),
         lastName: lastName.trim(),
@@ -91,11 +94,12 @@ export default async function contactRoutes(app: FastifyInstance) {
         phone: phone?.trim() || null,
         categoryLabel,
         message: message.trim(),
+        locale: locale || null,
         categoryId: categoryId || null,
       },
     });
 
-    // Send email
+    // --- Send notification email to recipients (existing behaviour) ---
     try {
       const subject = `Nouveau message de contact — ${firstName.trim()} ${lastName.trim()}`;
       const text = [
@@ -122,7 +126,74 @@ export default async function contactRoutes(app: FastifyInstance) {
       await sendEmail({ to: recipients, subject, text, html });
     } catch (err) {
       app.log.error("Failed to send contact email: %s", String(err));
-      // Message is saved in DB even if email fails
+    }
+
+    // --- Send confirmation email to the person who submitted the form ---
+    if (category) {
+      const lang = locale === "en" ? "en" : "fr";
+      const tplSubject = lang === "en" ? category.confirmationSubjectEn : category.confirmationSubjectFr;
+      const tplBody = lang === "en" ? category.confirmationBodyEn : category.confirmationBodyFr;
+
+      if (tplSubject && tplBody) {
+        try {
+          const edition = await getFeaturedEdition();
+          const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+          const brochureUrl = edition?.sponsorBrochureUrl
+            ? `${baseUrl}${edition.sponsorBrochureUrl}`
+            : "";
+
+          const vars = {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            brochureUrl,
+          };
+
+          const renderedSubject = interpolate(tplSubject, vars);
+          const renderedBody = interpolate(tplBody, vars);
+
+          await sendEmail({
+            to: [email.trim()],
+            subject: renderedSubject,
+            text: renderedBody.replace(/<[^>]+>/g, ""),
+            html: renderedBody.replace(/\n/g, "<br>"),
+          });
+        } catch (err) {
+          app.log.error("Failed to send confirmation email: %s", String(err));
+        }
+      }
+    }
+
+    // --- Fire webhook (async, fire-and-forget) ---
+    try {
+      const edition = await getFeaturedEdition();
+      if (edition?.contactWebhookUrl) {
+        const payload = {
+          id: stored.id,
+          submittedAt: stored.createdAt.toISOString(),
+          data: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
+            phone: phone?.trim() || null,
+            categoryId: categoryId || null,
+            categorySlug: category?.slug || null,
+            categoryLabel: categoryLabel || null,
+            message: message.trim(),
+            locale: locale || null,
+          },
+        };
+
+        fetch(edition.contactWebhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          signal: AbortSignal.timeout(10_000),
+        }).catch((err) => {
+          app.log.warn("Contact webhook failed: %s", String(err));
+        });
+      }
+    } catch (err) {
+      app.log.warn("Contact webhook error: %s", String(err));
     }
 
     return { success: true };
