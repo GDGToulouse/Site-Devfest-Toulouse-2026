@@ -13,6 +13,7 @@ import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import contactRoutes from "./routes/contact.js";
+import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
 
 const port = Number(process.env.PORT) || 4000;
@@ -142,6 +143,9 @@ await app.register(articleRoutes, { prefix: "/api" });
 await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });
 await app.register(contactRoutes, { prefix: "/api" });
+
+// Per-user routes (any authenticated back-office user — own resources only)
+await app.register(myApiKeysRoutes, { prefix: "/api/me" });
 
 // Admin routes (protected by requireAdmin hook)
 await app.register(adminRoutes, { prefix: "/api/admin" });
