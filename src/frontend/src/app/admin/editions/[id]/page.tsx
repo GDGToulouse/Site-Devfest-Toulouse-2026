@@ -25,6 +25,8 @@ interface EditionData {
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  sponsorBrochureUrl: string | null;
+  contactWebhookUrl: string | null;
   ticketTiersCount: number;
   articlesCount: number;
 }
