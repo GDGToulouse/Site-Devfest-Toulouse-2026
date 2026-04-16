@@ -41,8 +41,16 @@ export default async function editionRoutes(app: FastifyInstance) {
   });
 
   // GET /api/editions/:year — returns full edition data by year
-  app.get("/editions/:year", async (request, reply) => {
-    const { year } = request.params as { year: string };
+  app.get<{ Params: { year: string } }>("/editions/:year", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["year"],
+        properties: { year: { type: "string" } },
+      },
+    },
+  }, async (request, reply) => {
+    const { year } = request.params;
     const yearNum = Number(year);
     if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
