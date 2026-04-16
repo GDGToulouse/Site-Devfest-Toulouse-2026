@@ -56,7 +56,7 @@ export default function FilesAdminPage() {
 
   async function loadFiles() {
     setIsLoading(true);
-    const { data } = await adminFetch<FileInfo[]>("/images");
+    const { data } = await adminFetch<FileInfo[]>("/files");
     if (data) setFiles(data);
     setIsLoading(false);
   }
@@ -73,7 +73,7 @@ export default function FilesAdminPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/images`, {
+      const res = await fetch(`${BACKEND_URL}/api/admin/files`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -108,7 +108,7 @@ export default function FilesAdminPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await adminFetch(`/images/${deleteTarget}`, { method: "DELETE" });
+    await adminFetch(`/files/${deleteTarget}`, { method: "DELETE" });
     setDeleteTarget(null);
     loadFiles();
   }
