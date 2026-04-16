@@ -14,9 +14,17 @@ export async function seedBase() {
 
   // --- Contact Categories ---
   const contactCategories = [
-    { nameFr: "Sponsoring", nameEn: "Sponsoring", emailRecipients: "sponsors@devfesttoulouse.fr", sortOrder: 1 },
-    { nameFr: "Appel à conférences", nameEn: "Call for Papers", emailRecipients: "cfp@devfesttoulouse.fr", sortOrder: 2 },
-    { nameFr: "Presse / Média", nameEn: "Press / Media", emailRecipients: "presse@devfesttoulouse.fr", sortOrder: 3 },
+    {
+      nameFr: "Sponsoring", nameEn: "Sponsoring",
+      emailRecipients: "sponsors@devfesttoulouse.fr", sortOrder: 1,
+      slug: "sponsoring", isSystem: true,
+      confirmationSubjectFr: "[DevFest Toulouse 2026] Tenez vous prêt",
+      confirmationSubjectEn: "[DevFest Toulouse 2026] Get ready",
+      confirmationBodyFr: "Bonjour {firstName} {lastName},\n\nMerci de l'intérêt que vous portez au DevFest Toulouse.\n\nVous pouvez consulter la plaquette sponsor à <a href=\"{brochureUrl}\">cette adresse</a>.\n\nSi vous avez des questions, nous sommes là pour y répondre.\nNous vous recontacterons d'ici quelques jours pour étudier la meilleure formule pour vous.\n\nDevFestement,\nLes organisateurs du DevFest Toulouse",
+      confirmationBodyEn: "Hello {firstName} {lastName},\n\nThank you for your interest in DevFest Toulouse.\n\nYou can download the sponsor brochure at <a href=\"{brochureUrl}\">this link</a>.\n\nIf you have any questions, we are happy to help.\nWe will get back to you within a few days to find the best option for you.\n\nBest regards,\nThe DevFest Toulouse organizers",
+    },
+    { nameFr: "Appel à conférences", nameEn: "Call for Papers", emailRecipients: "cfp@devfesttoulouse.fr", sortOrder: 2, slug: "cfp" },
+    { nameFr: "Presse / Média", nameEn: "Press / Media", emailRecipients: "presse@devfesttoulouse.fr", sortOrder: 3, slug: "presse" },
   ];
 
   for (const cat of contactCategories) {
@@ -25,6 +33,21 @@ export async function seedBase() {
     });
     if (!existing) {
       await prisma.contactCategory.create({ data: cat });
+    } else {
+      // Backfill slug/isSystem on existing categories
+      await prisma.contactCategory.update({
+        where: { id: existing.id },
+        data: {
+          slug: cat.slug,
+          isSystem: cat.isSystem ?? false,
+          ...(cat.confirmationSubjectFr && !existing.confirmationSubjectFr ? {
+            confirmationSubjectFr: cat.confirmationSubjectFr,
+            confirmationSubjectEn: cat.confirmationSubjectEn,
+            confirmationBodyFr: cat.confirmationBodyFr,
+            confirmationBodyEn: cat.confirmationBodyEn,
+          } : {}),
+        },
+      });
     }
   }
 
