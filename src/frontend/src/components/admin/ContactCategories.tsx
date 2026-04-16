@@ -77,14 +77,14 @@ export default function ContactCategories() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">Nouvelle categorie</button>
+        <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">Nouvelle catégorie</button>
       </div>
 
       {showForm && (
         <div className="bg-blanc rounded-xl shadow-card p-6 mb-6 space-y-4">
-          <h2 className="text-lg font-bold text-noir">{editingId ? "Modifier" : "Nouvelle categorie"}</h2>
+          <h2 className="text-lg font-bold text-noir">{editingId ? "Modifier" : "Nouvelle catégorie"}</h2>
           <BilingualInput label="Nom" nameFr="nameFr" nameEn="nameEn" valueFr={form.nameFr} valueEn={form.nameEn} onChangeFr={(v) => setForm({ ...form, nameFr: v })} onChangeEn={(v) => setForm({ ...form, nameEn: v })} required />
-          <FormField label="Destinataires (emails separes par virgule)" name="emailRecipients" value={form.emailRecipients} onChange={(v) => setForm({ ...form, emailRecipients: v })} required />
+          <FormField label="Destinataires (emails séparés par virgule)" name="emailRecipients" value={form.emailRecipients} onChange={(v) => setForm({ ...form, emailRecipients: v })} required />
           <div className="grid grid-cols-2 gap-4">
             <FormField label="Ordre" name="sortOrder" type="number" value={form.sortOrder} onChange={(v) => setForm({ ...form, sortOrder: v })} />
             <div className="flex items-center gap-2 pt-6">
@@ -127,7 +127,7 @@ export default function ContactCategories() {
         </table>
       </div>
 
-      <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer la categorie" message={`Supprimer "${deleteTarget?.nameFr}" ?`} confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer la catégorie" message={`Supprimer "${deleteTarget?.nameFr}" ?`} confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
     </div>
   );
 }

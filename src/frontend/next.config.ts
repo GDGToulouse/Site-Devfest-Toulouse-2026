@@ -27,6 +27,18 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/editions/:path*`,
       },
       {
+        source: "/api/me/:path*",
+        destination: `${backendUrl}/api/me/:path*`,
+      },
+      {
+        source: "/api/docs",
+        destination: `${backendUrl}/api/docs/`,
+      },
+      {
+        source: "/api/docs/:path*",
+        destination: `${backendUrl}/api/docs/:path*`,
+      },
+      {
         source: "/uploads/:path*",
         destination: `${backendUrl}/uploads/:path*`,
       },
@@ -34,9 +46,9 @@ const nextConfig: NextConfig = {
   },
   async headers() {
     return [
-      // Cache-Control: admin pages — no cache
+      // Cache-Control: admin pages — no cache (admin is not i18n-prefixed)
       {
-        source: "/:locale(fr|en)/admin/:path*",
+        source: "/admin/:path*",
         headers: [
           { key: "Cache-Control", value: "no-store" },
         ],
@@ -98,6 +110,10 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    localPatterns: [
+      { pathname: "/images/**" },
+      { pathname: "/uploads/**" },
+    ],
     remotePatterns: [
       {
         protocol: "https",

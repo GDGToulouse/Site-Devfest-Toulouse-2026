@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
@@ -30,7 +31,7 @@ export default async function Footer() {
 
   const previousEditions = edition
     ? editions
-        .filter((e) => e.year < edition.year && e.archivedSiteUrl)
+        .filter((e) => e.year < edition.year)
         .sort((a, b) => b.year - a.year)
     : [];
 
@@ -43,13 +44,13 @@ export default async function Footer() {
         <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
           {/* Left column — Logo + socials + CTA */}
           <div className="flex flex-col gap-6">
-            {/* Logo placeholder */}
-            <div className="text-blanc">
-              <span className="text-2xl font-bold">
-                &lt;&gt; DevFest
-              </span>
-              <div className="text-lg font-bold tracking-[0.3em]">TOULOUSE</div>
-            </div>
+            <Image
+              src="/images/logo-devfest-white.svg"
+              alt="DevFest Toulouse"
+              width={180}
+              height={80}
+              className="h-auto"
+            />
 
             <div>
               <p className="text-blanc text-sm mb-2">{tFooter("followUs")}</p>
@@ -126,14 +127,12 @@ export default async function Footer() {
                 <ul className="flex flex-col gap-1">
                   {previousEditions.map((e) => (
                     <li key={e.id}>
-                      <a
-                        href={e.archivedSiteUrl!}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                      <Link
+                        href={`/editions/${e.year}`}
                         className="text-blanc text-base hover:text-blanc-casse transition-colors"
                       >
                         DevFest Toulouse {e.year}
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -144,23 +143,20 @@ export default async function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="mx-4 mb-4 rounded-[12px] bg-blanc/75 px-4 py-2 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-noir/70 text-base italic">
+      <div className="mx-6 lg:mx-[84px] border-t border-blanc/20 px-0 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+        <p className="text-blanc/60 text-sm italic">
           {tFooter("tagline")}
         </p>
         <div className="flex items-center gap-4">
-          <Link href="/mentions-legales" className="text-link text-base hover:underline">
+          <Link href="/mentions-legales" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("legalNotice")}
           </Link>
-          <Link href="/code-de-conduite" className="text-link text-base hover:underline">
+          <Link href="/code-de-conduite" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("codeOfConduct")}
           </Link>
-          <a href="/sitemap.xml" className="text-link text-base hover:underline">
+          <a href="/sitemap.xml" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
           </a>
-          <Link href="/admin" className="text-link text-base hover:underline">
-            Admin
-          </Link>
         </div>
       </div>
     </footer>

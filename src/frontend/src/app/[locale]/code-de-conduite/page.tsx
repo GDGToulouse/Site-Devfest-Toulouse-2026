@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/code-de-conduite`,
-      languages: { fr: "/fr/code-de-conduite", en: "/en/code-de-conduite" },
+      languages: { fr: "/fr/code-de-conduite", en: "/en/code-de-conduite", "x-default": "/fr/code-de-conduite" },
     },
   };
 }

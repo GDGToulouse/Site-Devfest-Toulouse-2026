@@ -40,6 +40,68 @@ export default async function editionRoutes(app: FastifyInstance) {
     return editions;
   });
 
+  // GET /api/editions/:year — returns full edition data by year
+  app.get<{ Params: { year: string } }>("/editions/:year", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["year"],
+        properties: { year: { type: "string" } },
+      },
+    },
+  }, async (request, reply) => {
+    const { year } = request.params;
+    const yearNum = Number(year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findUnique({
+      where: { year: yearNum },
+      include: {
+        keyFigures: { orderBy: { sortOrder: "asc" } },
+        articles: {
+          where: { publicationStatus: "PUBLISHED" },
+          orderBy: { publishedAt: "desc" },
+          take: 4,
+          include: { tags: true },
+        },
+      },
+    });
+
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    return {
+      id: edition.id,
+      year: edition.year,
+      startDate: edition.startDate,
+      endDate: edition.endDate,
+      status: edition.status,
+      venueName: edition.venueName,
+      venueAddress: edition.venueAddress,
+      heroImageUrl: edition.heroImageUrl,
+      aftermovieUrl: edition.aftermovieUrl,
+      galleryUrl: edition.galleryUrl,
+      archivedSiteUrl: edition.archivedSiteUrl,
+      keyFigures: edition.keyFigures.map((kf) => ({
+        icon: kf.icon,
+        value: kf.value,
+        labelFr: kf.labelFr,
+        labelEn: kf.labelEn,
+      })),
+      articles: edition.articles.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        titleFr: a.titleFr,
+        titleEn: a.titleEn,
+        excerptFr: a.excerptFr,
+        excerptEn: a.excerptEn,
+        imageUrl: a.imageUrl,
+        author: a.author,
+        publishedAt: a.publishedAt,
+        tags: a.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
+      })),
+    };
+  });
+
   // GET /api/editions/current — returns the featured edition
   app.get("/editions/current", async (_request, reply) => {
     const edition = await getFeaturedEdition();
@@ -75,6 +137,38 @@ export default async function editionRoutes(app: FastifyInstance) {
       hasSpeakers: false,
       hasSponsors: false,
     };
+  });
+
+  // GET /api/editions/current/sponsor-plans — returns visible plans for the featured edition
+  app.get("/editions/current/sponsor-plans", async (_request, reply) => {
+    const edition = await getFeaturedEdition();
+
+    if (!edition) {
+      return reply.status(404).send({ error: "No edition found" });
+    }
+
+    const plans = await prisma.sponsorPlan.findMany({
+      where: {
+        editionId: edition.id,
+        isVisible: true,
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return plans.map((p) => ({
+      id: p.id,
+      nameFr: p.nameFr,
+      nameEn: p.nameEn,
+      subtitleFr: p.subtitleFr,
+      subtitleEn: p.subtitleEn,
+      descriptionFr: p.descriptionFr,
+      descriptionEn: p.descriptionEn,
+      price: p.price,
+      standSize: p.standSize,
+      advantages: p.advantages ? JSON.parse(p.advantages) : [],
+      color: p.color,
+      isFeatured: p.isFeatured,
+    }));
   });
 
   // GET /api/editions/current/ticket-tiers — returns visible tiers for the featured edition

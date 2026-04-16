@@ -18,7 +18,7 @@ export async function generateMetadata({
     title: `${t("taggedWith")} ${slug}`,
     alternates: {
       canonical: `/${locale}/actualites/tag/${slug}`,
-      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}` },
+      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}`, "x-default": `/fr/actualites/tag/${slug}` },
     },
   };
 }
@@ -36,7 +36,7 @@ export default async function TagPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
 
-  const { articles, totalPages } = await getArticles(page, 9, slug);
+  const { articles, totalPages } = await getArticles(page, 8, slug);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },

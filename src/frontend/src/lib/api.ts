@@ -1,5 +1,6 @@
 import type {
   Edition,
+  EditionDetail,
   EditionSummary,
   SocialLinks,
   Article,
@@ -11,6 +12,7 @@ import type {
   CfpSettings,
   ContactCategory,
   PaginatedArticles,
+  SponsorPlan,
 } from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -34,6 +36,10 @@ export async function getCurrentEdition(): Promise<Edition | null> {
 
 export async function getEditions(): Promise<EditionSummary[]> {
   return (await fetchAPI<EditionSummary[]>("/api/editions")) || [];
+}
+
+export async function getEditionByYear(year: number): Promise<EditionDetail | null> {
+  return fetchAPI<EditionDetail>(`/api/editions/${year}`);
 }
 
 export async function getLatestArticles(limit = 4, editionId?: number): Promise<Article[]> {
@@ -96,4 +102,12 @@ export async function getContactCategories(): Promise<ContactCategory[]> {
 
 export async function getSocialLinks(): Promise<SocialLinks> {
   return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
+}
+
+export async function getSeoSettings(): Promise<Record<string, string>> {
+  return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+}
+
+export async function getSponsorPlans(): Promise<SponsorPlan[]> {
+  return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
 }

@@ -74,7 +74,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
 
     // Send invitation email with password reset link
     try {
-      const resetUrl = `${BASE_URL}/fr/admin`;
+      const resetUrl = `${BASE_URL}/admin`;
       await sendEmail({
         to: [email],
         subject: "Invitation DevFest Toulouse — Acces admin",
@@ -125,9 +125,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
     "/users/:id/ban",
     async (request, reply) => {
       const { id } = request.params;
-      const adminUser = (request as unknown as { adminUser: { id: string } }).adminUser;
-
-      if (adminUser.id === id) {
+      if (request.adminUser?.id === id) {
         return reply.code(400).send({ error: "You cannot ban yourself" });
       }
 
@@ -153,9 +151,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
     "/users/:id",
     async (request, reply) => {
       const { id } = request.params;
-      const adminUser = (request as unknown as { adminUser: { id: string } }).adminUser;
-
-      if (adminUser.id === id) {
+      if (request.adminUser?.id === id) {
         return reply.code(400).send({ error: "You cannot delete your own account" });
       }
 

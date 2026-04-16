@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { revalidateArticle } from "../../lib/revalidate.js";
 
 interface ArticleBody {
   slug: string;
@@ -30,7 +31,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
         skip: (page - 1) * limit,
         take: limit,
         include: { tags: true, editions: true },
@@ -126,6 +127,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       include: { tags: true },
     });
 
+    revalidateArticle(article.slug);
     return reply.status(201).send({ id: article.id, slug: article.slug });
   });
 
@@ -168,6 +170,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       include: { tags: true },
     });
 
+    // Revalidate both the old and new slug if renamed
+    revalidateArticle(article.slug);
+    if (existing.slug !== article.slug) revalidateArticle(existing.slug);
     return { id: article.id, slug: article.slug };
   });
 
@@ -182,6 +187,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: "Article not found" });
 
     await prisma.article.delete({ where: { id } });
+    revalidateArticle(existing.slug);
     return { success: true };
   });
 

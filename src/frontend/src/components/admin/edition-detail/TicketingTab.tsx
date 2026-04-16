@@ -28,7 +28,7 @@ interface BilletwebEvent {
 }
 
 const TICKET_STATUS = [
-  { value: "COMING_SOON", label: "Bientot disponible", variant: "gray" as const },
+  { value: "COMING_SOON", label: "Bientôt disponible", variant: "gray" as const },
   { value: "AVAILABLE", label: "Disponible", variant: "green" as const },
   { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
 ];
@@ -204,7 +204,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
     if (status === 200 && data) {
       setBwEvents(data);
     } else {
-      setImportError("Impossible de charger les evenements Billetweb. Verifiez la configuration API.");
+      setImportError("Impossible de charger les événements Billetweb. Vérifiez la configuration API.");
       setBwEvents([]);
     }
     setIsLoadingEvents(false);
@@ -258,7 +258,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField label="Prix (EUR)" name="price" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} required />
-            <FormField label="Debut des ventes" name="saleStartDate" type="date" value={form.saleStartDate} onChange={(v) => setForm({ ...form, saleStartDate: v })} />
+            <FormField label="Début des ventes" name="saleStartDate" type="date" value={form.saleStartDate} onChange={(v) => setForm({ ...form, saleStartDate: v })} />
             <FormField label="Fin des ventes" name="saleEndDate" type="date" value={form.saleEndDate} onChange={(v) => setForm({ ...form, saleEndDate: v })} />
           </div>
 
@@ -288,7 +288,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       )}
 
       {tiers.length === 0 ? (
-        <p className="text-gris text-sm">Aucun tarif pour cette edition.</p>
+        <p className="text-gris text-sm">Aucun tarif pour cette édition.</p>
       ) : (
         <>
           <TierTable
@@ -298,7 +298,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
             onDelete={setDeleteTarget}
           />
           <TierTable
-            title="Tarifs masques"
+            title="Tarifs masqués"
             tiers={tiers.filter((t) => !t.isVisible)}
             onEdit={startEdit}
             onDelete={setDeleteTarget}
@@ -316,12 +316,12 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
             <div className="px-6 py-4 border-b border-gris/20">
               <h3 className="text-lg font-bold text-noir">Importer depuis Billetweb</h3>
               <p className="text-sm text-gris mt-1">
-                Selectionnez un evenement. Les tarifs existants seront remplaces.
+                Sélectionnez un événement. Les tarifs existants seront remplacés.
               </p>
             </div>
 
             <div className="flex-1 overflow-y-auto px-6 py-4">
-              {isLoadingEvents && <p className="text-gris text-sm">Chargement des evenements...</p>}
+              {isLoadingEvents && <p className="text-gris text-sm">Chargement des événements...</p>}
 
               {importError && (
                 <div className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
@@ -330,7 +330,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
               )}
 
               {!isLoadingEvents && bwEvents.length === 0 && !importError && (
-                <p className="text-gris text-sm">Aucun evenement trouve.</p>
+                <p className="text-gris text-sm">Aucun événement trouvé.</p>
               )}
 
               {bwEvents.map((event) => (
@@ -345,7 +345,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                 >
                   <p className="font-medium text-noir text-sm">{event.name}</p>
                   <p className="text-xs text-gris mt-0.5">
-                    {event.date ? new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Date non definie"}
+                    {event.date ? new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Date non définie"}
                   </p>
                 </button>
               ))}

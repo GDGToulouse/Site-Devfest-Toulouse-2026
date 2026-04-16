@@ -23,6 +23,16 @@ Les spécifications du projet sont dans le dossier `docs/` :
 | [modele-donnees-metier.md](docs/modele-donnees-metier.md) | Modèle de données métier (entités, relations, bilingue) |
 | [maquettes-figma.md](docs/maquettes-figma.md) | Inventaire des maquettes Figma et structure des pages |
 | [design-system.md](docs/design-system.md) | Design system complet (charte, couleurs, typos, tokens, UI kit) |
+| [api-publique.md](docs/api-publique.md) | API REST publique : authentification, jetons, exemples curl |
+
+## API publique
+
+Le backend expose une API REST documentée via OpenAPI :
+
+- Documentation interactive : `https://devfesttoulouse.fr/api/docs` (Swagger UI)
+- Authentification par cookie de session ou jeton Bearer (`Authorization: Bearer dft_…`)
+- Création / révocation de jetons depuis [`/admin/profile`](https://devfesttoulouse.fr/admin/profile)
+- Voir [docs/api-publique.md](docs/api-publique.md) pour les détails et exemples.
 
 ## Données historiques
 

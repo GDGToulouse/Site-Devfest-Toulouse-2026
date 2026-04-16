@@ -6,7 +6,7 @@
   "langBanner": {
     "message": "This page is available in your language.",
     "switch": "Switch to {lang}",
-    "dismiss": "Fermer"
+    "dismiss": "Dismiss"
   },
   "nav": {
     "home": "Accueil",
@@ -157,6 +157,46 @@
       "responseTime": "Nous sommes bénévoles, merci pour votre patience. Nous faisons de notre mieux pour répondre sous 48h.",
       "followUs": "Suivez-nous :"
     }
+  },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Bilan de l'édition {year} du DevFest Toulouse.",
+    "home": "Accueil",
+    "editions": "Éditions",
+    "keyFigures": "L'édition en chiffres",
+    "aftermovie": "Aftermovie",
+    "gallery": "Galerie photos",
+    "galleryLink": "Voir la galerie",
+    "news": "Actualités de cette édition",
+    "venue": "Lieu",
+    "date": "Date",
+    "archivedSite": "Voir le site archivé",
+    "noEdition": "Aucune édition trouvée pour cette année.",
+    "allEditions": "Toutes les éditions"
+  },
+  "sponsor": {
+    "pageTitle": "Devenir sponsor",
+    "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse est l'opportunité de vous rendre visible auprès de milliers de passionnés de technologie. Rejoignez-nous en tant que sponsor et bénéficiez d'une visibilité unique auprès de la communauté tech toulousaine.",
+    "whyTitle": "Pourquoi devenir sponsor ?",
+    "whyVisibility": "Visibilité auprès de la communauté tech",
+    "whyVisibilityDesc": "Rendez-vous visible auprès de nos participants, développeurs, ingénieurs, décideurs techniques et étudiants.",
+    "whyBrand": "Marque employeur",
+    "whyBrandDesc": "Montrez votre engagement pour l'innovation et attirez les meilleurs talents de la tech.",
+    "whyProducts": "Promotion de vos produits",
+    "whyProductsDesc": "Présentez vos solutions et technologies directement à votre public cible.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Échangez avec les acteurs de la tech toulousaine dans un cadre convivial et professionnel.",
+    "plansTitle": "Nos formules",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Avantages inclus",
+    "ctaContact": "Nous contacter",
+    "ctaDownload": "Recevoir le dossier de sponsoring",
+    "noPlans": "Les formules de sponsoring seront bientôt disponibles.",
+    "visible": "Visible",
+    "hidden": "Masqué"
   },
   "codeOfConduct": {
     "title": "Code de conduite",

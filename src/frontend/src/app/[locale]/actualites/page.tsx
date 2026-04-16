@@ -14,7 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
     description: t("description"),
     alternates: {
       canonical: `/${locale}/actualites`,
-      languages: { fr: "/fr/actualites", en: "/en/actualites" },
+      languages: { fr: "/fr/actualites", en: "/en/actualites", "x-default": "/fr/actualites" },
     },
   };
 }
@@ -29,7 +29,7 @@ export default async function ArticlesPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
 
-  const { articles, totalPages } = await getArticles(page, 9);
+  const { articles, totalPages } = await getArticles(page, 8);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },

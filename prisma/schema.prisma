@@ -50,6 +50,7 @@ model Edition {
   ticketTiers      TicketTier[]
   articles         Article[]
   keyFigures       KeyFigure[]
+  sponsorPlans     SponsorPlan[]
 }
 
 // --- Key Figures ---
@@ -92,6 +93,30 @@ model Tag {
   name             String    @unique
   slug             String    @unique
   articles         Article[]
+}
+
+// --- Sponsor Plans ---
+
+model SponsorPlan {
+  id               Int       @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  subtitleFr       String?
+  subtitleEn       String?
+  descriptionFr    String?
+  descriptionEn    String?
+  price            String?
+  standSize        String?
+  advantages       String?   // JSON array of { fr: string, en: string }
+  color            String    @default("#109E6E")
+  isFeatured       Boolean   @default(false)
+  isVisible        Boolean   @default(true)
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  editionId        Int
+  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
 }
 
 // --- Ticketing ---
@@ -170,8 +195,31 @@ model User {
 
   sessions         Session[]
   accounts         Account[]
+  apiKeys          ApiKey[]
 
   @@map("user")
+}
+
+// --- API Keys ---
+// Personal API tokens. Inherit their owner's role dynamically (no scopes in v1).
+// The raw key is shown once at creation, then only its argon2 hash is stored.
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String    @unique
+  hashedKey   String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([prefix])
+  @@map("api_key")
 }
 
 model Session {

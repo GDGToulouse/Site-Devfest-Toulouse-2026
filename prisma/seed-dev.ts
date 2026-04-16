@@ -181,6 +181,131 @@ async function seedDev() {
 
   console.log(`Key figures created: ${keyFigures.length}`);
 
+  // --- Edition 2025 (past edition for bilan page) ---
+  const edition2025 = await prisma.edition.upsert({
+    where: { year: 2025 },
+    update: {
+      status: "SEE_YOU_NEXT_YEAR",
+      startDate: new Date("2025-11-06T09:00:00Z"),
+      endDate: new Date("2025-11-06T18:00:00Z"),
+      venueName: "Centre de Congrès Pierre Baudis",
+      venueAddress: "Toulouse",
+      aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
+      galleryUrl: "https://photos.app.goo.gl/devfest2025",
+      archivedSiteUrl: "https://2025.devfesttoulouse.fr",
+    },
+    create: {
+      year: 2025,
+      startDate: new Date("2025-11-06T09:00:00Z"),
+      endDate: new Date("2025-11-06T18:00:00Z"),
+      status: "SEE_YOU_NEXT_YEAR",
+      venueName: "Centre de Congrès Pierre Baudis",
+      venueAddress: "Toulouse",
+      aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
+      galleryUrl: "https://photos.app.goo.gl/devfest2025",
+      archivedSiteUrl: "https://2025.devfesttoulouse.fr",
+    },
+  });
+  console.log(`Edition created: ${edition2025.year} (${edition2025.status})`);
+
+  // --- Key Figures for 2025 ---
+  await prisma.keyFigure.deleteMany({ where: { editionId: edition2025.id } });
+  const keyFigures2025 = [
+    { icon: "calendar", value: "1", labelFr: "Journée", labelEn: "Day", sortOrder: 0 },
+    { icon: "users", value: "2800", labelFr: "Participants", labelEn: "Attendees", sortOrder: 1 },
+    { icon: "microphone", value: "72", labelFr: "Conférences", labelEn: "Talks", sortOrder: 2 },
+    { icon: "handshake", value: "50", labelFr: "Stands", labelEn: "Booths", sortOrder: 3 },
+  ];
+  await prisma.keyFigure.createMany({
+    data: keyFigures2025.map((fig) => ({ ...fig, editionId: edition2025.id })),
+  });
+  console.log(`Key figures 2025 created: ${keyFigures2025.length}`);
+
+  // --- Sponsor Plans for 2026 ---
+  await prisma.sponsorPlan.deleteMany({ where: { editionId: edition.id } });
+  const sponsorPlans = [
+    {
+      nameFr: "Platinum", nameEn: "Platinum",
+      subtitleFr: "Au dessus de la mêlée !", subtitleEn: "Above the pack!",
+      descriptionFr: "La visibilité la plus complète avec un grand stand pour vous mettre en avant.",
+      descriptionEn: "The most comprehensive visibility with a large booth to showcase your brand.",
+      price: null, standSize: "12m²",
+      advantages: JSON.stringify([
+        { fr: "Stand premium de 12m²", en: "Premium 12m² booth" },
+        { fr: "Logo sur tous les supports de communication", en: "Logo on all communication materials" },
+        { fr: "Visibilité maximale sur le site web", en: "Maximum visibility on the website" },
+        { fr: "Posts dédiés sur les réseaux sociaux", en: "Dedicated social media posts" },
+        { fr: "Billets inclus pour votre équipe", en: "Included tickets for your team" },
+        { fr: "Logo sur le badge des participants", en: "Logo on attendee badges" },
+        { fr: "Intervention sur scène", en: "On-stage speaking slot" },
+        { fr: "Accès à la liste des participants (opt-in)", en: "Access to attendee list (opt-in)" },
+      ]),
+      color: "#41B38E", isFeatured: false, isVisible: true, sortOrder: 1, editionId: edition.id,
+    },
+    {
+      nameFr: "Gold", nameEn: "Gold",
+      subtitleFr: "Le Best-seller", subtitleEn: "The Best-seller",
+      descriptionFr: "Le stand idéal pour être au contact des participants et promouvoir votre marque.",
+      descriptionEn: "The ideal booth to connect with attendees and promote your brand.",
+      price: null, standSize: "6m²",
+      advantages: JSON.stringify([
+        { fr: "Stand de 6m²", en: "6m² booth" },
+        { fr: "Logo sur le site web", en: "Logo on the website" },
+        { fr: "Mention sur les réseaux sociaux", en: "Social media mention" },
+        { fr: "Billets inclus pour votre équipe", en: "Included tickets for your team" },
+        { fr: "Logo sur les supports de communication", en: "Logo on communication materials" },
+        { fr: "Roll-up sur le stand", en: "Roll-up at the booth" },
+      ]),
+      color: "#FFD428", isFeatured: true, isVisible: true, sortOrder: 2, editionId: edition.id,
+    },
+    {
+      nameFr: "Discovery", nameEn: "Discovery",
+      subtitleFr: "Un coup de pouce aux PME", subtitleEn: "A boost for SMEs",
+      descriptionFr: "Un format accessible pour les PME souhaitant se faire connaître auprès de la communauté tech.",
+      descriptionEn: "An accessible format for SMEs wanting to get known in the tech community.",
+      price: null, standSize: "2m²",
+      advantages: JSON.stringify([
+        { fr: "Stand de 2m²", en: "2m² booth" },
+        { fr: "Logo sur le site web", en: "Logo on the website" },
+        { fr: "Mention sur les réseaux sociaux", en: "Social media mention" },
+        { fr: "Billets inclus", en: "Included tickets" },
+      ]),
+      color: "#EE7CAD", isFeatured: false, isVisible: true, sortOrder: 3, editionId: edition.id,
+    },
+    {
+      nameFr: "Soutien", nameEn: "Support",
+      subtitleFr: "Visibilité numérique", subtitleEn: "Digital visibility",
+      descriptionFr: "Associez votre marque à l'événement sans avoir à gérer un stand physique.",
+      descriptionEn: "Associate your brand with the event without managing a physical booth.",
+      price: null, standSize: null,
+      advantages: JSON.stringify([
+        { fr: "Logo sur le site web", en: "Logo on the website" },
+        { fr: "Mention sur les réseaux sociaux", en: "Social media mention" },
+        { fr: "Billets inclus", en: "Included tickets" },
+        { fr: "Visibilité sur les écrans de l'événement", en: "Visibility on event screens" },
+      ]),
+      color: "#507BBD", isFeatured: false, isVisible: true, sortOrder: 4, editionId: edition.id,
+    },
+  ];
+  await prisma.sponsorPlan.createMany({ data: sponsorPlans });
+  console.log(`Sponsor plans created: ${sponsorPlans.length}`);
+
+  // --- Social Links ---
+  const socialSettings = [
+    { key: "social_linkedin", value: "https://www.linkedin.com/company/gdg-toulouse/" },
+    { key: "social_youtube", value: "https://www.youtube.com/@GDGToulouse" },
+    { key: "social_x", value: "https://x.com/DevFestToulouse" },
+    { key: "social_bluesky", value: "https://bsky.app/profile/devfesttoulouse.fr" },
+  ];
+  for (const entry of socialSettings) {
+    await prisma.siteSetting.upsert({
+      where: { key: entry.key },
+      update: {},
+      create: entry,
+    });
+  }
+  console.log(`Social links created: ${socialSettings.length}`);
+
   // --- CFP Settings ---
   const cfpSettings = [
     { key: "cfp_is_open", value: "true" },

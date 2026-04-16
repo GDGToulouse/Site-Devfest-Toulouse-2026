@@ -6,7 +6,7 @@
   "langBanner": {
     "message": "Cette page est disponible dans votre langue.",
     "switch": "Passer en {lang}",
-    "dismiss": "Close"
+    "dismiss": "Fermer"
   },
   "nav": {
     "home": "Home",
@@ -157,6 +157,46 @@
       "responseTime": "We are volunteers, thank you for your patience. We do our best to respond within 48 hours.",
       "followUs": "Follow us:"
     }
+  },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Recap of DevFest Toulouse {year} edition.",
+    "home": "Home",
+    "editions": "Editions",
+    "keyFigures": "The edition in numbers",
+    "aftermovie": "Aftermovie",
+    "gallery": "Photo gallery",
+    "galleryLink": "View gallery",
+    "news": "News from this edition",
+    "venue": "Venue",
+    "date": "Date",
+    "archivedSite": "View archived site",
+    "noEdition": "No edition found for this year.",
+    "allEditions": "All editions"
+  },
+  "sponsor": {
+    "pageTitle": "Become a sponsor",
+    "description": "Discover our sponsorship packages for DevFest Toulouse 2026.",
+    "home": "Home",
+    "intro": "DevFest Toulouse is the opportunity to gain visibility among thousands of tech enthusiasts. Join us as a sponsor and benefit from unique exposure to the Toulouse tech community.",
+    "whyTitle": "Why become a sponsor?",
+    "whyVisibility": "Visibility within the tech community",
+    "whyVisibilityDesc": "Get noticed by our attendees: developers, engineers, technical decision-makers and students.",
+    "whyBrand": "Employer branding",
+    "whyBrandDesc": "Show your commitment to innovation and attract top tech talent.",
+    "whyProducts": "Product promotion",
+    "whyProductsDesc": "Present your solutions and technologies directly to your target audience.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Connect with the Toulouse tech community in a friendly and professional setting.",
+    "plansTitle": "Our packages",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Included benefits",
+    "ctaContact": "Contact us",
+    "ctaDownload": "Receive sponsorship package",
+    "noPlans": "Sponsorship packages will be available soon.",
+    "visible": "Visible",
+    "hidden": "Hidden"
   },
   "codeOfConduct": {
     "title": "Code of Conduct",

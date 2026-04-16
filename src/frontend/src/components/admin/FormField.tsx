@@ -9,8 +9,13 @@ interface FormFieldProps {
   required?: boolean;
   placeholder?: string;
   error?: string;
+  helpText?: string;
+  disabled?: boolean;
   multiline?: boolean;
   rows?: number;
+  min?: string | number;
+  max?: string | number;
+  step?: string | number;
 }
 
 export default function FormField({
@@ -22,11 +27,19 @@ export default function FormField({
   required,
   placeholder,
   error,
+  helpText,
+  disabled,
   multiline,
   rows = 3,
+  min,
+  max,
+  step,
 }: FormFieldProps) {
-  const inputClass =
-    "w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 focus:border-malachite";
+  const inputClass = [
+    "w-full rounded-lg border px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 focus:border-malachite",
+    error ? "border-terre-cuite" : "border-gris/30",
+    disabled ? "bg-blanc-casse text-gris cursor-not-allowed" : "",
+  ].join(" ");
 
   return (
     <div>
@@ -42,7 +55,10 @@ export default function FormField({
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
+          disabled={disabled}
           className={inputClass}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${name}-error` : helpText ? `${name}-help` : undefined}
         />
       ) : (
         <input
@@ -52,10 +68,17 @@ export default function FormField({
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder={placeholder}
+          disabled={disabled}
+          min={min}
+          max={max}
+          step={step}
           className={inputClass}
+          aria-invalid={!!error}
+          aria-describedby={error ? `${name}-error` : helpText ? `${name}-help` : undefined}
         />
       )}
-      {error && <p className="mt-1 text-sm text-terre-cuite">{error}</p>}
+      {error && <p id={`${name}-error`} className="mt-1 text-sm text-terre-cuite">{error}</p>}
+      {helpText && !error && <p id={`${name}-help`} className="mt-1 text-xs text-gris">{helpText}</p>}
     </div>
   );
 }

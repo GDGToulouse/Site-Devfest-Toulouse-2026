@@ -27,7 +27,7 @@ export async function generateMetadata({
     description,
     alternates: {
       canonical: `/${locale}/actualites/${slug}`,
-      languages: { fr: `/fr/actualites/${slug}`, en: `/en/actualites/${slug}` },
+      languages: { fr: `/fr/actualites/${slug}`, en: `/en/actualites/${slug}`, "x-default": `/fr/actualites/${slug}` },
     },
     openGraph: {
       title,

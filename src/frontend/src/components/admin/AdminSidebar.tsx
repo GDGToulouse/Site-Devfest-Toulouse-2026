@@ -2,11 +2,26 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTableCellsLarge,
+  faCalendarDays,
+  faFileLines,
+  faBook,
+  faImage,
+  faEnvelope,
+  faUsers,
+  faGear,
+  faKey,
+} from "@fortawesome/free-solid-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+
+import { adminNavItems, type AdminRole } from "./nav-items";
 
 interface AdminUser {
   email: string;
   name: string | null;
-  role: "ADMIN" | "EDITOR";
+  role: AdminRole;
 }
 
 interface AdminSidebarProps {
@@ -15,33 +30,33 @@ interface AdminSidebarProps {
   onNavigate?: () => void;
 }
 
-const navItems = [
-  { label: "Dashboard", path: "/admin", icon: "grid", roles: ["ADMIN", "EDITOR"] },
-  { label: "Editions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
-  { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
-  { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
-  { label: "Fichiers", path: "/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
-  { label: "Messages", path: "/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
-  { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
-  { label: "Parametres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
-];
+const iconMap: Record<string, IconDefinition> = {
+  grid: faTableCellsLarge,
+  calendar: faCalendarDays,
+  "file-text": faFileLines,
+  book: faBook,
+  image: faImage,
+  mail: faEnvelope,
+  users: faUsers,
+  settings: faGear,
+  key: faKey,
+};
 
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const locale = pathname.startsWith("/en") ? "en" : "fr";
-  const visibleItems = navItems
+  const visibleItems = adminNavItems
     .filter((item) => item.roles.includes(user.role))
-    .map((item) => ({ ...item, href: `/${locale}${item.path}` }));
+    .map((item) => ({ ...item, href: item.path }));
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
       <div className="p-6 border-b border-blanc/10 flex items-center justify-between">
-        <Link href={`/${locale}/admin`} className="text-xl font-bold">
+        <Link href="/admin" className="text-xl font-bold">
           <span className="text-malachite">DevFest</span>{" "}
           <span className="text-terre-cuite">Admin</span>
         </Link>
         <Link
-          href={`/${locale}`}
+          href="/"
           className="text-blanc/50 hover:text-blanc transition-colors"
           title="Voir le site"
         >
@@ -51,19 +66,21 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
 
       <nav className="flex-1 py-4 overflow-y-auto">
         {visibleItems.map((item) => {
-          const adminRoot = `/${locale}/admin`;
-          const isActive = pathname === item.href || (item.href !== adminRoot && pathname.startsWith(item.href));
+          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
           return (
             <Link
               key={item.href}
               href={item.href}
               onClick={onNavigate}
-              className={`block px-6 py-3 text-sm transition-colors ${
+              className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4 ${
                 isActive
-                  ? "bg-blanc/10 text-blanc font-bold border-l-4 border-malachite"
-                  : "text-blanc/70 hover:bg-blanc/5 hover:text-blanc"
+                  ? "bg-blanc/10 text-blanc font-bold border-malachite"
+                  : "text-blanc/70 hover:bg-blanc/5 hover:text-blanc border-transparent"
               }`}
             >
+              {iconMap[item.icon] && (
+                <FontAwesomeIcon icon={iconMap[item.icon]} className="w-4 h-4" aria-hidden="true" />
+              )}
               {item.label}
             </Link>
           );
@@ -71,7 +88,8 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
       </nav>
 
       <div className="p-4 border-t border-blanc/10">
-        <Link href={`/${locale}/admin/profile`} onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
+        <Link href="/admin/profile" onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
+          {user.name && <p className="text-sm text-blanc truncate">{user.name}</p>}
           <p className="text-xs text-blanc/50 truncate">{user.email}</p>
           <p className="text-xs text-blanc/30">{user.role === "ADMIN" ? "Administrateur" : "Éditeur"}</p>
         </Link>
