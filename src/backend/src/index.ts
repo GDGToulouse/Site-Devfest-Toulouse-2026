@@ -32,11 +32,12 @@ const app = Fastify({
   trustProxy: true,
 });
 
-// Per-request decorations attached by auth middleware. Initialised to null
-// so Fastify's internal "shouldn't be undefined" check passes; the actual
-// types are declared in src/types/fastify.d.ts.
-app.decorateRequest("adminUser", null);
-app.decorateRequest("authContext", null);
+// Per-request decorations attached by auth middleware. Declared without a
+// default so Fastify treats them as optional getters (the typings live in
+// src/types/fastify.d.ts as `field?: T`). Reading them before the auth
+// preHandler runs returns undefined.
+app.decorateRequest("adminUser");
+app.decorateRequest("authContext");
 
 const corsOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
