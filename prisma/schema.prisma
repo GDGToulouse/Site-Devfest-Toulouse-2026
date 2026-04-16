@@ -31,26 +31,30 @@ enum UserRole {
 // --- Edition ---
 
 model Edition {
-  id               Int             @id @default(autoincrement())
-  year             Int             @unique
-  startDate        DateTime?
-  endDate          DateTime?
-  status           EditionStatus   @default(PREPARATION)
-  venueName        String?
-  venueAddress     String?
-  heroImageUrl     String?
-  cfpUrl           String?
-  partnerFormUrl   String?
-  aftermovieUrl    String?
-  galleryUrl       String?
-  archivedSiteUrl  String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                  Int             @id @default(autoincrement())
+  year                Int             @unique
+  startDate           DateTime?
+  endDate             DateTime?
+  status              EditionStatus   @default(PREPARATION)
+  venueName           String?
+  venueAddress        String?
+  heroImageUrl        String?
+  cfpUrl              String?
+  partnerFormUrl      String?
+  aftermovieUrl       String?
+  galleryUrl          String?
+  archivedSiteUrl     String?
+  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
+  sponsorBrochureUrl  String?
+  // External URL POSTed when a contact message is submitted (any category)
+  contactWebhookUrl   String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
-  ticketTiers      TicketTier[]
-  articles         Article[]
-  keyFigures       KeyFigure[]
-  sponsorPlans     SponsorPlan[]
+  ticketTiers         TicketTier[]
+  articles            Article[]
+  keyFigures          KeyFigure[]
+  sponsorPlans        SponsorPlan[]
 }
 
 // --- Key Figures ---
@@ -141,16 +145,26 @@ model TicketTier {
 // --- Contact ---
 
 model ContactCategory {
-  id               Int       @id @default(autoincrement())
-  nameFr           String
-  nameEn           String
-  emailRecipients  String
-  sortOrder        Int       @default(0)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                     Int       @id @default(autoincrement())
+  nameFr                 String
+  nameEn                 String
+  emailRecipients        String
+  sortOrder              Int       @default(0)
+  isActive               Boolean   @default(true)
+  // Stable identifier used in code to target a specific category (e.g. "sponsoring")
+  slug                   String?   @unique
+  // System categories cannot be deleted from the admin UI
+  isSystem               Boolean   @default(false)
+  // Per-category confirmation email sent to the person who submitted the form.
+  // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
+  confirmationSubjectFr  String?
+  confirmationSubjectEn  String?
+  confirmationBodyFr     String?
+  confirmationBodyEn     String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  messages         ContactMessage[]
+  messages               ContactMessage[]
 }
 
 model ContactMessage {
@@ -161,6 +175,7 @@ model ContactMessage {
   phone            String?
   categoryLabel    String?
   message          String
+  locale           String?
   isRead           Boolean          @default(false)
   createdAt        DateTime         @default(now())
 
