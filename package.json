@@ -2,6 +2,7 @@
   "name": "devfest-toulouse-2026",
   "private": true,
   "description": "DevFest Toulouse 2026 — monorepo root",
+  "packageManager": "pnpm@9.15.4",
   "scripts": {
     "db:generate": "prisma generate --schema prisma/schema.prisma"
   },
