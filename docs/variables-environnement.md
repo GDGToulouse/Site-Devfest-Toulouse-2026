@@ -23,6 +23,7 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `NODE_ENV` | oui | Environnement d'exécution | `production` |
 | `BASE_URL` | oui | URL publique du site (utilisée pour les liens emails, liens de modification) | `https://devfesttoulouse.fr` |
 | `PORT` | non | Port d'écoute du backend (défaut : `4000`) | `4000` |
+| `LOG_LEVEL` | non | Niveau du logger Pino/Fastify (`fatal\|error\|warn\|info\|debug\|trace`). Défaut `info`. Passer à `debug` pour activer les traces verbeuses (auth guards, proxy, etc.) lors d'un diagnostic. | `debug` |
 
 ## Base de données (backend uniquement)
 

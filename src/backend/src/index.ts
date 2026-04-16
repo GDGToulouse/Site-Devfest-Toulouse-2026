@@ -16,7 +16,17 @@ import adminRoutes from "./routes/admin/index.js";
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
 
-const app = Fastify({ logger: true });
+// LOG_LEVEL: set to "debug" (or "trace") to enable verbose .debug() entries
+// scattered across the codebase (auth guards, proxy, etc.). Defaults to "info"
+// so debug entries are filtered out in normal runs and free to leave in place
+// as a permanent diagnostic tool.
+//
+// trustProxy: required behind Traefik/Coolify so request.ip and request.protocol
+// reflect X-Forwarded-* headers set by the reverse proxy.
+const app = Fastify({
+  logger: { level: process.env.LOG_LEVEL || "info" },
+  trustProxy: true,
+});
 
 const corsOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
@@ -79,6 +89,15 @@ app.route({
   async handler(request, reply) {
     const url = new URL(request.url, `http://${request.headers.host}`);
 
+    request.log.debug({
+      authPhase: "proxy.incoming",
+      url: request.url,
+      method: request.method,
+      hasCookie: !!request.headers.cookie,
+      cookiePrefix: request.headers.cookie ? request.headers.cookie.slice(0, 60) : null,
+      origin: request.headers.origin,
+    });
+
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (value) headers.append(key, Array.isArray(value) ? value.join(", ") : value);
@@ -91,6 +110,8 @@ app.route({
     });
 
     const response = await auth.handler(req);
+
+    request.log.debug({ authPhase: "proxy.response", status: response.status });
 
     // Log failed auth attempts for security monitoring
     if (response.status >= 400 && request.url.includes("sign-in")) {
