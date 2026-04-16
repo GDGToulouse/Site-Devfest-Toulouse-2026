@@ -11,6 +11,7 @@ import adminContactRoutes from "./contact.js";
 import adminImageRoutes from "./images.js";
 import adminUserRoutes from "./users.js";
 import adminSponsorPlanRoutes from "./sponsor-plans.js";
+import adminApiKeyRoutes from "./api-keys.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -34,5 +35,6 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(adminSettingsRoutes);
     await adminApp.register(adminUserRoutes);
     await adminApp.register(adminSponsorPlanRoutes);
+    await adminApp.register(adminApiKeyRoutes);
   });
 }
