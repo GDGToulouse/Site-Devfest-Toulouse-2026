@@ -2,10 +2,44 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSponsors } from "../../lib/revalidate.js";
 
+interface SponsorPlanCreateBody {
+  editionId: number;
+  nameFr: string;
+  nameEn: string;
+  subtitleFr?: string;
+  subtitleEn?: string;
+  descriptionFr?: string;
+  descriptionEn?: string;
+  price?: string;
+  standSize?: string;
+  advantages?: { fr: string; en: string }[];
+  color?: string;
+  isFeatured?: boolean;
+  isVisible?: boolean;
+  sortOrder?: number;
+}
+
+type SponsorPlanUpdateBody = Partial<Omit<SponsorPlanCreateBody, "editionId">>;
+
+interface SponsorPlanIdParams {
+  id: string;
+}
+
+interface SponsorPlanListQuery {
+  editionId?: string;
+}
+
 export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   // GET /api/admin/sponsor-plans?editionId=X
-  app.get("/sponsor-plans", async (request, reply) => {
-    const { editionId } = request.query as { editionId?: string };
+  app.get<{ Querystring: SponsorPlanListQuery }>("/sponsor-plans", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: { editionId: { type: "string" } },
+      },
+    },
+  }, async (request, reply) => {
+    const { editionId } = request.query;
     if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const plans = await prisma.sponsorPlan.findMany({
@@ -20,23 +54,8 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/sponsor-plans
-  app.post("/sponsor-plans", async (request, reply) => {
-    const body = request.body as {
-      editionId: number;
-      nameFr: string;
-      nameEn: string;
-      subtitleFr?: string;
-      subtitleEn?: string;
-      descriptionFr?: string;
-      descriptionEn?: string;
-      price?: string;
-      standSize?: string;
-      advantages?: { fr: string; en: string }[];
-      color?: string;
-      isFeatured?: boolean;
-      isVisible?: boolean;
-      sortOrder?: number;
-    };
+  app.post<{ Body: SponsorPlanCreateBody }>("/sponsor-plans", async (request, reply) => {
+    const body = request.body;
 
     if (!body.editionId || !body.nameFr || !body.nameEn) {
       return reply.code(400).send({ error: "editionId, nameFr and nameEn are required" });
@@ -66,23 +85,17 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/admin/sponsor-plans/:id
-  app.put("/sponsor-plans/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
-    const body = request.body as {
-      nameFr?: string;
-      nameEn?: string;
-      subtitleFr?: string;
-      subtitleEn?: string;
-      descriptionFr?: string;
-      descriptionEn?: string;
-      price?: string;
-      standSize?: string;
-      advantages?: { fr: string; en: string }[];
-      color?: string;
-      isFeatured?: boolean;
-      isVisible?: boolean;
-      sortOrder?: number;
-    };
+  app.put<{ Params: SponsorPlanIdParams; Body: SponsorPlanUpdateBody }>("/sponsor-plans/:id", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" } },
+      },
+    },
+  }, async (request) => {
+    const { id } = request.params;
+    const body = request.body;
 
     const plan = await prisma.sponsorPlan.update({
       where: { id: Number(id) },
@@ -108,8 +121,16 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/sponsor-plans/:id
-  app.delete("/sponsor-plans/:id", async (request, reply) => {
-    const { id } = request.params as { id: string };
+  app.delete<{ Params: SponsorPlanIdParams }>("/sponsor-plans/:id", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" } },
+      },
+    },
+  }, async (request, reply) => {
+    const { id } = request.params;
     await prisma.sponsorPlan.delete({ where: { id: Number(id) } });
     revalidateSponsors();
     return reply.code(204).send();
