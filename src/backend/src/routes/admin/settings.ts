@@ -93,6 +93,12 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     }
     if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL provided" });
 
+    // Use a real category if one exists, so the test payload mirrors what
+    // a genuine submission would produce (id + slug + label all set).
+    const sampleCategory = await prisma.contactCategory.findFirst({
+      where: { slug: "sponsoring" },
+    });
+
     const payload = {
       id: `test_${Date.now()}`,
       submittedAt: new Date().toISOString(),
@@ -101,9 +107,9 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
         lastName: "Doe",
         email: "john.doe@example.com",
         phone: "+33 6 00 00 00 00",
-        categoryId: null,
-        categorySlug: "sponsoring",
-        categoryLabel: "Sponsoring",
+        categoryId: sampleCategory?.id ?? null,
+        categorySlug: sampleCategory?.slug ?? null,
+        categoryLabel: sampleCategory?.nameFr ?? null,
         message: "Ceci est un message de test envoyé depuis le back-office pour vérifier la configuration du webhook.",
         locale: "fr",
       },
