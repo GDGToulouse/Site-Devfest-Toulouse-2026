@@ -75,7 +75,17 @@ await app.register(fastifyStatic, {
 
 // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
 // Exposes /api/docs (UI) and /api/docs/json (raw spec).
-await registerSwagger(app);
+//
+// In production the docs list every admin endpoint (schema, query params,
+// auth scheme) which is great for internal use but also shortens the recon
+// loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true (or
+// non-production env) so the default prod deployment keeps them off.
+const swaggerPublic = process.env.SWAGGER_PUBLIC === "true" || process.env.NODE_ENV !== "production";
+if (swaggerPublic) {
+  await registerSwagger(app);
+} else {
+  app.log.info("[swagger] /api/docs disabled in production (set SWAGGER_PUBLIC=true to re-enable)");
+}
 registerCommonSchemas(app);
 registerApiKeySchemas(app);
 
