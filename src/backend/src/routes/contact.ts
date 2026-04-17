@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { sendEmail, interpolate } from "../lib/email.js";
+import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
 import { validateWebhookUrl } from "../lib/webhook-url.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -149,14 +149,18 @@ export default async function contactRoutes(app: FastifyInstance) {
             brochureUrl,
           };
 
+          // Subject is plain-text, use plain interpolation (values not HTML-escaped).
+          // Body has two renderings: plain-text for `text` (strip tags after
+          // interpolation) and HTML for `html` (escape values to avoid XSS).
           const renderedSubject = interpolate(tplSubject, vars);
-          const renderedBody = interpolate(tplBody, vars);
+          const renderedTextBody = interpolate(tplBody, vars).replace(/<[^>]+>/g, "");
+          const renderedHtmlBody = interpolateHtml(tplBody, vars).replace(/\n/g, "<br>");
 
           await sendEmail({
             to: [email.trim()],
             subject: renderedSubject,
-            text: renderedBody.replace(/<[^>]+>/g, ""),
-            html: renderedBody.replace(/\n/g, "<br>"),
+            text: renderedTextBody,
+            html: renderedHtmlBody,
           });
         } catch (err) {
           app.log.error("Failed to send confirmation email: %s", String(err));

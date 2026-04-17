@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { sanitizeRichHtml } from "../../lib/sanitize.js";
 
 interface PageBody {
   slug: string;
@@ -54,8 +55,8 @@ export default async function adminPageRoutes(app: FastifyInstance) {
       data: {
         titleFr: body.titleFr?.trim() ?? existing.titleFr,
         titleEn: body.titleEn?.trim() ?? existing.titleEn,
-        contentFr: body.contentFr ?? existing.contentFr,
-        contentEn: body.contentEn ?? existing.contentEn,
+        contentFr: body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr,
+        contentEn: body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn,
       },
     });
 
@@ -78,8 +79,8 @@ export default async function adminPageRoutes(app: FastifyInstance) {
         slug: body.slug.trim(),
         titleFr: body.titleFr.trim(),
         titleEn: body.titleEn.trim(),
-        contentFr: body.contentFr || "",
-        contentEn: body.contentEn || "",
+        contentFr: sanitizeRichHtml(body.contentFr),
+        contentEn: sanitizeRichHtml(body.contentEn),
       },
     });
 

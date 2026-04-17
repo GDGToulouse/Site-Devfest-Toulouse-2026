@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateArticle } from "../../lib/revalidate.js";
+import { sanitizeRichHtml } from "../../lib/sanitize.js";
 
 interface ArticleBody {
   slug: string;
@@ -113,8 +114,8 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         slug: body.slug.trim(),
         titleFr: body.titleFr.trim(),
         titleEn: body.titleEn.trim(),
-        contentFr: body.contentFr || "",
-        contentEn: body.contentEn || "",
+        contentFr: sanitizeRichHtml(body.contentFr),
+        contentEn: sanitizeRichHtml(body.contentEn),
         excerptFr: body.excerptFr?.trim() || null,
         excerptEn: body.excerptEn?.trim() || null,
         imageUrl: body.imageUrl?.trim() || null,
@@ -152,8 +153,8 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         slug: body.slug?.trim() || existing.slug,
         titleFr: body.titleFr?.trim() || existing.titleFr,
         titleEn: body.titleEn?.trim() || existing.titleEn,
-        contentFr: body.contentFr ?? existing.contentFr,
-        contentEn: body.contentEn ?? existing.contentEn,
+        contentFr: body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr,
+        contentEn: body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn,
         excerptFr: body.excerptFr?.trim() ?? existing.excerptFr,
         excerptEn: body.excerptEn?.trim() ?? existing.excerptEn,
         imageUrl: body.imageUrl?.trim() ?? existing.imageUrl,
