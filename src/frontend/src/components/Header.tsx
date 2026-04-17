@@ -22,7 +22,9 @@ export default function Header() {
   const tHeader = useTranslations("header");
   const edition = useEdition();
 
-  const partnerUrl = edition?.partnerFormUrl || null;
+  // Show "Become a sponsor" CTA whenever the page is meant to receive
+  // visitors (i.e. anything but the sold-out state).
+  const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = edition?.cfpUrl || null;
 
   const navLinks = ALL_NAV_LINKS.filter((link) => {
@@ -70,7 +72,7 @@ export default function Header() {
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-4">
           <SocialIcons size={20} className="text-gris" />
-          {partnerUrl && (
+          {showSponsorCta && (
             <Link
               href="/devenir-sponsor"
               className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
@@ -127,8 +129,8 @@ export default function Header() {
                 {t(link.key)}
               </Link>
             ))}
-            {(partnerUrl || cfpUrl) && <hr className="border-gray-100" />}
-            {partnerUrl && (
+            {(showSponsorCta || cfpUrl) && <hr className="border-gray-100" />}
+            {showSponsorCta && (
               <Link
                 href="/devenir-sponsor"
                 className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
