@@ -13,6 +13,8 @@ process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import adminRoutes from "../routes/admin/index.js";
+import { registerCommonSchemas } from "../schemas/common.js";
+import { registerApiKeySchemas } from "../schemas/api-key.js";
 
 let app: FastifyInstance;
 
@@ -22,6 +24,10 @@ beforeAll(async () => {
   // otherwise admin-guard's `request.adminUser = ...` would throw.
   app.decorateRequest("adminUser");
   app.decorateRequest("authContext");
+  // Admin routes reference shared JSON schemas ($ref) that live in index.ts.
+  // Register them here too so the serializer can resolve them.
+  registerCommonSchemas(app);
+  registerApiKeySchemas(app);
   await app.register(adminRoutes, { prefix: "/api/admin" });
   await app.ready();
 });
