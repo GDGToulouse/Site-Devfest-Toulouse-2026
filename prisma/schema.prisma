@@ -213,7 +213,10 @@ model User {
   name             String?
   emailVerified    Boolean   @default(false)
   image            String?
-  role             UserRole  @default(ADMIN)
+  // Default to EDITOR so a leaked/forgotten user insertion path never
+  // elevates to ADMIN. Admins are explicitly promoted via the seed
+  // (from ADMIN_EMAILS) or by another admin through the back-office.
+  role             UserRole  @default(EDITOR)
   banned           Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
