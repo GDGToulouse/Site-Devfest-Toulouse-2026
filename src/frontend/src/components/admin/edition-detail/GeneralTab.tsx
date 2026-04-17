@@ -19,7 +19,6 @@ interface EditionData {
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
-  sponsorBrochureUrl: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -45,12 +44,10 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     aftermovieUrl: edition.aftermovieUrl || "",
     galleryUrl: edition.galleryUrl || "",
     archivedSiteUrl: edition.archivedSiteUrl || "",
-    sponsorBrochureUrl: edition.sponsorBrochureUrl || "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
-  const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
 
   async function handleSave() {
     setIsSaving(true);
@@ -68,7 +65,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         aftermovieUrl: form.aftermovieUrl || undefined,
         galleryUrl: form.galleryUrl || undefined,
         archivedSiteUrl: form.archivedSiteUrl || undefined,
-        sponsorBrochureUrl: form.sponsorBrochureUrl || undefined,
       }),
     });
     setIsSaving(false);
@@ -136,37 +132,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
       </div>
 
       <FormField label="URL formulaire partenaire" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
-
-      {/* Sponsor brochure */}
-      <div>
-        <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => setIsBrochurePickerOpen(true)}
-            className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
-          >
-            {form.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
-          </button>
-          {form.sponsorBrochureUrl && (
-            <button
-              type="button"
-              onClick={() => setForm({ ...form, sponsorBrochureUrl: "" })}
-              className="text-sm text-terre-cuite hover:underline"
-            >
-              Supprimer
-            </button>
-          )}
-        </div>
-        {form.sponsorBrochureUrl && (
-          <p className="text-xs text-gris mt-1">{form.sponsorBrochureUrl}</p>
-        )}
-        <ImagePickerDialog
-          open={isBrochurePickerOpen}
-          onClose={() => setIsBrochurePickerOpen(false)}
-          onSelect={(url) => setForm({ ...form, sponsorBrochureUrl: url })}
-        />
-      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={form.aftermovieUrl} onChange={(v) => setForm({ ...form, aftermovieUrl: v })} />

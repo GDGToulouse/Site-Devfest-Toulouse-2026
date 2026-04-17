@@ -22,6 +22,14 @@ enum PublicationStatus {
   PUBLISHED
 }
 
+// Drives what /devenir-sponsor displays for the featured edition.
+enum SponsorPageStatus {
+  PRE_ANNOUNCEMENT  // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
+  TEMPORARY         // Plans visible (if any) but contact still goes through the temporary external form
+  OPEN              // Full mode: plans + brochure download + integrated contact form
+  SOLD_OUT          // All slots taken: short message + link to /contact
+}
+
 
 enum UserRole {
   ADMIN
@@ -45,7 +53,11 @@ model Edition {
   galleryUrl          String?
   archivedSiteUrl     String?
   // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
-  sponsorBrochureUrl  String?
+  sponsorBrochureUrl       String?
+  // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
+  sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
+  // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
+  sponsorTemporaryFormUrl  String?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 
