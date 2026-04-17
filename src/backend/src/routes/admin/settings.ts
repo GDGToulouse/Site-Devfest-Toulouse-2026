@@ -79,13 +79,19 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
-  // POST /api/admin/settings/test-webhook — send a test payload to contact_webhook_url
-  app.post("/settings/test-webhook", async (_request, reply) => {
-    const setting = await prisma.siteSetting.findUnique({
-      where: { key: "contact_webhook_url" },
-    });
-    const webhookUrl = setting?.value;
-    if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL configured (contact_webhook_url)" });
+  // POST /api/admin/settings/test-webhook — send a test payload to a webhook URL
+  // Body { url? }: when set, tests this URL directly (lets the admin probe a
+  // candidate URL without saving). Falls back to the stored contact_webhook_url
+  // if no body URL is provided.
+  app.post<{ Body: { url?: string } }>("/settings/test-webhook", async (request, reply) => {
+    let webhookUrl = request.body?.url?.trim();
+    if (!webhookUrl) {
+      const setting = await prisma.siteSetting.findUnique({
+        where: { key: "contact_webhook_url" },
+      });
+      webhookUrl = setting?.value;
+    }
+    if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL provided" });
 
     const payload = {
       id: `test_${Date.now()}`,

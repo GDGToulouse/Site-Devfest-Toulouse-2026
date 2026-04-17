@@ -217,13 +217,16 @@ function ContactsTab({
               onClick={async () => {
                 setWebhookTestResult(null);
                 const { adminFetch } = await import("@/lib/admin-api");
-                const { data } = await adminFetch<{ status: string; responseStatus?: number; responseBody?: string }>("/settings/test-webhook", { method: "POST" });
+                const { data } = await adminFetch<{ status: string; responseStatus?: number; responseBody?: string }>(
+                  "/settings/test-webhook",
+                  { method: "POST", body: JSON.stringify({ url: form.contact_webhook_url }) }
+                );
                 if (data) {
                   setWebhookTestResult(data.status === "sent" ? `Envoyé (${data.responseStatus})` : `Échec : ${data.responseBody?.slice(0, 100)}`);
                 } else {
                   setWebhookTestResult("Erreur");
                 }
-                setTimeout(() => setWebhookTestResult(null), 5000);
+                setTimeout(() => setWebhookTestResult(null), 8000);
               }}
               className="mt-2 px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
             >
