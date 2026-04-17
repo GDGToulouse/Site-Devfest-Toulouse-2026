@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { interpolate } from "./email.js";
+import { interpolate, interpolateHtml } from "./email.js";
 
 describe("interpolate", () => {
   it("replaces known tokens", () => {
@@ -26,5 +26,27 @@ describe("interpolate", () => {
 
   it("replaces multiple occurrences of the same token", () => {
     expect(interpolate("{name} and {name}", { name: "X" })).toBe("X and X");
+  });
+});
+
+describe("interpolateHtml", () => {
+  it("escapes HTML special chars in values", () => {
+    const result = interpolateHtml("Hello {firstName}", {
+      firstName: "<script>alert(1)</script>",
+    });
+    expect(result).toBe("Hello &lt;script&gt;alert(1)&lt;/script&gt;");
+  });
+
+  it("preserves HTML in the template itself", () => {
+    const tpl = '<p>Hi <strong>{name}</strong></p>';
+    expect(interpolateHtml(tpl, { name: "Jane" })).toBe("<p>Hi <strong>Jane</strong></p>");
+  });
+
+  it("escapes quotes and ampersands", () => {
+    expect(interpolateHtml("{x}", { x: 'A "B" & C' })).toBe("A &quot;B&quot; &amp; C");
+  });
+
+  it("leaves unknown tokens unchanged", () => {
+    expect(interpolateHtml("{unknown}", {})).toBe("{unknown}");
   });
 });
