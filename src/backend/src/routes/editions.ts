@@ -132,6 +132,9 @@ export default async function editionRoutes(app: FastifyInstance) {
       previousAfterMovieUrl: previousEdition?.aftermovieUrl || null,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
+      sponsorBrochureUrl: edition.sponsorBrochureUrl,
+      sponsorPageStatus: edition.sponsorPageStatus,
+      sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
       // TODO: compute from actual data when Speaker/Session/Sponsor models exist
       isProgramPublished: false,
       hasSpeakers: false,

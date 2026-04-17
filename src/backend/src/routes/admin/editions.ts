@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateHome, revalidateEdition } from "../../lib/revalidate.js";
+import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 
 interface EditionBody {
   year: number;
@@ -16,6 +16,8 @@ interface EditionBody {
   galleryUrl?: string;
   archivedSiteUrl?: string;
   sponsorBrochureUrl?: string;
+  sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
+  sponsorTemporaryFormUrl?: string;
 }
 
 export default async function adminEditionRoutes(app: FastifyInstance) {
@@ -107,6 +109,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         aftermovieUrl: edition.aftermovieUrl,
         galleryUrl: edition.galleryUrl,
         archivedSiteUrl: edition.archivedSiteUrl,
+        sponsorBrochureUrl: edition.sponsorBrochureUrl,
+        sponsorPageStatus: edition.sponsorPageStatus,
+        sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
         ticketTiersCount: edition._count.ticketTiers,
         articlesCount: edition._count.articles,
       };
@@ -143,12 +148,16 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
         sponsorBrochureUrl: body.sponsorBrochureUrl !== undefined ? (body.sponsorBrochureUrl || null) : existing.sponsorBrochureUrl,
+        sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
+        sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
       },
     });
 
     // Revalidate the edition bilan page (both years if year changed) + home
     revalidateEdition(edition.year);
     if (existing.year !== edition.year) revalidateEdition(existing.year);
+    // Sponsor page depends on featured edition fields (status, brochure, etc.)
+    revalidateSponsors();
 
     return {
       id: edition.id,
