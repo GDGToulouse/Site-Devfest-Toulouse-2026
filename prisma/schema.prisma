@@ -46,8 +46,6 @@ model Edition {
   archivedSiteUrl     String?
   // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
   sponsorBrochureUrl  String?
-  // External URL POSTed when a contact message is submitted (any category)
-  contactWebhookUrl   String?
   createdAt           DateTime        @default(now())
   updatedAt           DateTime        @updatedAt
 

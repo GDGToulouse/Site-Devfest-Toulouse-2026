@@ -16,7 +16,6 @@ interface EditionBody {
   galleryUrl?: string;
   archivedSiteUrl?: string;
   sponsorBrochureUrl?: string;
-  contactWebhookUrl?: string;
 }
 
 export default async function adminEditionRoutes(app: FastifyInstance) {
@@ -144,7 +143,6 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
         sponsorBrochureUrl: body.sponsorBrochureUrl !== undefined ? (body.sponsorBrochureUrl || null) : existing.sponsorBrochureUrl,
-        contactWebhookUrl: body.contactWebhookUrl !== undefined ? (body.contactWebhookUrl || null) : existing.contactWebhookUrl,
       },
     });
 
@@ -287,51 +285,4 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       return { success: true, editionId };
     }
   );
-
-  // POST /api/admin/editions/:id/test-webhook — send a test payload to the contact webhook
-  app.post<{ Params: { id: string } }>("/editions/:id/test-webhook", async (request, reply) => {
-    const id = Number(request.params.id);
-    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
-
-    const edition = await prisma.edition.findUnique({ where: { id } });
-    if (!edition) return reply.status(404).send({ error: "Edition not found" });
-    if (!edition.contactWebhookUrl) return reply.status(400).send({ error: "No webhook URL configured for this edition" });
-
-    const payload = {
-      id: `test_${Date.now()}`,
-      submittedAt: new Date().toISOString(),
-      data: {
-        firstName: "John",
-        lastName: "Doe",
-        email: "john.doe@example.com",
-        phone: "+33 6 00 00 00 00",
-        categoryId: null,
-        categorySlug: "sponsoring",
-        categoryLabel: "Sponsoring",
-        message: "Ceci est un message de test envoyé depuis le back-office pour vérifier la configuration du webhook.",
-        locale: "fr",
-      },
-    };
-
-    try {
-      const response = await fetch(edition.contactWebhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10_000),
-      });
-      const responseBody = await response.text().catch(() => "");
-      return {
-        status: response.ok ? "sent" : "failed",
-        responseStatus: response.status,
-        responseBody: responseBody.slice(0, 500),
-      };
-    } catch (err) {
-      return {
-        status: "failed",
-        responseStatus: null,
-        responseBody: String(err),
-      };
-    }
-  });
 }
