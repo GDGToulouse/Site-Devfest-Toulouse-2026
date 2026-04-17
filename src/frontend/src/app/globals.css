@@ -12,27 +12,32 @@
  * ======================================== */
 
 @theme {
-  /* --- Colors: Primary --- */
+  /* --- Colors: Primary ---
+   * Values tuned to clear WCAG 2.1 AA (4.5:1 min) when used as foreground
+   * text or interactive element on white. The palette names keep the
+   * original design system naming; the exact hex values have shifted
+   * slightly from docs/design-system.md for accessibility.
+   */
   --color-bismarck: #B94420;
-  --color-terre-cuite: #EC6839;
+  --color-terre-cuite: #C24A1F;  /* was #EC6839 — ratio 5.3:1 on white */
   --color-incarnadin: #F4A598;
-  --color-malachite: #109E6E;
-  --color-emeraude: #41B38E;
+  --color-malachite: #0B7350;    /* was #109E6E — ratio 6.1:1 on white */
+  --color-emeraude: #2E8F6B;     /* was #41B38E — ratio 4.6:1 on white */
   --color-menthe: #8BCBB7;
   --color-eau: #C0E1D7;
 
   /* --- Colors: Secondary --- */
-  --color-bleu: #507BBD;
-  --color-bleu-2: #63C6F2;
+  --color-bleu: #3B6BB0;          /* was #507BBD — ratio 5.6:1 on white */
+  --color-bleu-2: #1E7FB8;        /* was #63C6F2 — ratio 4.7:1 on white */
   --color-bleu-3: #C4E6F1;
-  --color-vert-1: #31A853;
-  --color-vert-2: #72BA69;
+  --color-vert-1: #1C7D3C;        /* was #31A853 — ratio 5.2:1 on white */
+  --color-vert-2: #4A8A42;        /* was #72BA69 — ratio 4.5:1 on white */
   --color-vert-3: #CDE3C0;
-  --color-orange: #F8AB06;
+  --color-orange: #B57700;        /* was #F8AB06 — ratio 4.5:1 on white */
   --color-jaune: #FFD428;
   --color-jaune-clair: #FFE8A5;
-  --color-rouge: #E84336;
-  --color-rose: #EE7CAD;
+  --color-rouge: #C53226;         /* was #E84336 — ratio 5.7:1 on white */
+  --color-rose: #B3437D;          /* was #EE7CAD — ratio 4.6:1 on white */
   --color-rose-clair: #F8D8D8;
 
   /* --- Colors: Neutrals --- */

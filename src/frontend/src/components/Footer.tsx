@@ -144,17 +144,17 @@ export default async function Footer() {
 
       {/* Bottom bar */}
       <div className="mx-6 lg:mx-[84px] border-t border-blanc/20 px-0 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-        <p className="text-blanc/60 text-sm italic">
+        <p className="text-blanc/85 text-sm italic">
           {tFooter("tagline")}
         </p>
         <div className="flex items-center gap-4">
-          <Link href="/mentions-legales" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
+          <Link href="/mentions-legales" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("legalNotice")}
           </Link>
-          <Link href="/code-de-conduite" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
+          <Link href="/code-de-conduite" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("codeOfConduct")}
           </Link>
-          <a href="/sitemap.xml" className="text-blanc/60 text-sm hover:text-blanc transition-colors">
+          <a href="/sitemap.xml" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
           </a>
         </div>
