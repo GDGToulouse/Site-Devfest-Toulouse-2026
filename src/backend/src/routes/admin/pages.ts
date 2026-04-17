@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
+import { parseIdParam, notFound } from "../../lib/admin-helpers.js";
 
 interface PageBody {
   slug: string;
@@ -28,11 +29,11 @@ export default async function adminPageRoutes(app: FastifyInstance) {
 
   // GET /api/admin/pages/:id
   app.get<{ Params: { id: string } }>("/pages/:id", async (request, reply) => {
-    const id = Number(request.params.id);
-    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+    const id = await parseIdParam(request, reply);
+    if (id === null) return;
 
     const page = await prisma.contentPage.findUnique({ where: { id } });
-    if (!page) return reply.status(404).send({ error: "Page not found" });
+    if (!page) return notFound(reply, "Page");
 
     return page;
   });
@@ -42,11 +43,11 @@ export default async function adminPageRoutes(app: FastifyInstance) {
     Params: { id: string };
     Body: PageBody;
   }>("/pages/:id", async (request, reply) => {
-    const id = Number(request.params.id);
-    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+    const id = await parseIdParam(request, reply);
+    if (id === null) return;
 
     const existing = await prisma.contentPage.findUnique({ where: { id } });
-    if (!existing) return reply.status(404).send({ error: "Page not found" });
+    if (!existing) return notFound(reply, "Page");
 
     const body = request.body;
 
