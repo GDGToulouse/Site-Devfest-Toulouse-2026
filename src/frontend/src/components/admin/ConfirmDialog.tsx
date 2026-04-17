@@ -1,5 +1,8 @@
 "use client";
 
+import { useId } from "react";
+import { useDialog } from "@/lib/use-dialog";
+
 interface ConfirmDialogProps {
   isOpen: boolean;
   title: string;
@@ -21,6 +24,12 @@ export default function ConfirmDialog({
   onCancel,
   variant = "default",
 }: ConfirmDialogProps) {
+  const titleId = useId();
+  const messageId = useId();
+  // Attach focus trap + Escape handling + focus restore even when isOpen
+  // transitions; hook handles the no-op case internally.
+  const containerRef = useDialog({ open: isOpen, onClose: onCancel });
+
   if (!isOpen) return null;
 
   const confirmButtonClass =
@@ -29,10 +38,18 @@ export default function ConfirmDialog({
       : "bg-malachite text-blanc hover:bg-malachite/90";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-noir/50">
-      <div className="bg-blanc rounded-xl shadow-lg p-6 max-w-md w-full mx-4">
-        <h3 className="text-lg font-bold text-noir">{title}</h3>
-        <p className="mt-2 text-sm text-gris">{message}</p>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-noir/50" onClick={onCancel}>
+      <div
+        ref={containerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        aria-describedby={messageId}
+        className="bg-blanc rounded-xl shadow-lg p-6 max-w-md w-full mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <h3 id={titleId} className="text-lg font-bold text-noir">{title}</h3>
+        <p id={messageId} className="mt-2 text-sm text-gris">{message}</p>
         <div className="mt-6 flex justify-end gap-3">
           <button
             onClick={onCancel}
