@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { sendEmail, interpolate } from "../lib/email.js";
+import { validateWebhookUrl } from "../lib/webhook-url.js";
 import { getFeaturedEdition } from "./editions.js";
 
 interface ContactBody {
@@ -170,6 +171,16 @@ export default async function contactRoutes(app: FastifyInstance) {
       });
       const webhookUrl = webhookSetting?.value;
       if (webhookUrl) {
+        // Validate against SSRF: protocol + private IP check. Skip the webhook
+        // if validation fails — better to miss the event than leak internal
+        // endpoints to whichever URL an admin accidentally set.
+        try {
+          await validateWebhookUrl(webhookUrl);
+        } catch (err) {
+          app.log.warn("Contact webhook skipped (invalid URL: %s)", String(err));
+          return { success: true };
+        }
+
         const payload = {
           id: stored.id,
           submittedAt: stored.createdAt.toISOString(),
@@ -191,6 +202,7 @@ export default async function contactRoutes(app: FastifyInstance) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),
           signal: AbortSignal.timeout(10_000),
+          redirect: "manual",
         }).catch((err) => {
           app.log.warn("Contact webhook failed: %s", String(err));
         });

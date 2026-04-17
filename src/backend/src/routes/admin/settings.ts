@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateHome } from "../../lib/revalidate.js";
+import { validateWebhookUrl } from "../../lib/webhook-url.js";
 
 interface CfpBody {
   isOpen: boolean;
@@ -93,6 +94,19 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     }
     if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL provided" });
 
+    // Validate the URL against SSRF before touching it. The admin is trusted
+    // to point elsewhere but we refuse internal/loopback/private-IP targets
+    // unconditionally — this is also our primary defense for the stored
+    // webhook used by real submissions (defense in depth).
+    try {
+      await validateWebhookUrl(webhookUrl);
+    } catch (err) {
+      return reply.status(400).send({
+        error: "invalid_webhook_url",
+        reason: String((err as Error).message ?? err),
+      });
+    }
+
     // Use a real category if one exists, so the test payload mirrors what
     // a genuine submission would produce (id + slug + label all set).
     const sampleCategory = await prisma.contactCategory.findFirst({
@@ -121,6 +135,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
         signal: AbortSignal.timeout(10_000),
+        redirect: "manual",
       });
       const responseBody = await response.text().catch(() => "");
       return {
