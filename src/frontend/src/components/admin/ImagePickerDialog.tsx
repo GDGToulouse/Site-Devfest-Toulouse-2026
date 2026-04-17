@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { useDialog } from "@/lib/use-dialog";
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
 
@@ -19,6 +20,9 @@ interface ImagePickerDialogProps {
 }
 
 export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePickerDialogProps) {
+  const titleId = useId();
+  // Focus trap + Escape + focus restore — hook handles the open/close lifecycle.
+  const dialogRef = useDialog({ open, onClose });
   const [tab, setTab] = useState<"library" | "upload">("library");
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -93,12 +97,25 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50">
-      <div className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
-          <h2 className="text-lg font-bold text-noir">Bibliothèque d&apos;images</h2>
-          <button onClick={onClose} className="text-gris hover:text-noir text-xl leading-none">&times;</button>
+          <h2 id={titleId} className="text-lg font-bold text-noir">Bibliothèque d&apos;images</h2>
+          <button
+            onClick={onClose}
+            aria-label="Fermer la boîte de dialogue"
+            className="text-gris hover:text-noir text-xl leading-none"
+          >
+            &times;
+          </button>
         </div>
 
         {/* Tabs */}
