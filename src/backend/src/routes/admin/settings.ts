@@ -79,4 +79,49 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  // POST /api/admin/settings/test-webhook — send a test payload to contact_webhook_url
+  app.post("/settings/test-webhook", async (_request, reply) => {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "contact_webhook_url" },
+    });
+    const webhookUrl = setting?.value;
+    if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL configured (contact_webhook_url)" });
+
+    const payload = {
+      id: `test_${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+      data: {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        phone: "+33 6 00 00 00 00",
+        categoryId: null,
+        categorySlug: "sponsoring",
+        categoryLabel: "Sponsoring",
+        message: "Ceci est un message de test envoyé depuis le back-office pour vérifier la configuration du webhook.",
+        locale: "fr",
+      },
+    };
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+      });
+      const responseBody = await response.text().catch(() => "");
+      return {
+        status: response.ok ? "sent" : "failed",
+        responseStatus: response.status,
+        responseBody: responseBody.slice(0, 500),
+      };
+    } catch (err) {
+      return {
+        status: "failed",
+        responseStatus: null,
+        responseBody: String(err),
+      };
+    }
+  });
 }

@@ -165,8 +165,11 @@ export default async function contactRoutes(app: FastifyInstance) {
 
     // --- Fire webhook (async, fire-and-forget) ---
     try {
-      const edition = await getFeaturedEdition();
-      if (edition?.contactWebhookUrl) {
+      const webhookSetting = await prisma.siteSetting.findUnique({
+        where: { key: "contact_webhook_url" },
+      });
+      const webhookUrl = webhookSetting?.value;
+      if (webhookUrl) {
         const payload = {
           id: stored.id,
           submittedAt: stored.createdAt.toISOString(),
@@ -183,7 +186,7 @@ export default async function contactRoutes(app: FastifyInstance) {
           },
         };
 
-        fetch(edition.contactWebhookUrl, {
+        fetch(webhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(payload),

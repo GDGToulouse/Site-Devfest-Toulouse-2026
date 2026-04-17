@@ -20,7 +20,6 @@ interface EditionData {
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   sponsorBrochureUrl: string | null;
-  contactWebhookUrl: string | null;
 }
 
 const STATUS_OPTIONS = [
@@ -47,13 +46,11 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     galleryUrl: edition.galleryUrl || "",
     archivedSiteUrl: edition.archivedSiteUrl || "",
     sponsorBrochureUrl: edition.sponsorBrochureUrl || "",
-    contactWebhookUrl: edition.contactWebhookUrl || "",
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
-  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
 
   async function handleSave() {
     setIsSaving(true);
@@ -72,7 +69,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         galleryUrl: form.galleryUrl || undefined,
         archivedSiteUrl: form.archivedSiteUrl || undefined,
         sponsorBrochureUrl: form.sponsorBrochureUrl || undefined,
-        contactWebhookUrl: form.contactWebhookUrl || undefined,
       }),
     });
     setIsSaving(false);
@@ -170,36 +166,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
           onClose={() => setIsBrochurePickerOpen(false)}
           onSelect={(url) => setForm({ ...form, sponsorBrochureUrl: url })}
         />
-      </div>
-
-      {/* Webhook */}
-      <div>
-        <FormField label="URL webhook contact" name="contactWebhookUrl" type="url" value={form.contactWebhookUrl} onChange={(v) => setForm({ ...form, contactWebhookUrl: v })} helpText="URL appelée en POST à chaque soumission de formulaire de contact (toutes catégories)." />
-        {form.contactWebhookUrl && (
-          <div className="mt-2 flex items-center gap-3">
-            <button
-              type="button"
-              onClick={async () => {
-                setWebhookTestResult(null);
-                const { data } = await adminFetch<{ status: string; responseStatus?: number; responseBody?: string }>(`/editions/${edition.id}/test-webhook`, { method: "POST" });
-                if (data) {
-                  setWebhookTestResult(data.status === "sent" ? `✓ ${data.responseStatus}` : `✗ ${data.responseBody?.slice(0, 100)}`);
-                } else {
-                  setWebhookTestResult("✗ Erreur");
-                }
-                setTimeout(() => setWebhookTestResult(null), 5000);
-              }}
-              className="px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
-            >
-              Tester le webhook
-            </button>
-            {webhookTestResult && (
-              <span className={`text-xs ${webhookTestResult.startsWith("✓") ? "text-malachite" : "text-terre-cuite"}`}>
-                {webhookTestResult}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
