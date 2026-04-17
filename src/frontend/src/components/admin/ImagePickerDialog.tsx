@@ -4,8 +4,6 @@ import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useDialog } from "@/lib/use-dialog";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
 interface ImageInfo {
   filename: string;
   url: string;
@@ -67,7 +65,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
       // Auto-select the uploaded image and switch to library
       await loadImages();
-      setSelected(`${BACKEND_URL}${data.url}`);
+      setSelected(data.url);
       setTab("library");
     } catch {
       setError("Impossible de contacter le serveur");
@@ -159,15 +157,15 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                   {images.map((img) => (
                     <button
                       key={img.filename}
-                      onClick={() => setSelected(`${BACKEND_URL}${img.url}`)}
+                      onClick={() => setSelected(img.url)}
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                        selected === `${BACKEND_URL}${img.url}`
+                        selected === img.url
                           ? "border-malachite"
                           : "border-transparent hover:border-gris/30"
                       }`}
                     >
                       <img
-                        src={`${BACKEND_URL}${img.url}`}
+                        src={img.url}
                         alt={img.filename}
                         className="w-full h-full object-cover"
                       />

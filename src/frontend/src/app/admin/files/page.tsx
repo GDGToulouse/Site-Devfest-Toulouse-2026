@@ -4,8 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
 interface FileInfo {
   filename: string;
   url: string;
@@ -73,7 +71,7 @@ export default function FilesAdminPage() {
     formData.append("file", file);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/admin/files`, {
+      const res = await fetch(`/api/admin/files`, {
         method: "POST",
         credentials: "include",
         body: formData,
@@ -114,7 +112,9 @@ export default function FilesAdminPage() {
   }
 
   function copyUrl(url: string) {
-    const fullUrl = `${BACKEND_URL}${url}`;
+    // Resolve against the public origin (the frontend domain) — never the
+    // internal backend URL, which isn't reachable from the browser anyway.
+    const fullUrl = typeof window !== "undefined" ? `${window.location.origin}${url}` : url;
     navigator.clipboard.writeText(fullUrl);
     setCopiedUrl(url);
     setTimeout(() => setCopiedUrl(null), 2000);
@@ -209,14 +209,14 @@ export default function FilesAdminPage() {
           {filtered.map((file) => (
             <div key={file.filename} className="bg-blanc rounded-lg shadow-card overflow-hidden">
               <a
-                href={`${BACKEND_URL}${file.url}`}
+                href={file.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block aspect-square relative flex items-center justify-center bg-blanc-casse hover:opacity-80 transition-opacity cursor-pointer"
               >
                 {file.isImage ? (
                   <img
-                    src={`${BACKEND_URL}${file.url}`}
+                    src={file.url}
                     alt={file.filename}
                     className="w-full h-full object-cover"
                   />

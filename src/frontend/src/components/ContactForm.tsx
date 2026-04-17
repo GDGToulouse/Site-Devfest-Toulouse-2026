@@ -13,8 +13,6 @@ interface ContactFormProps {
   submitLabel?: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
 export default function ContactForm({ categories, locale, forceCategoryId, submitLabel }: ContactFormProps) {
   const t = useTranslations("contact.form");
 
@@ -52,7 +50,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
     setStatus("sending");
     try {
       const categoryId = forceCategoryId ?? (formData.categoryId ? Number(formData.categoryId) : undefined);
-      const res = await fetch(`${BACKEND_URL}/api/contact/send`, {
+      const res = await fetch(`/api/contact/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
