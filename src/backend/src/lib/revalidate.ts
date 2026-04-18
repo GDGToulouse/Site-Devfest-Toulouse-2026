@@ -1,9 +1,21 @@
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
-const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET || "dev-secret";
+
+// REVALIDATE_SECRET must be set in production. A soft fallback here would
+// let anyone purge the Next.js cache by sending `secret: "dev-secret"` if
+// the env var was ever forgotten. We fail closed: no secret configured ->
+// revalidation is skipped silently in every environment, and an explicit
+// warning is emitted so the misconfiguration is visible in logs.
+const REVALIDATE_SECRET = process.env.REVALIDATE_SECRET || "";
+
+if (!REVALIDATE_SECRET) {
+  // eslint-disable-next-line no-console
+  console.warn("[revalidate] REVALIDATE_SECRET not set — revalidation disabled.");
+}
 
 const LOCALES = ["fr", "en"] as const;
 
 export async function revalidatePaths(paths: string[] = ["/"]): Promise<void> {
+  if (!REVALIDATE_SECRET) return; // fail closed — see note above
   try {
     await fetch(`${FRONTEND_URL}/api/revalidate`, {
       method: "POST",

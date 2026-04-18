@@ -26,7 +26,9 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition?.venueName || null;
 
-  const partnerUrl = edition?.partnerFormUrl || null;
+  // Show "Become a sponsor" CTA whenever the page is meant to receive
+  // visitors (i.e. anything but the sold-out state).
+  const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = edition?.cfpUrl || null;
 
   const backgroundImage = heroImageUrl
@@ -53,8 +55,11 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
               className="bg-blanc pl-8 lg:pl-[150px] pr-8 lg:pr-[45px] pt-[10px] pb-[2px]"
               style={{ borderTopRightRadius: "40px" }}
             >
-              <h1>
-                <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
+              {/* The visible title is split across 3 blocks for the staircase
+                  effect. Assistive tech sees a single h1 with the combined
+                  label; the subtitle paragraphs below stay separate. */}
+              <h1 aria-label="DevFest Toulouse">
+                <span aria-hidden="true" className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
                   DevFest
                 </span>
               </h1>
@@ -65,7 +70,7 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
               className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
               style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
             >
-              <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
+              <span aria-hidden="true" className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
               <p className="pt-[22px] text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
@@ -110,9 +115,9 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
             )}
 
             {/* Buttons */}
-            {(partnerUrl || cfpUrl) && (
+            {(showSponsorCta || cfpUrl) && (
               <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
-                {partnerUrl && (
+                {showSponsorCta && (
                   <Link
                     href="/devenir-sponsor"
                     className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"

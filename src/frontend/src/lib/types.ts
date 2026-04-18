@@ -1,3 +1,5 @@
+export type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
+
 export interface Edition {
   id: number;
   year: number;
@@ -13,6 +15,9 @@ export interface Edition {
   previousAfterMovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  sponsorBrochureUrl: string | null;
+  sponsorPageStatus: SponsorPageStatus;
+  sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
@@ -125,6 +130,7 @@ export interface ContactCategory {
   id: number;
   nameFr: string;
   nameEn: string;
+  slug: string | null;
 }
 
 export interface ContactFormData {

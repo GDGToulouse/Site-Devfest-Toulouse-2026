@@ -4,8 +4,6 @@ import { useState, useEffect } from "react";
 import { adminFetch, getAdminSession } from "@/lib/admin-api";
 import ApiKeysSection from "@/components/admin/ApiKeysSection";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
 interface AdminUser {
   id: string;
   email: string;
@@ -80,7 +78,7 @@ export default function ProfilePage() {
     setIsSavingPassword(true);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/change-password`, {
+      const res = await fetch(`/api/auth/change-password`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },

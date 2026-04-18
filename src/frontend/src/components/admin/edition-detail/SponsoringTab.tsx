@@ -5,6 +5,22 @@ import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import BilingualInput from "@/components/admin/BilingualInput";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+
+type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
+
+interface EditionSettings {
+  sponsorPageStatus: SponsorPageStatus;
+  sponsorTemporaryFormUrl: string | null;
+  sponsorBrochureUrl: string | null;
+}
+
+const STATUS_OPTIONS: { value: SponsorPageStatus; label: string; hint: string }[] = [
+  { value: "PRE_ANNOUNCEMENT", label: "Avant annonce", hint: "Affiche un message + CTA vers le formulaire temporaire (formulaire externe)." },
+  { value: "TEMPORARY", label: "Annoncé (formulaire temporaire)", hint: "Affiche les plans + CTA vers le formulaire externe (la plaquette n'est pas encore prête)." },
+  { value: "OPEN", label: "Ouvert (formulaire intégré)", hint: "Affiche tout : plans, plaquette téléchargeable, formulaire intégré." },
+  { value: "SOLD_OUT", label: "Sponsoring complet", hint: "Affiche un message « tout est vendu » avec un lien vers /contact." },
+];
 
 interface SponsorPlan {
   id: number;
@@ -61,6 +77,44 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SponsorPlan | null>(null);
 
+  // Page settings (status, temporary form URL, brochure URL) — separate
+  // from the plans list because they live on Edition, not on SponsorPlan.
+  const [settings, setSettings] = useState<EditionSettings>({
+    sponsorPageStatus: "PRE_ANNOUNCEMENT",
+    sponsorTemporaryFormUrl: null,
+    sponsorBrochureUrl: null,
+  });
+  const [isSettingsSaving, setIsSettingsSaving] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+  const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
+
+  async function loadSettings() {
+    const { data } = await adminFetch<EditionSettings>(`/editions/${editionId}`);
+    if (data) {
+      setSettings({
+        sponsorPageStatus: data.sponsorPageStatus ?? "PRE_ANNOUNCEMENT",
+        sponsorTemporaryFormUrl: data.sponsorTemporaryFormUrl ?? null,
+        sponsorBrochureUrl: data.sponsorBrochureUrl ?? null,
+      });
+    }
+  }
+
+  async function saveSettings() {
+    setIsSettingsSaving(true);
+    setSettingsSaved(false);
+    await adminFetch(`/editions/${editionId}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        sponsorPageStatus: settings.sponsorPageStatus,
+        sponsorTemporaryFormUrl: settings.sponsorTemporaryFormUrl ?? "",
+        sponsorBrochureUrl: settings.sponsorBrochureUrl ?? "",
+      }),
+    });
+    setIsSettingsSaving(false);
+    setSettingsSaved(true);
+    setTimeout(() => setSettingsSaved(false), 3000);
+  }
+
   async function loadPlans() {
     setIsLoading(true);
     const { data } = await adminFetch<SponsorPlan[]>(
@@ -72,6 +126,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   useEffect(() => {
     loadPlans();
+    loadSettings();
   }, [editionId]);
 
   function startNew() {
@@ -169,8 +224,87 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
 
+  const currentStatusOption = STATUS_OPTIONS.find((o) => o.value === settings.sponsorPageStatus);
+  const showTempUrl = settings.sponsorPageStatus === "PRE_ANNOUNCEMENT" || settings.sponsorPageStatus === "TEMPORARY";
+  const showBrochure = settings.sponsorPageStatus === "OPEN";
+
   return (
     <div>
+      {/* Page settings */}
+      <div className="bg-blanc-casse/50 rounded-xl p-6 mb-6 space-y-4">
+        <h3 className="text-lg font-bold text-noir">Statut de la page « Devenir sponsor »</h3>
+        <div>
+          <label className="block text-sm font-medium text-noir mb-1">Statut</label>
+          <select
+            value={settings.sponsorPageStatus}
+            onChange={(e) => setSettings({ ...settings, sponsorPageStatus: e.target.value as SponsorPageStatus })}
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          >
+            {STATUS_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </select>
+          {currentStatusOption && (
+            <p className="mt-1 text-xs text-gris">{currentStatusOption.hint}</p>
+          )}
+        </div>
+
+        {showTempUrl && (
+          <FormField
+            label="URL formulaire temporaire (Google Form, etc.)"
+            name="sponsorTemporaryFormUrl"
+            type="url"
+            value={settings.sponsorTemporaryFormUrl || ""}
+            onChange={(v) => setSettings({ ...settings, sponsorTemporaryFormUrl: v || null })}
+            helpText="Lien externe affiché en CTA tant que la plaquette n'est pas finalisée."
+          />
+        )}
+
+        {showBrochure && (
+          <div>
+            <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsBrochurePickerOpen(true)}
+                className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+              >
+                {settings.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
+              </button>
+              {settings.sponsorBrochureUrl && (
+                <button
+                  type="button"
+                  onClick={() => setSettings({ ...settings, sponsorBrochureUrl: null })}
+                  className="text-sm text-terre-cuite hover:underline"
+                >
+                  Supprimer
+                </button>
+              )}
+            </div>
+            {settings.sponsorBrochureUrl && (
+              <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>
+            )}
+            <ImagePickerDialog
+              open={isBrochurePickerOpen}
+              onClose={() => setIsBrochurePickerOpen(false)}
+              onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrl: url })}
+            />
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={saveSettings}
+            disabled={isSettingsSaving}
+            className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+          >
+            {isSettingsSaving ? "Sauvegarde..." : "Enregistrer le statut"}
+          </button>
+          {settingsSaved && <span className="text-sm text-malachite">Enregistré !</span>}
+        </div>
+      </div>
+
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-bold text-noir">Formules de sponsoring</h3>
         <button

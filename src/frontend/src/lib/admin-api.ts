@@ -1,5 +1,5 @@
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
+// All requests go through Next.js rewrites (next.config.ts) so the
+// backend URL stays internal — never exposed to the browser bundle.
 interface AdminUser {
   id: string;
   email: string;
@@ -18,7 +18,7 @@ export async function adminFetch<T>(
       headers["Content-Type"] = "application/json";
     }
 
-    const res = await fetch(`${BACKEND_URL}/api/admin${path}`, {
+    const res = await fetch(`/api/admin${path}`, {
       credentials: "include",
       headers: {
         ...headers,
@@ -50,11 +50,11 @@ export async function getAdminSession(): Promise<AdminUser | null> {
 
 export function getAuthUrl(provider: "google" | "github"): string {
   const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/admin` : "/admin";
-  return `${BACKEND_URL}/api/auth/sign-in/social?provider=${provider}&callbackURL=${encodeURIComponent(callbackURL)}`;
+  return `/api/auth/sign-in/social?provider=${provider}&callbackURL=${encodeURIComponent(callbackURL)}`;
 }
 
 export async function signOut(): Promise<void> {
-  await fetch(`${BACKEND_URL}/api/auth/sign-out`, {
+  await fetch(`/api/auth/sign-out`, {
     method: "POST",
     credentials: "include",
   });
@@ -62,7 +62,7 @@ export async function signOut(): Promise<void> {
 
 export async function signInWithEmail(email: string, password: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/sign-in/email`, {
+    const res = await fetch(`/api/auth/sign-in/email`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -86,7 +86,7 @@ export async function signInWithEmail(email: string, password: string): Promise<
 
 export async function forgotPassword(email: string): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/auth/request-password-reset`, {
+    const res = await fetch(`/api/auth/request-password-reset`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, redirectTo: `${typeof window !== "undefined" ? window.location.origin : ""}/admin` }),
@@ -125,7 +125,7 @@ async function meFetch<T>(path: string, options: RequestInit = {}): Promise<{ da
     if (options.body && !(options.body instanceof FormData)) {
       headers["Content-Type"] = "application/json";
     }
-    const res = await fetch(`${BACKEND_URL}/api/me${path}`, {
+    const res = await fetch(`/api/me${path}`, {
       credentials: "include",
       headers: { ...headers, ...options.headers },
       ...options,

@@ -155,6 +155,7 @@ function ContactsTab({
 }) {
   const [form, setForm] = useState({
     contact_default_email: settings.contact_default_email || "",
+    contact_webhook_url: settings.contact_webhook_url || "",
     social_linkedin: settings.social_linkedin || "",
     social_youtube: settings.social_youtube || "",
     social_x: settings.social_x || "",
@@ -162,6 +163,7 @@ function ContactsTab({
   });
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
 
   function handleChange(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -194,6 +196,48 @@ function ContactsTab({
           <p className="mt-1 text-xs text-gris">
             Utilisé quand aucune catégorie de contact n&apos;est définie ou n&apos;a de destinataire.
           </p>
+        </div>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-noir mb-1">
+            URL webhook contact
+          </label>
+          <input
+            type="url"
+            value={form.contact_webhook_url}
+            onChange={(e) => handleChange("contact_webhook_url", e.target.value)}
+            placeholder="https://hooks.example.com/..."
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            URL appelée en POST à chaque soumission de formulaire de contact (toutes catégories). Laissez vide pour désactiver.
+          </p>
+          {form.contact_webhook_url && (
+            <button
+              type="button"
+              onClick={async () => {
+                setWebhookTestResult(null);
+                const { adminFetch } = await import("@/lib/admin-api");
+                const { data } = await adminFetch<{ status: string; responseStatus?: number; responseBody?: string }>(
+                  "/settings/test-webhook",
+                  { method: "POST", body: JSON.stringify({ url: form.contact_webhook_url }) }
+                );
+                if (data) {
+                  setWebhookTestResult(data.status === "sent" ? `Envoyé (${data.responseStatus})` : `Échec : ${data.responseBody?.slice(0, 100)}`);
+                } else {
+                  setWebhookTestResult("Erreur");
+                }
+                setTimeout(() => setWebhookTestResult(null), 8000);
+              }}
+              className="mt-2 px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              Tester le webhook
+            </button>
+          )}
+          {webhookTestResult && (
+            <p className={`mt-1 text-xs ${webhookTestResult.startsWith("Envoyé") ? "text-malachite" : "text-terre-cuite"}`}>
+              {webhookTestResult}
+            </p>
+          )}
         </div>
 
         <h2 className="text-lg font-bold text-noir mb-4">Réseaux sociaux</h2>

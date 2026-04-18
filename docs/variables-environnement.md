@@ -24,6 +24,8 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `BASE_URL` | oui | URL publique du site (utilisée pour les liens emails, liens de modification) | `https://devfesttoulouse.fr` |
 | `PORT` | non | Port d'écoute du backend (défaut : `4000`) | `4000` |
 | `LOG_LEVEL` | non | Niveau du logger Pino/Fastify (`fatal\|error\|warn\|info\|debug\|trace`). Défaut `info`. Passer à `debug` pour activer les traces verbeuses (auth guards, proxy, etc.) lors d'un diagnostic. | `debug` |
+| `SWAGGER_PUBLIC` | non | `true` pour exposer la doc OpenAPI sur `/api/docs` en production. Défaut désactivé en prod, activé en dev. | `false` |
+| `REVALIDATE_SECRET` | oui en prod | Secret partagé entre backend et frontend pour invalider le cache Next via `POST /api/revalidate`. Si absent, la revalidation est désactivée (le cache reste statique jusqu'au TTL `s-maxage`). | (32+ caractères aléatoires) |
 
 ## Base de données (backend uniquement)
 
@@ -53,11 +55,28 @@ Utilisé pour l'authentification des admins (Lot 2) et des participants au passp
 
 Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modification speakers/sponsors (Lot 2).
 
-| Variable | Obligatoire | Description | Exemple |
-|----------|:-----------:|-------------|---------|
-| `SMTP_HOST` | oui | Hôte du serveur SMTP | `postfix` (container Docker) ou `localhost` |
-| `SMTP_PORT` | non | Port SMTP (défaut : `25`) | `25` |
+### Variables disponibles
+
+| Variable | Obligatoire | Description | Défaut |
+|----------|:-----------:|-------------|--------|
+| `SMTP_HOST` | oui | Hôte du serveur SMTP. | `localhost` |
+| `SMTP_PORT` | non | Port SMTP. | `1025` |
+| `SMTP_SECURE` | non | `true` pour forcer TLS au handshake (port 465). | `false` |
+| `SMTP_AUTH` | non | `true` pour activer l'auth SMTP via `SMTP_USER` / `SMTP_PASSWORD`. | `false` |
+| `SMTP_USER` | si `SMTP_AUTH=true` | Identifiant SMTP | — |
+| `SMTP_PASSWORD` | si `SMTP_AUTH=true` | Mot de passe SMTP | — |
 | `SMTP_FROM` | oui | Adresse expéditeur des emails | `contact@devfesttoulouse.fr` |
+
+### Profil par environnement
+
+| Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
+|---|---|---|---|---|---|---|
+| **Local / dev-j** | `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`) |
+| **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
+
+> ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
+
+> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
 
 ## API tierces (backend uniquement)
 

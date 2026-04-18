@@ -1,9 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
+import { useDialog } from "@/lib/use-dialog";
 
 interface ImageInfo {
   filename: string;
@@ -19,6 +18,9 @@ interface ImagePickerDialogProps {
 }
 
 export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePickerDialogProps) {
+  const titleId = useId();
+  // Focus trap + Escape + focus restore — hook handles the open/close lifecycle.
+  const dialogRef = useDialog({ open, onClose });
   const [tab, setTab] = useState<"library" | "upload">("library");
   const [images, setImages] = useState<ImageInfo[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +39,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
   async function loadImages() {
     setIsLoading(true);
-    const { data } = await adminFetch<ImageInfo[]>("/images");
+    const { data } = await adminFetch<ImageInfo[]>("/files");
     if (data) setImages(data);
     setIsLoading(false);
   }
@@ -50,7 +52,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     formData.append("file", file);
 
     try {
-      const { data, status } = await adminFetch<{ url: string }>("/images", {
+      const { data, status } = await adminFetch<{ url: string }>("/files", {
         method: "POST",
         body: formData,
       });
@@ -63,7 +65,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
       // Auto-select the uploaded image and switch to library
       await loadImages();
-      setSelected(`${BACKEND_URL}${data.url}`);
+      setSelected(data.url);
       setTab("library");
     } catch {
       setError("Impossible de contacter le serveur");
@@ -93,12 +95,25 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50">
-      <div className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
-          <h2 className="text-lg font-bold text-noir">Bibliothèque d&apos;images</h2>
-          <button onClick={onClose} className="text-gris hover:text-noir text-xl leading-none">&times;</button>
+          <h2 id={titleId} className="text-lg font-bold text-noir">Bibliothèque d&apos;images</h2>
+          <button
+            onClick={onClose}
+            aria-label="Fermer la boîte de dialogue"
+            className="text-gris hover:text-noir text-xl leading-none"
+          >
+            &times;
+          </button>
         </div>
 
         {/* Tabs */}
@@ -142,15 +157,15 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                   {images.map((img) => (
                     <button
                       key={img.filename}
-                      onClick={() => setSelected(`${BACKEND_URL}${img.url}`)}
+                      onClick={() => setSelected(img.url)}
                       className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                        selected === `${BACKEND_URL}${img.url}`
+                        selected === img.url
                           ? "border-malachite"
                           : "border-transparent hover:border-gris/30"
                       }`}
                     >
                       <img
-                        src={`${BACKEND_URL}${img.url}`}
+                        src={img.url}
                         alt={img.filename}
                         className="w-full h-full object-cover"
                       />
@@ -185,7 +200,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF — max 5 Mo</p>
+                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF — max 20 Mo</p>
                 </>
               )}
             </div>

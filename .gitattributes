@@ -1,0 +1,3 @@
+# Shell scripts must keep LF endings even on Windows clones; Docker runs them
+# inside Alpine and CRLF breaks the shebang / `set -e` parsing.
+*.sh text eol=lf

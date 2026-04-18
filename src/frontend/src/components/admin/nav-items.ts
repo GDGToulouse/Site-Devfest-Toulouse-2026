@@ -12,7 +12,7 @@ export const adminNavItems: AdminNavItem[] = [
   { label: "Éditions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
   { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
   { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
-  { label: "Fichiers", path: "/admin/images", icon: "image", roles: ["ADMIN", "EDITOR"] },
+  { label: "Fichiers", path: "/admin/files", icon: "image", roles: ["ADMIN", "EDITOR"] },
   { label: "Messages", path: "/admin/contact/messages", icon: "mail", roles: ["ADMIN", "EDITOR"] },
   { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
   { label: "Clés API", path: "/admin/api-keys", icon: "key", roles: ["ADMIN"] },

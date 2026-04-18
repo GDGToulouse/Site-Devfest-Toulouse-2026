@@ -17,4 +17,8 @@ RUN pnpm build
 ARG SEED_SCRIPT=prisma/seed.ts
 ENV SEED_SCRIPT=${SEED_SCRIPT}
 
-CMD ["sh", "-c", "pnpm exec prisma db push --schema prisma/schema.prisma && pnpm exec tsx prisma/seed.ts && node dist/index.js"]
+RUN chmod +x scripts/db-boot.sh
+
+# Use the boot script: baseline the init migration if upgrading from
+# `prisma db push`, run `prisma migrate deploy`, run the seed, start the server.
+CMD ["sh", "scripts/db-boot.sh"]

@@ -37,31 +37,30 @@ services:
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
       - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
       - ADMIN_EMAILS=${ADMIN_EMAILS}
-      - SMTP_HOST=postfix
-      - SMTP_PORT=25
+      # SMTP relayed through the standalone `postfix` service deployed at
+      # the Coolify level (shared by all projects). Reachable via the
+      # `coolify` network — see the `networks:` section below.
+      - SMTP_HOST=${SMTP_HOST:-postfix}
+      - SMTP_PORT=${SMTP_PORT:-25}
+      - SMTP_SECURE=${SMTP_SECURE:-false}
+      - SMTP_AUTH=${SMTP_AUTH:-false}
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
     depends_on:
       db:
         condition: service_healthy
-      postfix:
-        condition: service_started
-    # Intentionally NOT on the shared `coolify` network. The backend isn't
-    # exposed via Traefik — the frontend proxies /api/* to it through the
-    # Next.js rewrites. Joining `coolify` would put it side-by-side with the
-    # backend of every other Coolify project that uses the same service name,
-    # and Docker DNS would round-robin between them.
-    #
-    # Network alias gives the backend a unique, env-scoped hostname inside
-    # the project's `default` network. The frontend points BACKEND_URL at
-    # this alias instead of the bare `backend` to avoid resolving against
-    # other projects' backends through the shared `coolify` network (Coolify
-    # ignores `container_name` so we can't rely on that).
+    # The backend itself is NOT exposed via Traefik (the frontend proxies
+    # /api/* to it through the Next.js rewrites). It joins the shared
+    # `coolify` network only to reach the standalone `postfix` service
+    # deployed at the Coolify level. Inbound resolution from other projects
+    # is mitigated by the env-scoped network alias on `default` —
+    # `BACKEND_URL` points at that alias, never at the bare `backend` name.
     networks:
       default:
         aliases:
           - devfest-${ENV_NAME:-local}-backend
+      coolify:
 
   db:
     image: postgres:16-alpine
@@ -76,13 +75,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  postfix:
-    image: boky/postfix:latest
-    environment:
-      - ALLOWED_SENDER_DOMAINS=${SMTP_DOMAIN:-devfesttoulouse.fr}
-    networks:
-      - default
 
 networks:
   coolify:

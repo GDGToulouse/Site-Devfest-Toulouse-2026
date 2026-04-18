@@ -196,7 +196,18 @@
     "ctaDownload": "Recevoir le dossier de sponsoring",
     "noPlans": "Les formules de sponsoring seront bientôt disponibles.",
     "visible": "Visible",
-    "hidden": "Masqué"
+    "hidden": "Masqué",
+    "formTitle": "Contactez-nous",
+    "formIntro": "Remplissez le formulaire ci-dessous et nous vous enverrons notre dossier de sponsoring. Nous reviendrons vers vous dans les plus brefs délais.",
+    "formSubmit": "Recevoir le dossier de sponsoring",
+    "brochureCta": "Télécharger la plaquette",
+    "preAnnouncementTitle": "Bientôt disponible",
+    "preAnnouncementMessage": "Les sponsorings ouvrent prochainement. Inscrivez-vous pour être informé dès que les formules seront disponibles.",
+    "preAnnouncementCta": "S'inscrire pour être informé",
+    "temporaryCta": "Recevoir le dossier de sponsoring",
+    "soldOutTitle": "Sponsoring complet",
+    "soldOutMessage": "Tous les emplacements sponsors de cette édition sont attribués. Rendez-vous l'année prochaine ! En attendant, vous pouvez nous contacter pour toute question.",
+    "soldOutCta": "Nous contacter"
   },
   "codeOfConduct": {
     "title": "Code de conduite",

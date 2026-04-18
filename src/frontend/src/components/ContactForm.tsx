@@ -9,11 +9,11 @@ import type { ContactCategory } from "@/lib/types";
 interface ContactFormProps {
   categories: ContactCategory[];
   locale: string;
+  forceCategoryId?: number;
+  submitLabel?: string;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "";
-
-export default function ContactForm({ categories, locale }: ContactFormProps) {
+export default function ContactForm({ categories, locale, forceCategoryId, submitLabel }: ContactFormProps) {
   const t = useTranslations("contact.form");
 
   const [formData, setFormData] = useState({
@@ -35,7 +35,7 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
     if (!formData.lastName.trim()) errs.lastName = t("lastNameError");
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       errs.email = t("emailError");
-    if (categories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
+    if (!forceCategoryId && categories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
     if (!formData.message.trim() || formData.message.trim().length < 10)
       errs.message = t("messageError");
     return errs;
@@ -49,7 +49,8 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
 
     setStatus("sending");
     try {
-      const res = await fetch(`${BACKEND_URL}/api/contact/send`, {
+      const categoryId = forceCategoryId ?? (formData.categoryId ? Number(formData.categoryId) : undefined);
+      const res = await fetch(`/api/contact/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -57,8 +58,9 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone || undefined,
-          categoryId: formData.categoryId ? Number(formData.categoryId) : undefined,
+          categoryId,
           message: formData.message,
+          locale,
           website: formData.website, // honeypot
         }),
       });
@@ -172,8 +174,8 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
         />
       </div>
 
-      {/* Category */}
-      {categories.length > 0 && (
+      {/* Category — hidden when forceCategoryId is set */}
+      {!forceCategoryId && categories.length > 0 && (
         <div>
           <label htmlFor="categoryId" className="block text-sm font-bold text-noir mb-1">
             {t("category")} *
@@ -226,7 +228,7 @@ export default function ContactForm({ categories, locale }: ContactFormProps) {
         disabled={status === "sending"}
         className="px-8 py-3 rounded-[12px] bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {status === "sending" ? t("sending") : t("submit")}
+        {status === "sending" ? t("sending") : (submitLabel || t("submit"))}
       </button>
 
       {/* Status messages */}

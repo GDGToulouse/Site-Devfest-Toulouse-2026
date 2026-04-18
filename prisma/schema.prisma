@@ -22,6 +22,14 @@ enum PublicationStatus {
   PUBLISHED
 }
 
+// Drives what /devenir-sponsor displays for the featured edition.
+enum SponsorPageStatus {
+  PRE_ANNOUNCEMENT  // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
+  TEMPORARY         // Plans visible (if any) but contact still goes through the temporary external form
+  OPEN              // Full mode: plans + brochure download + integrated contact form
+  SOLD_OUT          // All slots taken: short message + link to /contact
+}
+
 
 enum UserRole {
   ADMIN
@@ -31,26 +39,32 @@ enum UserRole {
 // --- Edition ---
 
 model Edition {
-  id               Int             @id @default(autoincrement())
-  year             Int             @unique
-  startDate        DateTime?
-  endDate          DateTime?
-  status           EditionStatus   @default(PREPARATION)
-  venueName        String?
-  venueAddress     String?
-  heroImageUrl     String?
-  cfpUrl           String?
-  partnerFormUrl   String?
-  aftermovieUrl    String?
-  galleryUrl       String?
-  archivedSiteUrl  String?
-  createdAt        DateTime        @default(now())
-  updatedAt        DateTime        @updatedAt
+  id                  Int             @id @default(autoincrement())
+  year                Int             @unique
+  startDate           DateTime?
+  endDate             DateTime?
+  status              EditionStatus   @default(PREPARATION)
+  venueName           String?
+  venueAddress        String?
+  heroImageUrl        String?
+  cfpUrl              String?
+  partnerFormUrl      String?
+  aftermovieUrl       String?
+  galleryUrl          String?
+  archivedSiteUrl     String?
+  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
+  sponsorBrochureUrl       String?
+  // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
+  sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
+  // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
+  sponsorTemporaryFormUrl  String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
 
-  ticketTiers      TicketTier[]
-  articles         Article[]
-  keyFigures       KeyFigure[]
-  sponsorPlans     SponsorPlan[]
+  ticketTiers         TicketTier[]
+  articles            Article[]
+  keyFigures          KeyFigure[]
+  sponsorPlans        SponsorPlan[]
 }
 
 // --- Key Figures ---
@@ -141,16 +155,26 @@ model TicketTier {
 // --- Contact ---
 
 model ContactCategory {
-  id               Int       @id @default(autoincrement())
-  nameFr           String
-  nameEn           String
-  emailRecipients  String
-  sortOrder        Int       @default(0)
-  isActive         Boolean   @default(true)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                     Int       @id @default(autoincrement())
+  nameFr                 String
+  nameEn                 String
+  emailRecipients        String
+  sortOrder              Int       @default(0)
+  isActive               Boolean   @default(true)
+  // Stable identifier used in code to target a specific category (e.g. "sponsoring")
+  slug                   String?   @unique
+  // System categories cannot be deleted from the admin UI
+  isSystem               Boolean   @default(false)
+  // Per-category confirmation email sent to the person who submitted the form.
+  // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
+  confirmationSubjectFr  String?
+  confirmationSubjectEn  String?
+  confirmationBodyFr     String?
+  confirmationBodyEn     String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
-  messages         ContactMessage[]
+  messages               ContactMessage[]
 }
 
 model ContactMessage {
@@ -161,6 +185,7 @@ model ContactMessage {
   phone            String?
   categoryLabel    String?
   message          String
+  locale           String?
   isRead           Boolean          @default(false)
   createdAt        DateTime         @default(now())
 
@@ -188,7 +213,10 @@ model User {
   name             String?
   emailVerified    Boolean   @default(false)
   image            String?
-  role             UserRole  @default(ADMIN)
+  // Default to EDITOR so a leaked/forgotten user insertion path never
+  // elevates to ADMIN. Admins are explicitly promoted via the seed
+  // (from ADMIN_EMAILS) or by another admin through the back-office.
+  role             UserRole  @default(EDITOR)
   banned           Boolean   @default(false)
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

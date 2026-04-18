@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateHome } from "../../lib/revalidate.js";
+import { validateWebhookUrl } from "../../lib/webhook-url.js";
 
 interface CfpBody {
   isOpen: boolean;
@@ -79,4 +80,75 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     return { success: true };
   });
 
+  // POST /api/admin/settings/test-webhook — send a test payload to a webhook URL
+  // Body { url? }: when set, tests this URL directly (lets the admin probe a
+  // candidate URL without saving). Falls back to the stored contact_webhook_url
+  // if no body URL is provided.
+  app.post<{ Body: { url?: string } }>("/settings/test-webhook", async (request, reply) => {
+    let webhookUrl = request.body?.url?.trim();
+    if (!webhookUrl) {
+      const setting = await prisma.siteSetting.findUnique({
+        where: { key: "contact_webhook_url" },
+      });
+      webhookUrl = setting?.value;
+    }
+    if (!webhookUrl) return reply.status(400).send({ error: "No webhook URL provided" });
+
+    // Validate the URL against SSRF before touching it. The admin is trusted
+    // to point elsewhere but we refuse internal/loopback/private-IP targets
+    // unconditionally — this is also our primary defense for the stored
+    // webhook used by real submissions (defense in depth).
+    try {
+      await validateWebhookUrl(webhookUrl);
+    } catch (err) {
+      return reply.status(400).send({
+        error: "invalid_webhook_url",
+        reason: String((err as Error).message ?? err),
+      });
+    }
+
+    // Use a real category if one exists, so the test payload mirrors what
+    // a genuine submission would produce (id + slug + label all set).
+    const sampleCategory = await prisma.contactCategory.findFirst({
+      where: { slug: "sponsoring" },
+    });
+
+    const payload = {
+      id: `test_${Date.now()}`,
+      submittedAt: new Date().toISOString(),
+      data: {
+        firstName: "John",
+        lastName: "Doe",
+        email: "john.doe@example.com",
+        phone: "+33 6 00 00 00 00",
+        categoryId: sampleCategory?.id ?? null,
+        categorySlug: sampleCategory?.slug ?? null,
+        categoryLabel: sampleCategory?.nameFr ?? null,
+        message: "Ceci est un message de test envoyé depuis le back-office pour vérifier la configuration du webhook.",
+        locale: "fr",
+      },
+    };
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(10_000),
+        redirect: "manual",
+      });
+      const responseBody = await response.text().catch(() => "");
+      return {
+        status: response.ok ? "sent" : "failed",
+        responseStatus: response.status,
+        responseBody: responseBody.slice(0, 500),
+      };
+    } catch (err) {
+      return {
+        status: "failed",
+        responseStatus: null,
+        responseBody: String(err),
+      };
+    }
+  });
 }
