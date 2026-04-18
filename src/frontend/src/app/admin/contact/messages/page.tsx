@@ -6,6 +6,8 @@ import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ContactCategories from "@/components/admin/ContactCategories";
 
+type WebhookStatus = "not_attempted" | "success" | "failed" | "skipped";
+
 interface Message {
   id: number;
   firstName: string;
@@ -18,6 +20,9 @@ interface Message {
   createdAt: string;
   brochureDownloadCount: number;
   brochureDownloadedAt: string | null;
+  webhookStatus: WebhookStatus;
+  webhookAttemptedAt: string | null;
+  webhookError: string | null;
 }
 
 interface MessagesResponse {
@@ -75,6 +80,7 @@ export default function ContactMessagesPage() {
     setSelected(msg);
     setShowForward(false);
     setForwardSuccess(false);
+    setWebhookRetryFeedback(null);
     if (!msg.isRead) {
       await adminFetch(`/contact/messages/${msg.id}/read`, { method: "PUT" });
       setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m)));
@@ -102,6 +108,31 @@ export default function ContactMessagesPage() {
       setForwardEmails("");
       setShowForward(false);
     }
+  }
+
+  const [isRetryingWebhook, setIsRetryingWebhook] = useState(false);
+  const [webhookRetryFeedback, setWebhookRetryFeedback] = useState<string | null>(null);
+
+  async function handleRetryWebhook() {
+    if (!selected) return;
+    setIsRetryingWebhook(true);
+    setWebhookRetryFeedback(null);
+    const { data, status } = await adminFetch<{ status: WebhookStatus; error: string | null; httpStatus?: number }>(
+      `/contact/messages/${selected.id}/retry-webhook`,
+      { method: "POST" },
+    );
+    if (status !== 200 || !data) {
+      setWebhookRetryFeedback("Erreur réseau lors de la relance.");
+    } else if (data.status === "success") {
+      setWebhookRetryFeedback("Webhook relancé avec succès.");
+    } else {
+      setWebhookRetryFeedback(`Échec : ${data.error ?? "raison inconnue"}`);
+    }
+    setIsRetryingWebhook(false);
+    // Refresh the list to update the badge.
+    await loadMessages(page);
+    // Re-pick the selected message from the refreshed list.
+    setSelected((prev) => (prev ? { ...prev, ...data } as Message : prev));
   }
 
   // Client-side filtering
@@ -283,6 +314,58 @@ export default function ContactMessagesPage() {
                     <span className="text-gris">Pas encore téléchargée</span>
                   )}
                 </p>
+                <p className="sm:col-span-2">
+                  <span className="text-gris">Webhook :</span>{" "}
+                  {selected.webhookStatus === "success" && (
+                    <span className="text-malachite font-medium">
+                      Envoyé avec succès
+                      {selected.webhookAttemptedAt && (
+                        <span className="text-gris font-normal"> · le {new Date(selected.webhookAttemptedAt).toLocaleString("fr-FR")}</span>
+                      )}
+                    </span>
+                  )}
+                  {selected.webhookStatus === "failed" && (
+                    <>
+                      <span className="text-rouge font-medium">
+                        Échec
+                        {selected.webhookAttemptedAt && (
+                          <span className="text-gris font-normal"> · le {new Date(selected.webhookAttemptedAt).toLocaleString("fr-FR")}</span>
+                        )}
+                      </span>
+                      {selected.webhookError && (
+                        <span className="block text-xs text-gris mt-0.5">{selected.webhookError}</span>
+                      )}
+                    </>
+                  )}
+                  {selected.webhookStatus === "skipped" && (
+                    <>
+                      <span className="text-gris font-medium">Ignoré</span>
+                      {selected.webhookError && (
+                        <span className="block text-xs text-gris mt-0.5">{selected.webhookError}</span>
+                      )}
+                    </>
+                  )}
+                  {selected.webhookStatus === "not_attempted" && (
+                    <span className="text-gris">Pas encore tenté</span>
+                  )}
+                </p>
+                {(selected.webhookStatus === "failed" || selected.webhookStatus === "skipped" || selected.webhookStatus === "not_attempted") && (
+                  <p className="sm:col-span-2 -mt-2">
+                    <button
+                      type="button"
+                      onClick={handleRetryWebhook}
+                      disabled={isRetryingWebhook}
+                      className="text-sm px-3 py-1.5 rounded border border-bleu text-bleu hover:bg-bleu/10 disabled:opacity-50"
+                    >
+                      {isRetryingWebhook ? "Relance en cours…" : "Relancer le webhook"}
+                    </button>
+                    {webhookRetryFeedback && (
+                      <span className={`ml-3 text-xs ${webhookRetryFeedback.startsWith("Échec") || webhookRetryFeedback.startsWith("Erreur") ? "text-rouge" : "text-malachite"}`}>
+                        {webhookRetryFeedback}
+                      </span>
+                    )}
+                  </p>
+                )}
               </div>
 
               {showForward && (

@@ -151,6 +151,9 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         createdAt: m.createdAt,
         brochureDownloadCount: m.brochureDownloadCount,
         brochureDownloadedAt: m.brochureDownloadedAt,
+        webhookStatus: m.webhookStatus,
+        webhookAttemptedAt: m.webhookAttemptedAt,
+        webhookError: m.webhookError,
       })),
       total,
       page,
@@ -225,5 +228,21 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     } catch {
       return reply.status(500).send({ error: "Failed to send email" });
     }
+  });
+
+  // POST /api/admin/contact/messages/:id/retry-webhook — re-fire the
+  // contact webhook for a stored message. Useful when the original POST
+  // failed (target down, bad URL set then fixed, etc.). Returns the
+  // outcome synchronously so the admin sees success/failure immediately.
+  app.post<{ Params: { id: string } }>("/contact/messages/:id/retry-webhook", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const { buildPayloadFromStored, sendContactWebhook } = await import("../../lib/contact-webhook.js");
+    const payload = await buildPayloadFromStored(id);
+    if (!payload) return reply.status(404).send({ error: "Message not found" });
+
+    const result = await sendContactWebhook(payload);
+    return result;
   });
 }
