@@ -189,6 +189,11 @@ model ContactMessage {
   isRead           Boolean          @default(false)
   createdAt        DateTime         @default(now())
 
+  // Tracks how many times the per-message brochure link has been opened.
+  // Populated by the public /api/brochure/:token redirector.
+  brochureDownloadCount Int        @default(0)
+  brochureDownloadedAt  DateTime?
+
   categoryId       Int?
   category         ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 }

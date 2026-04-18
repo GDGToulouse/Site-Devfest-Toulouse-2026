@@ -149,6 +149,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         locale: m.locale,
         isRead: m.isRead,
         createdAt: m.createdAt,
+        brochureDownloadCount: m.brochureDownloadCount,
+        brochureDownloadedAt: m.brochureDownloadedAt,
       })),
       total,
       page,

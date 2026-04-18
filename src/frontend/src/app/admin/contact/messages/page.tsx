@@ -16,6 +16,8 @@ interface Message {
   message: string;
   isRead: boolean;
   createdAt: string;
+  brochureDownloadCount: number;
+  brochureDownloadedAt: string | null;
 }
 
 interface MessagesResponse {
@@ -268,6 +270,19 @@ export default function ContactMessagesPage() {
                 {selected.phone && <p><span className="text-gris">Téléphone :</span> {selected.phone}</p>}
                 {selected.categoryLabel && <p><span className="text-gris">Catégorie :</span> <StatusBadge status={selected.categoryLabel} variant="blue" /></p>}
                 <p><span className="text-gris">Date :</span> {new Date(selected.createdAt).toLocaleString("fr-FR")}</p>
+                <p>
+                  <span className="text-gris">Plaquette :</span>{" "}
+                  {selected.brochureDownloadCount > 0 ? (
+                    <span className="text-noir">
+                      {selected.brochureDownloadCount} téléchargement{selected.brochureDownloadCount > 1 ? "s" : ""}
+                      {selected.brochureDownloadedAt && (
+                        <span className="text-gris"> · dernier le {new Date(selected.brochureDownloadedAt).toLocaleDateString("fr-FR")}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-gris">Pas encore téléchargée</span>
+                  )}
+                </p>
               </div>
 
               {showForward && (

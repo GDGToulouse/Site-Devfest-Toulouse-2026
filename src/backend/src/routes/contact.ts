@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
+import { makeToken } from "../lib/brochure-token.js";
 import { validateWebhookUrl } from "../lib/webhook-url.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -139,8 +140,14 @@ export default async function contactRoutes(app: FastifyInstance) {
         try {
           const edition = await getFeaturedEdition();
           const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+          // Per-message tracked link if both the brochure and the signing
+          // secret are configured; falls back to the raw URL otherwise so
+          // the email stays useful in dev.
+          const brochureToken = makeToken(stored.id);
           const brochureUrl = edition?.sponsorBrochureUrl
-            ? `${baseUrl}${edition.sponsorBrochureUrl}`
+            ? brochureToken
+              ? `${baseUrl}/api/brochure/${brochureToken}`
+              : `${baseUrl}${edition.sponsorBrochureUrl}`
             : "";
 
           const vars = {
