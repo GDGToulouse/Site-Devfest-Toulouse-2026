@@ -13,7 +13,10 @@ interface ContactBody {
   categoryId?: number;
   message: string;
   locale?: string;
-  website?: string; // honeypot
+  // Honeypot. Accepts both the new `confirmUrl` (current front) and the
+  // old `website` field in case a cached build is still out there.
+  confirmUrl?: string;
+  website?: string;
 }
 
 function validateEmail(email: string): boolean {
@@ -46,10 +49,18 @@ export default async function contactRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { firstName, lastName, email, phone, categoryId, message, locale, website } = request.body;
+    const { firstName, lastName, email, phone, categoryId, message, locale, confirmUrl, website } = request.body;
 
-    // Honeypot check — bots fill this hidden field
-    if (website) {
+    // Honeypot check — bots fill this hidden field. We silently succeed
+    // (200 OK) so bots can't tell they were caught, but we log on the
+    // server so legitimate users trapped by aggressive autofill show up
+    // in the logs instead of "my message vanished without a trace".
+    const honeypotValue = confirmUrl || website;
+    if (honeypotValue) {
+      request.log.warn(
+        { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
+        "[contact] honeypot tripped — submission silently dropped",
+      );
       return { success: true };
     }
 
