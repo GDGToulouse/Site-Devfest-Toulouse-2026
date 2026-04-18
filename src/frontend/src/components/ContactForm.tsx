@@ -242,7 +242,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
       )}
       {status === "error" && (
         <p role="alert" className="mt-4 p-4 rounded-m bg-rouge/10 text-rouge font-bold">
-          {t("error")}
+          {errors.honeypot === "autofill_detected" ? t("honeypotError") : t("error")}
         </p>
       )}
     </form>

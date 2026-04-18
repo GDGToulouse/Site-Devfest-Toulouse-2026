@@ -151,7 +151,8 @@
       "submit": "Send",
       "sending": "Sending...",
       "success": "Thank you! We received your message and will respond as soon as possible.",
-      "error": "An error occurred. Please try again."
+      "error": "An error occurred. Please try again.",
+      "honeypotError": "Your browser (or password manager) filled a hidden field we use to filter out bots. Try again in a private window, or temporarily disable autofill, then resubmit."
     },
     "sidebar": {
       "responseTime": "We are volunteers, thank you for your patience. We do our best to respond within 48 hours.",

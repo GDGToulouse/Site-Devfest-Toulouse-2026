@@ -151,7 +151,8 @@
       "submit": "Envoyer",
       "sending": "Envoi en cours...",
       "success": "Merci ! Nous avons reçu votre message et vous répondrons dans les meilleurs délais.",
-      "error": "Une erreur s'est produite. Veuillez réessayer."
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "honeypotError": "Votre navigateur (ou votre gestionnaire de mots de passe) a rempli un champ caché qui nous sert à filtrer les robots. Essayez en navigation privée, ou désactivez temporairement l'auto-remplissage, puis soumettez à nouveau."
     },
     "sidebar": {
       "responseTime": "Nous sommes bénévoles, merci pour votre patience. Nous faisons de notre mieux pour répondre sous 48h.",

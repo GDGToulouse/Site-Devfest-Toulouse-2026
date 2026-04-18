@@ -51,25 +51,39 @@ export default async function contactRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { firstName, lastName, email, phone, categoryId, message, locale, confirmUrl, website } = request.body;
 
-    // Honeypot check — bots fill this hidden field. We silently succeed
-    // (200 OK) so bots can't tell they were caught, but we log on the
-    // server so legitimate users trapped by aggressive autofill show up
-    // in the logs instead of "my message vanished without a trace".
-    const honeypotValue = confirmUrl || website;
-    if (honeypotValue) {
-      request.log.warn(
-        { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
-        "[contact] honeypot tripped — submission silently dropped",
-      );
-      return { success: true };
-    }
-
-    // Server-side validation
+    // Server-side validation first, so we can tell "honeypot + bot-like
+    // payload" (drop silently) apart from "honeypot + real user with
+    // aggressive autofill" (show a helpful error). A real bot rarely
+    // fills all four required fields cleanly before triggering the trap;
+    // a human whose password-manager polluted the hidden input does.
     const errors: Record<string, string> = {};
     if (!firstName?.trim()) errors.firstName = "required";
     if (!lastName?.trim()) errors.lastName = "required";
     if (!email?.trim() || !validateEmail(email)) errors.email = "invalid";
     if (!message?.trim() || message.trim().length < 10) errors.message = "too_short";
+
+    const honeypotValue = confirmUrl || website;
+    if (honeypotValue) {
+      if (Object.keys(errors).length === 0) {
+        // All required fields are valid AND the honeypot was touched —
+        // this looks like autofill on a legitimate user. Tell them so
+        // they know their message didn't vanish.
+        request.log.warn(
+          { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
+          "[contact] honeypot tripped on well-formed payload — surfacing error to user",
+        );
+        return reply.status(400).send({
+          success: false,
+          errors: { honeypot: "autofill_detected" },
+        });
+      }
+      // Missing/bad required fields + honeypot => classic bot. Drop silently.
+      request.log.warn(
+        { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
+        "[contact] honeypot tripped on bot-like payload — silently dropped",
+      );
+      return { success: true };
+    }
 
     if (Object.keys(errors).length > 0) {
       return reply.status(400).send({ success: false, errors });
