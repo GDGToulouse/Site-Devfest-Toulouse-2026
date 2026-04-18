@@ -281,16 +281,6 @@ export default async function SponsorPage() {
               <p className="mt-4 text-gris leading-relaxed max-w-3xl">
                 {t("formIntro")}
               </p>
-              {edition?.sponsorBrochureUrl && (
-                <a
-                  href={edition.sponsorBrochureUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-4 inline-block px-5 py-2 rounded-[12px] border-2 border-bleu text-bleu font-bold hover:bg-bleu/10 transition-colors"
-                >
-                  {t("brochureCta")}
-                </a>
-              )}
               <div className="mt-8 max-w-2xl">
                 <ContactForm
                   categories={categories}

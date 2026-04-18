@@ -140,22 +140,41 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
     };
   });
 
-  // DELETE /api/me/api-keys/:id — revoke caller's own key
-  app.delete<{ Params: { id: string } }>("/api-keys/:id", {
+  // DELETE /api/me/api-keys/:id — revoke caller's own key (soft-delete).
+  // With ?purge=true, physically delete an already-revoked key. We refuse
+  // to hard-delete an active key: revoking first creates a paper trail
+  // (the admin can tell the user "yes I revoked this one") before the row
+  // disappears for good.
+  app.delete<{ Params: { id: string }; Querystring: { purge?: string } }>("/api-keys/:id", {
     schema: {
       tags: ["api-keys"],
-      summary: "Révoquer un de ses propres jetons",
+      summary: "Révoquer (ou supprimer définitivement) un de ses propres jetons",
       security: [{ bearerAuth: [] }, { cookieAuth: [] }],
       params: {
         type: "object",
         required: ["id"],
         properties: { id: { type: "string" } },
       },
+      querystring: {
+        type: "object",
+        properties: {
+          purge: {
+            type: "string",
+            enum: ["true", "false"],
+            description: "`true` pour supprimer physiquement une clé déjà révoquée",
+          },
+        },
+      },
       response: {
         200: {
           type: "object",
-          properties: { ok: { type: "boolean" }, alreadyRevoked: { type: "boolean" } },
+          properties: {
+            ok: { type: "boolean" },
+            alreadyRevoked: { type: "boolean" },
+            purged: { type: "boolean" },
+          },
         },
+        400: { $ref: "Error#" },
         401: { $ref: "Error#" },
         403: { $ref: "Error#" },
         404: { $ref: "Error#" },
@@ -167,6 +186,16 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
     if (!key || key.userId !== user.id) {
       return reply.status(404).send({ error: "not_found" });
     }
+
+    const wantPurge = request.query.purge === "true";
+    if (wantPurge) {
+      if (!key.revokedAt) {
+        return reply.status(400).send({ error: "key_still_active" });
+      }
+      await prisma.apiKey.delete({ where: { id: key.id } });
+      return { ok: true, purged: true };
+    }
+
     if (key.revokedAt) {
       return reply.status(200).send({ ok: true, alreadyRevoked: true });
     }

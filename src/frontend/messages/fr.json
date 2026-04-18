@@ -151,7 +151,8 @@
       "submit": "Envoyer",
       "sending": "Envoi en cours...",
       "success": "Merci ! Nous avons reçu votre message et vous répondrons dans les meilleurs délais.",
-      "error": "Une erreur s'est produite. Veuillez réessayer."
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "honeypotError": "Votre navigateur (ou votre gestionnaire de mots de passe) a rempli un champ caché qui nous sert à filtrer les robots. Essayez en navigation privée, ou désactivez temporairement l'auto-remplissage, puis soumettez à nouveau."
     },
     "sidebar": {
       "responseTime": "Nous sommes bénévoles, merci pour votre patience. Nous faisons de notre mieux pour répondre sous 48h.",
@@ -172,7 +173,9 @@
     "date": "Date",
     "archivedSite": "Voir le site archivé",
     "noEdition": "Aucune édition trouvée pour cette année.",
-    "allEditions": "Toutes les éditions"
+    "allEditions": "Toutes les éditions",
+    "previousEdition": "Édition précédente",
+    "nextEdition": "Édition suivante"
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
@@ -200,7 +203,6 @@
     "formTitle": "Contactez-nous",
     "formIntro": "Remplissez le formulaire ci-dessous et nous vous enverrons notre dossier de sponsoring. Nous reviendrons vers vous dans les plus brefs délais.",
     "formSubmit": "Recevoir le dossier de sponsoring",
-    "brochureCta": "Télécharger la plaquette",
     "preAnnouncementTitle": "Bientôt disponible",
     "preAnnouncementMessage": "Les sponsorings ouvrent prochainement. Inscrivez-vous pour être informé dès que les formules seront disponibles.",
     "preAnnouncementCta": "S'inscrire pour être informé",

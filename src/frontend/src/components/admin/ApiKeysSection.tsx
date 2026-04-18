@@ -6,6 +6,7 @@ import {
   listMyApiKeys,
   createApiKey,
   revokeMyApiKey,
+  purgeMyApiKey,
   type ApiKey,
   type CreatedApiKey,
 } from "@/lib/admin-api";
@@ -82,6 +83,13 @@ export default function ApiKeysSection() {
     if (!confirm("Révoquer cette clé ? Les requêtes utilisant cette clé échoueront immédiatement.")) return;
     const ok = await revokeMyApiKey(id);
     if (!ok) setError("Révocation impossible");
+    await load();
+  }
+
+  async function handlePurge(id: string, name: string) {
+    if (!confirm(`Supprimer définitivement la clé « ${name} » ? Cette action est irréversible.`)) return;
+    const ok = await purgeMyApiKey(id);
+    if (!ok) setError("Suppression impossible");
     await load();
   }
 
@@ -240,7 +248,16 @@ export default function ApiKeysSection() {
                     <td className="py-3 pr-4 text-gris">{formatDate(k.expiresAt)}</td>
                     <td className="py-3 pr-4 text-gris">{formatDate(k.createdAt)}</td>
                     <td className="py-3 text-right">
-                      {!k.revokedAt && (
+                      {k.revokedAt ? (
+                        <button
+                          type="button"
+                          onClick={() => handlePurge(k.id, k.name)}
+                          className="text-terre-cuite hover:underline text-sm"
+                          title="La clé est déjà révoquée ; cette action la supprime définitivement."
+                        >
+                          Supprimer définitivement
+                        </button>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => handleRevoke(k.id)}

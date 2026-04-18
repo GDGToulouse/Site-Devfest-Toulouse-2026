@@ -23,7 +23,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
     phone: "",
     categoryId: "",
     message: "",
-    website: "", // honeypot
+    confirmUrl: "", // honeypot
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -61,7 +61,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
           categoryId,
           message: formData.message,
           locale,
-          website: formData.website, // honeypot
+          confirmUrl: formData.confirmUrl, // honeypot
         }),
       });
 
@@ -73,7 +73,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
       }
 
       setStatus("success");
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", categoryId: "", message: "", website: "" });
+      setFormData({ firstName: "", lastName: "", email: "", phone: "", categoryId: "", message: "", confirmUrl: "" });
       setErrors({});
     } catch {
       setStatus("error");
@@ -87,15 +87,18 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      {/* Honeypot — hidden from users */}
-      <div aria-hidden="true" className="absolute -left-[9999px] opacity-0">
+      {/* Honeypot — hidden from users. Name is intentionally neutral
+          (not "website"/"url"/"company") so Chrome/password-managers
+          don't auto-fill it. We kept a legit-looking type and autoComplete
+          value so bots that blindly fill every text field still trip it. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] opacity-0 pointer-events-none">
         <input
           type="text"
-          name="website"
+          name="confirm_url"
           tabIndex={-1}
-          autoComplete="off"
-          value={formData.website}
-          onChange={(e) => handleChange("website", e.target.value)}
+          autoComplete="new-password"
+          value={formData.confirmUrl}
+          onChange={(e) => handleChange("confirmUrl", e.target.value)}
         />
       </div>
 
@@ -239,7 +242,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
       )}
       {status === "error" && (
         <p role="alert" className="mt-4 p-4 rounded-m bg-rouge/10 text-rouge font-bold">
-          {t("error")}
+          {errors.honeypot === "autofill_detected" ? t("honeypotError") : t("error")}
         </p>
       )}
     </form>

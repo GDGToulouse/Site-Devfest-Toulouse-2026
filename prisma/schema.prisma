@@ -189,6 +189,22 @@ model ContactMessage {
   isRead           Boolean          @default(false)
   createdAt        DateTime         @default(now())
 
+  // Tracks how many times the per-message brochure link has been opened.
+  // Populated by the public /api/brochure/:token redirector.
+  brochureDownloadCount Int        @default(0)
+  brochureDownloadedAt  DateTime?
+
+  // Outcome of the last contact_webhook_url POST attempt for this message.
+  // Status string (avoids a Postgres enum so we can add new states without
+  // a migration): "not_attempted" | "success" | "failed" | "skipped".
+  // - skipped: no URL configured, or URL failed SSRF validation.
+  // - failed: HTTP error / network error / non-2xx response.
+  // - success: 2xx received from the webhook target.
+  // webhookError stores the last error string (truncated) when status=failed.
+  webhookStatus    String           @default("not_attempted")
+  webhookAttemptedAt DateTime?
+  webhookError     String?
+
   categoryId       Int?
   category         ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 }

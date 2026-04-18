@@ -26,6 +26,7 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `LOG_LEVEL` | non | Niveau du logger Pino/Fastify (`fatal\|error\|warn\|info\|debug\|trace`). Défaut `info`. Passer à `debug` pour activer les traces verbeuses (auth guards, proxy, etc.) lors d'un diagnostic. | `debug` |
 | `SWAGGER_PUBLIC` | non | `true` pour exposer la doc OpenAPI sur `/api/docs` en production. Défaut désactivé en prod, activé en dev. | `false` |
 | `REVALIDATE_SECRET` | oui en prod | Secret partagé entre backend et frontend pour invalider le cache Next via `POST /api/revalidate`. Si absent, la revalidation est désactivée (le cache reste statique jusqu'au TTL `s-maxage`). | (32+ caractères aléatoires) |
+| `BROCHURE_TOKEN_SECRET` | oui en prod | Secret HMAC utilisé pour signer les liens de téléchargement de la plaquette envoyés par email. Si absent, le mail de confirmation tombe sur l'URL brute (sans tracking). | (32+ caractères aléatoires) |
 
 ## Base de données (backend uniquement)
 

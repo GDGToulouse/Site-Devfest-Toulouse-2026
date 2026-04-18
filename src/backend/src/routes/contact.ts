@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
-import { validateWebhookUrl } from "../lib/webhook-url.js";
+import { makeToken } from "../lib/brochure-token.js";
+import { sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
 
 interface ContactBody {
@@ -12,7 +13,10 @@ interface ContactBody {
   categoryId?: number;
   message: string;
   locale?: string;
-  website?: string; // honeypot
+  // Honeypot. Accepts both the new `confirmUrl` (current front) and the
+  // old `website` field in case a cached build is still out there.
+  confirmUrl?: string;
+  website?: string;
 }
 
 function validateEmail(email: string): boolean {
@@ -45,19 +49,41 @@ export default async function contactRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { firstName, lastName, email, phone, categoryId, message, locale, website } = request.body;
+    const { firstName, lastName, email, phone, categoryId, message, locale, confirmUrl, website } = request.body;
 
-    // Honeypot check — bots fill this hidden field
-    if (website) {
-      return { success: true };
-    }
-
-    // Server-side validation
+    // Server-side validation first, so we can tell "honeypot + bot-like
+    // payload" (drop silently) apart from "honeypot + real user with
+    // aggressive autofill" (show a helpful error). A real bot rarely
+    // fills all four required fields cleanly before triggering the trap;
+    // a human whose password-manager polluted the hidden input does.
     const errors: Record<string, string> = {};
     if (!firstName?.trim()) errors.firstName = "required";
     if (!lastName?.trim()) errors.lastName = "required";
     if (!email?.trim() || !validateEmail(email)) errors.email = "invalid";
     if (!message?.trim() || message.trim().length < 10) errors.message = "too_short";
+
+    const honeypotValue = confirmUrl || website;
+    if (honeypotValue) {
+      if (Object.keys(errors).length === 0) {
+        // All required fields are valid AND the honeypot was touched —
+        // this looks like autofill on a legitimate user. Tell them so
+        // they know their message didn't vanish.
+        request.log.warn(
+          { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
+          "[contact] honeypot tripped on well-formed payload — surfacing error to user",
+        );
+        return reply.status(400).send({
+          success: false,
+          errors: { honeypot: "autofill_detected" },
+        });
+      }
+      // Missing/bad required fields + honeypot => classic bot. Drop silently.
+      request.log.warn(
+        { ip: request.ip, email, honeypotValue: honeypotValue.slice(0, 80) },
+        "[contact] honeypot tripped on bot-like payload — silently dropped",
+      );
+      return { success: true };
+    }
 
     if (Object.keys(errors).length > 0) {
       return reply.status(400).send({ success: false, errors });
@@ -139,8 +165,14 @@ export default async function contactRoutes(app: FastifyInstance) {
         try {
           const edition = await getFeaturedEdition();
           const baseUrl = process.env.BASE_URL || "http://localhost:3000";
+          // Per-message tracked link if both the brochure and the signing
+          // secret are configured; falls back to the raw URL otherwise so
+          // the email stays useful in dev.
+          const brochureToken = makeToken(stored.id);
           const brochureUrl = edition?.sponsorBrochureUrl
-            ? `${baseUrl}${edition.sponsorBrochureUrl}`
+            ? brochureToken
+              ? `${baseUrl}/api/brochure/${brochureToken}`
+              : `${baseUrl}${edition.sponsorBrochureUrl}`
             : "";
 
           const vars = {
@@ -169,51 +201,26 @@ export default async function contactRoutes(app: FastifyInstance) {
     }
 
     // --- Fire webhook (async, fire-and-forget) ---
-    try {
-      const webhookSetting = await prisma.siteSetting.findUnique({
-        where: { key: "contact_webhook_url" },
-      });
-      const webhookUrl = webhookSetting?.value;
-      if (webhookUrl) {
-        // Validate against SSRF: protocol + private IP check. Skip the webhook
-        // if validation fails — better to miss the event than leak internal
-        // endpoints to whichever URL an admin accidentally set.
-        try {
-          await validateWebhookUrl(webhookUrl);
-        } catch (err) {
-          app.log.warn("Contact webhook skipped (invalid URL: %s)", String(err));
-          return { success: true };
-        }
-
-        const payload = {
-          id: stored.id,
-          submittedAt: stored.createdAt.toISOString(),
-          data: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: email.trim(),
-            phone: phone?.trim() || null,
-            categoryId: categoryId || null,
-            categorySlug: category?.slug || null,
-            categoryLabel: categoryLabel || null,
-            message: message.trim(),
-            locale: locale || null,
-          },
-        };
-
-        fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.timeout(10_000),
-          redirect: "manual",
-        }).catch((err) => {
-          app.log.warn("Contact webhook failed: %s", String(err));
-        });
-      }
-    } catch (err) {
-      app.log.warn("Contact webhook error: %s", String(err));
-    }
+    // sendContactWebhook records the outcome on the ContactMessage so the
+    // admin can see failures and retry them. We don't await — the form
+    // response shouldn't block on a slow third-party endpoint.
+    sendContactWebhook({
+      id: stored.id,
+      submittedAt: stored.createdAt.toISOString(),
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone?.trim() || null,
+        categoryId: categoryId || null,
+        categorySlug: category?.slug || null,
+        categoryLabel: categoryLabel || null,
+        message: message.trim(),
+        locale: locale || null,
+      },
+    }).catch((err) => {
+      app.log.warn("Contact webhook helper crashed: %s", String(err));
+    });
 
     return { success: true };
   });
