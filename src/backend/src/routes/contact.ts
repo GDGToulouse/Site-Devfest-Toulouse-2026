@@ -25,6 +25,9 @@ function validateEmail(email: string): boolean {
 
 export default async function contactRoutes(app: FastifyInstance) {
   // GET /api/contact/categories — public list of active categories
+  // Hidden categories (isPublic=false) are still returned so dedicated
+  // pages can match them by slug, but they're flagged so the generic
+  // /contact <select> filters them out client-side.
   app.get("/contact/categories", async () => {
     const categories = await prisma.contactCategory.findMany({
       where: { isActive: true },
@@ -36,6 +39,7 @@ export default async function contactRoutes(app: FastifyInstance) {
       nameFr: cat.nameFr,
       nameEn: cat.nameEn,
       slug: cat.slug,
+      isPublic: cat.isPublic,
     }));
   });
 

@@ -13,33 +13,44 @@ export async function seedBase() {
   console.log("Seeding database (base)...");
 
   // --- Contact Categories ---
+  // "Sponsoring" stays a public, generic bucket for sponsoring questions
+  // sent through the /contact page (no automatic brochure email).
+  // "sponsor-brochure" is the hidden category used only by the brochure
+  // request form on /devenir-sponsor: receivers are the same, but the
+  // confirmation email contains the per-message tracked brochure link.
   const contactCategories = [
     {
       nameFr: "Sponsoring", nameEn: "Sponsoring",
       emailRecipients: "sponsors@devfesttoulouse.fr", sortOrder: 1,
-      slug: "sponsoring", isSystem: true,
-      confirmationSubjectFr: "[DevFest Toulouse 2026] Tenez vous prêt",
-      confirmationSubjectEn: "[DevFest Toulouse 2026] Get ready",
+      slug: "sponsoring", isSystem: true, isPublic: true,
+    },
+    {
+      nameFr: "Demande de plaquette sponsor", nameEn: "Sponsor brochure request",
+      emailRecipients: "sponsors@devfesttoulouse.fr", sortOrder: 2,
+      slug: "sponsor-brochure", isSystem: true, isPublic: false,
+      confirmationSubjectFr: "[DevFest Toulouse 2026] Votre dossier de sponsoring",
+      confirmationSubjectEn: "[DevFest Toulouse 2026] Your sponsorship brochure",
       confirmationBodyFr: "Bonjour {firstName} {lastName},\n\nMerci de l'intérêt que vous portez au DevFest Toulouse.\n\nVous pouvez consulter la plaquette sponsor à <a href=\"{brochureUrl}\">cette adresse</a>.\n\nSi vous avez des questions, nous sommes là pour y répondre.\nNous vous recontacterons d'ici quelques jours pour étudier la meilleure formule pour vous.\n\nDevFestement,\nLes organisateurs du DevFest Toulouse",
       confirmationBodyEn: "Hello {firstName} {lastName},\n\nThank you for your interest in DevFest Toulouse.\n\nYou can download the sponsor brochure at <a href=\"{brochureUrl}\">this link</a>.\n\nIf you have any questions, we are happy to help.\nWe will get back to you within a few days to find the best option for you.\n\nBest regards,\nThe DevFest Toulouse organizers",
     },
-    { nameFr: "Appel à conférences", nameEn: "Call for Papers", emailRecipients: "cfp@devfesttoulouse.fr", sortOrder: 2, slug: "cfp" },
-    { nameFr: "Presse / Média", nameEn: "Press / Media", emailRecipients: "presse@devfesttoulouse.fr", sortOrder: 3, slug: "presse" },
+    { nameFr: "Appel à conférences", nameEn: "Call for Papers", emailRecipients: "cfp@devfesttoulouse.fr", sortOrder: 3, slug: "cfp", isPublic: true },
+    { nameFr: "Presse / Média", nameEn: "Press / Media", emailRecipients: "presse@devfesttoulouse.fr", sortOrder: 4, slug: "presse", isPublic: true },
   ];
 
   for (const cat of contactCategories) {
     const existing = await prisma.contactCategory.findFirst({
-      where: { nameFr: cat.nameFr },
+      where: { OR: [{ slug: cat.slug }, { nameFr: cat.nameFr }] },
     });
     if (!existing) {
       await prisma.contactCategory.create({ data: cat });
     } else {
-      // Backfill slug/isSystem on existing categories
+      // Backfill slug/isSystem/isPublic on existing categories.
       await prisma.contactCategory.update({
         where: { id: existing.id },
         data: {
           slug: cat.slug,
           isSystem: cat.isSystem ?? false,
+          isPublic: cat.isPublic ?? true,
           ...(cat.confirmationSubjectFr && !existing.confirmationSubjectFr ? {
             confirmationSubjectFr: cat.confirmationSubjectFr,
             confirmationSubjectEn: cat.confirmationSubjectEn,

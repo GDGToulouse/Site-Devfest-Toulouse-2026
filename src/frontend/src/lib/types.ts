@@ -131,6 +131,8 @@ export interface ContactCategory {
   nameFr: string;
   nameEn: string;
   slug: string | null;
+  // Optional for backward compat with cached responses; missing means public.
+  isPublic?: boolean;
 }
 
 export interface ContactFormData {

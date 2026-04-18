@@ -15,6 +15,7 @@ interface ContactCategory {
   isActive: boolean;
   slug: string | null;
   isSystem: boolean;
+  isPublic: boolean;
   confirmationSubjectFr: string | null;
   confirmationSubjectEn: string | null;
   confirmationBodyFr: string | null;
@@ -182,6 +183,7 @@ export default function ContactCategories() {
                 <td className="px-4 py-3 text-noir font-medium">
                   {cat.nameFr}
                   {cat.isSystem && <span className="ml-2 text-[10px] bg-bleu/10 text-bleu px-1.5 py-0.5 rounded">système</span>}
+                  {!cat.isPublic && <span className="ml-2 text-[10px] bg-gris/10 text-gris px-1.5 py-0.5 rounded" title="Non proposée dans le formulaire générique /contact ; utilisée par une page dédiée.">interne</span>}
                 </td>
                 <td className="px-4 py-3 text-gris text-xs font-mono">{cat.slug || "—"}</td>
                 <td className="px-4 py-3 text-gris text-xs">{cat.emailRecipients}</td>

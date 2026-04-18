@@ -29,13 +29,17 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
+  // Categories with isPublic !== false are shown in the generic <select>.
+  // We treat undefined as public for backward compat with old API responses.
+  const publicCategories = categories.filter((c) => c.isPublic !== false);
+
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
     if (!formData.firstName.trim()) errs.firstName = t("firstNameError");
     if (!formData.lastName.trim()) errs.lastName = t("lastNameError");
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       errs.email = t("emailError");
-    if (!forceCategoryId && categories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
+    if (!forceCategoryId && publicCategories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
     if (!formData.message.trim() || formData.message.trim().length < 10)
       errs.message = t("messageError");
     return errs;
@@ -177,8 +181,11 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
         />
       </div>
 
-      {/* Category — hidden when forceCategoryId is set */}
-      {!forceCategoryId && categories.length > 0 && (
+      {/* Category — hidden when forceCategoryId is set.
+          Internal categories (isPublic=false) are excluded from the
+          generic <select>; they're meant to be reached only through
+          dedicated pages that pass forceCategoryId. */}
+      {!forceCategoryId && publicCategories.length > 0 && (
         <div>
           <label htmlFor="categoryId" className="block text-sm font-bold text-noir mb-1">
             {t("category")} *
@@ -192,7 +199,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
             className={`w-full px-4 py-3 rounded-m border ${errors.categoryId ? "border-rouge" : "border-gris-clair"} text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-bleu`}
           >
             <option value="">{t("categoryPlaceholder")}</option>
-            {categories.map((cat) => (
+            {publicCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {localizedField(cat, "name", locale)}
               </option>

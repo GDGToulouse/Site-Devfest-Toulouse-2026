@@ -165,6 +165,12 @@ model ContactCategory {
   slug                   String?   @unique
   // System categories cannot be deleted from the admin UI
   isSystem               Boolean   @default(false)
+  // When false, the category is hidden from the public /contact <select> but
+  // still usable via forceCategoryId on dedicated pages (e.g. the sponsor
+  // brochure form on /devenir-sponsor). Lets us separate generic sponsoring
+  // questions from explicit brochure requests so the email templates and the
+  // tracking can diverge.
+  isPublic               Boolean   @default(true)
   // Per-category confirmation email sent to the person who submitted the form.
   // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
   confirmationSubjectFr  String?

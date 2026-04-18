@@ -32,6 +32,7 @@ export default async function adminContactRoutes(app: FastifyInstance) {
       isActive: c.isActive,
       slug: c.slug,
       isSystem: c.isSystem,
+      isPublic: c.isPublic,
       confirmationSubjectFr: c.confirmationSubjectFr,
       confirmationSubjectEn: c.confirmationSubjectEn,
       confirmationBodyFr: c.confirmationBodyFr,

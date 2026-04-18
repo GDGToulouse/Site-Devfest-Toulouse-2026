@@ -38,7 +38,12 @@ export default async function SponsorPage() {
     getContactCategories(),
   ]);
 
-  const sponsoringCategory = categories.find((c) => c.slug === "sponsoring");
+  // The dedicated brochure-request category triggers the email template
+  // with the tracked {brochureUrl} link. We fall back to the legacy
+  // "sponsoring" slug for environments where the seed hasn't run yet.
+  const sponsoringCategory =
+    categories.find((c) => c.slug === "sponsor-brochure") ??
+    categories.find((c) => c.slug === "sponsoring");
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
