@@ -155,6 +155,13 @@ export async function revokeMyApiKey(id: string): Promise<boolean> {
   return status === 200;
 }
 
+// Hard-delete a key that has already been revoked. Returns false if the
+// key is still active (the backend refuses to purge unrevoked keys).
+export async function purgeMyApiKey(id: string): Promise<boolean> {
+  const { status } = await meFetch(`/api-keys/${id}?purge=true`, { method: "DELETE" });
+  return status === 200;
+}
+
 export interface AdminApiKeysList {
   page: number;
   limit: number;
