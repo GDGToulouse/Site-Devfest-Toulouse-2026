@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { getEditionByYear, getEditions } from "@/lib/api";
+import { getEditionByYear } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
@@ -29,11 +29,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       },
     },
   };
-}
-
-export async function generateStaticParams() {
-  const editions = await getEditions();
-  return editions.map((e) => ({ year: String(e.year) }));
 }
 
 function formatDate(dateStr: string, locale: string): string {
