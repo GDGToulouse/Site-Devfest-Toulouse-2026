@@ -172,7 +172,9 @@
     "date": "Date",
     "archivedSite": "View archived site",
     "noEdition": "No edition found for this year.",
-    "allEditions": "All editions"
+    "allEditions": "All editions",
+    "previousEdition": "Previous edition",
+    "nextEdition": "Next edition"
   },
   "sponsor": {
     "pageTitle": "Become a sponsor",

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { getEditionByYear } from "@/lib/api";
+import { getEditionByYear, getEditions } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
@@ -44,8 +44,21 @@ export default async function BilanPage({ params }: PageProps) {
   const locale = await getLocale();
   const t = await getTranslations("bilan");
 
-  const edition = await getEditionByYear(Number(year));
+  const [edition, allEditions] = await Promise.all([
+    getEditionByYear(Number(year)),
+    getEditions(),
+  ]);
   if (!edition) notFound();
+
+  // Prev/next navigation across archived editions only — going forward
+  // from a recap to the upcoming edition would be jarring.
+  const archivedYears = allEditions
+    .filter((e) => e.status === "SEE_YOU_NEXT_YEAR")
+    .map((e) => e.year)
+    .sort((a, b) => a - b);
+  const idx = archivedYears.indexOf(edition.year);
+  const previousYear = idx > 0 ? archivedYears[idx - 1] : null;
+  const nextYear = idx >= 0 && idx < archivedYears.length - 1 ? archivedYears[idx + 1] : null;
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -199,6 +212,45 @@ export default async function BilanPage({ params }: PageProps) {
                 {t("archivedSite")}
               </a>
             </section>
+          )}
+
+          {/* Prev/next archived edition */}
+          {(previousYear || nextYear) && (
+            <nav
+              aria-label={t("editions")}
+              className="mt-16 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 border-t border-gris/20 pt-8"
+            >
+              <div className="flex-1">
+                {previousYear && (
+                  <Link
+                    href={`/editions/${previousYear}`}
+                    rel="prev"
+                    className="group flex items-center gap-3 px-5 py-3 rounded-[12px] border border-gris/30 hover:border-bleu hover:bg-bleu/5 transition-colors"
+                  >
+                    <span aria-hidden="true" className="text-bleu text-xl group-hover:-translate-x-1 transition-transform">←</span>
+                    <span className="flex flex-col leading-tight">
+                      <span className="text-xs uppercase tracking-wide text-gris">{t("previousEdition")}</span>
+                      <span className="text-noir font-bold">DevFest Toulouse {previousYear}</span>
+                    </span>
+                  </Link>
+                )}
+              </div>
+              <div className="flex-1 sm:text-right">
+                {nextYear && (
+                  <Link
+                    href={`/editions/${nextYear}`}
+                    rel="next"
+                    className="group flex items-center justify-end gap-3 px-5 py-3 rounded-[12px] border border-gris/30 hover:border-bleu hover:bg-bleu/5 transition-colors"
+                  >
+                    <span className="flex flex-col leading-tight text-right">
+                      <span className="text-xs uppercase tracking-wide text-gris">{t("nextEdition")}</span>
+                      <span className="text-noir font-bold">DevFest Toulouse {nextYear}</span>
+                    </span>
+                    <span aria-hidden="true" className="text-bleu text-xl group-hover:translate-x-1 transition-transform">→</span>
+                  </Link>
+                )}
+              </div>
+            </nav>
           )}
         </div>
       </div>
