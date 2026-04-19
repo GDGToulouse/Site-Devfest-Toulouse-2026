@@ -12,7 +12,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCfpSettings, getCurrentEdition, getSeoSettings } from "@/lib/api";
+import { getCfpSettings, getCurrentEdition, getIdentitySettings, getSeoSettings } from "@/lib/api";
+import { buildFaviconMetadata } from "@/lib/identity";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
@@ -24,9 +25,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const [t, seoSettings] = await Promise.all([
+  const [t, seoSettings, identity] = await Promise.all([
     getTranslations({ locale, namespace: "site" }),
     getSeoSettings(),
+    getIdentitySettings(),
   ]);
 
   const ogImage = seoSettings.seo_og_image || "/images/og-default.png";
@@ -38,6 +40,7 @@ export async function generateMetadata({
       default: t("title"),
     },
     description: t("description"),
+    icons: buildFaviconMetadata(identity),
     openGraph: {
       siteName: t("title"),
       type: "website",
@@ -82,9 +85,10 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, cfp] = await Promise.all([
+  const [edition, cfp, identity] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
+    getIdentitySettings(),
   ]);
 
   return (
@@ -98,7 +102,7 @@ export default async function LocaleLayout({
       </a>
       <NextIntlClientProvider>
         <LanguageSuggestionBanner />
-        <EditionProvider edition={edition} cfp={cfp}>
+        <EditionProvider edition={edition} cfp={cfp} identity={identity}>
           <Header />
           <main id="main-content" role="main" className="flex-1">
             {children}
