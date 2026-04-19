@@ -6,6 +6,7 @@ import FormField from "@/components/admin/FormField";
 import BilingualInput from "@/components/admin/BilingualInput";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import FilePickerDialog from "@/components/admin/FilePickerDialog";
 
 type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
 
@@ -335,10 +336,11 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
             {settings.sponsorBrochureUrl && (
               <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>
             )}
-            <ImagePickerDialog
+            <FilePickerDialog
               open={isBrochurePickerOpen}
               onClose={() => setIsBrochurePickerOpen(false)}
               onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrl: url })}
+              title="Bibliothèque de plaquettes"
             />
           </div>
         )}
