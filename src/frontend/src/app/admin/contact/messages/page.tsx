@@ -14,6 +14,8 @@ interface Message {
   lastName: string;
   email: string;
   phone: string | null;
+  company: string;
+  jobTitle: string;
   categoryLabel: string | null;
   message: string;
   isRead: boolean;
@@ -299,6 +301,8 @@ export default function ContactMessagesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
                 <p><span className="text-gris">Email :</span> <a href={`mailto:${selected.email}`} className="text-bleu hover:underline">{selected.email}</a></p>
                 {selected.phone && <p><span className="text-gris">Téléphone :</span> {selected.phone}</p>}
+                {selected.company && <p><span className="text-gris">Entreprise :</span> {selected.company}</p>}
+                {selected.jobTitle && <p><span className="text-gris">Poste :</span> {selected.jobTitle}</p>}
                 {selected.categoryLabel && <p><span className="text-gris">Catégorie :</span> <StatusBadge status={selected.categoryLabel} variant="blue" /></p>}
                 <p><span className="text-gris">Date :</span> {new Date(selected.createdAt).toLocaleString("fr-FR")}</p>
                 <p>

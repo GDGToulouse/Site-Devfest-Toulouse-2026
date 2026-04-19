@@ -200,6 +200,12 @@ model ContactMessage {
   lastName         String
   email            String
   phone            String?
+  // Company and job title — required on the public form, stored as "" on
+  // legacy rows predating the column. Empty strings are never surfaced as
+  // valid in the admin UI / webhook; they stand in for "unknown from a
+  // pre-migration row" without breaking NOT NULL assumptions.
+  company          String           @default("")
+  jobTitle         String           @default("")
   categoryLabel    String?
   message          String
   locale           String?

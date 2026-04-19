@@ -1,15 +1,9 @@
 import { prisma } from "./prisma.js";
-import { makeToken } from "./brochure-token.js";
 import { validateWebhookUrl } from "./webhook-url.js";
 
 // Common shape of the JSON sent to the configured webhook URL.
 // Mirrors what the form already POSTed before this refactor — keep
 // stable, consumers (n8n, Zapier, Make…) parse these field names.
-//
-// `brochureUrl` is populated only for messages tied to a category that
-// uses the {brochureUrl} template variable (the sponsor-brochure flow).
-// It gives the webhook everything it needs to auto-reply with the
-// tracked download link without having to mint tokens itself.
 export interface ContactWebhookPayload {
   id: number;
   submittedAt: string;
@@ -18,17 +12,13 @@ export interface ContactWebhookPayload {
     lastName: string;
     email: string;
     phone: string | null;
+    company: string;
+    jobTitle: string;
     categoryId: number | null;
     categorySlug: string | null;
     categoryLabel: string | null;
     message: string;
     locale: string | null;
-    edition: {
-      id: number;
-      year: number;
-    } | null;
-    brochureUrl: string | null;
-    brochureDirectUrl: string | null;
   };
 }
 
@@ -121,45 +111,6 @@ export async function sendContactWebhook(
   return { status: "success", error: null, httpStatus: response.status };
 }
 
-/**
- * Build the brochure-related payload extras for a given ContactMessage.
- * Returns the tracked redirect URL (with HMAC token) and the raw URL.
- * Both are null if the featured edition has no sponsorBrochureUrl or the
- * token secret isn't configured.
- */
-export async function buildBrochureFields(messageId: number): Promise<{
-  edition: { id: number; year: number } | null;
-  brochureUrl: string | null;
-  brochureDirectUrl: string | null;
-}> {
-  const featured = await prisma.edition.findFirst({
-    where: { status: { in: ["ANNOUNCEMENT", "PREPARATION"] } },
-    orderBy: { year: "desc" },
-    select: { id: true, year: true, sponsorBrochureUrl: true },
-  });
-
-  if (!featured) {
-    return { edition: null, brochureUrl: null, brochureDirectUrl: null };
-  }
-
-  const edition = { id: featured.id, year: featured.year };
-  const directUrl = featured.sponsorBrochureUrl || null;
-
-  if (!directUrl) {
-    return { edition, brochureUrl: null, brochureDirectUrl: null };
-  }
-
-  const baseUrl = process.env.BASE_URL || "http://localhost:3000";
-  const token = makeToken(messageId);
-  const trackedUrl = token ? `${baseUrl}/api/brochure/${token}` : null;
-
-  return {
-    edition,
-    brochureUrl: trackedUrl,
-    brochureDirectUrl: directUrl,
-  };
-}
-
 /** Build the payload from a stored ContactMessage (used by the retry endpoint). */
 export async function buildPayloadFromStored(messageId: number): Promise<ContactWebhookPayload | null> {
   const m = await prisma.contactMessage.findUnique({
@@ -167,9 +118,6 @@ export async function buildPayloadFromStored(messageId: number): Promise<Contact
     include: { category: true },
   });
   if (!m) return null;
-
-  const brochureFields = await buildBrochureFields(m.id);
-
   return {
     id: m.id,
     submittedAt: m.createdAt.toISOString(),
@@ -178,12 +126,13 @@ export async function buildPayloadFromStored(messageId: number): Promise<Contact
       lastName: m.lastName,
       email: m.email,
       phone: m.phone,
+      company: m.company,
+      jobTitle: m.jobTitle,
       categoryId: m.categoryId,
       categorySlug: m.category?.slug ?? null,
       categoryLabel: m.category?.nameFr || m.categoryLabel,
       message: m.message,
       locale: m.locale,
-      ...brochureFields,
     },
   };
 }

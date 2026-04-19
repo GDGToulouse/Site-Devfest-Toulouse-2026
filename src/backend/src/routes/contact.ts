@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
 import { makeToken } from "../lib/brochure-token.js";
-import { buildBrochureFields, sendContactWebhook } from "../lib/contact-webhook.js";
+import { sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
 
 interface ContactBody {
@@ -10,6 +10,8 @@ interface ContactBody {
   lastName: string;
   email: string;
   phone?: string;
+  company: string;
+  jobTitle: string;
   categoryId?: number;
   message: string;
   locale?: string;
@@ -53,7 +55,7 @@ export default async function contactRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { firstName, lastName, email, phone, categoryId, message, locale, confirmUrl, website } = request.body;
+    const { firstName, lastName, email, phone, company, jobTitle, categoryId, message, locale, confirmUrl, website } = request.body;
 
     // Server-side validation first, so we can tell "honeypot + bot-like
     // payload" (drop silently) apart from "honeypot + real user with
@@ -64,6 +66,8 @@ export default async function contactRoutes(app: FastifyInstance) {
     if (!firstName?.trim()) errors.firstName = "required";
     if (!lastName?.trim()) errors.lastName = "required";
     if (!email?.trim() || !validateEmail(email)) errors.email = "invalid";
+    if (!company?.trim()) errors.company = "required";
+    if (!jobTitle?.trim()) errors.jobTitle = "required";
     if (!message?.trim() || message.trim().length < 10) errors.message = "too_short";
 
     const honeypotValue = confirmUrl || website;
@@ -123,6 +127,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         lastName: lastName.trim(),
         email: email.trim(),
         phone: phone?.trim() || null,
+        company: company.trim(),
+        jobTitle: jobTitle.trim(),
         categoryLabel,
         message: message.trim(),
         locale: locale || null,
@@ -137,6 +143,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         `De: ${firstName.trim()} ${lastName.trim()}`,
         `Email: ${email.trim()}`,
         phone ? `Téléphone: ${phone.trim()}` : null,
+        `Entreprise: ${company.trim()}`,
+        `Poste: ${jobTitle.trim()}`,
         categoryLabel ? `Catégorie: ${categoryLabel}` : null,
         "",
         message.trim(),
@@ -149,6 +157,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         <p><strong>De:</strong> ${firstName.trim()} ${lastName.trim()}</p>
         <p><strong>Email:</strong> <a href="mailto:${email.trim()}">${email.trim()}</a></p>
         ${phone ? `<p><strong>Téléphone:</strong> ${phone.trim()}</p>` : ""}
+        <p><strong>Entreprise:</strong> ${company.trim()}</p>
+        <p><strong>Poste:</strong> ${jobTitle.trim()}</p>
         ${categoryLabel ? `<p><strong>Catégorie:</strong> ${categoryLabel}</p>` : ""}
         <hr>
         <p>${message.trim().replace(/\n/g, "<br>")}</p>
@@ -208,34 +218,25 @@ export default async function contactRoutes(app: FastifyInstance) {
     // sendContactWebhook records the outcome on the ContactMessage so the
     // admin can see failures and retry them. We don't await — the form
     // response shouldn't block on a slow third-party endpoint.
-    //
-    // The brochure fields are populated for every message, not just the
-    // sponsor-brochure category: an n8n workflow may decide what to do
-    // with them based on categorySlug, and it's cheaper to always send
-    // them than to special-case the category server-side.
-    (async () => {
-      try {
-        const brochureFields = await buildBrochureFields(stored.id);
-        await sendContactWebhook({
-          id: stored.id,
-          submittedAt: stored.createdAt.toISOString(),
-          data: {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            email: email.trim(),
-            phone: phone?.trim() || null,
-            categoryId: categoryId || null,
-            categorySlug: category?.slug || null,
-            categoryLabel: categoryLabel || null,
-            message: message.trim(),
-            locale: locale || null,
-            ...brochureFields,
-          },
-        });
-      } catch (err) {
-        app.log.warn("Contact webhook helper crashed: %s", String(err));
-      }
-    })();
+    sendContactWebhook({
+      id: stored.id,
+      submittedAt: stored.createdAt.toISOString(),
+      data: {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+        phone: phone?.trim() || null,
+        company: company.trim(),
+        jobTitle: jobTitle.trim(),
+        categoryId: categoryId || null,
+        categorySlug: category?.slug || null,
+        categoryLabel: categoryLabel || null,
+        message: message.trim(),
+        locale: locale || null,
+      },
+    }).catch((err) => {
+      app.log.warn("Contact webhook helper crashed: %s", String(err));
+    });
 
     return { success: true };
   });

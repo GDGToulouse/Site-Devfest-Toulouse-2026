@@ -145,6 +145,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         lastName: m.lastName,
         email: m.email,
         phone: m.phone,
+        company: m.company,
+        jobTitle: m.jobTitle,
         categoryLabel: m.category?.nameFr || m.categoryLabel,
         message: m.message,
         locale: m.locale,
@@ -213,12 +215,23 @@ export default async function adminContactRoutes(app: FastifyInstance) {
       await sendEmail({
         to: emails,
         subject: `[Fwd] Message de contact — ${msg.firstName} ${msg.lastName}`,
-        text: `De: ${msg.firstName} ${msg.lastName}\nEmail: ${msg.email}${msg.phone ? `\nTel: ${msg.phone}` : ""}${msg.categoryLabel ? `\nCategorie: ${msg.categoryLabel}` : ""}\n\n${msg.message}`,
+        text: [
+          `De: ${msg.firstName} ${msg.lastName}`,
+          `Email: ${msg.email}`,
+          msg.phone ? `Tel: ${msg.phone}` : null,
+          msg.company ? `Entreprise: ${msg.company}` : null,
+          msg.jobTitle ? `Poste: ${msg.jobTitle}` : null,
+          msg.categoryLabel ? `Categorie: ${msg.categoryLabel}` : null,
+          "",
+          msg.message,
+        ].filter(Boolean).join("\n"),
         html: `
         <h3>Message de contact transféré</h3>
         <p><strong>De:</strong> ${msg.firstName} ${msg.lastName}</p>
         <p><strong>Email:</strong> <a href="mailto:${msg.email}">${msg.email}</a></p>
         ${msg.phone ? `<p><strong>Tel:</strong> ${msg.phone}</p>` : ""}
+        ${msg.company ? `<p><strong>Entreprise:</strong> ${msg.company}</p>` : ""}
+        ${msg.jobTitle ? `<p><strong>Poste:</strong> ${msg.jobTitle}</p>` : ""}
         ${msg.categoryLabel ? `<p><strong>Categorie:</strong> ${msg.categoryLabel}</p>` : ""}
         <p><strong>Date:</strong> ${new Date(msg.createdAt).toLocaleString("fr-FR")}</p>
         <hr>
