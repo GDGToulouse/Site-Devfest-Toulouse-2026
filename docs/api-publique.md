@@ -142,5 +142,4 @@ Les réponses d'erreur suivent le schéma :
 ## Liens utiles
 
 - Documentation OpenAPI interactive : [`/api/docs`](https://devfesttoulouse.fr/api/docs)
-- Plan de construction de l'API : [`docs/plan-api-publique-et-jetons.md`](plan-api-publique-et-jetons.md)
 - Spécification métier du projet : [`docs/modele-donnees-metier.md`](modele-donnees-metier.md)
