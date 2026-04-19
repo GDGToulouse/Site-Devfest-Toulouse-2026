@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useDialog } from "@/lib/use-dialog";
+import GenerateAltButton from "./GenerateAltButton";
 
 interface ImageInfo {
   filename: string;
@@ -13,8 +14,10 @@ interface ImageInfo {
 }
 
 interface UploadResponse {
+  filename: string;
   url: string;
   size: number;
+  alt: string | null;
   compression: {
     originalSize: number;
     finalSize: number;
@@ -54,6 +57,11 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [pendingPreview, setPendingPreview] = useState<string | null>(null);
   const [pendingAlt, setPendingAlt] = useState("");
+  // Set when the user clicks "Generate with AI" before final upload: we
+  // upload the file early so the backend has a path to read pixels from,
+  // then the final "Téléverser" click only persists the alt metadata.
+  const [pendingUploadedFilename, setPendingUploadedFilename] = useState<string | null>(null);
+  const [isPreUploading, setIsPreUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,6 +73,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       setPendingFile(null);
       setPendingPreview(null);
       setPendingAlt("");
+      setPendingUploadedFilename(null);
     }
   }, [open]);
 
@@ -90,6 +99,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     setPendingFile(file);
     setPendingPreview(URL.createObjectURL(file));
     setPendingAlt("");
+    setPendingUploadedFilename(null);
   }
 
   function cancelPending() {
@@ -97,6 +107,63 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     setPendingFile(null);
     setPendingPreview(null);
     setPendingAlt("");
+    // Note: we intentionally don't delete pendingUploadedFilename's file
+    // from the server — if the admin pre-uploaded for AI generation then
+    // changed their mind, the file stays in the library. Could be cleaned
+    // up later, but a stray file is less surprising than silently deleting.
+    setPendingUploadedFilename(null);
+  }
+
+  /**
+   * Upload the pending file with the current alt (if any). Returns the
+   * server response so callers can chain on it (e.g. trigger AI generation
+   * right after).
+   */
+  async function uploadPendingFile(altOverride?: string): Promise<UploadResponse | null> {
+    if (!pendingFile) return null;
+    const formData = new FormData();
+    formData.append("file", pendingFile);
+    const altToSend = (altOverride ?? pendingAlt).trim();
+    if (altToSend) formData.append("alt", altToSend);
+
+    const { data, status } = await adminFetch<UploadResponse>("/files", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!data?.url) {
+      setError(status === 413 ? "Fichier trop volumineux" : "Erreur lors de l'upload");
+      return null;
+    }
+
+    if (data.compression) {
+      const c = data.compression;
+      const sizeMsg = `${formatKb(c.originalSize)} → ${formatKb(c.finalSize)}`;
+      const resizeMsg =
+        c.resized && c.originalWidth && c.finalWidth
+          ? ` · redimensionnée de ${c.originalWidth}px à ${c.finalWidth}px de large`
+          : "";
+      setNotice(`Image optimisée automatiquement (${sizeMsg})${resizeMsg}.`);
+    }
+
+    return data;
+  }
+
+  /**
+   * Triggered by the "Générer avec l'IA" button while still in the pending
+   * preview screen. We upload the file first (without alt) so the backend
+   * has bytes to inspect, then the GenerateAltButton handles the actual
+   * generation once given a real filename.
+   */
+  async function preUploadForAi(): Promise<string | null> {
+    if (pendingUploadedFilename) return pendingUploadedFilename;
+    setIsPreUploading(true);
+    setError(null);
+    const data = await uploadPendingFile("");
+    setIsPreUploading(false);
+    if (!data) return null;
+    setPendingUploadedFilename(data.filename);
+    return data.filename;
   }
 
   async function handleUpload() {
@@ -105,38 +172,33 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     setError(null);
     setNotice(null);
 
-    const formData = new FormData();
-    formData.append("file", pendingFile);
-    if (pendingAlt.trim()) {
-      formData.append("alt", pendingAlt.trim());
-    }
-
     try {
-      const { data, status } = await adminFetch<UploadResponse>("/files", {
-        method: "POST",
-        body: formData,
-      });
+      let finalUrl: string | null = null;
 
-      if (!data?.url) {
-        setError(status === 413 ? "Fichier trop volumineux" : "Erreur lors de l'upload");
-        setIsUploading(false);
-        return;
-      }
-
-      if (data.compression) {
-        const c = data.compression;
-        const sizeMsg = `${formatKb(c.originalSize)} → ${formatKb(c.finalSize)}`;
-        const resizeMsg =
-          c.resized && c.originalWidth && c.finalWidth
-            ? ` · redimensionnée de ${c.originalWidth}px à ${c.finalWidth}px de large`
-            : "";
-        setNotice(`Image optimisée automatiquement (${sizeMsg})${resizeMsg}.`);
+      if (pendingUploadedFilename) {
+        // File is already on the server (the AI button triggered an early
+        // upload). Just persist the (possibly edited) alt via PUT metadata.
+        finalUrl = `/uploads/${pendingUploadedFilename}`;
+        if (pendingAlt.trim()) {
+          await adminFetch(`/files/${encodeURIComponent(pendingUploadedFilename)}/metadata`, {
+            method: "PUT",
+            body: JSON.stringify({ alt: pendingAlt.trim() }),
+          });
+        }
+      } else {
+        // Standard path: single POST that uploads + sets alt in one shot.
+        const data = await uploadPendingFile();
+        if (!data) {
+          setIsUploading(false);
+          return;
+        }
+        finalUrl = data.url;
       }
 
       // Auto-select the uploaded image and switch to library
       cancelPending();
       await loadImages();
-      setSelected(data.url);
+      setSelected(finalUrl);
       setTab("library");
     } catch {
       setError("Impossible de contacter le serveur");
@@ -305,9 +367,45 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
               </div>
 
               <div>
-                <label htmlFor="alt-text" className="block text-sm font-medium text-noir mb-1">
-                  Texte alternatif (alt)
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label htmlFor="alt-text" className="block text-sm font-medium text-noir">
+                    Texte alternatif (alt)
+                  </label>
+                  {/* When the user clicks the AI button before submitting, we
+                      pre-upload the file so the backend has bytes to inspect.
+                      Once uploaded, the button stays available so they can
+                      re-generate if the first suggestion isn't great. */}
+                  {pendingUploadedFilename ? (
+                    <GenerateAltButton
+                      filename={pendingUploadedFilename}
+                      disabled={isUploading || isPreUploading}
+                      onGenerated={(generated) => setPendingAlt(generated)}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        const filename = await preUploadForAi();
+                        if (!filename) return;
+                        // Trigger generation right after the pre-upload finishes.
+                        const { data, status } = await adminFetch<{ alt: string }>(
+                          `/files/${encodeURIComponent(filename)}/generate-alt`,
+                          { method: "POST" },
+                        );
+                        if (status === 200 && data?.alt !== undefined) {
+                          setPendingAlt(data.alt);
+                        } else {
+                          setError("Échec de la génération du texte alternatif.");
+                        }
+                      }}
+                      disabled={isUploading || isPreUploading}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 text-xs rounded-lg border border-bleu/40 text-bleu hover:bg-bleu/5 disabled:opacity-50"
+                    >
+                      <span aria-hidden="true">✨</span>
+                      {isPreUploading ? "Préparation…" : "Générer avec l'IA"}
+                    </button>
+                  )}
+                </div>
                 <textarea
                   id="alt-text"
                   value={pendingAlt}
@@ -329,7 +427,11 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                   disabled={isUploading}
                   className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
                 >
-                  {isUploading ? "Upload en cours..." : "Téléverser"}
+                  {isUploading
+                    ? "Enregistrement…"
+                    : pendingUploadedFilename
+                      ? "Valider"
+                      : "Téléverser"}
                 </button>
               </div>
             </div>

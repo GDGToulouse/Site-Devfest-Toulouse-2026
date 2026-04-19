@@ -3,6 +3,7 @@
 import { useEffect, useId, useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useDialog } from "@/lib/use-dialog";
+import GenerateAltButton from "./GenerateAltButton";
 
 interface FileForDetails {
   filename: string;
@@ -135,9 +136,19 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
 
           {file.isImage && (
             <div>
-              <label htmlFor="alt-text-edit" className="block text-sm font-medium text-noir mb-1">
-                Texte alternatif (alt)
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label htmlFor="alt-text-edit" className="block text-sm font-medium text-noir">
+                  Texte alternatif (alt)
+                </label>
+                <GenerateAltButton
+                  filename={file.filename}
+                  disabled={isSaving}
+                  onGenerated={(generated) => {
+                    setAlt(generated);
+                    setSaveStatus("idle");
+                  }}
+                />
+              </div>
               <textarea
                 id="alt-text-edit"
                 value={alt}
@@ -149,7 +160,7 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
               />
               <p className="mt-1 text-xs text-gris">
                 Important pour l&apos;accessibilité. Décrit ce qu&apos;on voit ou son rôle, sans le mot
-                « image ».
+                « image ». Le bouton « Générer avec l&apos;IA » propose une suggestion à relire.
               </p>
             </div>
           )}

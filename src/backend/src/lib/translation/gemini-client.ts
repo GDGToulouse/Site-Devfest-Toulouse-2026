@@ -15,6 +15,11 @@ export interface GeminiCallParams {
   topP?: number;
   // Flash-Lite: pass 0 to disable the reasoning pass (faster, cheaper).
   thinkingBudget?: number;
+  // Optional inline image attachments for multimodal prompts (e.g. alt-text
+  // generation). Each part embeds the raw image bytes as base64 alongside
+  // its mime type. Kept under a few hundred KB total to stay well below the
+  // model's image input limits.
+  inlineImages?: Array<{ mimeType: string; base64: string }>;
 }
 
 export interface GeminiCallResult {
@@ -33,6 +38,8 @@ export function isConfigured(): boolean {
 }
 
 interface GeminiPart { text: string }
+interface GeminiInlineDataPart { inlineData: { mimeType: string; data: string } }
+type GeminiRequestPart = { text: string } | GeminiInlineDataPart;
 interface GeminiContent { parts: GeminiPart[] }
 interface GeminiCandidate { content?: GeminiContent }
 interface GeminiUsage {
@@ -55,8 +62,15 @@ export async function callGemini(params: GeminiCallParams): Promise<GeminiCallRe
     throw new TranslationError("not_configured", "GEMINI_API_KEY is not set");
   }
 
+  const userParts: GeminiRequestPart[] = [{ text: params.userContent }];
+  if (params.inlineImages) {
+    for (const img of params.inlineImages) {
+      userParts.push({ inlineData: { mimeType: img.mimeType, data: img.base64 } });
+    }
+  }
+
   const body = {
-    contents: [{ role: "user", parts: [{ text: params.userContent }] }],
+    contents: [{ role: "user", parts: userParts }],
     systemInstruction: { parts: [{ text: params.systemInstruction }] },
     generationConfig: {
       temperature: params.temperature ?? 0.1,

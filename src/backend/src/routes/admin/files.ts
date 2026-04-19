@@ -4,6 +4,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
 import { prisma } from "../../lib/prisma.js";
+import { generateAltText } from "../../lib/alt-text.js";
+import { TranslationError, QuotaExhaustedError } from "../../lib/translation/errors.js";
 
 const UPLOADS_DIR = "/app/uploads";
 const ALLOWED_MIMES = [
@@ -228,6 +230,81 @@ export default async function adminFileRoutes(app: FastifyInstance) {
 
     return { filename: meta.filename, alt: meta.alt };
   });
+
+  // POST /api/admin/files/:filename/generate-alt — generate an alt text
+  // suggestion for an image using Gemini. Doesn't persist the result —
+  // the admin reviews it in the UI and saves explicitly via PUT /metadata.
+  app.post<{ Params: { filename: string } }>(
+    "/files/:filename/generate-alt",
+    async (request, reply) => {
+      const { filename } = request.params;
+
+      if (filename.includes("/") || filename.includes("\\") || filename.includes("..")) {
+        return reply.code(400).send({ error: "Invalid filename" });
+      }
+
+      const ext = path.extname(filename).toLowerCase();
+      // Vision works best on raster images. SVG / ICO are too constrained
+      // (vector / multi-resolution containers) — refuse them upfront so the
+      // admin doesn't burn quota for nothing.
+      const supportedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+      if (!supportedExts.includes(ext)) {
+        return reply.code(415).send({
+          error: "unsupported_format",
+          message: `Alt-text generation only supports raster images (got ${ext}).`,
+        });
+      }
+
+      const filePath = path.join(UPLOADS_DIR, filename);
+      let buffer: Buffer;
+      try {
+        buffer = await fs.promises.readFile(filePath);
+      } catch {
+        return reply.code(404).send({ error: "File not found" });
+      }
+
+      const mimeByExt: Record<string, string> = {
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".webp": "image/webp",
+        ".gif": "image/gif",
+      };
+
+      try {
+        const result = await generateAltText(buffer, mimeByExt[ext], {
+          userId: request.adminUser?.id ?? null,
+        });
+        return {
+          alt: result.alt,
+          model: result.model,
+          durationMs: result.durationMs,
+          tokensUsed: { input: result.inputTokens, output: result.outputTokens },
+        };
+      } catch (err) {
+        if (err instanceof QuotaExhaustedError) {
+          return reply
+            .code(429)
+            .header("Retry-After", String(err.retryAfterSec ?? 60))
+            .send({
+              error: err.code,
+              message: err.message,
+              retryAfterSec: err.retryAfterSec,
+            });
+        }
+        if (err instanceof TranslationError) {
+          const status =
+            err.code === "not_configured" ? 503 :
+            err.code === "invalid_input" ? 400 :
+            err.code === "rate_limit" ? 429 :
+            502;
+          return reply.code(status).send({ error: err.code, message: err.message });
+        }
+        request.log.error({ err, filename }, "Unexpected alt-text generation error");
+        return reply.code(500).send({ error: "internal_error" });
+      }
+    },
+  );
 
   // DELETE /api/admin/files/:filename — delete a file
   app.delete<{ Params: { filename: string } }>(
