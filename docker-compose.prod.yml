@@ -13,6 +13,12 @@ services:
       - "3000"
     depends_on:
       - backend
+    # Persist Next.js' on-the-fly image optimization cache across rebuilds.
+    # Without this, every redeploy throws away all the AVIF/WebP variants
+    # that next/image generated and the first visitor pays the CPU cost
+    # again for each image.
+    volumes:
+      - next_image_cache:/app/.next/cache/images
     networks:
       - default
       - coolify
@@ -83,3 +89,4 @@ networks:
 volumes:
   pgdata:
   uploads:
+  next_image_cache:

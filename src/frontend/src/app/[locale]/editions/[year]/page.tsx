@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -175,12 +176,13 @@ export default async function BilanPage({ params }: PageProps) {
                     className="group rounded-xl overflow-hidden bg-blanc shadow-card hover:shadow-lg transition-shadow"
                   >
                     {article.imageUrl && (
-                      <div className="aspect-video overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                      <div className="relative aspect-video overflow-hidden">
+                        <Image
                           src={article.imageUrl}
                           alt={localizedField(article, "title", locale)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover group-hover:scale-105 transition-transform"
                         />
                       </div>
                     )}

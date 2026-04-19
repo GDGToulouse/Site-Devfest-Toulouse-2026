@@ -11,6 +11,26 @@ interface ImageInfo {
   uploadedAt: string;
 }
 
+interface UploadResponse {
+  url: string;
+  size: number;
+  compression: {
+    originalSize: number;
+    finalSize: number;
+    originalWidth: number | null;
+    originalHeight: number | null;
+    finalWidth: number | null;
+    finalHeight: number | null;
+    resized: boolean;
+  } | null;
+}
+
+function formatKb(bytes: number): string {
+  return bytes >= 1_000_000
+    ? `${(bytes / 1_000_000).toFixed(1)} Mo`
+    : `${Math.round(bytes / 1024)} Ko`;
+}
+
 interface ImagePickerDialogProps {
   open: boolean;
   onClose: () => void;
@@ -27,6 +47,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   const [selected, setSelected] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -34,6 +55,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       loadImages();
       setSelected(null);
       setError(null);
+      setNotice(null);
     }
   }, [open]);
 
@@ -47,12 +69,13 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   async function handleUpload(file: File) {
     setIsUploading(true);
     setError(null);
+    setNotice(null);
 
     const formData = new FormData();
     formData.append("file", file);
 
     try {
-      const { data, status } = await adminFetch<{ url: string }>("/files", {
+      const { data, status } = await adminFetch<UploadResponse>("/files", {
         method: "POST",
         body: formData,
       });
@@ -61,6 +84,16 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
         setError(status === 413 ? "Fichier trop volumineux" : "Erreur lors de l'upload");
         setIsUploading(false);
         return;
+      }
+
+      if (data.compression) {
+        const c = data.compression;
+        const sizeMsg = `${formatKb(c.originalSize)} → ${formatKb(c.finalSize)}`;
+        const resizeMsg =
+          c.resized && c.originalWidth && c.finalWidth
+            ? ` · redimensionnée de ${c.originalWidth}px à ${c.finalWidth}px de large`
+            : "";
+        setNotice(`Image optimisée automatiquement (${sizeMsg})${resizeMsg}.`);
       }
 
       // Auto-select the uploaded image and switch to library
@@ -142,6 +175,11 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
         {error && (
           <div className="mx-4 mt-3 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
+        )}
+        {notice && (
+          <div className="mx-4 mt-3 p-3 rounded-lg bg-malachite/10 text-malachite text-sm">
+            {notice}
+          </div>
         )}
 
         {/* Content */}

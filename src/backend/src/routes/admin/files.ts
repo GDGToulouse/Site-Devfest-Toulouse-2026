@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import fs from "node:fs";
-import { pipeline } from "node:stream/promises";
 import path from "node:path";
 import crypto from "node:crypto";
+import sharp from "sharp";
 
 const UPLOADS_DIR = "/app/uploads";
 const ALLOWED_MIMES = [
@@ -19,6 +19,17 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
+
+// Raster images larger than this width (px) are downscaled before storage.
+// 2560 fits modern desktop hero images (1920–2560 logical width × 2 DPR
+// covered by Next.js srcset) without keeping multi-megapixel originals
+// that nobody ever displays at full size.
+const COMPRESS_MAX_WIDTH = 2560;
+const COMPRESS_QUALITY = 85;
+// Mimetypes we run through sharp. SVG (vector) and ICO (multi-res icon
+// container) are intentionally excluded — re-encoding them would lose
+// information or fail outright.
+const COMPRESSIBLE_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default async function adminFileRoutes(app: FastifyInstance) {
   // POST /api/admin/files — upload a single file (image or document)
@@ -49,13 +60,61 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     const destPath = path.join(UPLOADS_DIR, uniqueName);
 
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
-    await pipeline(data.file, fs.createWriteStream(destPath));
+
+    // Buffer the upload first so we can either write it as-is, or send it
+    // through sharp for compression. We already cap the stream at 20 MB via
+    // limits, so memory usage is bounded.
+    const buffer = await data.toBuffer();
 
     if (data.file.truncated) {
-      await fs.promises.unlink(destPath);
       return reply.code(413).send({ error: "File too large (max 20 MB)" });
     }
 
+    let finalBuffer = buffer;
+    let originalSize = buffer.length;
+    let originalDimensions: { width: number; height: number } | null = null;
+    let finalDimensions: { width: number; height: number } | null = null;
+    let wasCompressed = false;
+
+    if (COMPRESSIBLE_MIMES.has(data.mimetype)) {
+      try {
+        const pipeline = sharp(buffer, { failOn: "none" }).rotate(); // honor EXIF orientation
+        const meta = await pipeline.metadata();
+        if (meta.width && meta.height) {
+          originalDimensions = { width: meta.width, height: meta.height };
+        }
+
+        const needsResize = (meta.width ?? 0) > COMPRESS_MAX_WIDTH;
+        if (needsResize) {
+          pipeline.resize({ width: COMPRESS_MAX_WIDTH, withoutEnlargement: true });
+        }
+
+        // Re-encode to the same format with our quality target. PNG keeps PNG
+        // (lossless, palette-friendly); JPEG/WebP get the quality knob.
+        if (data.mimetype === "image/jpeg") {
+          pipeline.jpeg({ quality: COMPRESS_QUALITY, mozjpeg: true });
+        } else if (data.mimetype === "image/webp") {
+          pipeline.webp({ quality: COMPRESS_QUALITY });
+        } else {
+          pipeline.png({ compressionLevel: 9 });
+        }
+
+        const processed = await pipeline.toBuffer({ resolveWithObject: true });
+        // Only swap the buffer if compression actually saved bytes — otherwise
+        // we'd inflate small already-optimized images.
+        if (needsResize || processed.data.length < buffer.length) {
+          finalBuffer = processed.data;
+          finalDimensions = { width: processed.info.width, height: processed.info.height };
+          wasCompressed = true;
+        }
+      } catch (err) {
+        // Sharp may fail on edge-case files (corrupt, unsupported variant).
+        // Fall back to storing the original and log for ops visibility.
+        request.log.warn({ err, filename: data.filename }, "Image compression failed, storing original");
+      }
+    }
+
+    await fs.promises.writeFile(destPath, finalBuffer);
     const stat = await fs.promises.stat(destPath);
 
     return {
@@ -64,6 +123,22 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       url: `/uploads/${uniqueName}`,
       size: stat.size,
       mimetype: data.mimetype,
+      // Compression telemetry — UI uses this to inform the user when their
+      // image was downscaled or recompressed.
+      compression: wasCompressed
+        ? {
+            originalSize,
+            finalSize: stat.size,
+            originalWidth: originalDimensions?.width ?? null,
+            originalHeight: originalDimensions?.height ?? null,
+            finalWidth: finalDimensions?.width ?? null,
+            finalHeight: finalDimensions?.height ?? null,
+            resized:
+              originalDimensions && finalDimensions
+                ? originalDimensions.width !== finalDimensions.width
+                : false,
+          }
+        : null,
     };
   });
 
