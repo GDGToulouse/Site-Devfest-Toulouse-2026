@@ -110,6 +110,12 @@ export default async function articleRoutes(app: FastifyInstance) {
       imageUrl: article.imageUrl,
       author: article.author,
       publishedAt: article.publishedAt,
+      // AI-translation transparency: front uses these to show a discreet
+      // "automatic translation" notice on the relevant locale page.
+      autoTranslatedFr: article.autoTranslatedFr,
+      autoTranslatedEn: article.autoTranslatedEn,
+      translatedAtFr: article.translatedAtFr,
+      translatedAtEn: article.translatedAtEn,
       tags: article.tags.map((tag: (typeof article.tags)[number]) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
     };
   });

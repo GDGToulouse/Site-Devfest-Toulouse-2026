@@ -2,6 +2,13 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateArticle } from "../../lib/revalidate.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
+import {
+  isConfigured as translationConfigured,
+  QuotaExhaustedError,
+  translate,
+  TranslationError,
+  type Lang,
+} from "../../lib/translation/index.js";
 
 interface ArticleBody {
   slug: string;
@@ -16,6 +23,10 @@ interface ArticleBody {
   publicationStatus?: "DRAFT" | "PUBLISHED";
   editionIds?: number[];
   tagIds?: number[];
+  // When the editor manually edits a field that was AI-translated, the UI
+  // sends the corresponding flag to false to clear the "auto" badge.
+  autoTranslatedFr?: boolean;
+  autoTranslatedEn?: boolean;
 }
 
 export default async function adminArticleRoutes(app: FastifyInstance) {
@@ -89,6 +100,10 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       author: article.author,
       publicationStatus: article.publicationStatus,
       publishedAt: article.publishedAt,
+      autoTranslatedFr: article.autoTranslatedFr,
+      autoTranslatedEn: article.autoTranslatedEn,
+      translatedAtFr: article.translatedAtFr,
+      translatedAtEn: article.translatedAtEn,
       editions: article.editions.map((e: { id: number; year: number }) => ({ id: e.id, year: e.year })),
       tags: article.tags.map((t) => ({ id: t.id, name: t.name, slug: t.slug })),
     };
@@ -147,20 +162,35 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const isPublished = body.publicationStatus === "PUBLISHED";
     const wasPublished = existing.publicationStatus === "PUBLISHED";
 
+    const newContentFr = body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr;
+    const newContentEn = body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn;
+
+    // If the editor sent an explicit flag, honour it. Otherwise auto-clear
+    // the auto-translated flag whenever the corresponding content actually
+    // changed: a manual edit by definition means "I have reviewed this".
+    const nextAutoFr = body.autoTranslatedFr !== undefined
+      ? body.autoTranslatedFr
+      : (newContentFr !== existing.contentFr ? false : existing.autoTranslatedFr);
+    const nextAutoEn = body.autoTranslatedEn !== undefined
+      ? body.autoTranslatedEn
+      : (newContentEn !== existing.contentEn ? false : existing.autoTranslatedEn);
+
     const article = await prisma.article.update({
       where: { id },
       data: {
         slug: body.slug?.trim() || existing.slug,
         titleFr: body.titleFr?.trim() || existing.titleFr,
         titleEn: body.titleEn?.trim() || existing.titleEn,
-        contentFr: body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr,
-        contentEn: body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn,
+        contentFr: newContentFr,
+        contentEn: newContentEn,
         excerptFr: body.excerptFr?.trim() ?? existing.excerptFr,
         excerptEn: body.excerptEn?.trim() ?? existing.excerptEn,
         imageUrl: body.imageUrl?.trim() ?? existing.imageUrl,
         author: body.author?.trim() ?? existing.author,
         publicationStatus: body.publicationStatus || existing.publicationStatus,
         publishedAt: isPublished && !wasPublished ? new Date() : existing.publishedAt,
+        autoTranslatedFr: nextAutoFr,
+        autoTranslatedEn: nextAutoEn,
         editions: body.editionIds !== undefined
           ? { set: body.editionIds.map((editionId) => ({ id: editionId })) }
           : undefined,
@@ -175,6 +205,102 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     revalidateArticle(article.slug);
     if (existing.slug !== article.slug) revalidateArticle(existing.slug);
     return { id: article.id, slug: article.slug };
+  });
+
+  // POST /api/admin/articles/:id/translate-fields
+  // Translates the article from one language to the other (title, excerpt,
+  // content) and persists the result on the target side. The corresponding
+  // autoTranslated* flag is set to true and translatedAt* stamped.
+  // The editor still has to save the form afterwards if they edit anything;
+  // this route writes immediately so partial failure on one field doesn't
+  // leave the page in an inconsistent state.
+  app.post<{
+    Params: { id: string };
+    Body: { from: Lang; quality?: "fast" | "high" };
+  }>("/articles/:id/translate-fields", async (request, reply) => {
+    if (!translationConfigured()) {
+      return reply.status(503).send({ error: "not_configured" });
+    }
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const article = await prisma.article.findUnique({ where: { id } });
+    if (!article) return reply.status(404).send({ error: "Article not found" });
+
+    const from = request.body?.from;
+    if (from !== "fr" && from !== "en") {
+      return reply.status(400).send({ error: "from must be 'fr' or 'en'" });
+    }
+    const to: Lang = from === "fr" ? "en" : "fr";
+    const userId = request.adminUser?.id ?? null;
+
+    // Fan out the three field translations sequentially: the rate limiter
+    // would block parallel calls anyway and it keeps quota accounting clean.
+    const sourceTitle = from === "fr" ? article.titleFr : article.titleEn;
+    const sourceExcerpt = from === "fr" ? article.excerptFr : article.excerptEn;
+    const sourceContent = from === "fr" ? article.contentFr : article.contentEn;
+
+    try {
+      const titleOut = await translate(
+        { content: sourceTitle, sourceLang: from, targetLang: to, format: "plain", quality: request.body?.quality },
+        { userId },
+      );
+      const excerptOut = sourceExcerpt
+        ? await translate(
+            { content: sourceExcerpt, sourceLang: from, targetLang: to, format: "plain", quality: request.body?.quality },
+            { userId },
+          )
+        : null;
+      const contentOut = sourceContent
+        ? await translate(
+            { content: sourceContent, sourceLang: from, targetLang: to, format: "html", quality: request.body?.quality },
+            { userId },
+          )
+        : null;
+
+      const data: Record<string, unknown> = {};
+      if (to === "en") {
+        data.titleEn = titleOut.translatedContent;
+        if (excerptOut) data.excerptEn = excerptOut.translatedContent;
+        if (contentOut) data.contentEn = sanitizeRichHtml(contentOut.translatedContent);
+        data.autoTranslatedEn = true;
+        data.translatedAtEn = new Date();
+      } else {
+        data.titleFr = titleOut.translatedContent;
+        if (excerptOut) data.excerptFr = excerptOut.translatedContent;
+        if (contentOut) data.contentFr = sanitizeRichHtml(contentOut.translatedContent);
+        data.autoTranslatedFr = true;
+        data.translatedAtFr = new Date();
+      }
+
+      const updated = await prisma.article.update({ where: { id }, data });
+      revalidateArticle(updated.slug);
+
+      return {
+        id: updated.id,
+        targetLang: to,
+        title: titleOut.translatedContent,
+        excerpt: excerptOut?.translatedContent ?? null,
+        content: contentOut ? (to === "en" ? updated.contentEn : updated.contentFr) : null,
+        translatedAt: to === "en" ? updated.translatedAtEn : updated.translatedAtFr,
+      };
+    } catch (err) {
+      if (err instanceof QuotaExhaustedError) {
+        return reply.status(429).header("Retry-After", String(err.retryAfterSec ?? 60)).send({
+          error: err.code, message: err.message, retryAfterSec: err.retryAfterSec,
+        });
+      }
+      if (err instanceof TranslationError) {
+        const status =
+          err.code === "invalid_input" ? 400 :
+          err.code === "content_too_large" ? 413 :
+          err.code === "tag_mismatch" || err.code === "placeholder_mismatch" ? 422 :
+          502;
+        return reply.status(status).send({ error: err.code, message: err.message });
+      }
+      request.log.error({ err }, "translate-fields failed");
+      return reply.status(500).send({ error: "internal_error" });
+    }
   });
 
   // DELETE /api/admin/articles/:id

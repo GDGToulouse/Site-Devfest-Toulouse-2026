@@ -95,6 +95,13 @@ model Article {
   author           String?
   publicationStatus PublicationStatus @default(DRAFT)
   publishedAt      DateTime?
+  // AI-translation tracking (see docs/traduction-ia.md). The flag stays true
+  // until an editor actively reviews/edits the field and unchecks it from
+  // the back-office. translatedAt* records the last fill timestamp.
+  autoTranslatedFr Boolean           @default(false)
+  autoTranslatedEn Boolean           @default(false)
+  translatedAtFr   DateTime?
+  translatedAtEn   DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
