@@ -77,7 +77,7 @@ async function seedDev() {
 
   for (const tier of tiers) {
     await prisma.ticketTier.upsert({
-      where: { id: tier.sortOrder },
+      where: { editionId_sortOrder: { editionId: tier.editionId, sortOrder: tier.sortOrder } },
       update: {},
       create: tier,
     });

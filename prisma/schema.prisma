@@ -159,6 +159,8 @@ model TicketTier {
 
   editionId        Int
   edition          Edition          @relation(fields: [editionId], references: [id])
+
+  @@unique([editionId, sortOrder])
 }
 
 // --- Contact ---
