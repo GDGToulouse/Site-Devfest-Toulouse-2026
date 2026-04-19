@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useEdition } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition } from "@/contexts/EditionContext";
 
 const ALL_NAV_LINKS = [
   { key: "program", href: "/conferences" },
@@ -21,11 +21,14 @@ export default function Header() {
   const tCta = useTranslations("cta");
   const tHeader = useTranslations("header");
   const edition = useEdition();
+  const cfp = useCfpSettings();
 
   // Show "Become a sponsor" CTA whenever the page is meant to receive
   // visitors (i.e. anything but the sold-out state).
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
-  const cfpUrl = edition?.cfpUrl || null;
+  // CFP CTA: shown only when the CFP is open AND we have a Sessionize URL.
+  // Source of truth = the global CFP settings (admin > Edition > CFP tab).
+  const cfpUrl = cfp?.isOpen && cfp.sessionizeUrl ? cfp.sessionizeUrl : null;
 
   const navLinks = ALL_NAV_LINKS.filter((link) => {
     if (link.key === "program" && !edition?.isProgramPublished) return false;

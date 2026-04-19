@@ -47,7 +47,6 @@ model Edition {
   venueName           String?
   venueAddress        String?
   heroImageUrl        String?
-  cfpUrl              String?
   partnerFormUrl      String?
   aftermovieUrl       String?
   galleryUrl          String?

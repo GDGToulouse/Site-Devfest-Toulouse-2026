@@ -12,7 +12,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCurrentEdition, getSeoSettings } from "@/lib/api";
+import { getCfpSettings, getCurrentEdition, getSeoSettings } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
@@ -82,7 +82,10 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const edition = await getCurrentEdition();
+  const [edition, cfp] = await Promise.all([
+    getCurrentEdition(),
+    getCfpSettings(),
+  ]);
 
   return (
     <>
@@ -95,7 +98,7 @@ export default async function LocaleLayout({
       </a>
       <NextIntlClientProvider>
         <LanguageSuggestionBanner />
-        <EditionProvider edition={edition}>
+        <EditionProvider edition={edition} cfp={cfp}>
           <Header />
           <main id="main-content" role="main" className="flex-1">
             {children}
