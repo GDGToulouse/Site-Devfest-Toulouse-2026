@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCfpSettings } from "@/lib/api";
+import { getCfpCtaUrl } from "@/lib/cfp";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,6 +31,10 @@ export default async function CfpPage() {
   const locale = await getLocale();
   const t = await getTranslations("cfp");
   const cfp = await getCfpSettings();
+  // Effective open state matches the Hero/Header CTA visibility (auto-closes
+  // past closeDate even if isOpen is still true). Same single source of truth.
+  const ctaUrl = getCfpCtaUrl(cfp);
+  const isEffectivelyOpen = ctaUrl !== null;
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -51,7 +56,7 @@ export default async function CfpPage() {
 
         {/* CFP Status */}
         <div className="mt-8 p-6 rounded-3xl bg-blanc shadow-card">
-          {cfp.isOpen ? (
+          {isEffectivelyOpen ? (
             <>
               <p className="text-lg font-bold text-malachite">
                 {t("statusOpen")}
@@ -64,9 +69,9 @@ export default async function CfpPage() {
                   })}
                 </p>
               )}
-              {cfp.sessionizeUrl && (
+              {ctaUrl && (
                 <a
-                  href={cfp.sessionizeUrl}
+                  href={ctaUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="mt-6 inline-block px-8 py-4 rounded-[12px] bg-bleu text-blanc font-bold text-xl hover:bg-bleu/90 transition-colors"

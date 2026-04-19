@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateHome } from "../../lib/revalidate.js";
+import { revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
 import { validateWebhookUrl } from "../../lib/webhook-url.js";
 
 interface CfpBody {
@@ -76,7 +76,9 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
       });
     }
 
-    revalidateHome();
+    // CFP changes affect both the home (CTA in hero/header) and the
+    // dedicated /proposer-un-talk page (status + dates + button).
+    revalidateCfp();
     return { success: true };
   });
 

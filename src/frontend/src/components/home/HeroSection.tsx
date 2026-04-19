@@ -1,5 +1,6 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { getCfpCtaUrl } from "@/lib/cfp";
 import type { CfpSettings, Edition } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
@@ -30,9 +31,7 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
   // Show "Become a sponsor" CTA whenever the page is meant to receive
   // visitors (i.e. anything but the sold-out state).
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
-  // CFP CTA shown only when the CFP is open AND we have a Sessionize URL.
-  // Source of truth = the global CFP settings (admin > Edition > CFP tab).
-  const cfpUrl = cfp?.isOpen && cfp.sessionizeUrl ? cfp.sessionizeUrl : null;
+  const cfpUrl = getCfpCtaUrl(cfp);
 
   const backgroundImage = heroImageUrl
     ? `linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('${heroImageUrl}')`
