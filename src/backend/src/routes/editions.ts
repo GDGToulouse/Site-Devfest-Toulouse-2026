@@ -132,6 +132,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
       sponsorBrochureUrl: edition.sponsorBrochureUrl,
+      sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
       sponsorPageStatus: edition.sponsorPageStatus,
       sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
       // TODO: compute from actual data when Speaker/Session/Sponsor models exist

@@ -15,6 +15,7 @@ interface EditionBody {
   galleryUrl?: string;
   archivedSiteUrl?: string;
   sponsorBrochureUrl?: string;
+  sponsorHeroImageUrl?: string;
   sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
   sponsorTemporaryFormUrl?: string;
 }
@@ -106,6 +107,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: edition.galleryUrl,
         archivedSiteUrl: edition.archivedSiteUrl,
         sponsorBrochureUrl: edition.sponsorBrochureUrl,
+        sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
         ticketTiersCount: edition._count.ticketTiers,
@@ -143,6 +145,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
         sponsorBrochureUrl: body.sponsorBrochureUrl !== undefined ? (body.sponsorBrochureUrl || null) : existing.sponsorBrochureUrl,
+        sponsorHeroImageUrl: body.sponsorHeroImageUrl !== undefined ? (body.sponsorHeroImageUrl || null) : existing.sponsorHeroImageUrl,
         sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
         sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
       },
