@@ -14,6 +14,56 @@ interface PageProps {
   params: Promise<{ year: string }>;
 }
 
+type BilanEdition = {
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  heroImageUrl: string | null;
+  aftermovieUrl: string | null;
+  status: string;
+};
+
+function buildCompletedEventJsonLd(edition: BilanEdition) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: `DevFest Toulouse ${edition.year}`,
+    startDate: edition.startDate?.split("T")[0] ?? undefined,
+    endDate: edition.endDate?.split("T")[0] ?? undefined,
+    eventStatus:
+      edition.status === "SEE_YOU_NEXT_YEAR"
+        ? "https://schema.org/EventCompleted"
+        : "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: edition.venueName
+      ? {
+          "@type": "Place",
+          name: edition.venueName,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: edition.venueAddress ?? undefined,
+            addressRegion: "Occitanie",
+            addressCountry: "FR",
+          },
+        }
+      : undefined,
+    organizer: {
+      "@type": "Organization",
+      name: "GDG Toulouse",
+      url: "https://gdg.community.dev/gdg-toulouse/",
+    },
+    superEvent: {
+      "@type": "Event",
+      name: "DevFest",
+      url: "https://developers.google.com/community/devfest",
+    },
+    ...(edition.heroImageUrl ? { image: edition.heroImageUrl } : {}),
+    ...(edition.aftermovieUrl ? { video: edition.aftermovieUrl } : {}),
+  };
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { year } = await params;
   const locale = await getLocale();
@@ -73,8 +123,14 @@ export default async function BilanPage({ params }: PageProps) {
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition.venueName || null;
 
+  const eventJsonLd = buildCompletedEventJsonLd(edition);
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+      />
       {/* Hero banner */}
       <div
         className="relative w-full h-[280px] lg:h-[380px] bg-cover bg-center"
