@@ -16,7 +16,6 @@ interface FeaturedEdition {
   startDate: string | null;
   venueName: string | null;
   venueAddress: string | null;
-  cfpUrl: string | null;
   partnerFormUrl: string | null;
   heroImageUrl: string | null;
 }
@@ -142,7 +141,6 @@ export default function AdminDashboard() {
 
           {/* URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-            <InfoCard label="URL CFP" value={featured.cfpUrl} />
             <InfoCard label="URL Partenaire" value={featured.partnerFormUrl} />
           </div>
         </section>

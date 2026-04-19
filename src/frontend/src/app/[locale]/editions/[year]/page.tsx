@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
@@ -11,6 +12,56 @@ import { Link } from "@/i18n/navigation";
 
 interface PageProps {
   params: Promise<{ year: string }>;
+}
+
+type BilanEdition = {
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+  venueName: string | null;
+  venueAddress: string | null;
+  heroImageUrl: string | null;
+  aftermovieUrl: string | null;
+  status: string;
+};
+
+function buildCompletedEventJsonLd(edition: BilanEdition) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: `DevFest Toulouse ${edition.year}`,
+    startDate: edition.startDate?.split("T")[0] ?? undefined,
+    endDate: edition.endDate?.split("T")[0] ?? undefined,
+    eventStatus:
+      edition.status === "SEE_YOU_NEXT_YEAR"
+        ? "https://schema.org/EventCompleted"
+        : "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: edition.venueName
+      ? {
+          "@type": "Place",
+          name: edition.venueName,
+          address: {
+            "@type": "PostalAddress",
+            addressLocality: edition.venueAddress ?? undefined,
+            addressRegion: "Occitanie",
+            addressCountry: "FR",
+          },
+        }
+      : undefined,
+    organizer: {
+      "@type": "Organization",
+      name: "GDG Toulouse",
+      url: "https://gdg.community.dev/gdg-toulouse/",
+    },
+    superEvent: {
+      "@type": "Event",
+      name: "DevFest",
+      url: "https://developers.google.com/community/devfest",
+    },
+    ...(edition.heroImageUrl ? { image: edition.heroImageUrl } : {}),
+    ...(edition.aftermovieUrl ? { video: edition.aftermovieUrl } : {}),
+  };
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -72,8 +123,14 @@ export default async function BilanPage({ params }: PageProps) {
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition.venueName || null;
 
+  const eventJsonLd = buildCompletedEventJsonLd(edition);
+
   return (
     <div>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+      />
       {/* Hero banner */}
       <div
         className="relative w-full h-[280px] lg:h-[380px] bg-cover bg-center"
@@ -175,12 +232,13 @@ export default async function BilanPage({ params }: PageProps) {
                     className="group rounded-xl overflow-hidden bg-blanc shadow-card hover:shadow-lg transition-shadow"
                   >
                     {article.imageUrl && (
-                      <div className="aspect-video overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                      <div className="relative aspect-video overflow-hidden">
+                        <Image
                           src={article.imageUrl}
                           alt={localizedField(article, "title", locale)}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          fill
+                          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                          className="object-cover group-hover:scale-105 transition-transform"
                         />
                       </div>
                     )}

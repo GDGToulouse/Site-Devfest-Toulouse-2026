@@ -1,6 +1,7 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import type { Edition } from "@/lib/types";
+import { getCfpCtaUrl } from "@/lib/cfp";
+import type { CfpSettings, Edition } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
@@ -13,10 +14,11 @@ function formatDate(dateStr: string, locale: string): string {
 
 interface HeroSectionProps {
   edition: Edition | null;
+  cfp: CfpSettings | null;
   locale: string;
 }
 
-export default function HeroSection({ edition, locale }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) {
   const t = useTranslations("home.hero");
 
   const heroImageUrl = edition?.heroImageUrl || null;
@@ -29,7 +31,7 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
   // Show "Become a sponsor" CTA whenever the page is meant to receive
   // visitors (i.e. anything but the sold-out state).
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
-  const cfpUrl = edition?.cfpUrl || null;
+  const cfpUrl = getCfpCtaUrl(cfp);
 
   const backgroundImage = heroImageUrl
     ? `linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('${heroImageUrl}')`
@@ -50,27 +52,31 @@ export default function HeroSection({ edition, locale }: HeroSectionProps) {
         {/* 5 staircase blocks — pyramid effect */}
         <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
           <div className="flex flex-col items-start">
+            {/* Visually hidden H1 holds the semantic page heading so crawlers
+                and assistive tech see the full "DevFest Toulouse 2026" text.
+                The visual staircase below is purely decorative (aria-hidden). */}
+            <h1 className="sr-only">
+              DevFest Toulouse {edition?.year ?? ""} — {t("subtitleLine1")}
+            </h1>
+
             {/* Block 1: DevFest — most indented, rounded top-right only */}
             <div
+              aria-hidden="true"
               className="bg-blanc pl-8 lg:pl-[150px] pr-8 lg:pr-[45px] pt-[10px] pb-[2px]"
               style={{ borderTopRightRadius: "40px" }}
             >
-              {/* The visible title is split across 3 blocks for the staircase
-                  effect. Assistive tech sees a single h1 with the combined
-                  label; the subtitle paragraphs below stay separate. */}
-              <h1 aria-label="DevFest Toulouse">
-                <span aria-hidden="true" className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
-                  DevFest
-                </span>
-              </h1>
+              <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
+                DevFest
+              </span>
             </div>
 
             {/* Block 2: Toulouse + subtitle line 1 */}
             <div
+              aria-hidden="true"
               className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
               style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
             >
-              <span aria-hidden="true" className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
+              <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
                 Toulouse
               </span>
               <p className="pt-[22px] text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">

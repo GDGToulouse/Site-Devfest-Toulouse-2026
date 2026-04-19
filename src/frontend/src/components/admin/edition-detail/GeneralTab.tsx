@@ -14,7 +14,6 @@ interface EditionData {
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
-  cfpUrl: string | null;
   partnerFormUrl: string | null;
   aftermovieUrl: string | null;
   galleryUrl: string | null;

@@ -47,13 +47,15 @@ model Edition {
   venueName           String?
   venueAddress        String?
   heroImageUrl        String?
-  cfpUrl              String?
   partnerFormUrl      String?
   aftermovieUrl       String?
   galleryUrl          String?
   archivedSiteUrl     String?
   // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
   sponsorBrochureUrl       String?
+  // Optional hero image specific to the /devenir-sponsor page. When null,
+  // the page falls back to heroImageUrl.
+  sponsorHeroImageUrl      String?
   // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
   sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
@@ -95,6 +97,13 @@ model Article {
   author           String?
   publicationStatus PublicationStatus @default(DRAFT)
   publishedAt      DateTime?
+  // AI-translation tracking (see docs/traduction-ia.md). The flag stays true
+  // until an editor actively reviews/edits the field and unchecks it from
+  // the back-office. translatedAt* records the last fill timestamp.
+  autoTranslatedFr Boolean           @default(false)
+  autoTranslatedEn Boolean           @default(false)
+  translatedAtFr   DateTime?
+  translatedAtEn   DateTime?
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -150,6 +159,8 @@ model TicketTier {
 
   editionId        Int
   edition          Edition          @relation(fields: [editionId], references: [id])
+
+  @@unique([editionId, sortOrder])
 }
 
 // --- Contact ---
@@ -165,6 +176,12 @@ model ContactCategory {
   slug                   String?   @unique
   // System categories cannot be deleted from the admin UI
   isSystem               Boolean   @default(false)
+  // When false, the category is hidden from the public /contact <select> but
+  // still usable via forceCategoryId on dedicated pages (e.g. the sponsor
+  // brochure form on /devenir-sponsor). Lets us separate generic sponsoring
+  // questions from explicit brochure requests so the email templates and the
+  // tracking can diverge.
+  isPublic               Boolean   @default(true)
   // Per-category confirmation email sent to the person who submitted the form.
   // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
   confirmationSubjectFr  String?
@@ -183,6 +200,12 @@ model ContactMessage {
   lastName         String
   email            String
   phone            String?
+  // Company and job title — required on the public form, stored as "" on
+  // legacy rows predating the column. Empty strings are never surfaced as
+  // valid in the admin UI / webhook; they stand in for "unknown from a
+  // pre-migration row" without breaking NOT NULL assumptions.
+  company          String           @default("")
+  jobTitle         String           @default("")
   categoryLabel    String?
   message          String
   locale           String?
@@ -320,4 +343,42 @@ model SiteSetting {
   key              String    @unique
   value            String
   updatedAt        DateTime  @updatedAt
+}
+
+// --- Translation Log ---
+// One row per Gemini translation request. Used for usage stats, quota
+// monitoring, and per-editor activity. Status values are kept as strings
+// (no enum) so we can add new ones without a migration:
+//   "success" | "failed" | "validation_error" | "quota_exhausted" | "upstream_error"
+// errorCode is a short machine-readable tag (e.g. "tag_mismatch", "rate_limit").
+model TranslationLog {
+  id             Int       @id @default(autoincrement())
+  userId         String?
+  sourceLang     String
+  targetLang     String
+  format         String
+  model          String
+  inputChars     Int       @default(0)
+  outputChars    Int       @default(0)
+  inputTokens    Int       @default(0)
+  outputTokens   Int       @default(0)
+  durationMs     Int       @default(0)
+  status         String
+  errorCode      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([status])
+}
+
+// --- File Metadata ---
+// Per-file editor metadata for assets uploaded under /uploads/. Kept as
+// a separate table so we don't need to alter the filesystem layout.
+// Only created on demand — files without metadata simply have no row.
+model FileMetadata {
+  filename       String    @id
+  alt            String?   // Default alt text for accessibility
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
 }

@@ -12,6 +12,8 @@ export interface ContactWebhookPayload {
     lastName: string;
     email: string;
     phone: string | null;
+    company: string;
+    jobTitle: string;
     categoryId: number | null;
     categorySlug: string | null;
     categoryLabel: string | null;
@@ -124,6 +126,8 @@ export async function buildPayloadFromStored(messageId: number): Promise<Contact
       lastName: m.lastName,
       email: m.email,
       phone: m.phone,
+      company: m.company,
+      jobTitle: m.jobTitle,
       categoryId: m.categoryId,
       categorySlug: m.category?.slug ?? null,
       categoryLabel: m.category?.nameFr || m.categoryLabel,

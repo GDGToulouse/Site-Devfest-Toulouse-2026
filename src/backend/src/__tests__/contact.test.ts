@@ -100,6 +100,8 @@ describe("POST /api/contact/send", () => {
         firstName: "Integration",
         lastName: "Test",
         email: "integration@test.com",
+        company: "Test Corp",
+        jobTitle: "QA Engineer",
         message: "This is an integration test message for the contact form.",
         categoryId: 1,
       },

@@ -86,8 +86,12 @@ export async function getContentPage(slug: string): Promise<ContentPage | null> 
 }
 
 export async function getCfpSettings(): Promise<CfpSettings> {
+  // Short TTL: the close-date check expires the CTA on its own once the
+  // date passes. With the default 1h TTL we'd keep showing the button up
+  // to an hour past closing. 60s is a fine compromise — admins still get
+  // an explicit revalidate when they save in the back-office.
   return (
-    (await fetchAPI<CfpSettings>("/api/settings/cfp")) || {
+    (await fetchAPI<CfpSettings>("/api/settings/cfp", 60)) || {
       isOpen: false,
       sessionizeUrl: null,
       openDate: null,
@@ -106,6 +110,12 @@ export async function getSocialLinks(): Promise<SocialLinks> {
 
 export async function getSeoSettings(): Promise<Record<string, string>> {
   return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+}
+
+// Brand identity (logo variants + favicons). Layout uses these to wire the
+// favicon metadata; Header/Footer pick the right logo variant via a helper.
+export async function getIdentitySettings(): Promise<Record<string, string>> {
+  return (await fetchAPI<Record<string, string>>("/api/settings/identity")) || {};
 }
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {

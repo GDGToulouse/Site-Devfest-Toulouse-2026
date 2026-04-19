@@ -9,13 +9,13 @@ export interface Edition {
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
-  cfpUrl: string | null;
   partnerFormUrl: string | null;
   aftermovieUrl: string | null;
   previousAfterMovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   sponsorBrochureUrl: string | null;
+  sponsorHeroImageUrl: string | null;
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
@@ -70,6 +70,12 @@ export interface KeyFigure {
 export interface ArticleDetail extends Article {
   contentFr: string;
   contentEn: string;
+  // AI-translation transparency. Optional for backward compat with cached
+  // responses that pre-date the field; missing means false.
+  autoTranslatedFr?: boolean;
+  autoTranslatedEn?: boolean;
+  translatedAtFr?: string | null;
+  translatedAtEn?: string | null;
 }
 
 export interface Tag {
@@ -131,6 +137,8 @@ export interface ContactCategory {
   nameFr: string;
   nameEn: string;
   slug: string | null;
+  // Optional for backward compat with cached responses; missing means public.
+  isPublic?: boolean;
 }
 
 export interface ContactFormData {

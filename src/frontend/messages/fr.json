@@ -1,7 +1,7 @@
 {
   "site": {
     "title": "DevFest Toulouse 2026",
-    "description": "La plus grande conférence tech du bassin Toulousain"
+    "description": "La plus grande conférence tech du bassin toulousain, organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité et plus encore."
   },
   "langBanner": {
     "message": "This page is available in your language.",
@@ -85,7 +85,8 @@
     "noArticles": "Aucun article pour le moment.",
     "by": "par",
     "backToList": "Retour aux actualités",
-    "taggedWith": "Articles tagués"
+    "taggedWith": "Articles tagués",
+    "autoTranslated": "Traduction automatique non relue par l'équipe."
   },
   "pagination": {
     "label": "Pagination",
@@ -141,6 +142,12 @@
       "emailError": "Email invalide",
       "phone": "Téléphone (optionnel)",
       "phonePlaceholder": "+33 6 12 34 56 78",
+      "company": "Entreprise",
+      "companyPlaceholder": "Nom de votre entreprise",
+      "companyError": "L'entreprise est obligatoire",
+      "jobTitle": "Poste",
+      "jobTitlePlaceholder": "Votre fonction",
+      "jobTitleError": "Le poste est obligatoire",
       "category": "Objet",
       "categoryPlaceholder": "Sélectionnez une catégorie",
       "categoryError": "Veuillez sélectionner une catégorie",
@@ -219,6 +226,31 @@
   "legalNotice": {
     "title": "Mentions légales",
     "description": "Mentions légales du site DevFest Toulouse.",
+    "home": "Accueil"
+  },
+  "conferences": {
+    "title": "Programme",
+    "description": "Découvrez le programme des conférences du DevFest Toulouse 2026 : web, cloud, IA, mobile et bien plus.",
+    "heading": "Programme du DevFest Toulouse {year}",
+    "comingSoonTitle": "Le programme arrive bientôt",
+    "comingSoonBody": "Le programme des conférences, quickies et keynotes du DevFest Toulouse {year} sera publié ici dès qu'il sera finalisé. En attendant, consultez l'aftermovie et les chiffres clés de l'édition précédente.",
+    "home": "Accueil"
+  },
+  "speakers": {
+    "title": "Conférenciers",
+    "description": "Découvrez les conférenciers du DevFest Toulouse 2026 : experts tech de Toulouse, France et international.",
+    "heading": "Conférenciers du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les conférenciers seront annoncés prochainement",
+    "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
+    "home": "Accueil"
+  },
+  "partners": {
+    "title": "Partenaires",
+    "description": "Découvrez les partenaires et sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
+    "heading": "Partenaires du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les partenaires seront annoncés prochainement",
+    "comingSoonBody": "La liste des partenaires et sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
+    "becomePartnerCta": "Devenir partenaire",
     "home": "Accueil"
   }
 }

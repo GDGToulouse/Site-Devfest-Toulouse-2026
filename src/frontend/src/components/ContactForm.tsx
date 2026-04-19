@@ -21,6 +21,8 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
     lastName: "",
     email: "",
     phone: "",
+    company: "",
+    jobTitle: "",
     categoryId: "",
     message: "",
     confirmUrl: "", // honeypot
@@ -29,13 +31,27 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
 
+  // Categories with isPublic !== false are shown in the generic <select>.
+  // We treat undefined as public for backward compat with old API responses.
+  const publicCategories = categories.filter((c) => c.isPublic !== false);
+
+  // Company + jobTitle are only mandatory for sponsor-brochure requests —
+  // the generic /contact form leaves them optional since most inbound
+  // messages are simple questions where forcing a company name would
+  // just add friction.
+  const effectiveCategoryId = forceCategoryId ?? (formData.categoryId ? Number(formData.categoryId) : undefined);
+  const effectiveCategory = categories.find((c) => c.id === effectiveCategoryId);
+  const requiresCompanyInfo = effectiveCategory?.slug === "sponsor-brochure";
+
   function validate(): Record<string, string> {
     const errs: Record<string, string> = {};
     if (!formData.firstName.trim()) errs.firstName = t("firstNameError");
     if (!formData.lastName.trim()) errs.lastName = t("lastNameError");
     if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
       errs.email = t("emailError");
-    if (!forceCategoryId && categories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
+    if (requiresCompanyInfo && !formData.company.trim()) errs.company = t("companyError");
+    if (requiresCompanyInfo && !formData.jobTitle.trim()) errs.jobTitle = t("jobTitleError");
+    if (!forceCategoryId && publicCategories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
     if (!formData.message.trim() || formData.message.trim().length < 10)
       errs.message = t("messageError");
     return errs;
@@ -58,6 +74,8 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
           lastName: formData.lastName,
           email: formData.email,
           phone: formData.phone || undefined,
+          company: formData.company,
+          jobTitle: formData.jobTitle,
           categoryId,
           message: formData.message,
           locale,
@@ -73,7 +91,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
       }
 
       setStatus("success");
-      setFormData({ firstName: "", lastName: "", email: "", phone: "", categoryId: "", message: "", confirmUrl: "" });
+      setFormData({ firstName: "", lastName: "", email: "", phone: "", company: "", jobTitle: "", categoryId: "", message: "", confirmUrl: "" });
       setErrors({});
     } catch {
       setStatus("error");
@@ -177,8 +195,11 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
         />
       </div>
 
-      {/* Category — hidden when forceCategoryId is set */}
-      {!forceCategoryId && categories.length > 0 && (
+      {/* Category — hidden when forceCategoryId is set.
+          Internal categories (isPublic=false) are excluded from the
+          generic <select>; they're meant to be reached only through
+          dedicated pages that pass forceCategoryId. */}
+      {!forceCategoryId && publicCategories.length > 0 && (
         <div>
           <label htmlFor="categoryId" className="block text-sm font-bold text-noir mb-1">
             {t("category")} *
@@ -192,7 +213,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
             className={`w-full px-4 py-3 rounded-m border ${errors.categoryId ? "border-rouge" : "border-gris-clair"} text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-bleu`}
           >
             <option value="">{t("categoryPlaceholder")}</option>
-            {categories.map((cat) => (
+            {publicCategories.map((cat) => (
               <option key={cat.id} value={cat.id}>
                 {localizedField(cat, "name", locale)}
               </option>
@@ -202,6 +223,52 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
           {errors.categoryId && (
             <p id="categoryId-error" className="mt-1 text-sm text-rouge">{errors.categoryId}</p>
           )}
+        </div>
+      )}
+
+      {/* Company + Job title — only shown when the selected category is
+          sponsor-brochure. The generic /contact flow doesn't surface
+          these to keep friction low on simple inquiries. */}
+      {requiresCompanyInfo && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="company" className="block text-sm font-bold text-noir mb-1">
+              {t("company")} *
+            </label>
+            <input
+              id="company"
+              type="text"
+              autoComplete="organization"
+              value={formData.company}
+              onChange={(e) => handleChange("company", e.target.value)}
+              placeholder={t("companyPlaceholder")}
+              aria-invalid={!!errors.company}
+              aria-describedby={errors.company ? "company-error" : undefined}
+              className={`w-full px-4 py-3 rounded-m border ${errors.company ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+            />
+            {errors.company && (
+              <p id="company-error" className="mt-1 text-sm text-rouge">{errors.company}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="jobTitle" className="block text-sm font-bold text-noir mb-1">
+              {t("jobTitle")} *
+            </label>
+            <input
+              id="jobTitle"
+              type="text"
+              autoComplete="organization-title"
+              value={formData.jobTitle}
+              onChange={(e) => handleChange("jobTitle", e.target.value)}
+              placeholder={t("jobTitlePlaceholder")}
+              aria-invalid={!!errors.jobTitle}
+              aria-describedby={errors.jobTitle ? "jobTitle-error" : undefined}
+              className={`w-full px-4 py-3 rounded-m border ${errors.jobTitle ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+            />
+            {errors.jobTitle && (
+              <p id="jobTitle-error" className="mt-1 text-sm text-rouge">{errors.jobTitle}</p>
+            )}
+          </div>
         </div>
       )}
 

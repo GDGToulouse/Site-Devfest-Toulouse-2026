@@ -3,6 +3,8 @@ type BreadcrumbItem = {
   href: string;
 };
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
+
 export default function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
   const jsonLd = {
     "@context": "https://schema.org",
@@ -11,7 +13,7 @@ export default function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
       "@type": "ListItem",
       position: index + 1,
       name: item.label,
-      item: item.href,
+      item: `${BASE_URL}${item.href}`,
     })),
   };
 

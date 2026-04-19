@@ -10,6 +10,10 @@ interface ContactBody {
   lastName: string;
   email: string;
   phone?: string;
+  // Company + jobTitle are only required for sponsor-brochure requests;
+  // the public /contact form leaves them out for everything else.
+  company?: string;
+  jobTitle?: string;
   categoryId?: number;
   message: string;
   locale?: string;
@@ -25,6 +29,9 @@ function validateEmail(email: string): boolean {
 
 export default async function contactRoutes(app: FastifyInstance) {
   // GET /api/contact/categories — public list of active categories
+  // Hidden categories (isPublic=false) are still returned so dedicated
+  // pages can match them by slug, but they're flagged so the generic
+  // /contact <select> filters them out client-side.
   app.get("/contact/categories", async () => {
     const categories = await prisma.contactCategory.findMany({
       where: { isActive: true },
@@ -36,6 +43,7 @@ export default async function contactRoutes(app: FastifyInstance) {
       nameFr: cat.nameFr,
       nameEn: cat.nameEn,
       slug: cat.slug,
+      isPublic: cat.isPublic,
     }));
   });
 
@@ -49,7 +57,15 @@ export default async function contactRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { firstName, lastName, email, phone, categoryId, message, locale, confirmUrl, website } = request.body;
+    const { firstName, lastName, email, phone, company, jobTitle, categoryId, message, locale, confirmUrl, website } = request.body;
+
+    // Resolve the category upfront so the validator knows whether the
+    // submission is a sponsor-brochure request (where company + jobTitle
+    // are mandatory) or a generic contact (where both fields are optional).
+    const category = categoryId
+      ? await prisma.contactCategory.findUnique({ where: { id: categoryId } })
+      : null;
+    const requiresCompanyInfo = category?.slug === "sponsor-brochure";
 
     // Server-side validation first, so we can tell "honeypot + bot-like
     // payload" (drop silently) apart from "honeypot + real user with
@@ -60,6 +76,8 @@ export default async function contactRoutes(app: FastifyInstance) {
     if (!firstName?.trim()) errors.firstName = "required";
     if (!lastName?.trim()) errors.lastName = "required";
     if (!email?.trim() || !validateEmail(email)) errors.email = "invalid";
+    if (requiresCompanyInfo && !company?.trim()) errors.company = "required";
+    if (requiresCompanyInfo && !jobTitle?.trim()) errors.jobTitle = "required";
     if (!message?.trim() || message.trim().length < 10) errors.message = "too_short";
 
     const honeypotValue = confirmUrl || website;
@@ -89,19 +107,12 @@ export default async function contactRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, errors });
     }
 
-    // Resolve category + recipients
+    // Resolve recipients from the category we already fetched above.
     let recipients: string[] = [];
     let categoryLabel: string | null = null;
-    let category: Awaited<ReturnType<typeof prisma.contactCategory.findUnique>> = null;
-
-    if (categoryId) {
-      category = await prisma.contactCategory.findUnique({
-        where: { id: categoryId },
-      });
-      if (category) {
-        recipients = category.emailRecipients.split(",").map((e: string) => e.trim());
-        categoryLabel = category.nameFr;
-      }
+    if (category) {
+      recipients = category.emailRecipients.split(",").map((e: string) => e.trim());
+      categoryLabel = category.nameFr;
     }
 
     // Fallback to default email
@@ -119,6 +130,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         lastName: lastName.trim(),
         email: email.trim(),
         phone: phone?.trim() || null,
+        company: company?.trim() || "",
+        jobTitle: jobTitle?.trim() || "",
         categoryLabel,
         message: message.trim(),
         locale: locale || null,
@@ -133,6 +146,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         `De: ${firstName.trim()} ${lastName.trim()}`,
         `Email: ${email.trim()}`,
         phone ? `Téléphone: ${phone.trim()}` : null,
+        company?.trim() ? `Entreprise: ${company.trim()}` : null,
+        jobTitle?.trim() ? `Poste: ${jobTitle.trim()}` : null,
         categoryLabel ? `Catégorie: ${categoryLabel}` : null,
         "",
         message.trim(),
@@ -145,6 +160,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         <p><strong>De:</strong> ${firstName.trim()} ${lastName.trim()}</p>
         <p><strong>Email:</strong> <a href="mailto:${email.trim()}">${email.trim()}</a></p>
         ${phone ? `<p><strong>Téléphone:</strong> ${phone.trim()}</p>` : ""}
+        ${company?.trim() ? `<p><strong>Entreprise:</strong> ${company.trim()}</p>` : ""}
+        ${jobTitle?.trim() ? `<p><strong>Poste:</strong> ${jobTitle.trim()}</p>` : ""}
         ${categoryLabel ? `<p><strong>Catégorie:</strong> ${categoryLabel}</p>` : ""}
         <hr>
         <p>${message.trim().replace(/\n/g, "<br>")}</p>
@@ -212,6 +229,8 @@ export default async function contactRoutes(app: FastifyInstance) {
         lastName: lastName.trim(),
         email: email.trim(),
         phone: phone?.trim() || null,
+        company: company?.trim() || "",
+        jobTitle: jobTitle?.trim() || "",
         categoryId: categoryId || null,
         categorySlug: category?.slug || null,
         categoryLabel: categoryLabel || null,

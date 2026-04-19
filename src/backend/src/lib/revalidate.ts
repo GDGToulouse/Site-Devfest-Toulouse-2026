@@ -66,3 +66,10 @@ export function revalidateSponsors(): Promise<void> {
     ...bilingualPaths("/devenir-sponsor"),
   ]);
 }
+
+export function revalidateCfp(): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths("/proposer-un-talk"),
+  ]);
+}

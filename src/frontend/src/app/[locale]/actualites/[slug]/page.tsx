@@ -100,6 +100,15 @@ export default async function ArticleDetailPage({
           {publishedAt && <time>{publishedAt}</time>}
         </div>
 
+        {/* Auto-translation transparency notice — shown only on the locale
+            whose content was AI-translated (the "originale" stays unflagged) */}
+        {((locale === "fr" && article.autoTranslatedFr) ||
+          (locale === "en" && article.autoTranslatedEn)) && (
+          <p className="mt-3 inline-block px-3 py-1 rounded-full bg-blanc-casse text-gris text-xs italic">
+            {t("autoTranslated")}
+          </p>
+        )}
+
         {article.imageUrl && (
           <div className="relative mt-8 w-full aspect-video rounded-3xl overflow-hidden">
             <Image

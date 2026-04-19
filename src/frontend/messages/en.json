@@ -1,7 +1,7 @@
 {
   "site": {
     "title": "DevFest Toulouse 2026",
-    "description": "The largest tech conference in the Toulouse area"
+    "description": "Join DevFest Toulouse 2026, the largest Google Developer Group tech conference in southwestern France: web, cloud, AI, mobile, security and more."
   },
   "langBanner": {
     "message": "Cette page est disponible dans votre langue.",
@@ -80,12 +80,13 @@
   },
   "articles": {
     "title": "News",
-    "description": "All the latest news from DevFest Toulouse 2026.",
+    "description": "Latest news from DevFest Toulouse 2026: CFP announcements, ticket releases, speaker reveals and tech community updates from the Toulouse area.",
     "home": "Home",
     "noArticles": "No articles yet.",
     "by": "by",
     "backToList": "Back to news",
-    "taggedWith": "Articles tagged"
+    "taggedWith": "Articles tagged",
+    "autoTranslated": "Automatic translation not yet reviewed by the team."
   },
   "pagination": {
     "label": "Pagination",
@@ -94,7 +95,7 @@
   },
   "ticketing": {
     "pageTitle": "Tickets",
-    "description": "Buy your tickets for DevFest Toulouse 2026.",
+    "description": "Book your tickets for DevFest Toulouse 2026, the largest tech conference in southwestern France. Blind Bird, Normal and Late Bird tiers available.",
     "home": "Home",
     "available": "Available",
     "comingSoon": "Coming soon",
@@ -106,7 +107,7 @@
   },
   "cfp": {
     "pageTitle": "Submit a talk",
-    "description": "Submit your presentation for DevFest Toulouse 2026.",
+    "description": "Call for Papers for DevFest Toulouse 2026: submit your talk, quickie or keynote on web, cloud, AI, mobile, security and emerging tech topics.",
     "home": "Home",
     "intro": "DevFest Toulouse welcomes speakers from all backgrounds. Whether you're a beginner or an expert, your experience and passion matter. Submit a talk and share your knowledge with the community.",
     "statusOpen": "The CFP is currently open!",
@@ -127,7 +128,7 @@
   },
   "contact": {
     "title": "Contact",
-    "description": "Contact the DevFest Toulouse team.",
+    "description": "Contact the DevFest Toulouse organising team for sponsorship, speaker or press inquiries about the 2026 tech conference.",
     "home": "Home",
     "form": {
       "firstName": "First name",
@@ -141,6 +142,12 @@
       "emailError": "Invalid email",
       "phone": "Phone (optional)",
       "phonePlaceholder": "+33 6 12 34 56 78",
+      "company": "Company",
+      "companyPlaceholder": "Your company name",
+      "companyError": "Company is required",
+      "jobTitle": "Job title",
+      "jobTitlePlaceholder": "Your role",
+      "jobTitleError": "Job title is required",
       "category": "Subject",
       "categoryPlaceholder": "Select a category",
       "categoryError": "Please select a category",
@@ -161,7 +168,7 @@
   },
   "bilan": {
     "pageTitle": "DevFest Toulouse {year}",
-    "description": "Recap of DevFest Toulouse {year} edition.",
+    "description": "Recap of DevFest Toulouse {year}: talks, speakers, attendance figures, aftermovie and highlights from the {year} Google Developer Group conference.",
     "home": "Home",
     "editions": "Editions",
     "keyFigures": "The edition in numbers",
@@ -179,7 +186,7 @@
   },
   "sponsor": {
     "pageTitle": "Become a sponsor",
-    "description": "Discover our sponsorship packages for DevFest Toulouse 2026.",
+    "description": "Sponsorship packages for DevFest Toulouse 2026: boost your employer brand, recruit top tech talent and support the Toulouse developer community.",
     "home": "Home",
     "intro": "DevFest Toulouse is the opportunity to gain visibility among thousands of tech enthusiasts. Join us as a sponsor and benefit from unique exposure to the Toulouse tech community.",
     "whyTitle": "Why become a sponsor?",
@@ -219,6 +226,31 @@
   "legalNotice": {
     "title": "Legal Notice",
     "description": "DevFest Toulouse legal notice.",
+    "home": "Home"
+  },
+  "conferences": {
+    "title": "Schedule",
+    "description": "Discover the conference schedule for DevFest Toulouse 2026: web, cloud, AI, mobile and more.",
+    "heading": "DevFest Toulouse {year} schedule",
+    "comingSoonTitle": "Schedule coming soon",
+    "comingSoonBody": "The conference, quickie and keynote schedule for DevFest Toulouse {year} will be published here once finalized. Meanwhile, check out the aftermovie and key figures from last year's edition.",
+    "home": "Home"
+  },
+  "speakers": {
+    "title": "Speakers",
+    "description": "Discover the speakers of DevFest Toulouse 2026: tech experts from Toulouse, France and abroad.",
+    "heading": "DevFest Toulouse {year} speakers",
+    "comingSoonTitle": "Speakers will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} speaker list will be published here after the talk selection process. Past editions hosted over 300 speakers from France and beyond.",
+    "home": "Home"
+  },
+  "partners": {
+    "title": "Partners",
+    "description": "Discover the partners and sponsors of DevFest Toulouse 2026: tech companies from Toulouse and beyond who support the developer ecosystem.",
+    "heading": "DevFest Toulouse {year} partners",
+    "comingSoonTitle": "Partners will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} partner and sponsor list will be published here. Does your company want to support the Toulouse tech ecosystem?",
+    "becomePartnerCta": "Become a partner",
     "home": "Home"
   }
 }

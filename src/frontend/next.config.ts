@@ -8,6 +8,13 @@ const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 const plausibleOrigin = plausibleSrc ? new URL(plausibleSrc).origin : "";
 
 const nextConfig: NextConfig = {
+  // The backend accepts up to 20 MB per upload (see admin/files.ts).
+  // Next.js' default of 10 MB on proxied bodies would silently truncate
+  // multipart payloads and break image uploads — bump it past 20 MB plus
+  // the multipart envelope overhead.
+  experimental: {
+    proxyClientMaxBodySize: 25 * 1024 * 1024, // 25 MB
+  },
   async rewrites() {
     return [
       {
@@ -21,6 +28,10 @@ const nextConfig: NextConfig = {
       {
         source: "/api/contact/:path*",
         destination: `${backendUrl}/api/contact/:path*`,
+      },
+      {
+        source: "/api/brochure/:token",
+        destination: `${backendUrl}/api/brochure/:token`,
       },
       {
         source: "/api/editions/:path*",

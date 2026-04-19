@@ -13,6 +13,7 @@ interface EditionSettings {
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   sponsorBrochureUrl: string | null;
+  sponsorHeroImageUrl: string | null;
 }
 
 const STATUS_OPTIONS: { value: SponsorPageStatus; label: string; hint: string }[] = [
@@ -83,10 +84,12 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
     sponsorPageStatus: "PRE_ANNOUNCEMENT",
     sponsorTemporaryFormUrl: null,
     sponsorBrochureUrl: null,
+    sponsorHeroImageUrl: null,
   });
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
+  const [isHeroPickerOpen, setIsHeroPickerOpen] = useState(false);
 
   async function loadSettings() {
     const { data } = await adminFetch<EditionSettings>(`/editions/${editionId}`);
@@ -95,6 +98,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         sponsorPageStatus: data.sponsorPageStatus ?? "PRE_ANNOUNCEMENT",
         sponsorTemporaryFormUrl: data.sponsorTemporaryFormUrl ?? null,
         sponsorBrochureUrl: data.sponsorBrochureUrl ?? null,
+        sponsorHeroImageUrl: data.sponsorHeroImageUrl ?? null,
       });
     }
   }
@@ -108,6 +112,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         sponsorPageStatus: settings.sponsorPageStatus,
         sponsorTemporaryFormUrl: settings.sponsorTemporaryFormUrl ?? "",
         sponsorBrochureUrl: settings.sponsorBrochureUrl ?? "",
+        sponsorHeroImageUrl: settings.sponsorHeroImageUrl ?? "",
       }),
     });
     setIsSettingsSaving(false);
@@ -259,6 +264,52 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
             helpText="Lien externe affiché en CTA tant que la plaquette n'est pas finalisée."
           />
         )}
+
+        {/* Custom hero image (optional). Falls back to the edition main hero
+            on the public /devenir-sponsor page when empty. */}
+        <div>
+          <label className="block text-sm font-medium text-noir mb-1">
+            Image d&apos;en-tête « Devenir sponsor » (optionnel)
+          </label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsHeroPickerOpen(true)}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              {settings.sponsorHeroImageUrl ? "Changer l'image" : "Choisir une image"}
+            </button>
+            {settings.sponsorHeroImageUrl && (
+              <button
+                type="button"
+                onClick={() => setSettings({ ...settings, sponsorHeroImageUrl: null })}
+                className="text-sm text-terre-cuite hover:underline"
+              >
+                Retirer (utiliser le hero général)
+              </button>
+            )}
+          </div>
+          {settings.sponsorHeroImageUrl ? (
+            <div className="mt-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={settings.sponsorHeroImageUrl}
+                alt="Aperçu hero sponsor"
+                className="h-24 rounded-lg object-cover"
+              />
+              <p className="text-xs text-gris mt-1">{settings.sponsorHeroImageUrl}</p>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-gris">
+              Si non définie, l&apos;image principale de l&apos;édition (onglet Général) est utilisée.
+            </p>
+          )}
+          <ImagePickerDialog
+            open={isHeroPickerOpen}
+            onClose={() => setIsHeroPickerOpen(false)}
+            onSelect={(url) => setSettings({ ...settings, sponsorHeroImageUrl: url })}
+          />
+        </div>
 
         {showBrochure && (
           <div>

@@ -38,14 +38,21 @@ export default async function SponsorPage() {
     getContactCategories(),
   ]);
 
-  const sponsoringCategory = categories.find((c) => c.slug === "sponsoring");
+  // The dedicated brochure-request category triggers the email template
+  // with the tracked {brochureUrl} link. We fall back to the legacy
+  // "sponsoring" slug for environments where the seed hasn't run yet.
+  const sponsoringCategory =
+    categories.find((c) => c.slug === "sponsor-brochure") ??
+    categories.find((c) => c.slug === "sponsoring");
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
     { label: t("pageTitle"), href: `/${locale}/devenir-sponsor` },
   ];
 
-  const heroImageUrl = edition?.heroImageUrl || null;
+  // Sponsor page can override the generic hero image with its own; falls back
+  // to the edition's main hero when not configured.
+  const heroImageUrl = edition?.sponsorHeroImageUrl || edition?.heroImageUrl || null;
   const status: SponsorPageStatus = edition?.sponsorPageStatus ?? "PRE_ANNOUNCEMENT";
   const tempUrl = edition?.sponsorTemporaryFormUrl || null;
 

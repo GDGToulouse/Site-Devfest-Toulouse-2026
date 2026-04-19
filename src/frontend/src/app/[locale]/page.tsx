@@ -1,6 +1,7 @@
 import { getLocale } from "next-intl/server";
 
 import {
+  getCfpSettings,
   getCurrentEdition,
   getLatestArticles,
   getCurrentTicketTiers,
@@ -25,8 +26,18 @@ function buildEventJsonLd(
   },
   tiers: { nameFr: string; price: number; status: string; externalUrl: string | null }[],
 ) {
+  // Dedup offers by (name, price, status) — protects Schema.org output from
+  // accidental duplicates in seed data or admin double-imports, which
+  // otherwise surface to Google as invalid structured data.
+  const seenKeys = new Set<string>();
   const offers = tiers
     .filter((t) => t.status !== "SOLD_OUT")
+    .filter((t) => {
+      const key = `${t.nameFr}|${t.price}|${t.status}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    })
     .map((t) => ({
       "@type": "Offer" as const,
       name: t.nameFr,
@@ -75,10 +86,11 @@ function buildEventJsonLd(
 export default async function HomePage() {
   const locale = await getLocale();
 
-  const [edition, tiers, figures] = await Promise.all([
+  const [edition, tiers, figures, cfp] = await Promise.all([
     getCurrentEdition(),
     getCurrentTicketTiers(),
     getKeyFigures(),
+    getCfpSettings(),
   ]);
 
   const articles = await getLatestArticles(4, edition?.id);
@@ -98,7 +110,7 @@ export default async function HomePage() {
         />
       )}
 
-      <HeroSection edition={edition} locale={locale} />
+      <HeroSection edition={edition} cfp={cfp} locale={locale} />
 
       {/* PREPARATION: teasing + replay from previous edition */}
       {isPreparation && edition?.previousAfterMovieUrl && (
