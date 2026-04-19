@@ -112,6 +112,12 @@ export async function getSeoSettings(): Promise<Record<string, string>> {
   return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
 }
 
+// Brand identity (logo variants + favicons). Layout uses these to wire the
+// favicon metadata; Header/Footer pick the right logo variant via a helper.
+export async function getIdentitySettings(): Promise<Record<string, string>> {
+  return (await fetchAPI<Record<string, string>>("/api/settings/identity")) || {};
+}
+
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {
   return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
 }

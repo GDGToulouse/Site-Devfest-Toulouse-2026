@@ -69,4 +69,18 @@ export default async function settingsRoutes(app: FastifyInstance) {
     }
     return result;
   });
+
+  // GET /api/settings/identity — returns brand identity assets (logos + favicons).
+  // Consumed by the frontend layout (favicon metadata) and by Header/Footer to
+  // pick the right logo variant. All values are URLs (typically /uploads/...).
+  app.get("/settings/identity", async () => {
+    const settings = await prisma.siteSetting.findMany({
+      where: { key: { startsWith: "identity_" } },
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings as (typeof settings)[number][]) {
+      result[s.key] = s.value;
+    }
+    return result;
+  });
 }

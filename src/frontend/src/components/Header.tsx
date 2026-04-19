@@ -6,8 +6,9 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
+import { getLogoUrl } from "@/lib/identity";
 
 const ALL_NAV_LINKS = [
   { key: "program", href: "/conferences" },
@@ -23,6 +24,9 @@ export default function Header() {
   const tHeader = useTranslations("header");
   const edition = useEdition();
   const cfp = useCfpSettings();
+  const identity = useIdentitySettings();
+  // Header sits on a white bar — use the square / main logo (color on white).
+  const logoUrl = getLogoUrl(identity, "square");
 
   // Show "Become a sponsor" CTA whenever the page is meant to receive
   // visitors (i.e. anything but the sold-out state).
@@ -46,7 +50,7 @@ export default function Header() {
         <div className="flex items-center gap-8">
           <Link href="/" className="shrink-0">
             <Image
-              src="/images/logo-devfest-96.png"
+              src={logoUrl}
               alt="DevFest Toulouse"
               width={40}
               height={40}

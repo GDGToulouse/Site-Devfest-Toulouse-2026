@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 
 import { adminFetch } from "@/lib/admin-api";
+import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 
 const TABS = [
+  { key: "identity", label: "Identité" },
   { key: "contacts", label: "Contacts" },
   { key: "seo", label: "SEO" },
   { key: "cache", label: "Cache" },
@@ -299,6 +301,203 @@ function ContactsTab({
   );
 }
 
+// ─── Identity tab ──────────────────────────────────────────────────
+
+interface AssetField {
+  key: string;
+  label: string;
+  helpText: string;
+}
+
+const LOGO_FIELDS: AssetField[] = [
+  {
+    key: "identity_logo_main",
+    label: "Logo principal (couleur)",
+    helpText: "Format SVG conseillé (sinon PNG fond transparent ≥ 512px de large). Utilisé partout par défaut.",
+  },
+  {
+    key: "identity_logo_white",
+    label: "Logo blanc (fond foncé)",
+    helpText: "Variante claire pour le footer et les fonds sombres. SVG recommandé, PNG transparent accepté.",
+  },
+  {
+    key: "identity_logo_monochrome",
+    label: "Logo monochrome (contrasté)",
+    helpText: "Version noire ou contrastée pour impressions et contextes accessibilité. Optionnel.",
+  },
+  {
+    key: "identity_logo_square",
+    label: "Logo carré (header / avatars)",
+    helpText: "Version compacte carrée pour le header et les avatars sociaux. PNG ou SVG ≥ 512×512.",
+  },
+];
+
+const FAVICON_FIELDS: AssetField[] = [
+  {
+    key: "identity_favicon_ico",
+    label: "Favicon (.ico)",
+    helpText: "Format historique multi-tailles. 32×32 minimum, idéalement 16/32/48 multi-résolution. Toujours inclus comme dernier fallback.",
+  },
+  {
+    key: "identity_favicon_svg",
+    label: "Favicon SVG",
+    helpText: "Vectoriel moderne (scalable, mode sombre). viewBox carré (32×32 ou similaire). Pris en priorité par les navigateurs récents.",
+  },
+  {
+    key: "identity_favicon_png_192",
+    label: "Icon PNG 192×192",
+    helpText: "Pour PWA / Android. PNG carré exact 192×192.",
+  },
+  {
+    key: "identity_favicon_png_512",
+    label: "Icon PNG 512×512",
+    helpText: "Pour PWA / splash screens. PNG carré exact 512×512.",
+  },
+  {
+    key: "identity_apple_touch_icon",
+    label: "Apple touch icon",
+    helpText: "Pour l'icône iOS sur l'écran d'accueil. PNG carré exact 180×180, sans coins arrondis (iOS les ajoute).",
+  },
+];
+
+function AssetPickerField({
+  field,
+  value,
+  onChange,
+}: {
+  field: AssetField;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  return (
+    <div className="border border-gris/20 rounded-lg p-4 space-y-2">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <p className="text-sm font-medium text-noir">{field.label}</p>
+          <p className="text-xs text-gris mt-0.5">{field.helpText}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsPickerOpen(true)}
+            className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+          >
+            {value ? "Changer" : "Choisir"}
+          </button>
+          {value && (
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="text-sm text-terre-cuite hover:underline"
+            >
+              Retirer
+            </button>
+          )}
+        </div>
+      </div>
+      {value && (
+        <div className="flex items-center gap-3 pt-2 border-t border-gris/10">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={value}
+            alt={`Aperçu ${field.label}`}
+            className="h-12 w-12 object-contain bg-blanc-casse rounded p-1"
+          />
+          <p className="text-xs text-gris font-mono break-all">{value}</p>
+        </div>
+      )}
+      <ImagePickerDialog
+        open={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={(url) => { onChange(url); setIsPickerOpen(false); }}
+      />
+    </div>
+  );
+}
+
+function IdentityTab({
+  settings,
+  onSave,
+}: {
+  settings: Record<string, string>;
+  onSave: (data: Record<string, string>) => Promise<void>;
+}) {
+  const initial = [...LOGO_FIELDS, ...FAVICON_FIELDS].reduce(
+    (acc, f) => ({ ...acc, [f.key]: settings[f.key] || "" }),
+    {} as Record<string, string>,
+  );
+  const [form, setForm] = useState<Record<string, string>>(initial);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  function handleChange(key: string, value: string) {
+    setForm((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setIsSaving(true);
+    await onSave(form);
+    setIsSaving(false);
+    setSaved(true);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
+        <p className="text-sm text-gris mb-6">
+          Tous les champs sont optionnels. Les valeurs vides utilisent les fichiers par défaut livrés
+          avec le site (<code className="bg-blanc-casse px-1 rounded">/public/images/</code> et favicon embarqué).
+          Téléversez vos fichiers depuis l&apos;onglet « Fichiers » avant de les sélectionner ici.
+        </p>
+
+        <h2 className="text-lg font-bold text-noir mb-4">Logos</h2>
+        <div className="space-y-3 mb-6">
+          {LOGO_FIELDS.map((field) => (
+            <AssetPickerField
+              key={field.key}
+              field={field}
+              value={form[field.key]}
+              onChange={(v) => handleChange(field.key, v)}
+            />
+          ))}
+        </div>
+
+        <h2 className="text-lg font-bold text-noir mb-4">Favicon &amp; icônes</h2>
+        <p className="text-xs text-gris mb-3">
+          Les navigateurs choisissent automatiquement la meilleure résolution disponible.
+          Le SVG est préféré quand il est défini ; sinon les PNG par taille ; le .ico sert toujours
+          de dernier fallback.
+        </p>
+        <div className="space-y-3">
+          {FAVICON_FIELDS.map((field) => (
+            <AssetPickerField
+              key={field.key}
+              field={field}
+              value={form[field.key]}
+              onChange={(v) => handleChange(field.key, v)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-4">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer"}
+        </button>
+        {saved && <span className="text-sm text-malachite">Enregistré !</span>}
+      </div>
+    </form>
+  );
+}
+
 // ─── SEO tab ───────────────────────────────────────────────────────
 
 function SeoTab({
@@ -451,7 +650,7 @@ function SeoTab({
 // ─── Main page ─────────────────────────────────────────────────────
 
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<TabKey>("contacts");
+  const [activeTab, setActiveTab] = useState<TabKey>("identity");
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -504,6 +703,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab content */}
+      {activeTab === "identity" && <IdentityTab settings={settings} onSave={handleSave} />}
       {activeTab === "contacts" && <ContactsTab settings={settings} onSave={handleSave} />}
       {activeTab === "seo" && <SeoTab settings={settings} onSave={handleSave} />}
       {activeTab === "cache" && <CacheTab />}

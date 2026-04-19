@@ -2,7 +2,8 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
-import { getCurrentEdition, getEditions, getSocialLinks } from "@/lib/api";
+import { getCurrentEdition, getEditions, getIdentitySettings, getSocialLinks } from "@/lib/api";
+import { getLogoUrl } from "@/lib/identity";
 import SocialIcons from "./SocialIcons";
 
 const NAV_LINKS = [
@@ -18,14 +19,18 @@ const ECOSYSTEM_LINKS = [
 ];
 
 export default async function Footer() {
-  const [tNav, tFooter, tCta, edition, editions, socialLinks] = await Promise.all([
+  const [tNav, tFooter, tCta, edition, editions, socialLinks, identity] = await Promise.all([
     getTranslations("nav"),
     getTranslations("footer"),
     getTranslations("cta"),
     getCurrentEdition(),
     getEditions(),
     getSocialLinks(),
+    getIdentitySettings(),
   ]);
+
+  // Footer sits on a dark green background — pick the white variant.
+  const logoUrl = getLogoUrl(identity, "white");
 
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
 
@@ -45,7 +50,7 @@ export default async function Footer() {
           {/* Left column — Logo + socials + CTA */}
           <div className="flex flex-col gap-6">
             <Image
-              src="/images/logo-devfest-white.svg"
+              src={logoUrl}
               alt="DevFest Toulouse"
               width={180}
               height={80}
