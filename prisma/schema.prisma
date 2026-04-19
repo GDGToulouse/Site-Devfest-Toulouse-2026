@@ -53,6 +53,9 @@ model Edition {
   archivedSiteUrl     String?
   // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
   sponsorBrochureUrl       String?
+  // Optional hero image specific to the /devenir-sponsor page. When null,
+  // the page falls back to heroImageUrl.
+  sponsorHeroImageUrl      String?
   // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
   sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes

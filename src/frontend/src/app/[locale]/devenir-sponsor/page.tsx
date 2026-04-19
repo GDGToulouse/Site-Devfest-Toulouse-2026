@@ -50,7 +50,9 @@ export default async function SponsorPage() {
     { label: t("pageTitle"), href: `/${locale}/devenir-sponsor` },
   ];
 
-  const heroImageUrl = edition?.heroImageUrl || null;
+  // Sponsor page can override the generic hero image with its own; falls back
+  // to the edition's main hero when not configured.
+  const heroImageUrl = edition?.sponsorHeroImageUrl || edition?.heroImageUrl || null;
   const status: SponsorPageStatus = edition?.sponsorPageStatus ?? "PRE_ANNOUNCEMENT";
   const tempUrl = edition?.sponsorTemporaryFormUrl || null;
 

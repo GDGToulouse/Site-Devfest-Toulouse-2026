@@ -15,6 +15,7 @@ export interface Edition {
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   sponsorBrochureUrl: string | null;
+  sponsorHeroImageUrl: string | null;
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
