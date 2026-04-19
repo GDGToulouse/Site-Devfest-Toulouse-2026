@@ -16,6 +16,7 @@ interface Message {
   phone: string | null;
   company: string;
   jobTitle: string;
+  categorySlug: string | null;
   categoryLabel: string | null;
   message: string;
   isRead: boolean;
@@ -305,19 +306,21 @@ export default function ContactMessagesPage() {
                 {selected.jobTitle && <p><span className="text-gris">Poste :</span> {selected.jobTitle}</p>}
                 {selected.categoryLabel && <p><span className="text-gris">Catégorie :</span> <StatusBadge status={selected.categoryLabel} variant="blue" /></p>}
                 <p><span className="text-gris">Date :</span> {new Date(selected.createdAt).toLocaleString("fr-FR")}</p>
-                <p>
-                  <span className="text-gris">Plaquette :</span>{" "}
-                  {selected.brochureDownloadCount > 0 ? (
-                    <span className="text-noir">
-                      {selected.brochureDownloadCount} téléchargement{selected.brochureDownloadCount > 1 ? "s" : ""}
-                      {selected.brochureDownloadedAt && (
-                        <span className="text-gris"> · dernier le {new Date(selected.brochureDownloadedAt).toLocaleDateString("fr-FR")}</span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="text-gris">Pas encore téléchargée</span>
-                  )}
-                </p>
+                {selected.categorySlug === "sponsor-brochure" && (
+                  <p>
+                    <span className="text-gris">Plaquette :</span>{" "}
+                    {selected.brochureDownloadCount > 0 ? (
+                      <span className="text-noir">
+                        {selected.brochureDownloadCount} téléchargement{selected.brochureDownloadCount > 1 ? "s" : ""}
+                        {selected.brochureDownloadedAt && (
+                          <span className="text-gris"> · dernier le {new Date(selected.brochureDownloadedAt).toLocaleDateString("fr-FR")}</span>
+                        )}
+                      </span>
+                    ) : (
+                      <span className="text-gris">Pas encore téléchargée</span>
+                    )}
+                  </p>
+                )}
                 <p className="sm:col-span-2">
                   <span className="text-gris">Webhook :</span>{" "}
                   {selected.webhookStatus === "success" && (

@@ -133,7 +133,7 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { category: { select: { nameFr: true } } },
+        include: { category: { select: { nameFr: true, slug: true } } },
       }),
       prisma.contactMessage.count({ where }),
     ]);
@@ -147,6 +147,7 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         phone: m.phone,
         company: m.company,
         jobTitle: m.jobTitle,
+        categorySlug: m.category?.slug ?? null,
         categoryLabel: m.category?.nameFr || m.categoryLabel,
         message: m.message,
         locale: m.locale,
