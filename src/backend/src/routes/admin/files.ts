@@ -8,6 +8,7 @@ const UPLOADS_DIR = "/app/uploads";
 const ALLOWED_MIMES = [
   // Images
   "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  "image/x-icon", "image/vnd.microsoft.icon",
   // Documents
   "application/pdf",
   "application/vnd.ms-powerpoint",
@@ -30,7 +31,11 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "No file uploaded" });
     }
 
-    if (!ALLOWED_MIMES.includes(data.mimetype)) {
+    // Some browsers send .ico with an empty or generic mimetype — accept it
+    // when the extension is unambiguous.
+    const ext = path.extname(data.filename).toLowerCase();
+    const isIcoByExt = ext === ".ico";
+    if (!ALLOWED_MIMES.includes(data.mimetype) && !isIcoByExt) {
       // Consume the stream to avoid hanging
       await data.toBuffer();
       return reply.code(400).send({
@@ -39,8 +44,8 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     }
 
     // Generate unique filename: timestamp-random.ext
-    const ext = path.extname(data.filename).toLowerCase() || ".jpg";
-    const uniqueName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
+    const safeExt = ext || ".jpg";
+    const uniqueName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`;
     const destPath = path.join(UPLOADS_DIR, uniqueName);
 
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
@@ -66,7 +71,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
   app.get("/files", async () => {
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
 
-    const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
+    const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico"];
 
     const files = await fs.promises.readdir(UPLOADS_DIR);
     const items = await Promise.all(

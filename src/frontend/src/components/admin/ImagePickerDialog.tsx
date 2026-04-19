@@ -196,11 +196,11 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico,.svg"
                     onChange={handleFileChange}
                     className="hidden"
                   />
-                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF — max 20 Mo</p>
+                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, SVG, ICO — max 20 Mo</p>
                 </>
               )}
             </div>
