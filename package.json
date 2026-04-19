@@ -11,5 +11,18 @@
   },
   "dependencies": {
     "@prisma/client": "^6.19.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "@prisma/engines",
+      "esbuild",
+      "sharp",
+      "@img/sharp-libvips-linux-x64",
+      "@img/sharp-libvips-linuxmusl-x64",
+      "@img/sharp-linux-x64",
+      "@img/sharp-linuxmusl-x64",
+      "@next/swc-linux-x64-musl"
+    ]
   }
 }
