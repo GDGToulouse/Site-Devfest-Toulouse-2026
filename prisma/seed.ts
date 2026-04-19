@@ -64,6 +64,27 @@ export async function seedBase() {
 
   console.log(`Contact categories created: ${contactCategories.length}`);
 
+  // --- One-shot migration: legacy installs had the brochure email template
+  // attached to the generic "sponsoring" category. Now that there's a
+  // dedicated "sponsor-brochure" category, an unwanted brochure email goes
+  // out every time a visitor picks "Sponsoring" on /contact. Detect that
+  // exact legacy template (matched on "{brochureUrl}") and clear it from
+  // sponsoring so generic sponsoring questions don't get the brochure reply.
+  // Custom templates that don't reference the brochure are left untouched.
+  const sponsoring = await prisma.contactCategory.findFirst({ where: { slug: "sponsoring" } });
+  if (sponsoring && sponsoring.confirmationBodyFr?.includes("{brochureUrl}")) {
+    await prisma.contactCategory.update({
+      where: { id: sponsoring.id },
+      data: {
+        confirmationSubjectFr: null,
+        confirmationSubjectEn: null,
+        confirmationBodyFr: null,
+        confirmationBodyEn: null,
+      },
+    });
+    console.log("Cleared legacy brochure template from 'sponsoring' category.");
+  }
+
   // --- Contact Default Email ---
   await prisma.siteSetting.upsert({
     where: { key: "contact_default_email" },
