@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
+import { prisma } from "../../lib/prisma.js";
 
 const UPLOADS_DIR = "/app/uploads";
 const ALLOWED_MIMES = [
@@ -117,12 +118,27 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     await fs.promises.writeFile(destPath, finalBuffer);
     const stat = await fs.promises.stat(destPath);
 
+    // Optional alt text passed in the same multipart payload (FormData
+    // .append("alt", "...")). Stored on FileMetadata for accessibility —
+    // empty string is treated as "no alt".
+    const altField = (data.fields as Record<string, { value?: unknown }> | undefined)?.alt;
+    const rawAlt = typeof altField?.value === "string" ? altField.value.trim() : "";
+    const alt = rawAlt.length > 0 ? rawAlt : null;
+    if (alt) {
+      await prisma.fileMetadata.upsert({
+        where: { filename: uniqueName },
+        update: { alt },
+        create: { filename: uniqueName, alt },
+      });
+    }
+
     return {
       filename: uniqueName,
       originalName: data.filename,
       url: `/uploads/${uniqueName}`,
       size: stat.size,
       mimetype: data.mimetype,
+      alt,
       // Compression telemetry — UI uses this to inform the user when their
       // image was downscaled or recompressed.
       compression: wasCompressed
@@ -149,27 +165,68 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico"];
 
     const files = await fs.promises.readdir(UPLOADS_DIR);
+    const filenames = files.filter((f) => f !== ".gitkeep");
+
+    // Bulk-fetch all metadata in one query, then merge in memory — keeps
+    // the listing O(N) on the filesystem and O(1) on the database.
+    const metaRows = await prisma.fileMetadata.findMany({
+      where: { filename: { in: filenames } },
+    });
+    const metaByFilename = new Map(metaRows.map((m) => [m.filename, m]));
+
     const items = await Promise.all(
-      files
-        .filter((f) => f !== ".gitkeep")
-        .map(async (filename) => {
-          const filePath = path.join(UPLOADS_DIR, filename);
-          const stat = await fs.promises.stat(filePath);
-          const ext = path.extname(filename).toLowerCase();
-          return {
-            filename,
-            url: `/uploads/${filename}`,
-            size: stat.size,
-            uploadedAt: stat.mtime.toISOString(),
-            isImage: IMAGE_EXTS.includes(ext),
-            ext,
-          };
-        })
+      filenames.map(async (filename) => {
+        const filePath = path.join(UPLOADS_DIR, filename);
+        const stat = await fs.promises.stat(filePath);
+        const ext = path.extname(filename).toLowerCase();
+        return {
+          filename,
+          url: `/uploads/${filename}`,
+          size: stat.size,
+          uploadedAt: stat.mtime.toISOString(),
+          isImage: IMAGE_EXTS.includes(ext),
+          ext,
+          alt: metaByFilename.get(filename)?.alt ?? null,
+        };
+      }),
     );
 
     items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 
     return items;
+  });
+
+  // PUT /api/admin/files/:filename/metadata — update metadata for an
+  // existing file. Currently only `alt` is editable; the table is designed
+  // to grow with caption/credits/etc. without changing this endpoint shape.
+  app.put<{
+    Params: { filename: string };
+    Body: { alt?: string | null };
+  }>("/files/:filename/metadata", async (request, reply) => {
+    const { filename } = request.params;
+
+    if (filename.includes("/") || filename.includes("\\") || filename.includes("..")) {
+      return reply.code(400).send({ error: "Invalid filename" });
+    }
+
+    const filePath = path.join(UPLOADS_DIR, filename);
+    try {
+      await fs.promises.access(filePath);
+    } catch {
+      return reply.code(404).send({ error: "File not found" });
+    }
+
+    const rawAlt = request.body?.alt;
+    const trimmed = typeof rawAlt === "string" ? rawAlt.trim() : "";
+    const alt = trimmed.length > 0 ? trimmed : null;
+
+    const meta = await prisma.fileMetadata.upsert({
+      where: { filename },
+      update: { alt },
+      create: { filename, alt },
+    });
+
+    return { filename: meta.filename, alt: meta.alt };
   });
 
   // DELETE /api/admin/files/:filename — delete a file
@@ -187,6 +244,8 @@ export default async function adminFileRoutes(app: FastifyInstance) {
 
       try {
         await fs.promises.unlink(filePath);
+        // Best-effort cleanup of metadata (no-op if no row exists).
+        await prisma.fileMetadata.deleteMany({ where: { filename } });
         return { success: true };
       } catch {
         return reply.code(404).send({ error: "File not found" });

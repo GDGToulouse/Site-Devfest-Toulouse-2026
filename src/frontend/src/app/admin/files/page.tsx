@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import FileDetailsDialog from "@/components/admin/FileDetailsDialog";
 
 interface FileInfo {
   filename: string;
@@ -11,6 +12,7 @@ interface FileInfo {
   uploadedAt: string;
   isImage: boolean;
   ext: string;
+  alt: string | null;
 }
 
 function formatSize(bytes: number): string {
@@ -50,6 +52,7 @@ export default function FilesAdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "images" | "documents">("all");
+  const [detailsTarget, setDetailsTarget] = useState<FileInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function loadFiles() {
@@ -208,16 +211,16 @@ export default function FilesAdminPage() {
         >
           {filtered.map((file) => (
             <div key={file.filename} className="bg-blanc rounded-lg shadow-card overflow-hidden">
-              <a
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block aspect-square relative flex items-center justify-center bg-blanc-casse hover:opacity-80 transition-opacity cursor-pointer"
+              <button
+                type="button"
+                onClick={() => setDetailsTarget(file)}
+                aria-label={`Voir les détails de ${file.filename}`}
+                className="block w-full aspect-square relative flex items-center justify-center bg-blanc-casse hover:opacity-80 transition-opacity cursor-pointer"
               >
                 {file.isImage ? (
                   <img
                     src={file.url}
-                    alt={file.filename}
+                    alt={file.alt || file.filename}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -225,7 +228,16 @@ export default function FilesAdminPage() {
                     {fileIcon(file.ext)}
                   </div>
                 )}
-              </a>
+                {file.isImage && !file.alt && (
+                  <span
+                    aria-label="Texte alternatif manquant"
+                    title="Texte alternatif manquant"
+                    className="absolute top-1 right-1 px-1.5 py-0.5 text-[9px] font-bold rounded bg-terre-cuite text-blanc"
+                  >
+                    Alt ?
+                  </span>
+                )}
+              </button>
               <div className="p-2 space-y-0.5">
                 <p className="text-[10px] text-noir truncate font-medium" title={file.filename}>{file.filename}</p>
                 <p className="text-[10px] text-gris">{formatSize(file.size)}</p>
@@ -256,6 +268,18 @@ export default function FilesAdminPage() {
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
         variant="danger"
+      />
+
+      <FileDetailsDialog
+        file={detailsTarget}
+        onClose={() => setDetailsTarget(null)}
+        onSaved={(updated) => {
+          // Patch the file in the list so the missing-alt badge disappears
+          // immediately without a full refetch.
+          setFiles((prev) =>
+            prev.map((f) => (f.filename === updated.filename ? { ...f, alt: updated.alt } : f)),
+          );
+        }}
       />
     </div>
   );

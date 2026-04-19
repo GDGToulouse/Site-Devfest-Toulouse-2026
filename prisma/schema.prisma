@@ -365,3 +365,14 @@ model TranslationLog {
   @@index([userId])
   @@index([status])
 }
+
+// --- File Metadata ---
+// Per-file editor metadata for assets uploaded under /uploads/. Kept as
+// a separate table so we don't need to alter the filesystem layout.
+// Only created on demand — files without metadata simply have no row.
+model FileMetadata {
+  filename       String    @id
+  alt            String?   // Default alt text for accessibility
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
+}

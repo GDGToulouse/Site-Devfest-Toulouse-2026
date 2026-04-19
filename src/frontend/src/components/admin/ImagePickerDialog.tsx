@@ -9,6 +9,7 @@ interface ImageInfo {
   url: string;
   size: number;
   uploadedAt: string;
+  alt: string | null;
 }
 
 interface UploadResponse {
@@ -48,6 +49,11 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Two-step upload flow: pick a file → preview + fill alt → confirm.
+  // Lets us collect accessibility metadata before sending the upload.
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const [pendingAlt, setPendingAlt] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -56,8 +62,19 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       setSelected(null);
       setError(null);
       setNotice(null);
+      setPendingFile(null);
+      setPendingPreview(null);
+      setPendingAlt("");
     }
   }, [open]);
+
+  // Revoke the preview URL on unmount / when it changes — otherwise the
+  // ObjectURL keeps the file alive in memory.
+  useEffect(() => {
+    return () => {
+      if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    };
+  }, [pendingPreview]);
 
   async function loadImages() {
     setIsLoading(true);
@@ -66,13 +83,33 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     setIsLoading(false);
   }
 
-  async function handleUpload(file: File) {
+  function handleFileSelected(file: File) {
+    setError(null);
+    setNotice(null);
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    setPendingFile(file);
+    setPendingPreview(URL.createObjectURL(file));
+    setPendingAlt("");
+  }
+
+  function cancelPending() {
+    if (pendingPreview) URL.revokeObjectURL(pendingPreview);
+    setPendingFile(null);
+    setPendingPreview(null);
+    setPendingAlt("");
+  }
+
+  async function handleUpload() {
+    if (!pendingFile) return;
     setIsUploading(true);
     setError(null);
     setNotice(null);
 
     const formData = new FormData();
-    formData.append("file", file);
+    formData.append("file", pendingFile);
+    if (pendingAlt.trim()) {
+      formData.append("alt", pendingAlt.trim());
+    }
 
     try {
       const { data, status } = await adminFetch<UploadResponse>("/files", {
@@ -97,6 +134,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       }
 
       // Auto-select the uploaded image and switch to library
+      cancelPending();
       await loadImages();
       setSelected(data.url);
       setTab("library");
@@ -109,13 +147,14 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) handleUpload(file);
+    if (file) handleFileSelected(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   }
 
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
-    if (file) handleUpload(file);
+    if (file) handleFileSelected(file);
   }
 
   function handleInsert() {
@@ -214,33 +253,85 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
             </>
           )}
 
-          {tab === "upload" && (
+          {tab === "upload" && !pendingFile && (
             <div
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
               className="border-2 border-dashed border-gris/30 rounded-xl p-8 text-center hover:border-malachite/50 transition-colors"
             >
-              {isUploading ? (
-                <p className="text-gris">Upload en cours...</p>
-              ) : (
-                <>
-                  <p className="text-gris mb-4">Glissez une image ici ou cliquez pour sélectionner</p>
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
-                  >
-                    Choisir un fichier
-                  </button>
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico,.svg"
-                    onChange={handleFileChange}
-                    className="hidden"
+              <p className="text-gris mb-4">Glissez une image ici ou cliquez pour sélectionner</p>
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
+              >
+                Choisir un fichier
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico,.svg"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, SVG, ICO — max 20 Mo</p>
+            </div>
+          )}
+
+          {tab === "upload" && pendingFile && (
+            <div className="space-y-4">
+              <div className="flex gap-4 items-start">
+                {pendingPreview && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={pendingPreview}
+                    alt="Aperçu de l'image à uploader"
+                    className="w-32 h-32 object-cover rounded-lg bg-blanc-casse border border-gris/20"
                   />
-                  <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, SVG, ICO — max 20 Mo</p>
-                </>
-              )}
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-noir truncate" title={pendingFile.name}>
+                    {pendingFile.name}
+                  </p>
+                  <p className="text-xs text-gris">{formatKb(pendingFile.size)}</p>
+                  <button
+                    type="button"
+                    onClick={cancelPending}
+                    className="mt-2 text-xs text-terre-cuite hover:underline"
+                    disabled={isUploading}
+                  >
+                    Choisir une autre image
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="alt-text" className="block text-sm font-medium text-noir mb-1">
+                  Texte alternatif (alt)
+                </label>
+                <textarea
+                  id="alt-text"
+                  value={pendingAlt}
+                  onChange={(e) => setPendingAlt(e.target.value)}
+                  placeholder="Décrivez l'image pour les lecteurs d'écran (laisser vide pour les images purement décoratives)."
+                  rows={2}
+                  disabled={isUploading}
+                  className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-50"
+                />
+                <p className="mt-1 text-xs text-gris">
+                  Important pour l&apos;accessibilité. Ne contient pas le mot « image », décrit ce qu&apos;on voit ou son rôle.
+                </p>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+                >
+                  {isUploading ? "Upload en cours..." : "Téléverser"}
+                </button>
+              </div>
             </div>
           )}
         </div>
