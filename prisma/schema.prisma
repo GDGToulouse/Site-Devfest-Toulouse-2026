@@ -327,3 +327,30 @@ model SiteSetting {
   value            String
   updatedAt        DateTime  @updatedAt
 }
+
+// --- Translation Log ---
+// One row per Gemini translation request. Used for usage stats, quota
+// monitoring, and per-editor activity. Status values are kept as strings
+// (no enum) so we can add new ones without a migration:
+//   "success" | "failed" | "validation_error" | "quota_exhausted" | "upstream_error"
+// errorCode is a short machine-readable tag (e.g. "tag_mismatch", "rate_limit").
+model TranslationLog {
+  id             Int       @id @default(autoincrement())
+  userId         String?
+  sourceLang     String
+  targetLang     String
+  format         String
+  model          String
+  inputChars     Int       @default(0)
+  outputChars    Int       @default(0)
+  inputTokens    Int       @default(0)
+  outputTokens   Int       @default(0)
+  durationMs     Int       @default(0)
+  status         String
+  errorCode      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([status])
+}
