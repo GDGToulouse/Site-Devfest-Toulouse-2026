@@ -12,6 +12,7 @@ services:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
     command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
     depends_on:
       - backend
@@ -44,6 +45,9 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
     command: >
       sh -c "
         corepack enable &&

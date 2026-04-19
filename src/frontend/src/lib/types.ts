@@ -70,6 +70,12 @@ export interface KeyFigure {
 export interface ArticleDetail extends Article {
   contentFr: string;
   contentEn: string;
+  // AI-translation transparency. Optional for backward compat with cached
+  // responses that pre-date the field; missing means false.
+  autoTranslatedFr?: boolean;
+  autoTranslatedEn?: boolean;
+  translatedAtFr?: string | null;
+  translatedAtEn?: string | null;
 }
 
 export interface Tag {

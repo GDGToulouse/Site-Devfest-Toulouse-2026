@@ -85,7 +85,8 @@
     "noArticles": "No articles yet.",
     "by": "by",
     "backToList": "Back to news",
-    "taggedWith": "Articles tagged"
+    "taggedWith": "Articles tagged",
+    "autoTranslated": "Automatic translation not yet reviewed by the team."
   },
   "pagination": {
     "label": "Pagination",

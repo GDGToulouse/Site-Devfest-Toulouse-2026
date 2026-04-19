@@ -85,7 +85,8 @@
     "noArticles": "Aucun article pour le moment.",
     "by": "par",
     "backToList": "Retour aux actualités",
-    "taggedWith": "Articles tagués"
+    "taggedWith": "Articles tagués",
+    "autoTranslated": "Traduction automatique non relue par l'équipe."
   },
   "pagination": {
     "label": "Pagination",
