@@ -1,6 +1,7 @@
 import { getLocale } from "next-intl/server";
 
 import {
+  getCfpSettings,
   getCurrentEdition,
   getLatestArticles,
   getCurrentTicketTiers,
@@ -75,10 +76,11 @@ function buildEventJsonLd(
 export default async function HomePage() {
   const locale = await getLocale();
 
-  const [edition, tiers, figures] = await Promise.all([
+  const [edition, tiers, figures, cfp] = await Promise.all([
     getCurrentEdition(),
     getCurrentTicketTiers(),
     getKeyFigures(),
+    getCfpSettings(),
   ]);
 
   const articles = await getLatestArticles(4, edition?.id);
@@ -98,7 +100,7 @@ export default async function HomePage() {
         />
       )}
 
-      <HeroSection edition={edition} locale={locale} />
+      <HeroSection edition={edition} cfp={cfp} locale={locale} />
 
       {/* PREPARATION: teasing + replay from previous edition */}
       {isPreparation && edition?.previousAfterMovieUrl && (
