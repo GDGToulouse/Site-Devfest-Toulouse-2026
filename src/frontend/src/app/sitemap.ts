@@ -5,7 +5,19 @@ const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const locales = ["fr", "en"];
-  const staticRoutes = ["", "/actualites", "/billetterie", "/contact", "/devenir-sponsor", "/code-de-conduite", "/mentions-legales"];
+  const staticRoutes = [
+    "",
+    "/actualites",
+    "/billetterie",
+    "/conferences",
+    "/speakers",
+    "/partners",
+    "/proposer-un-talk",
+    "/contact",
+    "/devenir-sponsor",
+    "/code-de-conduite",
+    "/mentions-legales",
+  ];
 
   const entries: MetadataRoute.Sitemap = [];
 

@@ -221,5 +221,30 @@
     "title": "Legal Notice",
     "description": "DevFest Toulouse legal notice.",
     "home": "Home"
+  },
+  "conferences": {
+    "title": "Schedule",
+    "description": "Discover the conference schedule for DevFest Toulouse 2026: web, cloud, AI, mobile and more.",
+    "heading": "DevFest Toulouse {year} schedule",
+    "comingSoonTitle": "Schedule coming soon",
+    "comingSoonBody": "The conference, quickie and keynote schedule for DevFest Toulouse {year} will be published here once finalized. Meanwhile, check out the aftermovie and key figures from last year's edition.",
+    "home": "Home"
+  },
+  "speakers": {
+    "title": "Speakers",
+    "description": "Discover the speakers of DevFest Toulouse 2026: tech experts from Toulouse, France and abroad.",
+    "heading": "DevFest Toulouse {year} speakers",
+    "comingSoonTitle": "Speakers will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} speaker list will be published here after the talk selection process. Past editions hosted over 300 speakers from France and beyond.",
+    "home": "Home"
+  },
+  "partners": {
+    "title": "Partners",
+    "description": "Discover the partners and sponsors of DevFest Toulouse 2026: tech companies from Toulouse and beyond who support the developer ecosystem.",
+    "heading": "DevFest Toulouse {year} partners",
+    "comingSoonTitle": "Partners will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} partner and sponsor list will be published here. Does your company want to support the Toulouse tech ecosystem?",
+    "becomePartnerCta": "Become a partner",
+    "home": "Home"
   }
 }

@@ -221,5 +221,30 @@
     "title": "Mentions légales",
     "description": "Mentions légales du site DevFest Toulouse.",
     "home": "Accueil"
+  },
+  "conferences": {
+    "title": "Programme",
+    "description": "Découvrez le programme des conférences du DevFest Toulouse 2026 : web, cloud, IA, mobile et bien plus.",
+    "heading": "Programme du DevFest Toulouse {year}",
+    "comingSoonTitle": "Le programme arrive bientôt",
+    "comingSoonBody": "Le programme des conférences, quickies et keynotes du DevFest Toulouse {year} sera publié ici dès qu'il sera finalisé. En attendant, consultez l'aftermovie et les chiffres clés de l'édition précédente.",
+    "home": "Accueil"
+  },
+  "speakers": {
+    "title": "Conférenciers",
+    "description": "Découvrez les conférenciers du DevFest Toulouse 2026 : experts tech de Toulouse, France et international.",
+    "heading": "Conférenciers du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les conférenciers seront annoncés prochainement",
+    "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
+    "home": "Accueil"
+  },
+  "partners": {
+    "title": "Partenaires",
+    "description": "Découvrez les partenaires et sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
+    "heading": "Partenaires du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les partenaires seront annoncés prochainement",
+    "comingSoonBody": "La liste des partenaires et sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
+    "becomePartnerCta": "Devenir partenaire",
+    "home": "Accueil"
   }
 }

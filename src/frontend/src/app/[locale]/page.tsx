@@ -26,8 +26,18 @@ function buildEventJsonLd(
   },
   tiers: { nameFr: string; price: number; status: string; externalUrl: string | null }[],
 ) {
+  // Dedup offers by (name, price, status) — protects Schema.org output from
+  // accidental duplicates in seed data or admin double-imports, which
+  // otherwise surface to Google as invalid structured data.
+  const seenKeys = new Set<string>();
   const offers = tiers
     .filter((t) => t.status !== "SOLD_OUT")
+    .filter((t) => {
+      const key = `${t.nameFr}|${t.price}|${t.status}`;
+      if (seenKeys.has(key)) return false;
+      seenKeys.add(key);
+      return true;
+    })
     .map((t) => ({
       "@type": "Offer" as const,
       name: t.nameFr,
