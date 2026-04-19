@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
 import { makeToken } from "../lib/brochure-token.js";
-import { sendContactWebhook } from "../lib/contact-webhook.js";
+import { buildBrochureFields, sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
 
 interface ContactBody {
@@ -208,23 +208,34 @@ export default async function contactRoutes(app: FastifyInstance) {
     // sendContactWebhook records the outcome on the ContactMessage so the
     // admin can see failures and retry them. We don't await — the form
     // response shouldn't block on a slow third-party endpoint.
-    sendContactWebhook({
-      id: stored.id,
-      submittedAt: stored.createdAt.toISOString(),
-      data: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone?.trim() || null,
-        categoryId: categoryId || null,
-        categorySlug: category?.slug || null,
-        categoryLabel: categoryLabel || null,
-        message: message.trim(),
-        locale: locale || null,
-      },
-    }).catch((err) => {
-      app.log.warn("Contact webhook helper crashed: %s", String(err));
-    });
+    //
+    // The brochure fields are populated for every message, not just the
+    // sponsor-brochure category: an n8n workflow may decide what to do
+    // with them based on categorySlug, and it's cheaper to always send
+    // them than to special-case the category server-side.
+    (async () => {
+      try {
+        const brochureFields = await buildBrochureFields(stored.id);
+        await sendContactWebhook({
+          id: stored.id,
+          submittedAt: stored.createdAt.toISOString(),
+          data: {
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
+            email: email.trim(),
+            phone: phone?.trim() || null,
+            categoryId: categoryId || null,
+            categorySlug: category?.slug || null,
+            categoryLabel: categoryLabel || null,
+            message: message.trim(),
+            locale: locale || null,
+            ...brochureFields,
+          },
+        });
+      } catch (err) {
+        app.log.warn("Contact webhook helper crashed: %s", String(err));
+      }
+    })();
 
     return { success: true };
   });
