@@ -52,7 +52,9 @@
       "viewAll": "Voir la billetterie"
     },
     "replay": {
-      "title": "Résumé de l'année dernière"
+      "title": "Résumé de l'année dernière",
+      "viewGallery": "Voir l'album photo",
+      "viewEdition": "Voir l'édition {year}"
     }
   },
   "footer": {

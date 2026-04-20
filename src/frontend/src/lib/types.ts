@@ -11,7 +11,9 @@ export interface Edition {
   heroImageUrl: string | null;
   sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
+  previousYear: number | null;
   previousAfterMovieUrl: string | null;
+  previousGalleryUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   sponsorBrochureUrl: string | null;
