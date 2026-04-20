@@ -7,26 +7,26 @@ import { Link } from "@/i18n/navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
-  const t = await getTranslations("partners");
+  const t = await getTranslations("sponsors");
   return {
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `/${locale}/partners`,
-      languages: { fr: "/fr/partners", en: "/en/partners", "x-default": "/fr/partners" },
+      canonical: `/${locale}/sponsors`,
+      languages: { fr: "/fr/sponsors", en: "/en/sponsors", "x-default": "/fr/sponsors" },
     },
   };
 }
 
-export default async function PartnersPage() {
+export default async function SponsorsPage() {
   const locale = await getLocale();
-  const t = await getTranslations("partners");
+  const t = await getTranslations("sponsors");
   const edition = await getCurrentEdition();
   const year = edition?.year ?? new Date().getFullYear();
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
-    { label: t("title"), href: `/${locale}/partners` },
+    { label: t("title"), href: `/${locale}/sponsors` },
   ];
 
   return (
@@ -49,7 +49,7 @@ export default async function PartnersPage() {
             href="/devenir-sponsor"
             className="mt-6 inline-block px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors"
           >
-            {t("becomePartnerCta")}
+            {t("becomeSponsorCta")}
           </Link>
         </div>
       </div>

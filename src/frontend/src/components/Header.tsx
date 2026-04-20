@@ -13,7 +13,7 @@ import { getLogoUrl } from "@/lib/identity";
 const ALL_NAV_LINKS = [
   { key: "program", href: "/conferences" },
   { key: "speakers", href: "/speakers" },
-  { key: "partners", href: "/partners" },
+  { key: "sponsors", href: "/sponsors" },
   { key: "blog", href: "/actualites" },
 ] as const;
 
@@ -36,7 +36,7 @@ export default function Header() {
   const navLinks = ALL_NAV_LINKS.filter((link) => {
     if (link.key === "program" && !edition?.isProgramPublished) return false;
     if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-    if (link.key === "partners" && !edition?.hasSponsors) return false;
+    if (link.key === "sponsors" && !edition?.hasSponsors) return false;
     return true;
   });
 
@@ -83,7 +83,7 @@ export default function Header() {
               href="/devenir-sponsor"
               className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
             >
-              {tCta("becomePartner")}
+              {tCta("becomeSponsor")}
             </Link>
           )}
           {cfpUrl && (
@@ -142,7 +142,7 @@ export default function Header() {
                 className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
                 onClick={() => setIsMenuOpen(false)}
               >
-                {tCta("becomePartner")}
+                {tCta("becomeSponsor")}
               </Link>
             )}
             {cfpUrl && (

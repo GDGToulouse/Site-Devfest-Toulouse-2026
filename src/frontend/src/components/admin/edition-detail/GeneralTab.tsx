@@ -14,7 +14,7 @@ interface EditionData {
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
-  partnerFormUrl: string | null;
+  sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
@@ -39,7 +39,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     venueName: edition.venueName || "",
     venueAddress: edition.venueAddress || "",
     heroImageUrl: edition.heroImageUrl || "",
-    partnerFormUrl: edition.partnerFormUrl || "",
+    sponsorFormUrl: edition.sponsorFormUrl || "",
     aftermovieUrl: edition.aftermovieUrl || "",
     galleryUrl: edition.galleryUrl || "",
     archivedSiteUrl: edition.archivedSiteUrl || "",
@@ -60,7 +60,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         venueName: form.venueName || undefined,
         venueAddress: form.venueAddress || undefined,
         heroImageUrl: form.heroImageUrl || undefined,
-        partnerFormUrl: form.partnerFormUrl || undefined,
+        sponsorFormUrl: form.sponsorFormUrl || undefined,
         aftermovieUrl: form.aftermovieUrl || undefined,
         galleryUrl: form.galleryUrl || undefined,
         archivedSiteUrl: form.archivedSiteUrl || undefined,
@@ -130,7 +130,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         />
       </div>
 
-      <FormField label="URL formulaire sponsor" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
+      <FormField label="URL formulaire sponsor" name="sponsorFormUrl" type="url" value={form.sponsorFormUrl} onChange={(v) => setForm({ ...form, sponsorFormUrl: v })} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={form.aftermovieUrl} onChange={(v) => setForm({ ...form, aftermovieUrl: v })} />

@@ -15,6 +15,17 @@ const nextConfig: NextConfig = {
   experimental: {
     proxyClientMaxBodySize: 25 * 1024 * 1024, // 25 MB
   },
+  async redirects() {
+    return [
+      // Legacy route: the former /partners page is now /sponsors. Keep a
+      // permanent redirect so external links and crawled results don't 404.
+      {
+        source: "/:locale(fr|en)/partners",
+        destination: "/:locale/sponsors",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [
       {

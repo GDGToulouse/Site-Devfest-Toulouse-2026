@@ -126,7 +126,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       venueName: edition.venueName,
       venueAddress: edition.venueAddress,
       heroImageUrl: edition.heroImageUrl,
-      partnerFormUrl: edition.partnerFormUrl,
+      sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
       previousAfterMovieUrl: previousEdition?.aftermovieUrl || null,
       galleryUrl: edition.galleryUrl,

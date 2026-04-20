@@ -47,7 +47,7 @@ model Edition {
   venueName           String?
   venueAddress        String?
   heroImageUrl        String?
-  partnerFormUrl      String?
+  sponsorFormUrl      String?
   aftermovieUrl       String?
   galleryUrl          String?
   archivedSiteUrl     String?

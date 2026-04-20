@@ -10,7 +10,7 @@ interface EditionBody {
   venueName?: string;
   venueAddress?: string;
   heroImageUrl?: string;
-  partnerFormUrl?: string;
+  sponsorFormUrl?: string;
   aftermovieUrl?: string;
   galleryUrl?: string;
   archivedSiteUrl?: string;
@@ -37,7 +37,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       venueName: e.venueName,
       venueAddress: e.venueAddress,
       heroImageUrl: e.heroImageUrl,
-      partnerFormUrl: e.partnerFormUrl,
+      sponsorFormUrl: e.sponsorFormUrl,
       aftermovieUrl: e.aftermovieUrl,
       galleryUrl: e.galleryUrl,
       archivedSiteUrl: e.archivedSiteUrl,
@@ -63,7 +63,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       venueName: edition.venueName,
       venueAddress: edition.venueAddress,
       heroImageUrl: edition.heroImageUrl,
-      partnerFormUrl: edition.partnerFormUrl,
+      sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
@@ -102,7 +102,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         venueName: edition.venueName,
         venueAddress: edition.venueAddress,
         heroImageUrl: edition.heroImageUrl,
-        partnerFormUrl: edition.partnerFormUrl,
+        sponsorFormUrl: edition.sponsorFormUrl,
         aftermovieUrl: edition.aftermovieUrl,
         galleryUrl: edition.galleryUrl,
         archivedSiteUrl: edition.archivedSiteUrl,
@@ -140,7 +140,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         venueName: body.venueName !== undefined ? (body.venueName || null) : existing.venueName,
         venueAddress: body.venueAddress !== undefined ? (body.venueAddress || null) : existing.venueAddress,
         heroImageUrl: body.heroImageUrl !== undefined ? (body.heroImageUrl || null) : existing.heroImageUrl,
-        partnerFormUrl: body.partnerFormUrl !== undefined ? (body.partnerFormUrl || null) : existing.partnerFormUrl,
+        sponsorFormUrl: body.sponsorFormUrl !== undefined ? (body.sponsorFormUrl || null) : existing.sponsorFormUrl,
         aftermovieUrl: body.aftermovieUrl !== undefined ? (body.aftermovieUrl || null) : existing.aftermovieUrl,
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
@@ -182,7 +182,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         venueName: body.venueName || null,
         venueAddress: body.venueAddress || null,
         heroImageUrl: body.heroImageUrl || null,
-        partnerFormUrl: body.partnerFormUrl || null,
+        sponsorFormUrl: body.sponsorFormUrl || null,
         aftermovieUrl: body.aftermovieUrl || null,
         galleryUrl: body.galleryUrl || null,
         archivedSiteUrl: body.archivedSiteUrl || null,

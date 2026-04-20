@@ -23,7 +23,7 @@ async function seedDev() {
       status: "ANNOUNCEMENT",
       venueName: "Diagora",
       venueAddress: "Labège",
-      partnerFormUrl: "https://forms.gle/devfest-partenaire",
+      sponsorFormUrl: "https://forms.gle/devfest-sponsor",
       aftermovieUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     },
   });

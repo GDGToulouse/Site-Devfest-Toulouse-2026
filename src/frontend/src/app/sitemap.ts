@@ -42,7 +42,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/billetterie",
     "/conferences",
     "/speakers",
-    "/partners",
+    "/sponsors",
     "/proposer-un-talk",
     "/contact",
     "/devenir-sponsor",

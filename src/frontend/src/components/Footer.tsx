@@ -15,7 +15,7 @@ import SocialIcons from "./SocialIcons";
 const NAV_LINKS = [
   { key: "program", href: "/conferences" },
   { key: "speakers", href: "/speakers" },
-  { key: "partners", href: "/partners" },
+  { key: "sponsors", href: "/sponsors" },
   { key: "blog", href: "/actualites" },
 ] as const;
 
@@ -80,7 +80,7 @@ export default async function Footer() {
               const footerLinks = NAV_LINKS.filter((link) => {
                 if (link.key === "program" && !edition?.isProgramPublished) return false;
                 if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-                if (link.key === "partners" && !edition?.hasSponsors) return false;
+                if (link.key === "sponsors" && !edition?.hasSponsors) return false;
                 return true;
               });
               if (footerLinks.length === 0) return null;

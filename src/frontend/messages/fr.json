@@ -12,11 +12,11 @@
     "home": "Accueil",
     "program": "Programme",
     "speakers": "Speakers",
-    "partners": "Sponsors",
+    "sponsors": "Sponsors",
     "blog": "Actus"
   },
   "cta": {
-    "becomePartner": "Devenir sponsor",
+    "becomeSponsor": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
     "contactUs": "Contactez-nous"
   },
@@ -27,7 +27,7 @@
       "subtitleLine2devs": "les devs",
       "subtitleLine2end": " et pour les ",
       "subtitleLine2devs2": "devs.",
-      "ctaPartner": "Devenir sponsor",
+      "ctaSponsor": "Devenir sponsor",
       "ctaTalk": "Proposer un talk"
     },
     "stats": {
@@ -244,13 +244,13 @@
     "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
     "home": "Accueil"
   },
-  "partners": {
+  "sponsors": {
     "title": "Sponsors",
     "description": "Découvrez les sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
     "heading": "Sponsors du DevFest Toulouse {year}",
     "comingSoonTitle": "Les sponsors seront annoncés prochainement",
     "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
-    "becomePartnerCta": "Devenir sponsor",
+    "becomeSponsorCta": "Devenir sponsor",
     "home": "Accueil"
   }
 }

@@ -12,11 +12,11 @@
     "home": "Home",
     "program": "Schedule",
     "speakers": "Speakers",
-    "partners": "Sponsors",
+    "sponsors": "Sponsors",
     "blog": "News"
   },
   "cta": {
-    "becomePartner": "Become a sponsor",
+    "becomeSponsor": "Become a sponsor",
     "submitTalk": "Submit a talk",
     "contactUs": "Contact us"
   },
@@ -27,7 +27,7 @@
       "subtitleLine2devs": "devs",
       "subtitleLine2end": ", for ",
       "subtitleLine2devs2": "devs.",
-      "ctaPartner": "Become a sponsor",
+      "ctaSponsor": "Become a sponsor",
       "ctaTalk": "Submit a talk"
     },
     "stats": {
@@ -244,13 +244,13 @@
     "comingSoonBody": "The DevFest Toulouse {year} speaker list will be published here after the talk selection process. Past editions hosted over 300 speakers from France and beyond.",
     "home": "Home"
   },
-  "partners": {
+  "sponsors": {
     "title": "Sponsors",
     "description": "Discover the sponsors of DevFest Toulouse 2026: tech companies from Toulouse and beyond who support the developer ecosystem.",
     "heading": "DevFest Toulouse {year} sponsors",
     "comingSoonTitle": "Sponsors will be announced soon",
     "comingSoonBody": "The DevFest Toulouse {year} sponsor list will be published here. Does your company want to support the Toulouse tech ecosystem?",
-    "becomePartnerCta": "Become a sponsor",
+    "becomeSponsorCta": "Become a sponsor",
     "home": "Home"
   }
 }
