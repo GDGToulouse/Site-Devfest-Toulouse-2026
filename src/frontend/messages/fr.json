@@ -12,11 +12,11 @@
     "home": "Accueil",
     "program": "Programme",
     "speakers": "Speakers",
-    "partners": "Partenaires",
+    "partners": "Sponsors",
     "blog": "Actus"
   },
   "cta": {
-    "becomePartner": "Devenir partenaire",
+    "becomePartner": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
     "contactUs": "Contactez-nous"
   },
@@ -27,7 +27,7 @@
       "subtitleLine2devs": "les devs",
       "subtitleLine2end": " et pour les ",
       "subtitleLine2devs2": "devs.",
-      "ctaPartner": "Devenir partenaire",
+      "ctaPartner": "Devenir sponsor",
       "ctaTalk": "Proposer un talk"
     },
     "stats": {
@@ -245,12 +245,12 @@
     "home": "Accueil"
   },
   "partners": {
-    "title": "Partenaires",
-    "description": "Découvrez les partenaires et sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
-    "heading": "Partenaires du DevFest Toulouse {year}",
-    "comingSoonTitle": "Les partenaires seront annoncés prochainement",
-    "comingSoonBody": "La liste des partenaires et sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
-    "becomePartnerCta": "Devenir partenaire",
+    "title": "Sponsors",
+    "description": "Découvrez les sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
+    "heading": "Sponsors du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les sponsors seront annoncés prochainement",
+    "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
+    "becomePartnerCta": "Devenir sponsor",
     "home": "Accueil"
   }
 }

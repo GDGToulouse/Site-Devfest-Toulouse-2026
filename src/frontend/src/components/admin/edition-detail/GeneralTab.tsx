@@ -130,7 +130,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         />
       </div>
 
-      <FormField label="URL formulaire partenaire" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
+      <FormField label="URL formulaire sponsor" name="partnerFormUrl" type="url" value={form.partnerFormUrl} onChange={(v) => setForm({ ...form, partnerFormUrl: v })} />
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <FormField label="Aftermovie URL" name="aftermovieUrl" type="url" value={form.aftermovieUrl} onChange={(v) => setForm({ ...form, aftermovieUrl: v })} />

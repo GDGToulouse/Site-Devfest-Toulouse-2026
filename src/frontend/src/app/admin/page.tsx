@@ -141,7 +141,7 @@ export default function AdminDashboard() {
 
           {/* URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
-            <InfoCard label="URL Partenaire" value={featured.partnerFormUrl} />
+            <InfoCard label="URL Sponsor" value={featured.partnerFormUrl} />
           </div>
         </section>
       )}
