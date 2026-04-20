@@ -94,7 +94,7 @@ export default async function Footer() {
                       <li key={link.key}>
                         <Link
                           href={link.href}
-                          className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                          className="text-blanc text-base hover:opacity-70 transition-opacity"
                         >
                           {tNav(link.key)}
                         </Link>
@@ -118,7 +118,7 @@ export default async function Footer() {
                         href={partner.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                        className="text-blanc text-base hover:opacity-70 transition-opacity"
                       >
                         {partner.name}
                       </a>
@@ -139,7 +139,7 @@ export default async function Footer() {
                     <li key={e.id}>
                       <Link
                         href={`/editions/${e.year}`}
-                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                        className="text-blanc text-base hover:opacity-70 transition-opacity"
                       >
                         DevFest Toulouse {e.year}
                       </Link>
