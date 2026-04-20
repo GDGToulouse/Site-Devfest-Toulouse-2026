@@ -10,7 +10,7 @@ interface CfpBody {
   closeDate?: string;
 }
 
-const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_"];
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_"];
 
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/general
@@ -30,7 +30,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
   // PUT /api/admin/settings/general
   app.put<{ Body: Record<string, string> }>("/settings/general", async (request) => {
     const body = request.body;
-    let touchedIdentity = false;
+    let touchedHomeRender = false;
 
     for (const [key, value] of Object.entries(body)) {
       if (!GENERAL_PREFIXES.some((p) => key.startsWith(p))) continue;
@@ -39,14 +39,15 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
         update: { value },
         create: { key, value },
       });
-      if (key.startsWith("identity_")) touchedIdentity = true;
+      // Identity assets (logos/favicons) and ecosystem partners both affect
+      // the home render (layout identity + EcosystemSection). Purge the
+      // home so visitors see the change without waiting for the cache TTL.
+      if (key.startsWith("identity_") || key.startsWith("ecosystem_")) {
+        touchedHomeRender = true;
+      }
     }
 
-    // Identity assets (logos/favicons) are read by the locale layout for
-    // every page render. Purge the home so visitors see the change without
-    // waiting for the cache TTL — deeper pages will revalidate on their own
-    // shorter / SWR cycle.
-    if (touchedIdentity) {
+    if (touchedHomeRender) {
       revalidateHome();
     }
 

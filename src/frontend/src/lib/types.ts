@@ -37,6 +37,12 @@ export interface SocialLinks {
   social_bluesky?: string;
 }
 
+export interface EcosystemPartner {
+  name: string;
+  url: string;
+  isFeatured: boolean;
+}
+
 export interface Article {
   id: number;
   slug: string;

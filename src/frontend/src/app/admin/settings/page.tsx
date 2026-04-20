@@ -8,6 +8,7 @@ import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 const TABS = [
   { key: "identity", label: "Identité" },
   { key: "contacts", label: "Contacts" },
+  { key: "ecosystem", label: "Écosystème" },
   { key: "seo", label: "SEO" },
   { key: "cache", label: "Cache" },
 ] as const;
@@ -498,6 +499,218 @@ function IdentityTab({
   );
 }
 
+// ─── Ecosystem tab ─────────────────────────────────────────────────
+
+interface EcosystemPartner {
+  name: string;
+  url: string;
+  isFeatured: boolean;
+}
+
+function parsePartners(raw: string | undefined): EcosystemPartner[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((p): p is Record<string, unknown> => typeof p === "object" && p !== null)
+      .map((p) => ({
+        name: typeof p.name === "string" ? p.name : "",
+        url: typeof p.url === "string" ? p.url : "",
+        isFeatured: Boolean(p.isFeatured),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function EcosystemTab({
+  settings,
+  onSave,
+}: {
+  settings: Record<string, string>;
+  onSave: (data: Record<string, string>) => Promise<void>;
+}) {
+  const [partners, setPartners] = useState<EcosystemPartner[]>(() =>
+    parsePartners(settings.ecosystem_partners),
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function updatePartner(index: number, patch: Partial<EcosystemPartner>) {
+    setPartners((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+    setSaved(false);
+    setError(null);
+  }
+
+  function setFeatured(index: number, value: boolean) {
+    // Only one featured at a time: unset any other.
+    setPartners((prev) =>
+      prev.map((p, i) => ({ ...p, isFeatured: value && i === index })),
+    );
+    setSaved(false);
+  }
+
+  function addPartner() {
+    setPartners((prev) => [...prev, { name: "", url: "", isFeatured: false }]);
+    setSaved(false);
+  }
+
+  function removePartner(index: number) {
+    setPartners((prev) => prev.filter((_, i) => i !== index));
+    setSaved(false);
+  }
+
+  function move(index: number, delta: -1 | 1) {
+    const target = index + delta;
+    if (target < 0 || target >= partners.length) return;
+    setPartners((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setSaved(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    const cleaned = partners
+      .map((p) => ({ ...p, name: p.name.trim(), url: p.url.trim() }))
+      .filter((p) => p.name || p.url);
+
+    for (const p of cleaned) {
+      if (!p.name || !p.url) {
+        setError("Chaque partenaire doit avoir un nom et une URL.");
+        return;
+      }
+      try {
+        new URL(p.url);
+      } catch {
+        setError(`URL invalide : ${p.url}`);
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    await onSave({ ecosystem_partners: JSON.stringify(cleaned) });
+    setPartners(cleaned);
+    setIsSaving(false);
+    setSaved(true);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
+        <p className="text-sm text-gris mb-6">
+          Partenaires de l&apos;écosystème affichés sur la page d&apos;accueil et dans le footer.
+          Cochez « Mettre en avant » pour qu&apos;un partenaire apparaisse en bouton plein sur la
+          page d&apos;accueil ; les autres sont affichés en bouton contour. Un seul partenaire peut
+          être mis en avant à la fois.
+        </p>
+
+        {partners.length === 0 && (
+          <p className="text-sm text-gris italic mb-4">Aucun partenaire configuré.</p>
+        )}
+
+        <ul className="space-y-3 mb-4">
+          {partners.map((partner, index) => (
+            <li
+              key={index}
+              className="border border-gris/20 rounded-lg p-4 flex flex-col md:flex-row gap-3 md:items-end"
+            >
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gris mb-1">Nom</label>
+                <input
+                  type="text"
+                  value={partner.name}
+                  onChange={(e) => updatePartner(index, { name: e.target.value })}
+                  placeholder="Toulouse Tech Hub"
+                  className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                />
+              </div>
+              <div className="flex-[2]">
+                <label className="block text-xs font-medium text-gris mb-1">URL</label>
+                <input
+                  type="url"
+                  value={partner.url}
+                  onChange={(e) => updatePartner(index, { url: e.target.value })}
+                  placeholder="https://www.toulousetechhub.com"
+                  className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                />
+              </div>
+              <label className="flex items-center gap-2 whitespace-nowrap text-sm text-noir">
+                <input
+                  type="checkbox"
+                  checked={partner.isFeatured}
+                  onChange={(e) => setFeatured(index, e.target.checked)}
+                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                />
+                Mettre en avant
+              </label>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => move(index, -1)}
+                  disabled={index === 0}
+                  title="Monter"
+                  className="px-2 py-1 text-xs rounded border border-gris/30 text-noir hover:bg-blanc-casse disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(index, 1)}
+                  disabled={index === partners.length - 1}
+                  title="Descendre"
+                  className="px-2 py-1 text-xs rounded border border-gris/30 text-noir hover:bg-blanc-casse disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removePartner(index)}
+                  title="Supprimer"
+                  className="px-2 py-1 text-xs rounded border border-terre-cuite/30 text-terre-cuite hover:bg-terre-cuite/10"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          onClick={addPartner}
+          className="px-3 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+        >
+          + Ajouter un partenaire
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer"}
+        </button>
+        {saved && <span className="text-sm text-malachite">Enregistré !</span>}
+      </div>
+    </form>
+  );
+}
+
 // ─── SEO tab ───────────────────────────────────────────────────────
 
 function SeoTab({
@@ -705,6 +918,7 @@ export default function SettingsPage() {
       {/* Tab content */}
       {activeTab === "identity" && <IdentityTab settings={settings} onSave={handleSave} />}
       {activeTab === "contacts" && <ContactsTab settings={settings} onSave={handleSave} />}
+      {activeTab === "ecosystem" && <EcosystemTab settings={settings} onSave={handleSave} />}
       {activeTab === "seo" && <SeoTab settings={settings} onSave={handleSave} />}
       {activeTab === "cache" && <CacheTab />}
     </div>

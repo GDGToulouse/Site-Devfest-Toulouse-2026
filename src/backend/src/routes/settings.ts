@@ -83,4 +83,33 @@ export default async function settingsRoutes(app: FastifyInstance) {
     }
     return result;
   });
+
+  // GET /api/settings/ecosystem — returns the ordered list of ecosystem partners
+  // displayed on the home page and in the footer. Stored as a JSON-encoded
+  // array under the single key `ecosystem_partners`.
+  app.get("/settings/ecosystem", async () => {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "ecosystem_partners" },
+    });
+    if (!setting?.value) return [];
+    try {
+      const parsed = JSON.parse(setting.value) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(
+          (p): p is { name: string; url: string; isFeatured?: boolean } =>
+            typeof p === "object" &&
+            p !== null &&
+            typeof (p as { name?: unknown }).name === "string" &&
+            typeof (p as { url?: unknown }).url === "string",
+        )
+        .map((p) => ({
+          name: p.name,
+          url: p.url,
+          isFeatured: Boolean(p.isFeatured),
+        }));
+    } catch {
+      return [];
+    }
+  });
 }
