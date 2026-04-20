@@ -232,7 +232,9 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   const currentStatusOption = STATUS_OPTIONS.find((o) => o.value === settings.sponsorPageStatus);
   const showTempUrl = settings.sponsorPageStatus === "PRE_ANNOUNCEMENT" || settings.sponsorPageStatus === "TEMPORARY";
-  const showBrochure = settings.sponsorPageStatus === "OPEN";
+  // Brochure is always editable — admins typically upload it before flipping
+  // the page to OPEN, and the sponsor-brochure email template needs it
+  // available regardless of the public page status.
 
   return (
     <div>
@@ -312,38 +314,36 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
           />
         </div>
 
-        {showBrochure && (
-          <div>
-            <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
-            <div className="flex items-center gap-3">
+        <div>
+          <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsBrochurePickerOpen(true)}
+              className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              {settings.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
+            </button>
+            {settings.sponsorBrochureUrl && (
               <button
                 type="button"
-                onClick={() => setIsBrochurePickerOpen(true)}
-                className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+                onClick={() => setSettings({ ...settings, sponsorBrochureUrl: null })}
+                className="text-sm text-terre-cuite hover:underline"
               >
-                {settings.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
+                Supprimer
               </button>
-              {settings.sponsorBrochureUrl && (
-                <button
-                  type="button"
-                  onClick={() => setSettings({ ...settings, sponsorBrochureUrl: null })}
-                  className="text-sm text-terre-cuite hover:underline"
-                >
-                  Supprimer
-                </button>
-              )}
-            </div>
-            {settings.sponsorBrochureUrl && (
-              <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>
             )}
-            <FilePickerDialog
-              open={isBrochurePickerOpen}
-              onClose={() => setIsBrochurePickerOpen(false)}
-              onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrl: url })}
-              title="Bibliothèque de plaquettes"
-            />
           </div>
-        )}
+          {settings.sponsorBrochureUrl && (
+            <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>
+          )}
+          <FilePickerDialog
+            open={isBrochurePickerOpen}
+            onClose={() => setIsBrochurePickerOpen(false)}
+            onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrl: url })}
+            title="Bibliothèque de plaquettes"
+          />
+        </div>
 
         <div className="flex items-center gap-3">
           <button
