@@ -192,16 +192,16 @@ export default async function SponsorPage() {
                     return (
                       <div
                         key={plan.id}
-                        className={`relative flex flex-col border border-gris/20 bg-blanc ${
+                        className={`relative flex flex-col border border-gris/20 bg-blanc rounded-2xl ${
                           plan.isFeatured
-                            ? "lg:-my-4 lg:shadow-xl lg:z-10 lg:scale-[1.03] rounded-2xl"
-                            : "first:rounded-l-2xl last:rounded-r-2xl"
+                            ? "lg:-my-4 lg:shadow-xl lg:z-10 lg:scale-[1.03]"
+                            : ""
                         }`}
                       >
                         {/* Color header */}
                         <div
-                          className={`px-6 py-4 text-center ${
-                            plan.isFeatured ? "rounded-t-2xl py-5" : "first:rounded-tl-2xl last:rounded-tr-2xl"
+                          className={`px-6 py-4 text-center rounded-t-2xl ${
+                            plan.isFeatured ? "py-5" : ""
                           }`}
                           style={{ backgroundColor: plan.color }}
                         >
