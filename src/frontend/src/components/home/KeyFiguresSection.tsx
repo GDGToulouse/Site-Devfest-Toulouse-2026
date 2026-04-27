@@ -42,7 +42,7 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
             {figures.map((figure) => (
               <div
                 key={figure.icon}
-                className="flex flex-col items-center text-center p-6 rounded-xl bg-blanc"
+                className="flex flex-col items-center text-center p-6 rounded-xl"
               >
                 <StatIcon name={figure.icon} className="text-4xl lg:text-[56px]" />
                 <span className="mt-3 text-4xl lg:text-[56px] lg:leading-[140%] font-bold text-noir">
