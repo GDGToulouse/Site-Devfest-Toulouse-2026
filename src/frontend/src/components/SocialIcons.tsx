@@ -3,13 +3,6 @@ import { faLinkedin, faYoutube, faXTwitter, faBluesky } from "@fortawesome/free-
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { SocialLinks } from "@/lib/types";
 
-const DEFAULT_LINKS: SocialLinks = {
-  social_linkedin: "https://www.linkedin.com/company/gdg-toulouse/",
-  social_youtube: "https://www.youtube.com/@GDGToulouse",
-  social_x: "https://x.com/DevFestToulouse",
-  social_bluesky: "https://bsky.app/profile/devfesttoulouse.fr",
-};
-
 const SOCIAL_ITEMS: { key: keyof SocialLinks; name: string; icon: IconDefinition }[] = [
   { key: "social_linkedin", name: "LinkedIn", icon: faLinkedin },
   { key: "social_youtube", name: "YouTube", icon: faYoutube },
@@ -17,6 +10,9 @@ const SOCIAL_ITEMS: { key: keyof SocialLinks; name: string; icon: IconDefinition
   { key: "social_bluesky", name: "Bluesky", icon: faBluesky },
 ];
 
+// Admin-saved values are the only source of truth. Empty/missing values
+// hide the corresponding icon — no hardcoded fallback to GDG accounts,
+// which would silently override an empty admin setting.
 export default function SocialIcons({
   size = 24,
   className = "",
@@ -26,12 +22,10 @@ export default function SocialIcons({
   className?: string;
   links?: SocialLinks;
 }) {
-  const resolved = { ...DEFAULT_LINKS, ...links };
-
   return (
     <div className={`flex items-center gap-4 ${className}`}>
       {SOCIAL_ITEMS.map((social) => {
-        const href = resolved[social.key];
+        const href = links?.[social.key]?.trim();
         if (!href) return null;
         return (
           <a

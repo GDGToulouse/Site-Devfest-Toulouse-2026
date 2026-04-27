@@ -136,7 +136,7 @@ export default async function LocaleLayout({
       </a>
       <NextIntlClientProvider>
         <LanguageSuggestionBanner />
-        <EditionProvider edition={edition} cfp={cfp} identity={identity}>
+        <EditionProvider edition={edition} cfp={cfp} identity={identity} socialLinks={socialLinks}>
           <Header />
           <main id="main-content" role="main" className="flex-1">
             {children}

@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition, useIdentitySettings } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
 
@@ -25,6 +25,7 @@ export default function Header() {
   const edition = useEdition();
   const cfp = useCfpSettings();
   const identity = useIdentitySettings();
+  const socialLinks = useSocialLinks();
   // Header sits on a white bar — use the square / main logo (color on white).
   const logoUrl = getLogoUrl(identity, "square");
 
@@ -77,7 +78,7 @@ export default function Header() {
 
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-4">
-          <SocialIcons size={20} className="text-gris" />
+          <SocialIcons size={20} className="text-gris" links={socialLinks} />
           {showSponsorCta && (
             <Link
               href="/devenir-sponsor"
@@ -156,7 +157,7 @@ export default function Header() {
               </a>
             )}
             <div className="flex items-center justify-between">
-              <SocialIcons size={24} className="text-gris" />
+              <SocialIcons size={24} className="text-gris" links={socialLinks} />
               <LanguageSwitcher />
             </div>
           </div>
