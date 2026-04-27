@@ -51,7 +51,7 @@ export default async function Footer() {
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-[84px] lg:py-8">
         <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
           {/* Left column — Logo + socials + CTA */}
-          <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-6 items-start">
             <Image
               src={logoUrl}
               alt="DevFest Toulouse"
@@ -60,9 +60,9 @@ export default async function Footer() {
               className="h-auto"
             />
 
-            <div>
+            <div className="w-full">
               <p className="text-blanc text-sm mb-2">{tFooter("followUs")}</p>
-              <SocialIcons size={48} className="text-blanc" links={socialLinks} />
+              <SocialIcons size={48} className="text-blanc justify-start flex-wrap" links={socialLinks} />
             </div>
 
             <Link
