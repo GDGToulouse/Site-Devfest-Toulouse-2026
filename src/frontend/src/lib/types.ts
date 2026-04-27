@@ -9,9 +9,11 @@ export interface Edition {
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
-  partnerFormUrl: string | null;
+  sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
+  previousYear: number | null;
   previousAfterMovieUrl: string | null;
+  previousGalleryUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
   sponsorBrochureUrl: string | null;
@@ -35,6 +37,12 @@ export interface SocialLinks {
   social_youtube?: string;
   social_x?: string;
   social_bluesky?: string;
+}
+
+export interface EcosystemPartner {
+  name: string;
+  url: string;
+  isFeatured: boolean;
 }
 
 export interface Article {

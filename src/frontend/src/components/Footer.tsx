@@ -2,32 +2,35 @@ import Image from "next/image";
 import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
-import { getCurrentEdition, getEditions, getIdentitySettings, getSocialLinks } from "@/lib/api";
+import {
+  getCurrentEdition,
+  getEcosystemPartners,
+  getEditions,
+  getIdentitySettings,
+  getSocialLinks,
+} from "@/lib/api";
 import { getLogoUrl } from "@/lib/identity";
 import SocialIcons from "./SocialIcons";
 
 const NAV_LINKS = [
   { key: "program", href: "/conferences" },
   { key: "speakers", href: "/speakers" },
-  { key: "partners", href: "/partners" },
+  { key: "sponsors", href: "/sponsors" },
   { key: "blog", href: "/actualites" },
 ] as const;
 
-const ECOSYSTEM_LINKS = [
-  { label: "ToulouseTechHub", href: "https://www.toulousetechhub.com/" },
-  { label: "CloudToulouse", href: "https://www.cloudtoulouse.com/" },
-];
-
 export default async function Footer() {
-  const [tNav, tFooter, tCta, edition, editions, socialLinks, identity] = await Promise.all([
-    getTranslations("nav"),
-    getTranslations("footer"),
-    getTranslations("cta"),
-    getCurrentEdition(),
-    getEditions(),
-    getSocialLinks(),
-    getIdentitySettings(),
-  ]);
+  const [tNav, tFooter, tCta, edition, editions, socialLinks, identity, ecosystemPartners] =
+    await Promise.all([
+      getTranslations("nav"),
+      getTranslations("footer"),
+      getTranslations("cta"),
+      getCurrentEdition(),
+      getEditions(),
+      getSocialLinks(),
+      getIdentitySettings(),
+      getEcosystemPartners(),
+    ]);
 
   // Footer sits on a dark green background — pick the white variant.
   const logoUrl = getLogoUrl(identity, "white");
@@ -77,7 +80,7 @@ export default async function Footer() {
               const footerLinks = NAV_LINKS.filter((link) => {
                 if (link.key === "program" && !edition?.isProgramPublished) return false;
                 if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-                if (link.key === "partners" && !edition?.hasSponsors) return false;
+                if (link.key === "sponsors" && !edition?.hasSponsors) return false;
                 return true;
               });
               if (footerLinks.length === 0) return null;
@@ -91,7 +94,7 @@ export default async function Footer() {
                       <li key={link.key}>
                         <Link
                           href={link.href}
-                          className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                          className="text-blanc text-base hover:opacity-70 transition-opacity"
                         >
                           {tNav(link.key)}
                         </Link>
@@ -103,25 +106,27 @@ export default async function Footer() {
             })()}
 
             {/* Ecosystems */}
-            <div>
-              <p className="text-blanc text-xl font-bold mb-2 leading-snug">
-                {tFooter("ecosystems")}
-              </p>
-              <ul className="flex flex-col gap-1">
-                {ECOSYSTEM_LINKS.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blanc text-base hover:text-blanc-casse transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {ecosystemPartners.length > 0 && (
+              <div>
+                <p className="text-blanc text-xl font-bold mb-2 leading-snug">
+                  {tFooter("ecosystems")}
+                </p>
+                <ul className="flex flex-col gap-1">
+                  {ecosystemPartners.map((partner) => (
+                    <li key={`${partner.name}-${partner.url}`}>
+                      <a
+                        href={partner.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blanc text-base hover:opacity-70 transition-opacity"
+                      >
+                        {partner.name}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* Previous editions — from database */}
             {previousEditions.length > 0 && (
@@ -134,7 +139,7 @@ export default async function Footer() {
                     <li key={e.id}>
                       <Link
                         href={`/editions/${e.year}`}
-                        className="text-blanc text-base hover:text-blanc-casse transition-colors"
+                        className="text-blanc text-base hover:opacity-70 transition-opacity"
                       >
                         DevFest Toulouse {e.year}
                       </Link>

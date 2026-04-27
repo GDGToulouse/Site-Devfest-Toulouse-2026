@@ -114,7 +114,11 @@ export default async function HomePage() {
 
       {/* PREPARATION: teasing + replay from previous edition */}
       {isPreparation && edition?.previousAfterMovieUrl && (
-        <ReplaySection aftermovieUrl={edition.previousAfterMovieUrl} />
+        <ReplaySection
+          aftermovieUrl={edition.previousAfterMovieUrl}
+          galleryUrl={edition.previousGalleryUrl}
+          editionYear={edition.previousYear}
+        />
       )}
 
       {/* ANNOUNCEMENT: full content */}
@@ -127,7 +131,11 @@ export default async function HomePage() {
       )}
 
       {isAnnouncement && edition?.previousAfterMovieUrl && (
-        <ReplaySection aftermovieUrl={edition.previousAfterMovieUrl} />
+        <ReplaySection
+          aftermovieUrl={edition.previousAfterMovieUrl}
+          galleryUrl={edition.previousGalleryUrl}
+          editionYear={edition.previousYear}
+        />
       )}
 
       {isAnnouncement && articles.length > 0 && (

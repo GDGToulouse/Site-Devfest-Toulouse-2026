@@ -128,7 +128,7 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
                     href="/devenir-sponsor"
                     className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
                   >
-                    {t("ctaPartner")}
+                    {t("ctaSponsor")}
                   </Link>
                 )}
                 {cfpUrl && (

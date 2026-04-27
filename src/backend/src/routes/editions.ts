@@ -110,11 +110,13 @@ export default async function editionRoutes(app: FastifyInstance) {
       return reply.status(404).send({ error: "No edition found" });
     }
 
-    // Fetch previous edition's aftermovie
+    // Fetch previous edition's aftermovie + gallery + year, used by the
+    // home page to link back to last edition's content during preparation
+    // and announcement phases.
     const previousEdition = await prisma.edition.findFirst({
       where: { year: { lt: edition.year } },
       orderBy: { year: "desc" },
-      select: { aftermovieUrl: true },
+      select: { year: true, aftermovieUrl: true, galleryUrl: true },
     });
 
     return {
@@ -126,9 +128,11 @@ export default async function editionRoutes(app: FastifyInstance) {
       venueName: edition.venueName,
       venueAddress: edition.venueAddress,
       heroImageUrl: edition.heroImageUrl,
-      partnerFormUrl: edition.partnerFormUrl,
+      sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
+      previousYear: previousEdition?.year ?? null,
       previousAfterMovieUrl: previousEdition?.aftermovieUrl || null,
+      previousGalleryUrl: previousEdition?.galleryUrl || null,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
       sponsorBrochureUrl: edition.sponsorBrochureUrl,

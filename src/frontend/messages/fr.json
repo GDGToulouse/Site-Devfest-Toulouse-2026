@@ -12,11 +12,11 @@
     "home": "Accueil",
     "program": "Programme",
     "speakers": "Speakers",
-    "partners": "Partenaires",
+    "sponsors": "Sponsors",
     "blog": "Actus"
   },
   "cta": {
-    "becomePartner": "Devenir partenaire",
+    "becomeSponsor": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
     "contactUs": "Contactez-nous"
   },
@@ -27,7 +27,7 @@
       "subtitleLine2devs": "les devs",
       "subtitleLine2end": " et pour les ",
       "subtitleLine2devs2": "devs.",
-      "ctaPartner": "Devenir partenaire",
+      "ctaSponsor": "Devenir sponsor",
       "ctaTalk": "Proposer un talk"
     },
     "stats": {
@@ -52,7 +52,9 @@
       "viewAll": "Voir la billetterie"
     },
     "replay": {
-      "title": "Résumé de l'année dernière"
+      "title": "Résumé de l'année dernière",
+      "viewGallery": "Voir l'album photo",
+      "viewEdition": "Voir l'édition {year}"
     }
   },
   "footer": {
@@ -244,13 +246,13 @@
     "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
     "home": "Accueil"
   },
-  "partners": {
-    "title": "Partenaires",
-    "description": "Découvrez les partenaires et sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
-    "heading": "Partenaires du DevFest Toulouse {year}",
-    "comingSoonTitle": "Les partenaires seront annoncés prochainement",
-    "comingSoonBody": "La liste des partenaires et sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
-    "becomePartnerCta": "Devenir partenaire",
+  "sponsors": {
+    "title": "Sponsors",
+    "description": "Découvrez les sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
+    "heading": "Sponsors du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les sponsors seront annoncés prochainement",
+    "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
+    "becomeSponsorCta": "Devenir sponsor",
     "home": "Accueil"
   }
 }

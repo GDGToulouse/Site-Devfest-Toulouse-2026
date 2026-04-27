@@ -6,14 +6,14 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition, useIdentitySettings } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
 
 const ALL_NAV_LINKS = [
   { key: "program", href: "/conferences" },
   { key: "speakers", href: "/speakers" },
-  { key: "partners", href: "/partners" },
+  { key: "sponsors", href: "/sponsors" },
   { key: "blog", href: "/actualites" },
 ] as const;
 
@@ -25,6 +25,7 @@ export default function Header() {
   const edition = useEdition();
   const cfp = useCfpSettings();
   const identity = useIdentitySettings();
+  const socialLinks = useSocialLinks();
   // Header sits on a white bar — use the square / main logo (color on white).
   const logoUrl = getLogoUrl(identity, "square");
 
@@ -36,7 +37,7 @@ export default function Header() {
   const navLinks = ALL_NAV_LINKS.filter((link) => {
     if (link.key === "program" && !edition?.isProgramPublished) return false;
     if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-    if (link.key === "partners" && !edition?.hasSponsors) return false;
+    if (link.key === "sponsors" && !edition?.hasSponsors) return false;
     return true;
   });
 
@@ -77,13 +78,13 @@ export default function Header() {
 
         {/* Desktop actions */}
         <div className="hidden lg:flex items-center gap-4">
-          <SocialIcons size={20} className="text-gris" />
+          <SocialIcons size={20} className="text-gris" links={socialLinks} />
           {showSponsorCta && (
             <Link
               href="/devenir-sponsor"
               className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
             >
-              {tCta("becomePartner")}
+              {tCta("becomeSponsor")}
             </Link>
           )}
           {cfpUrl && (
@@ -142,7 +143,7 @@ export default function Header() {
                 className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
                 onClick={() => setIsMenuOpen(false)}
               >
-                {tCta("becomePartner")}
+                {tCta("becomeSponsor")}
               </Link>
             )}
             {cfpUrl && (
@@ -156,7 +157,7 @@ export default function Header() {
               </a>
             )}
             <div className="flex items-center justify-between">
-              <SocialIcons size={24} className="text-gris" />
+              <SocialIcons size={24} className="text-gris" links={socialLinks} />
               <LanguageSwitcher />
             </div>
           </div>

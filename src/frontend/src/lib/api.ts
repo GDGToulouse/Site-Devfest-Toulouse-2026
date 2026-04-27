@@ -13,6 +13,7 @@ import type {
   ContactCategory,
   PaginatedArticles,
   SponsorPlan,
+  EcosystemPartner,
 } from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -116,6 +117,10 @@ export async function getSeoSettings(): Promise<Record<string, string>> {
 // favicon metadata; Header/Footer pick the right logo variant via a helper.
 export async function getIdentitySettings(): Promise<Record<string, string>> {
   return (await fetchAPI<Record<string, string>>("/api/settings/identity")) || {};
+}
+
+export async function getEcosystemPartners(): Promise<EcosystemPartner[]> {
+  return (await fetchAPI<EcosystemPartner[]>("/api/settings/ecosystem")) || [];
 }
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {

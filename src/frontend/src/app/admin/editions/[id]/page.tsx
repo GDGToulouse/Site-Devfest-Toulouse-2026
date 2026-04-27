@@ -20,7 +20,7 @@ interface EditionData {
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
-  partnerFormUrl: string | null;
+  sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
