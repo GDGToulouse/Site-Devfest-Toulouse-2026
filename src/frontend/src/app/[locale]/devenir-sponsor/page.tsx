@@ -99,13 +99,13 @@ export default async function SponsorPage() {
             </h1>
           )}
 
-          <p className="mt-6 text-lg text-gris leading-relaxed max-w-3xl">
+          <p className="mt-6 text-lg text-gris leading-relaxed">
             {t("intro")}
           </p>
 
           {/* Sold-out callout — short and ends the page */}
           {showSoldOut && (
-            <div className="mt-12 p-8 rounded-xl bg-blanc shadow-card max-w-3xl">
+            <div className="mt-12 p-8 rounded-xl bg-blanc shadow-card">
               <h2 className="text-2xl lg:text-3xl font-bold text-noir">
                 {t("soldOutTitle")}
               </h2>
@@ -149,7 +149,7 @@ export default async function SponsorPage() {
 
           {/* Pre-announcement message */}
           {showPreAnnouncementMessage && (
-            <div className="mt-16 p-8 rounded-xl bg-blanc shadow-card max-w-3xl">
+            <div className="mt-16 p-8 rounded-xl bg-blanc shadow-card">
               <h2 className="text-2xl lg:text-3xl font-bold text-noir">
                 {t("preAnnouncementTitle")}
               </h2>
@@ -282,13 +282,13 @@ export default async function SponsorPage() {
           {/* Integrated contact form (OPEN mode only) */}
           {showIntegratedForm && sponsoringCategory && (
             <div id="contact" className="mt-16 scroll-mt-8">
-              <h2 className="text-2xl lg:text-4xl font-bold text-noir">
+              <h2 className="text-2xl lg:text-4xl font-bold text-noir text-center">
                 {t("formTitle")}
               </h2>
-              <p className="mt-4 text-gris leading-relaxed max-w-3xl">
+              <p className="mt-4 text-gris leading-relaxed text-center">
                 {t("formIntro")}
               </p>
-              <div className="mt-8 max-w-2xl">
+              <div className="mt-8 mx-auto max-w-2xl">
                 <ContactForm
                   categories={categories}
                   locale={locale}

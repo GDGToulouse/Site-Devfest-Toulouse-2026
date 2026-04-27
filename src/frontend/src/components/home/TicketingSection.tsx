@@ -15,6 +15,14 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
 
   const billetwebUrl = tiers.find((t) => t.externalUrl)?.externalUrl || null;
 
+  // When the row isn't full, cap the column count so the cards stay
+  // centred instead of clinging to the left edge of a 3-column grid.
+  // Cards are also given a fixed max-width so the centred row keeps
+  // the same card size as a full row.
+  const lgCols =
+    tiers.length === 1 ? "lg:grid-cols-1" : tiers.length === 2 ? "lg:grid-cols-2" : "lg:grid-cols-3";
+  const smCols = tiers.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-2";
+
   return (
     <section className="px-6 py-16 lg:py-24 bg-blanc-casse">
       <div className="mx-auto max-w-6xl text-center">
@@ -22,7 +30,10 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
           {t("title")}
         </h2>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
+        <div
+          className={`grid grid-cols-1 ${smCols} ${lgCols} gap-6 mb-10 justify-center mx-auto`}
+          style={{ maxWidth: tiers.length < 3 ? `${tiers.length * 360}px` : undefined }}
+        >
           {tiers.map((tier) => {
             const name = localizedField(tier, "name", locale);
             const isAvailable = tier.status === "AVAILABLE";
