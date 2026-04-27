@@ -52,7 +52,8 @@
       "viewAll": "Voir la billetterie"
     },
     "replay": {
-      "title": "Résumé de l'année dernière",
+      "title": "Revivez l'édition {year} en 2 minutes !",
+      "titleFallback": "Revivez la dernière édition en 2 minutes !",
       "viewGallery": "Voir l'album photo",
       "viewEdition": "Voir l'édition {year}"
     }

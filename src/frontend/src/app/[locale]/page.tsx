@@ -148,7 +148,10 @@ export default async function HomePage() {
 
       {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
       {isSeeYouNextYear && edition?.aftermovieUrl && (
-        <ReplaySection aftermovieUrl={edition.aftermovieUrl} />
+        <ReplaySection
+          aftermovieUrl={edition.aftermovieUrl}
+          editionYear={edition.year}
+        />
       )}
 
       {isSeeYouNextYear && edition?.galleryUrl && (

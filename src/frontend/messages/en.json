@@ -52,7 +52,8 @@
       "viewAll": "View all tickets"
     },
     "replay": {
-      "title": "Last year's recap",
+      "title": "Relive the {year} edition in 2 minutes!",
+      "titleFallback": "Relive the last edition in 2 minutes!",
       "viewGallery": "View the photo gallery",
       "viewEdition": "View the {year} edition"
     }

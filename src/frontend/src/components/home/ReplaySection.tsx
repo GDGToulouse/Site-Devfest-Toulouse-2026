@@ -21,7 +21,7 @@ export default function ReplaySection({
     <section className="px-6 py-16 lg:py-24">
       <div className="mx-auto max-w-4xl">
         <h2 className="text-3xl lg:text-5xl font-bold text-noir text-center mb-10">
-          {t("title")}
+          {editionYear ? t("title", { year: editionYear }) : t("titleFallback")}
         </h2>
         <YouTubeFacade videoUrl={aftermovieUrl} title="DevFest Toulouse Aftermovie" />
         {hasCtas && (
