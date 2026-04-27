@@ -47,7 +47,18 @@ export default async function TicketingPage() {
               <p className="mt-6 text-lg font-bold text-rouge">{t("allSoldOut")}</p>
             )}
 
-            <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div
+              className={`mt-10 grid grid-cols-1 ${
+                tiers.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-2"
+              } ${
+                tiers.length === 1
+                  ? "lg:grid-cols-1"
+                  : tiers.length === 2
+                    ? "lg:grid-cols-2"
+                    : "lg:grid-cols-3"
+              } gap-8 justify-center mx-auto`}
+              style={{ maxWidth: tiers.length < 3 ? `${tiers.length * 380}px` : undefined }}
+            >
               {tiers.map((tier) => {
                 const name = localizedField(tier, "name", locale);
                 const isAvailable = tier.status === "AVAILABLE";
