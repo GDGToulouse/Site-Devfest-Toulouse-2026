@@ -1,10 +1,15 @@
 generator client {
-  provider = "prisma-client-js"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  // tsc compiles the generated client to dist/ and Node runs it as pure ESM,
+  // which requires explicit .js extensions on relative imports. Without this
+  // the runtime throws ERR_MODULE_NOT_FOUND on ./internal/class.
+  importFileExtension = "js"
+  moduleFormat        = "esm"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 // ============================================

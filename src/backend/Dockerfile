@@ -9,9 +9,12 @@ COPY src/backend/package.json src/backend/pnpm-lock.yaml ./
 RUN pnpm install --config.confirmModulesPurge=false
 
 COPY src/backend/ ./
-COPY prisma/ ./prisma/
 
-RUN pnpm exec prisma generate --schema prisma/schema.prisma
+# `prisma generate` loads prisma.config.ts, which resolves DATABASE_URL via
+# env(). The client generation never connects, but the config still requires
+# the var to be present — pass a throwaway value at build time (the real URL is
+# injected at runtime).
+RUN DATABASE_URL="postgresql://build:build@localhost:5432/build" pnpm exec prisma generate
 RUN pnpm build
 
 ARG SEED_SCRIPT=prisma/seed.ts

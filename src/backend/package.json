@@ -8,10 +8,10 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "db:migrate": "prisma migrate dev --schema ../../prisma/schema.prisma",
-    "db:generate": "prisma generate --schema ../../prisma/schema.prisma",
-    "db:push": "prisma db push --schema ../../prisma/schema.prisma",
-    "db:studio": "prisma studio --schema ../../prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
     "test": "vitest run"
   },
   "dependencies": {
@@ -24,18 +24,19 @@
     "@fastify/swagger": "^9.7.0",
     "@fastify/swagger-ui": "^5.2.5",
     "@node-rs/argon2": "^2.0.2",
-    "@prisma/client": "6",
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0",
+    "@prisma/config": "^7.8.0",
     "better-auth": "^1.6.5",
     "fastify": "^5.8.4",
     "nodemailer": "^8.0.4",
-    "prisma": "6",
+    "pg": "^8.21.0",
+    "prisma": "^7.8.0",
     "sanitize-html": "^2.17.3",
     "sharp": "^0.34.5"
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "prisma",
-      "@prisma/engines",
       "esbuild",
       "sharp",
       "@img/sharp-libvips-linux-x64",
@@ -44,12 +45,10 @@
       "@img/sharp-linuxmusl-x64"
     ]
   },
-  "prisma": {
-    "seed": "tsx ../../prisma/seed.ts"
-  },
   "devDependencies": {
     "@types/node": "^25.5.0",
     "@types/nodemailer": "^7.0.11",
+    "@types/pg": "^8.15.6",
     "@types/sanitize-html": "^2.16.1",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",

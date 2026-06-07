@@ -8,6 +8,9 @@ package-lock.json
 dist/
 out/
 
+# Prisma generated client (provider = prisma-client, regenerated on install/build)
+src/backend/src/generated/
+
 # Environment
 .env
 .env.local
