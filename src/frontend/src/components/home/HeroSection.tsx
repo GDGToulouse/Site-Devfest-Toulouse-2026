@@ -33,117 +33,82 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = getCfpCtaUrl(cfp);
 
-  const backgroundImage = heroImageUrl
-    ? `linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('${heroImageUrl}')`
-    : "linear-gradient(0deg, rgba(29, 29, 27, 0.3), rgba(29, 29, 27, 0.3)), url('https://picsum.photos/1200/800?random=devfest')";
+  // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
+  const yearMonogram = edition?.year ? `'${String(edition.year).slice(-2)}` : null;
+
+  const photoBackground = heroImageUrl
+    ? `linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('${heroImageUrl}')`
+    : "linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('https://picsum.photos/1600/1000?random=devfest')";
 
   return (
-    <section className="relative w-full bg-blanc">
-      {/* Background photo — starts at 1/3 of max-w container, extends to right edge of viewport */}
-      <div
-        className="absolute top-0 bottom-0 left-0 lg:left-[max(0px,calc(50%-240px))] right-0 bg-cover bg-center"
-        style={{
-          backgroundImage,
-          borderRadius: "64px 0px 0px 64px",
-        }}
-      />
-      <div className="relative mx-auto max-w-[1440px] min-h-[600px] lg:min-h-[700px]">
+    <section className="hero w-full bg-blanc" aria-label="DevFest Toulouse">
+      <div className="hero-inner">
+        <div className="hero-content">
+          {/* Visually hidden H1 holds the semantic page heading so crawlers
+              and assistive tech see the full "DevFest Toulouse {year}" text.
+              The two-tone visual title below is decorative (aria-hidden). */}
+          <h1 className="sr-only">
+            DevFest Toulouse {edition?.year ?? ""} — {t("subtitleLine1")} {t("subtitleLine2devs")}
+          </h1>
 
-        {/* 5 staircase blocks — pyramid effect */}
-        <div className="relative z-10 flex min-h-[600px] lg:min-h-[700px] items-center">
-          <div className="flex flex-col items-start">
-            {/* Visually hidden H1 holds the semantic page heading so crawlers
-                and assistive tech see the full "DevFest Toulouse 2026" text.
-                The visual staircase below is purely decorative (aria-hidden). */}
-            <h1 className="sr-only">
-              DevFest Toulouse {edition?.year ?? ""} — {t("subtitleLine1")}
-            </h1>
+          <p className="hero-title" aria-hidden="true">
+            <span className="text-malachite">DevFest</span>
+            <span className="text-terre-cuite">Toulouse</span>
+          </p>
 
-            {/* Block 1: DevFest — most indented, rounded top-right only */}
-            <div
-              aria-hidden="true"
-              className="bg-blanc pl-8 lg:pl-[150px] pr-8 lg:pr-[45px] pt-[10px] pb-[2px]"
-              style={{ borderTopRightRadius: "40px" }}
-            >
-              <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-malachite">
-                DevFest
-              </span>
+          <p className="hero-tagline text-noir">
+            {t("subtitleLine1")} <strong>{t("subtitleLine2devs")}</strong>
+            {t("subtitleLine2end")}
+            <strong>{t("subtitleLine2devs2")}</strong>
+          </p>
+
+          {(dateLabel || venueLabel) && (
+            <div className="hero-meta">
+              {dateLabel && (
+                <span className="hero-meta-item">
+                  <strong className="text-noir">{dateLabel}</strong>
+                </span>
+              )}
+              {dateLabel && venueLabel && <span className="hero-meta-dot" />}
+              {venueLabel && (
+                <span className="hero-meta-item">
+                  <span className="text-gris">{venueLabel}</span>
+                </span>
+              )}
             </div>
+          )}
 
-            {/* Block 2: Toulouse + subtitle line 1 */}
-            <div
-              aria-hidden="true"
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-[2px] pb-[10px]"
-              style={{ borderTopRightRadius: "40px", borderBottomRightRadius: "40px" }}
-            >
-              <span className="text-5xl sm:text-6xl lg:text-[96px] font-bold leading-[1.05] tracking-tight text-terre-cuite">
-                Toulouse
-              </span>
-              <p className="pt-[22px] text-lg sm:text-xl lg:text-2xl text-noir/80 leading-relaxed">
-                {t("subtitleLine1")}
-              </p>
+          {(showSponsorCta || cfpUrl) && (
+            <div className="hero-ctas">
+              {showSponsorCta && (
+                <Link
+                  href="/devenir-sponsor"
+                  className="rounded-[12px] border-2 border-bleu bg-blanc px-7 py-3.5 text-lg font-bold text-bleu transition-colors hover:bg-bleu hover:text-blanc"
+                >
+                  {t("ctaSponsor")}
+                </Link>
+              )}
+              {cfpUrl && (
+                <a
+                  href={cfpUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                >
+                  {t("ctaTalk")}
+                </a>
+              )}
             </div>
+          )}
+        </div>
 
-            {/* Block 3: subtitle line 2 */}
-            <div
-              className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] pt-0 pb-[20px] -mt-[10px]"
-              style={{ borderBottomRightRadius: "40px" }}
-            >
-              <p className="text-lg leading-none sm:text-xl sm:leading-none lg:text-2xl lg:leading-none text-noir/80 pt-[3px]">
-                <strong>{t("subtitleLine2devs")}</strong>
-                {t("subtitleLine2end")}
-                <strong>{t("subtitleLine2devs2")}</strong>
-              </p>
-            </div>
-
-            {/* Block 4: Date */}
-            {dateLabel && (
-              <div
-                className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
-                style={{ borderBottomRightRadius: "40px" }}
-              >
-                <p className="text-lg text-noir">
-                  <strong>{dateLabel}</strong>
-                </p>
-              </div>
-            )}
-
-            {/* Block 5: Venue */}
-            {venueLabel && (
-              <div
-                className="bg-blanc pl-8 lg:pl-[225px] pr-8 lg:pr-[45px] py-[2px]"
-                style={{ borderBottomRightRadius: "40px" }}
-              >
-                <p className="text-lg text-noir/70">
-                  {venueLabel}
-                </p>
-              </div>
-            )}
-
-            {/* Buttons */}
-            {(showSponsorCta || cfpUrl) && (
-              <div className="mt-16 pl-8 lg:pl-[225px] flex flex-col sm:flex-row gap-4">
-                {showSponsorCta && (
-                  <Link
-                    href="/devenir-sponsor"
-                    className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-blanc text-bleu font-bold text-2xl hover:bg-bleu hover:text-blanc transition-colors text-center"
-                  >
-                    {t("ctaSponsor")}
-                  </Link>
-                )}
-                {cfpUrl && (
-                  <a
-                    href={cfpUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-8 py-5 rounded-[12px] border-3 border-bleu bg-bleu text-blanc font-bold text-2xl hover:bg-bleu/90 transition-colors text-center"
-                  >
-                    {t("ctaTalk")}
-                  </a>
-                )}
-              </div>
-            )}
-          </div>
+        <div
+          className="hero-photo"
+          aria-hidden="true"
+          style={{ backgroundImage: photoBackground }}
+        >
+          {cfpUrl && <span className="hero-photo-badge text-noir">{t("cfpBadge")}</span>}
+          {yearMonogram && <span className="hero-photo-wordmark">{yearMonogram}</span>}
         </div>
       </div>
     </section>
