@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "../src/generated/prisma/client.js";
 
 // Set BASE_URL before importing auth (Better Auth needs it at import time)
 process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
@@ -7,7 +8,8 @@ process.env.ADMIN_EMAILS = process.env.ADMIN_EMAILS || "admin@devfesttoulouse.fr
 
 const { auth } = await import("../src/lib/auth.js");
 
-const prisma = new PrismaClient();
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 export async function seedBase() {
   console.log("Seeding database (base)...");

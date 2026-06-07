@@ -45,13 +45,16 @@ backend/                       # REST API
 │   ├── routes/                # API route handlers
 │   ├── services/              # Business logic
 │   ├── lib/                   # Utilities (prisma, email, auth)
+│   ├── generated/prisma/      # Generated Prisma client (gitignored, Prisma 7)
 │   └── index.ts               # Server entry point
+├── prisma/                    # Database schema, migrations, seeds
+│   ├── schema.prisma
+│   ├── migrations/
+│   ├── seed.ts                # Base seed (idempotent, runs on boot)
+│   └── seed-dev.ts            # Dev-only test accounts + sample data
+├── prisma.config.ts           # Prisma 7 config (schema, migrations, datasource URL)
 ├── package.json
 └── Dockerfile
-
-prisma/                        # Database schema (used by backend)
-├── schema.prisma
-└── migrations/
 
 docs/                          # Specification documents (in French)
 ├── fonctionnalites-2026.md    # Feature list for the 2026 site
@@ -75,7 +78,7 @@ docker-compose.yml             # Dev environment: frontend + backend + db + mail
 
 ## Dev Test Accounts
 
-Local dev accounts provisioned by `prisma/seed-dev.ts` (run manually) — use for browser testing:
+Local dev accounts provisioned by `src/backend/prisma/seed-dev.ts` (run manually) — use for browser testing:
 
 | Role | Email | Password |
 |------|-------|----------|

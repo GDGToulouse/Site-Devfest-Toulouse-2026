@@ -207,3 +207,162 @@ body {
   pointer-events: none;
   height: 0;
 }
+
+/* ========================================
+ * Home hero — fluid layout, ultra-wide to mobile.
+ * clamp()-based sizing isn't expressible with Tailwind utilities, so the
+ * fluid rules live here; colors still come from design tokens via the
+ * component's Tailwind color classes.
+ * ======================================== */
+.hero {
+  --hero-pad: clamp(20px, 4vw, 56px);
+  --hero-gap: clamp(20px, 3vw, 48px);
+  --hero-radius: clamp(24px, 3vw, 48px);
+  position: relative;
+  padding: clamp(20px, 3vw, 40px) var(--hero-pad) clamp(48px, 6vw, 96px);
+}
+.hero-inner {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.15fr);
+  gap: var(--hero-gap);
+  align-items: stretch;
+  max-width: 1760px;
+  margin: 0 auto;
+}
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(20px, 2.4vw, 36px);
+  padding-block: clamp(12px, 2vw, 32px);
+}
+.hero-title {
+  font-size: clamp(56px, 9.5vw, 168px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0;
+  text-wrap: balance;
+}
+.hero-title span {
+  display: block;
+}
+.hero-tagline {
+  font-size: clamp(16px, 1.4vw, 22px);
+  line-height: 1.45;
+  max-width: 36ch;
+  margin: 0;
+}
+.hero-tagline strong {
+  font-weight: 700;
+}
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  font-size: clamp(14px, 1.05vw, 17px);
+}
+.hero-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-meta-item strong {
+  font-weight: 700;
+}
+.hero-meta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gris);
+  display: inline-block;
+}
+.hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.hero-photo {
+  position: relative;
+  min-height: clamp(280px, 42vw, 640px);
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--hero-radius);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: clamp(20px, 2vw, 36px);
+}
+.hero-photo-wordmark {
+  font-size: clamp(72px, 14vw, 240px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  user-select: none;
+  pointer-events: none;
+  font-style: italic;
+}
+.hero-photo-badge {
+  position: absolute;
+  top: clamp(16px, 1.6vw, 28px);
+  right: clamp(16px, 1.6vw, 28px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-photo-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-malachite);
+  box-shadow: 0 0 0 0 rgba(11, 115, 80, 0.6);
+  animation: heroPulse 1.8s infinite;
+}
+@keyframes heroPulse {
+  0% { box-shadow: 0 0 0 0 rgba(11, 115, 80, 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(11, 115, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(11, 115, 80, 0); }
+}
+
+/* Tablet & below — stack vertically, photo on top */
+@media (max-width: 900px) {
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: clamp(20px, 4vw, 32px);
+  }
+  .hero-photo {
+    order: -1;
+    min-height: clamp(220px, 50vw, 360px);
+  }
+  .hero-content {
+    padding-block: 0;
+  }
+}
+
+/* Ultra-wide — cap the type so it doesn't blow up past 1900px */
+@media (min-width: 1900px) {
+  .hero-title {
+    font-size: 168px;
+  }
+  .hero-photo-wordmark {
+    font-size: 240px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo-badge::before {
+    animation: none;
+  }
+}
