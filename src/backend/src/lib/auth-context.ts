@@ -1,5 +1,5 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
-import type { UserRole } from "@prisma/client";
+import type { UserRole } from "../generated/prisma/client.js";
 import { fromNodeHeaders } from "better-auth/node";
 
 import { auth } from "./auth.js";
