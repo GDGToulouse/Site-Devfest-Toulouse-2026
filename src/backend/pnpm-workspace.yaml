@@ -1,0 +1,14 @@
+# pnpm 10+ moved settings out of package.json's "pnpm" field into this file.
+# `packages` keeps pnpm 9 happy (it treats this file as a workspace root);
+# the backend is a single self-contained package.
+packages:
+  - "."
+# Only these packages may run install/build scripts (native binaries).
+# Prisma 7 no longer ships a native query engine, so it is not listed here.
+onlyBuiltDependencies:
+  - esbuild
+  - sharp
+  - "@img/sharp-libvips-linux-x64"
+  - "@img/sharp-libvips-linuxmusl-x64"
+  - "@img/sharp-linux-x64"
+  - "@img/sharp-linuxmusl-x64"

@@ -13,7 +13,7 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
-    command: sh -c "corepack enable && corepack prepare pnpm@latest --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
+    command: sh -c "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
     depends_on:
       - backend
 
@@ -50,7 +50,7 @@ services:
     command: >
       sh -c "
         corepack enable &&
-        corepack prepare pnpm@latest --activate &&
+        corepack prepare pnpm@9.15.4 --activate &&
         pnpm install --config.confirmModulesPurge=false &&
         pnpm exec prisma generate &&
         pnpm dev
