@@ -11,6 +11,7 @@ import adminContactRoutes from "./contact.js";
 import adminFileRoutes from "./files.js";
 import adminUserRoutes from "./users.js";
 import adminSponsorPlanRoutes from "./sponsor-plans.js";
+import adminSponsorRoutes from "./sponsors.js";
 import adminApiKeyRoutes from "./api-keys.js";
 import adminTranslateRoutes from "./translate.js";
 
@@ -26,6 +27,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminContactRoutes);
     await editorApp.register(adminFileRoutes);
     await editorApp.register(adminTranslateRoutes);
+    await editorApp.register(adminSponsorRoutes);
   });
 
   // Routes restricted to ADMIN only
