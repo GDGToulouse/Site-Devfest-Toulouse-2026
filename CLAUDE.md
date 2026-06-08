@@ -18,8 +18,8 @@ The frontend calls the backend via HTTP (`http://backend:4000` in Docker, config
 | Layer | Technology |
 |-------|------------|
 | Frontend | Next.js 16 (App Router), Tailwind CSS v4, next-intl, pnpm |
-| Backend | Node.js (framework TBD: Fastify or Hono), Prisma, PostgreSQL |
-| Auth | Auth.js v5 (Google + GitHub OAuth) — admin only |
+| Backend | Node.js (Fastify), Prisma, PostgreSQL |
+| Auth | better-auth (email/password + Google + GitHub OAuth) — admin only |
 | Email | SMTP (Postfix or equivalent, MailHog in dev) |
 | Hosting | VPS + Coolify, Docker Compose |
 | CI/CD | GitHub Actions (lint, typecheck, tests) |
