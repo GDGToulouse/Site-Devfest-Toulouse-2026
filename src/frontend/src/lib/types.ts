@@ -118,6 +118,22 @@ export interface SponsorPlan {
   isFeatured: boolean;
 }
 
+export type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
+
+export interface Sponsor {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  socialLinks: Record<string, string>;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
 export interface EditionDetail {
   id: number;
   year: number;

@@ -18,6 +18,8 @@ interface EditionBody {
   sponsorHeroImageUrl?: string;
   sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
   sponsorTemporaryFormUrl?: string;
+  // SponsorLevel names offered when creating a sponsor for this edition (US-245).
+  openSponsorLevels?: string[];
 }
 
 export default async function adminEditionRoutes(app: FastifyInstance) {
@@ -110,6 +112,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
+        openSponsorLevels: edition.openSponsorLevels ? JSON.parse(edition.openSponsorLevels) : [],
         ticketTiersCount: edition._count.ticketTiers,
         articlesCount: edition._count.articles,
       };
@@ -148,6 +151,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: body.sponsorHeroImageUrl !== undefined ? (body.sponsorHeroImageUrl || null) : existing.sponsorHeroImageUrl,
         sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
         sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
+        openSponsorLevels: body.openSponsorLevels !== undefined
+          ? (body.openSponsorLevels.length > 0 ? JSON.stringify(body.openSponsorLevels) : null)
+          : existing.openSponsorLevels,
       },
     });
 
