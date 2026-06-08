@@ -11,7 +11,7 @@ export default async function EcosystemSection() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="px-6 py-16 lg:py-24">
+    <section className="px-6 py-10 lg:py-14">
       <div className="mx-auto max-w-6xl text-center">
         <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
           {t("ecosystemTitle")}

@@ -4,12 +4,14 @@ export default function AboutSection() {
   const t = useTranslations("home.about");
 
   return (
-    <section className="px-6 py-16 lg:py-24">
+    <section className="px-6 py-10 lg:py-14">
       <div className="mx-auto max-w-6xl">
-        <div className="relative overflow-hidden rounded-3xl bg-noir min-h-[400px] flex items-center">
-          {/* Gradient placeholder — replace with actual background image */}
-          <div className="absolute inset-0 bg-gradient-to-r from-malachite/30 to-terre-cuite/20" />
-          <div className="absolute inset-0 bg-noir/60" />
+        <div className="relative overflow-hidden rounded-3xl bg-bismarck min-h-[400px] flex items-center">
+          {/* Warm orange filter over the (future) background photo, replacing
+              the previous black/red flat fill. A real photo can be dropped in
+              behind these layers later. */}
+          <div className="absolute inset-0 bg-gradient-to-br from-terre-cuite to-bismarck" />
+          <div className="absolute inset-0 bg-terre-cuite/40 mix-blend-multiply" />
 
           <div className="relative z-10 p-8 lg:p-16 max-w-2xl">
             <h2 className="text-3xl lg:text-5xl font-bold text-blanc mb-6">
