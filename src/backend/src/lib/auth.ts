@@ -68,15 +68,17 @@ export const auth = betterAuth({
     },
   },
   socialProviders: {
+    // Implicit sign-up stays enabled so an allow-listed admin can sign in via
+    // OAuth on their very first visit (no prior email/password account needed).
+    // Access is still gated: the databaseHooks.user.create.before hook below
+    // rejects any email that is not in ADMIN_EMAILS.
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || "",
-      disableImplicitSignUp: true,
     },
     github: {
       clientId: process.env.OAUTH_GITHUB_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET || "",
-      disableImplicitSignUp: true,
     },
   },
   account: {

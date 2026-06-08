@@ -4,6 +4,7 @@ import { useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface EditionData {
   id: number;
@@ -47,8 +48,12 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+  const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
 
-  async function handleSave() {
+  const statusLabel = (value: string) =>
+    STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
+  async function persist() {
     setIsSaving(true);
     setSaved(false);
     await adminFetch(`/editions/${edition.id}`, {
@@ -70,6 +75,16 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     setSaved(true);
     setTimeout(() => setSaved(false), 3000);
     onSaved();
+  }
+
+  // Changing the annual status reshapes the whole public homepage, so it needs
+  // an explicit confirmation (US-191). Other edits save straight away.
+  function handleSave() {
+    if (form.status !== edition.status) {
+      setIsStatusConfirmOpen(true);
+      return;
+    }
+    void persist();
   }
 
   return (
@@ -148,6 +163,19 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         </button>
         {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
       </div>
+
+      <ConfirmDialog
+        isOpen={isStatusConfirmOpen}
+        title="Changer le statut de l'édition ?"
+        message={`Le statut passera de « ${statusLabel(edition.status)} » à « ${statusLabel(form.status)} ». Cela modifie le contenu affiché sur la page d'accueil et purge son cache.`}
+        confirmLabel="Changer le statut"
+        cancelLabel="Annuler"
+        onConfirm={() => {
+          setIsStatusConfirmOpen(false);
+          void persist();
+        }}
+        onCancel={() => setIsStatusConfirmOpen(false)}
+      />
     </div>
   );
 }
