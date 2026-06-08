@@ -134,6 +134,36 @@ export interface Sponsor {
   editionId: number;
 }
 
+// Public list item (lighter than the admin Sponsor).
+export interface SponsorPublic {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+}
+
+export interface SponsorSpeakerRef {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+}
+
+export interface SponsorDetail {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  socialLinks: Record<string, string>;
+  speakers: SponsorSpeakerRef[];
+}
+
 export interface EditionDetail {
   id: number;
   year: number;
