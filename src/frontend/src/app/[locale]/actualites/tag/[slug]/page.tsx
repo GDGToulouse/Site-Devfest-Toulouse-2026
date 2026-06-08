@@ -36,7 +36,7 @@ export default async function TagPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
 
-  const { articles, totalPages } = await getArticles(page, 8, slug);
+  const { articles, totalPages } = await getArticles(page, 9, slug);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },

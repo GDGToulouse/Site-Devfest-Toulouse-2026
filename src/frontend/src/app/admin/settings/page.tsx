@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { adminFetch } from "@/lib/admin-api";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 const TABS = [
   { key: "identity", label: "Identité" },
@@ -32,6 +33,7 @@ function CacheTab() {
   const [customPath, setCustomPath] = useState("");
   const [isPurging, setIsPurging] = useState(false);
   const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [confirmScope, setConfirmScope] = useState<"selection" | "all" | null>(null);
 
   function togglePath(path: string) {
     setSelectedPaths((prev) =>
@@ -39,15 +41,19 @@ function CacheTab() {
     );
   }
 
-  async function handlePurge() {
+  function requestPurge() {
     const paths = [...selectedPaths];
-    if (customPath.trim()) {
-      paths.push(customPath.trim());
-    }
+    if (customPath.trim()) paths.push(customPath.trim());
     if (paths.length === 0) {
       setResult({ success: false, message: "Sélectionnez au moins un chemin" });
       return;
     }
+    setConfirmScope("selection");
+  }
+
+  async function purgeSelection() {
+    const paths = [...selectedPaths];
+    if (customPath.trim()) paths.push(customPath.trim());
 
     setIsPurging(true);
     setResult(null);
@@ -68,7 +74,7 @@ function CacheTab() {
     }
   }
 
-  async function handlePurgeAll() {
+  async function purgeAll() {
     setIsPurging(true);
     setResult(null);
 
@@ -118,14 +124,14 @@ function CacheTab() {
 
         <div className="flex gap-3">
           <button
-            onClick={handlePurge}
+            onClick={requestPurge}
             disabled={isPurging}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
             {isPurging ? "Purge en cours..." : "Purger la sélection"}
           </button>
           <button
-            onClick={handlePurgeAll}
+            onClick={() => setConfirmScope("all")}
             disabled={isPurging}
             className="px-4 py-2 bg-terre-cuite text-blanc rounded-lg text-sm font-medium hover:bg-terre-cuite/90 disabled:opacity-50"
           >
@@ -143,6 +149,26 @@ function CacheTab() {
           {result.message}
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmScope !== null}
+        title={confirmScope === "all" ? "Purger tout le cache ?" : "Purger les pages sélectionnées ?"}
+        message={
+          confirmScope === "all"
+            ? "Tout le cache des pages publiques sera régénéré. Les visiteurs verront du contenu frais (re-rendu au prochain accès)."
+            : "Les pages sélectionnées seront purgées et régénérées au prochain accès."
+        }
+        confirmLabel="Purger"
+        cancelLabel="Annuler"
+        variant="danger"
+        onConfirm={() => {
+          const scope = confirmScope;
+          setConfirmScope(null);
+          if (scope === "all") void purgeAll();
+          else void purgeSelection();
+        }}
+        onCancel={() => setConfirmScope(null)}
+      />
     </>
   );
 }

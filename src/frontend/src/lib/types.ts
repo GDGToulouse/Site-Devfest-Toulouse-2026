@@ -30,6 +30,7 @@ export interface EditionSummary {
   year: number;
   status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
   archivedSiteUrl: string | null;
+  startDate: string | null;
 }
 
 export interface SocialLinks {
