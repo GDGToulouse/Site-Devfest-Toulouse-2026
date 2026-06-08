@@ -3,6 +3,7 @@ import { getLocale } from "next-intl/server";
 import {
   getCfpSettings,
   getCurrentEdition,
+  getEditions,
   getLatestArticles,
   getCurrentTicketTiers,
   getKeyFigures,
@@ -25,6 +26,7 @@ function buildEventJsonLd(
     venueAddress: string | null;
   },
   tiers: { nameFr: string; price: number; status: string; externalUrl: string | null }[],
+  previousStartDates: string[] = [],
 ) {
   // Dedup offers by (name, price, status) — protects Schema.org output from
   // accidental duplicates in seed data or admin double-imports, which
@@ -79,6 +81,11 @@ function buildEventJsonLd(
       name: "DevFest",
       url: "https://developers.google.com/community/devfest",
     },
+    // Past edition start dates signal the event's recurrence to search engines.
+    ...(previousStartDates.length > 0 && {
+      previousStartDate:
+        previousStartDates.length === 1 ? previousStartDates[0] : previousStartDates,
+    }),
     ...(offers.length > 0 && { offers }),
   };
 }
@@ -86,14 +93,20 @@ function buildEventJsonLd(
 export default async function HomePage() {
   const locale = await getLocale();
 
-  const [edition, tiers, figures, cfp] = await Promise.all([
+  const [edition, tiers, figures, cfp, editions] = await Promise.all([
     getCurrentEdition(),
     getCurrentTicketTiers(),
     getKeyFigures(),
     getCfpSettings(),
+    getEditions(),
   ]);
 
   const articles = await getLatestArticles(4, edition?.id);
+
+  // Past editions' start dates (YYYY-MM-DD) for Schema.org previousStartDate.
+  const previousStartDates = editions
+    .filter((e) => e.year < (edition?.year ?? Infinity) && e.startDate)
+    .map((e) => e.startDate!.split("T")[0]);
 
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
@@ -105,7 +118,7 @@ export default async function HomePage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildEventJsonLd(edition, tiers)),
+            __html: JSON.stringify(buildEventJsonLd(edition, tiers, previousStartDates)),
           }}
         />
       )}

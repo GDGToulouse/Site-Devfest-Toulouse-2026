@@ -35,7 +35,7 @@ export default async function editionRoutes(app: FastifyInstance) {
   app.get("/editions", async () => {
     const editions = await prisma.edition.findMany({
       orderBy: { year: "desc" },
-      select: { id: true, year: true, status: true, archivedSiteUrl: true },
+      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true },
     });
     return editions;
   });

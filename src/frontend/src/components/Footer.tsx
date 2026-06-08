@@ -35,8 +35,6 @@ export default async function Footer() {
   // Footer sits on a dark green background — pick the white variant.
   const logoUrl = getLogoUrl(identity, "white");
 
-  const isAnnouncement = edition?.status === "ANNOUNCEMENT";
-
   const previousEditions = edition
     ? editions
         .filter((e) => e.year < edition.year)
@@ -46,7 +44,7 @@ export default async function Footer() {
   return (
     <footer
       role="contentinfo"
-      className="bg-[#0B7350] rounded-3xl shadow-section mx-4 mb-4 mt-8 overflow-hidden"
+      className="bg-malachite rounded-3xl shadow-section mx-4 mb-4 mt-8 overflow-hidden"
     >
       <div className="mx-auto max-w-[1440px] px-6 py-8 lg:px-[84px] lg:py-8">
         <div className="flex flex-col lg:flex-row lg:justify-between gap-8">
@@ -75,8 +73,9 @@ export default async function Footer() {
 
           {/* Right columns */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
-            {/* Navigation — only when edition is in ANNOUNCEMENT */}
-            {isAnnouncement && (() => {
+            {/* Navigation — always shown; links appear as their content goes
+                live (Actus is always available). */}
+            {(() => {
               const footerLinks = NAV_LINKS.filter((link) => {
                 if (link.key === "program" && !edition?.isProgramPublished) return false;
                 if (link.key === "speakers" && !edition?.hasSpeakers) return false;
