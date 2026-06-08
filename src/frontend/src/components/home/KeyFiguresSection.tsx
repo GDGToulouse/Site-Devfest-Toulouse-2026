@@ -17,7 +17,21 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
 
   return (
     <section className="relative px-6 py-16 lg:py-24">
-      <div className="mx-auto max-w-6xl">
+      {/* La Grave illustration — sits on the page background, behind the card,
+          peeking out from the bottom-left rather than being boxed inside the
+          white card. */}
+      <div className="hidden lg:block absolute left-0 bottom-0 w-48 h-64 opacity-20 pointer-events-none">
+        <Image
+          src="/images/illustrations/la-grave.png"
+          alt=""
+          fill
+          className="object-contain object-left-bottom"
+          sizes="192px"
+          loading="lazy"
+        />
+      </div>
+
+      <div className="relative z-10 mx-auto max-w-6xl">
         <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-12 lg:mb-20">
           {t.rich("title", {
             tech: (chunks) => <span className="text-malachite">{chunks}</span>,
@@ -26,19 +40,7 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
         </h2>
 
         <div className="relative bg-blanc rounded-4xl shadow-section p-8 lg:p-12">
-          {/* La Grave illustration */}
-          <div className="hidden lg:block absolute left-0 bottom-0 w-48 h-64 opacity-20 pointer-events-none">
-            <Image
-              src="/images/illustrations/la-grave.png"
-              alt=""
-              fill
-              className="object-contain object-left-bottom"
-              sizes="192px"
-              loading="lazy"
-            />
-          </div>
-
-          <div className="relative z-10 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12">
             {figures.map((figure) => (
               <div
                 key={figure.icon}
