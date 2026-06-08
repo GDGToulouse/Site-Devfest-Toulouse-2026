@@ -255,6 +255,16 @@
     "comingSoonTitle": "Les sponsors seront annoncés prochainement",
     "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
     "becomeSponsorCta": "Devenir sponsor",
-    "home": "Accueil"
+    "home": "Accueil",
+    "empty": "Les sponsors seront annoncés prochainement.",
+    "visitWebsite": "Visiter le site",
+    "speakersOf": "Speakers de {name}",
+    "level": {
+      "PLATINUM": "Platinum",
+      "GOLD": "Gold",
+      "SILVER": "Silver",
+      "SOUTIEN": "Soutien",
+      "COMMUNAUTE": "Communauté"
+    }
   }
 }

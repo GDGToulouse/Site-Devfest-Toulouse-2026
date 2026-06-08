@@ -13,6 +13,8 @@ import type {
   ContactCategory,
   PaginatedArticles,
   SponsorPlan,
+  SponsorPublic,
+  SponsorDetail,
   EcosystemPartner,
 } from "./types";
 
@@ -125,4 +127,12 @@ export async function getEcosystemPartners(): Promise<EcosystemPartner[]> {
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {
   return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
+}
+
+export async function getSponsors(): Promise<SponsorPublic[]> {
+  return (await fetchAPI<SponsorPublic[]>("/api/sponsors")) || [];
+}
+
+export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | null> {
+  return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
 }
