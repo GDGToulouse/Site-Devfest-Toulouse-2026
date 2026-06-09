@@ -14,6 +14,7 @@ import SponsorsTab from "@/components/admin/edition-detail/SponsorsTab";
 import SpeakersTab from "@/components/admin/edition-detail/SpeakersTab";
 import CategoriesTab from "@/components/admin/edition-detail/CategoriesTab";
 import ConferencesTab from "@/components/admin/edition-detail/ConferencesTab";
+import ImportTab from "@/components/admin/edition-detail/ImportTab";
 
 interface EditionData {
   id: number;
@@ -44,6 +45,7 @@ const TABS = [
   { key: "speakers", label: "Speakers" },
   { key: "conferences", label: "Conférences" },
   { key: "categories", label: "Catégories" },
+  { key: "import", label: "Import" },
   { key: "sponsors", label: "Sponsors" },
   { key: "sponsoring", label: "Sponsoring" },
   { key: "cfp", label: "CFP" },
@@ -108,6 +110,9 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "categories" && (
           <CategoriesTab editionId={edition.id} />
+        )}
+        {activeTab === "import" && (
+          <ImportTab editionId={edition.id} />
         )}
         {activeTab === "sponsors" && (
           <SponsorsTab editionId={edition.id} />
