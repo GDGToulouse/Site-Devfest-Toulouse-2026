@@ -79,7 +79,7 @@ export default function CategoriesTab({ editionId }: CategoriesTabProps) {
     "w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
 
   return (
-    <div className="bg-blanc rounded-xl shadow-card p-6">
+    <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-noir">Catégories ({categories.length})</h2>
         {!showForm && (
