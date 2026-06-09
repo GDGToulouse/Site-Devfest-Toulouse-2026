@@ -137,7 +137,7 @@ export default function SponsorsTab({ editionId }: SponsorsTabProps) {
   return (
     <div className="space-y-8">
       {/* US-245 — open sponsoring levels for this edition */}
-      <div className="bg-blanc rounded-xl shadow-card p-6">
+      <div className="rounded-lg border border-gris/20 bg-blanc-casse/50 p-4">
         <h2 className="text-lg font-bold text-noir mb-1">Niveaux de sponsoring ouverts</h2>
         <p className="text-sm text-gris mb-4">
           Seuls les niveaux cochés sont proposés à la création d&apos;un sponsor.
@@ -167,7 +167,7 @@ export default function SponsorsTab({ editionId }: SponsorsTabProps) {
       </div>
 
       {/* Sponsor list + form */}
-      <div className="bg-blanc rounded-xl shadow-card p-6">
+      <div>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-bold text-noir">Sponsors ({sponsors.length})</h2>
           {!showForm && (
