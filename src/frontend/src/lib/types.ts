@@ -164,6 +164,37 @@ export interface SponsorDetail {
   speakers: SponsorSpeakerRef[];
 }
 
+// Public speaker list item.
+export interface SpeakerPublic {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  isFeatured?: boolean;
+}
+
+export interface SpeakerTalkRef {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  format: string;
+}
+
+export interface SpeakerDetail {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  city: string | null;
+  bioFr: string | null;
+  bioEn: string | null;
+  socialLinks: Record<string, string>;
+  sponsor: { slug: string; name: string } | null;
+  talks: SpeakerTalkRef[];
+}
+
 // Admin speaker entity (CRUD).
 export interface Speaker {
   id: number;

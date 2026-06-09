@@ -15,6 +15,8 @@ import type {
   SponsorPlan,
   SponsorPublic,
   SponsorDetail,
+  SpeakerPublic,
+  SpeakerDetail,
   EcosystemPartner,
 } from "./types";
 
@@ -135,4 +137,16 @@ export async function getSponsors(): Promise<SponsorPublic[]> {
 
 export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | null> {
   return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
+}
+
+export async function getSpeakers(): Promise<SpeakerPublic[]> {
+  return (await fetchAPI<SpeakerPublic[]>("/api/speakers")) || [];
+}
+
+export async function getFeaturedSpeakers(): Promise<SpeakerPublic[]> {
+  return (await fetchAPI<SpeakerPublic[]>("/api/speakers/featured")) || [];
+}
+
+export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | null> {
+  return fetchAPI<SpeakerDetail>(`/api/speakers/${slug}`);
 }
