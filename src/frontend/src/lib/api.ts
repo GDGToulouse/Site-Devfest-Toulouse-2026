@@ -17,6 +17,7 @@ import type {
   SponsorDetail,
   SpeakerPublic,
   SpeakerDetail,
+  TalkDetail,
   EcosystemPartner,
 } from "./types";
 
@@ -149,4 +150,8 @@ export async function getFeaturedSpeakers(): Promise<SpeakerPublic[]> {
 
 export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | null> {
   return fetchAPI<SpeakerDetail>(`/api/speakers/${slug}`);
+}
+
+export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {
+  return fetchAPI<TalkDetail>(`/api/talks/${slug}`);
 }
