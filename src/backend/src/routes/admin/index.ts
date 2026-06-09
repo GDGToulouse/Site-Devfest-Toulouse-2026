@@ -15,6 +15,7 @@ import adminSponsorRoutes from "./sponsors.js";
 import adminSpeakerRoutes from "./speakers.js";
 import adminCategoryRoutes from "./categories.js";
 import adminTalkRoutes from "./talks.js";
+import adminImportRoutes from "./import.js";
 import adminApiKeyRoutes from "./api-keys.js";
 import adminTranslateRoutes from "./translate.js";
 
@@ -34,6 +35,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminSpeakerRoutes);
     await editorApp.register(adminCategoryRoutes);
     await editorApp.register(adminTalkRoutes);
+    await editorApp.register(adminImportRoutes);
   });
 
   // Routes restricted to ADMIN only

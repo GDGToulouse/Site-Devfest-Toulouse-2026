@@ -120,7 +120,24 @@ export default function SpeakersTab({ editionId }: SpeakersTabProps) {
     void load();
   }
 
+  function socialCardUrl(s: Speaker) {
+    return `/speakers/${s.slug}/social-card`;
+  }
+
+  function openSocialCard(s: Speaker) {
+    window.open(socialCardUrl(s), "_blank", "noopener");
+  }
+
+  function openAllSocialCards() {
+    const published = speakers.filter((s) => s.publicationStatus === "PUBLISHED");
+    for (const s of published) {
+      window.open(socialCardUrl(s), "_blank", "noopener");
+    }
+  }
+
   if (isLoading) return <p className="py-12 text-center text-gris">Chargement…</p>;
+
+  const publishedCount = speakers.filter((s) => s.publicationStatus === "PUBLISHED").length;
 
   const inputClass =
     "w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
@@ -130,12 +147,23 @@ export default function SpeakersTab({ editionId }: SpeakersTabProps) {
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-bold text-noir">Speakers ({speakers.length})</h2>
         {!showForm && (
-          <button
-            onClick={openCreate}
-            className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
-          >
-            + Ajouter un speaker
-          </button>
+          <div className="flex items-center gap-3">
+            {publishedCount > 0 && (
+              <button
+                onClick={openAllSocialCards}
+                title="Ouvre le visuel de chaque speaker publié dans un nouvel onglet"
+                className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+              >
+                Générer les visuels ({publishedCount})
+              </button>
+            )}
+            <button
+              onClick={openCreate}
+              className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
+            >
+              + Ajouter un speaker
+            </button>
+          </div>
         )}
       </div>
 
@@ -307,6 +335,9 @@ export default function SpeakersTab({ editionId }: SpeakersTabProps) {
               >
                 {s.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
               </span>
+              {s.publicationStatus === "PUBLISHED" && (
+                <button onClick={() => openSocialCard(s)} className="text-sm text-malachite hover:underline">Visuel</button>
+              )}
               <button onClick={() => openEdit(s)} className="text-sm text-bleu hover:underline">Éditer</button>
               <button onClick={() => setDeleteTarget(s)} className="text-sm text-terre-cuite hover:underline">Supprimer</button>
             </li>
