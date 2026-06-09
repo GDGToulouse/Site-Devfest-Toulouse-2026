@@ -251,7 +251,10 @@
     "heading": "Conférenciers du DevFest Toulouse {year}",
     "comingSoonTitle": "Les conférenciers seront annoncés prochainement",
     "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
-    "home": "Accueil"
+    "home": "Accueil",
+    "empty": "Les conférenciers seront annoncés prochainement.",
+    "sessionsTitle": "Sessions",
+    "backToList": "Tous les conférenciers"
   },
   "sponsors": {
     "title": "Sponsors",
