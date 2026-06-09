@@ -16,9 +16,12 @@ interface SponsorCardProps {
   sponsor: SponsorPublic;
   /** Platinum cards are larger (RG-223). */
   large?: boolean;
+  /** On the homepage only the logo is shown, without the name (RG-223). */
+  logoOnly?: boolean;
 }
 
-export default function SponsorCard({ sponsor, large = false }: SponsorCardProps) {
+export default function SponsorCard({ sponsor, large = false, logoOnly = false }: SponsorCardProps) {
+  const showName = !logoOnly || !sponsor.logoUrl;
   return (
     <Link
       href={`/sponsors/${sponsor.slug}`}
@@ -41,7 +44,7 @@ export default function SponsorCard({ sponsor, large = false }: SponsorCardProps
             </span>
           )}
         </div>
-        {sponsor.logoUrl && (
+        {sponsor.logoUrl && showName && (
           <span className={`font-bold text-noir ${large ? "text-2xl" : "text-lg"}`}>
             {sponsor.name}
           </span>

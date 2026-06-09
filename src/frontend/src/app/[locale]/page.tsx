@@ -16,6 +16,7 @@ import ReplaySection from "@/components/home/ReplaySection";
 import LatestNewsSection from "@/components/home/LatestNewsSection";
 import AboutSection from "@/components/home/AboutSection";
 import EcosystemSection from "@/components/home/EcosystemSection";
+import SponsorsSection from "@/components/home/SponsorsSection";
 
 function buildEventJsonLd(
   edition: {
@@ -150,6 +151,8 @@ export default async function HomePage() {
           editionYear={edition.previousYear}
         />
       )}
+
+      {isAnnouncement && <SponsorsSection />}
 
       {isAnnouncement && articles.length > 0 && (
         <LatestNewsSection articles={articles} locale={locale} />
