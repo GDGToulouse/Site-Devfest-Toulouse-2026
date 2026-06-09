@@ -164,6 +164,23 @@ export interface SponsorDetail {
   speakers: SponsorSpeakerRef[];
 }
 
+// Admin speaker entity (CRUD).
+export interface Speaker {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  city: string | null;
+  bioFr: string | null;
+  bioEn: string | null;
+  socialLinks: Record<string, string>;
+  isFeatured: boolean;
+  sponsorId: number | null;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
 export interface EditionDetail {
   id: number;
   year: number;

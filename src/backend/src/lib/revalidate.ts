@@ -64,6 +64,14 @@ export function revalidateSponsors(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/devenir-sponsor"),
+    ...bilingualPaths("/sponsors"),
+  ]);
+}
+
+export function revalidateSpeakers(): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths("/speakers"),
   ]);
 }
 
