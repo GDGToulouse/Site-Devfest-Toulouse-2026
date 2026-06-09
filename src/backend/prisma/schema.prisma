@@ -441,6 +441,8 @@ model Speaker {
   bioEn            String?
   // JSON object of social links, e.g. {"twitter":"...","github":"...","linkedin":"...","bluesky":"...","website":"..."}
   socialLinks      String?
+  // Contact email used to send the modification link (RG-243). Optional.
+  contactEmail     String?
   // Shown in the homepage "featured speakers" section (RG-202).
   isFeatured       Boolean           @default(false)
   publicationStatus PublicationStatus @default(DRAFT)
@@ -523,6 +525,8 @@ model Sponsor {
   descriptionEn    String?
   // JSON object of social links (same shape as Speaker.socialLinks).
   socialLinks      String?
+  // Contact email used to send the modification link (RG-243). Optional.
+  contactEmail     String?
   publicationStatus PublicationStatus @default(DRAFT)
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).

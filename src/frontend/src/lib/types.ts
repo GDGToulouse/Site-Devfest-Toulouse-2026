@@ -130,6 +130,8 @@ export interface Sponsor {
   descriptionFr: string | null;
   descriptionEn: string | null;
   socialLinks: Record<string, string>;
+  contactEmail: string | null;
+  editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
 }
@@ -254,6 +256,8 @@ export interface Speaker {
   bioFr: string | null;
   bioEn: string | null;
   socialLinks: Record<string, string>;
+  contactEmail: string | null;
+  editLinkLocked: boolean;
   isFeatured: boolean;
   sponsorId: number | null;
   publicationStatus: "DRAFT" | "PUBLISHED";

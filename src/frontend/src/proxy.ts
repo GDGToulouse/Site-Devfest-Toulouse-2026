@@ -11,7 +11,9 @@ export default function proxy(request: NextRequest) {
   // through request headers so the root layout can pin <html lang> to the
   // default locale (and ignore any NEXT_LOCALE cookie from a previous
   // visit to a public page).
-  if (pathname.startsWith("/admin")) {
+  // Admin and the token-based edit pages are mono-language: bypass i18n routing
+  // but forward the pathname so the root layout can pin <html lang>.
+  if (pathname.startsWith("/admin") || pathname.startsWith("/edit/")) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     return NextResponse.next({ request: { headers: requestHeaders } });

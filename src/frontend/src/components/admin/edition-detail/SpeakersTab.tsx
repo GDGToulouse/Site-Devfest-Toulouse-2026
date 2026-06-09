@@ -6,6 +6,7 @@ import { adminFetch } from "@/lib/admin-api";
 import type { Speaker, Sponsor } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import EditLinkActions from "@/components/admin/EditLinkActions";
 
 const emptyForm = {
   name: "",
@@ -247,6 +248,18 @@ export default function SpeakersTab({ editionId }: SpeakersTabProps) {
               <span className="text-sm text-noir">Publié (visible sur le site)</span>
             </label>
           </div>
+
+          {editingId !== null && (() => {
+            const current = speakers.find((s) => s.id === editingId);
+            return current ? (
+              <EditLinkActions
+                resource="speakers"
+                entityId={editingId}
+                initialEmail={current.contactEmail ?? ""}
+                initialLocked={current.editLinkLocked}
+              />
+            ) : null;
+          })()}
 
           <div className="flex items-center gap-3 pt-2">
             <button
