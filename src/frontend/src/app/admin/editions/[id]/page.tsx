@@ -11,6 +11,7 @@ import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import SponsorsTab from "@/components/admin/edition-detail/SponsorsTab";
+import SpeakersTab from "@/components/admin/edition-detail/SpeakersTab";
 
 interface EditionData {
   id: number;
@@ -38,7 +39,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 const TABS = [
   { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
-  { key: "speakers", label: "Speakers (0)" },
+  { key: "speakers", label: "Speakers" },
   { key: "conferences", label: "Conférences (0)" },
   { key: "sponsors", label: "Sponsors" },
   { key: "sponsoring", label: "Sponsoring" },
@@ -97,10 +98,7 @@ export default function EditionDetailPage() {
           <TicketingTab editionId={edition.id} />
         )}
         {activeTab === "speakers" && (
-          <div className="py-12 text-center text-gris">
-            <p className="text-lg font-medium">Speakers</p>
-            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des speakers de l&apos;édition.</p>
-          </div>
+          <SpeakersTab editionId={edition.id} />
         )}
         {activeTab === "conferences" && (
           <div className="py-12 text-center text-gris">

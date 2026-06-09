@@ -12,6 +12,7 @@ import adminFileRoutes from "./files.js";
 import adminUserRoutes from "./users.js";
 import adminSponsorPlanRoutes from "./sponsor-plans.js";
 import adminSponsorRoutes from "./sponsors.js";
+import adminSpeakerRoutes from "./speakers.js";
 import adminApiKeyRoutes from "./api-keys.js";
 import adminTranslateRoutes from "./translate.js";
 
@@ -28,6 +29,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminFileRoutes);
     await editorApp.register(adminTranslateRoutes);
     await editorApp.register(adminSponsorRoutes);
+    await editorApp.register(adminSpeakerRoutes);
   });
 
   // Routes restricted to ADMIN only
