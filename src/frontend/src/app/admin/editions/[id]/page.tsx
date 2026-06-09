@@ -13,6 +13,7 @@ import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import SponsorsTab from "@/components/admin/edition-detail/SponsorsTab";
 import SpeakersTab from "@/components/admin/edition-detail/SpeakersTab";
 import CategoriesTab from "@/components/admin/edition-detail/CategoriesTab";
+import ConferencesTab from "@/components/admin/edition-detail/ConferencesTab";
 
 interface EditionData {
   id: number;
@@ -41,7 +42,7 @@ const TABS = [
   { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
   { key: "speakers", label: "Speakers" },
-  { key: "conferences", label: "Conférences (0)" },
+  { key: "conferences", label: "Conférences" },
   { key: "categories", label: "Catégories" },
   { key: "sponsors", label: "Sponsors" },
   { key: "sponsoring", label: "Sponsoring" },
@@ -103,10 +104,7 @@ export default function EditionDetailPage() {
           <SpeakersTab editionId={edition.id} />
         )}
         {activeTab === "conferences" && (
-          <div className="py-12 text-center text-gris">
-            <p className="text-lg font-medium">Conférences</p>
-            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des conférences de l&apos;édition.</p>
-          </div>
+          <ConferencesTab editionId={edition.id} />
         )}
         {activeTab === "categories" && (
           <CategoriesTab editionId={edition.id} />

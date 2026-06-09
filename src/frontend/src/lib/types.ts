@@ -195,6 +195,29 @@ export interface SpeakerDetail {
   talks: SpeakerTalkRef[];
 }
 
+export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
+export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
+
+// Admin talk/session entity (CRUD).
+export interface Talk {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  room: string | null;
+  categoryId: number | null;
+  category: { id: number; nameFr: string; color: string } | null;
+  speakerIds: number[];
+  speakers: { id: number; name: string }[];
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
 // Session category / track.
 export interface Category {
   id: number;
