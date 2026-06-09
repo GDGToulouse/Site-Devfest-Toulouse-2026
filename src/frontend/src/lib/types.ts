@@ -195,6 +195,16 @@ export interface SpeakerDetail {
   talks: SpeakerTalkRef[];
 }
 
+// Session category / track.
+export interface Category {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+  color: string;
+  sortOrder: number;
+  editionId: number;
+}
+
 // Admin speaker entity (CRUD).
 export interface Speaker {
   id: number;
