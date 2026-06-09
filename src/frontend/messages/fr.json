@@ -247,7 +247,18 @@
     "heading": "Programme du DevFest Toulouse {year}",
     "comingSoonTitle": "Le programme arrive bientôt",
     "comingSoonBody": "Le programme des conférences, quickies et keynotes du DevFest Toulouse {year} sera publié ici dès qu'il sera finalisé. En attendant, consultez l'aftermovie et les chiffres clés de l'édition précédente.",
-    "home": "Accueil"
+    "home": "Accueil",
+    "speakersLabel": "Speakers",
+    "format": {
+      "CONFERENCE": "Conférence",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote"
+    },
+    "level": {
+      "DEBUTANT": "Débutant",
+      "INTERMEDIAIRE": "Intermédiaire",
+      "CONFIRME": "Confirmé"
+    }
   },
   "speakers": {
     "title": "Conférenciers",

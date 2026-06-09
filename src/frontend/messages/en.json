@@ -247,7 +247,18 @@
     "heading": "DevFest Toulouse {year} schedule",
     "comingSoonTitle": "Schedule coming soon",
     "comingSoonBody": "The conference, quickie and keynote schedule for DevFest Toulouse {year} will be published here once finalized. Meanwhile, check out the aftermovie and key figures from last year's edition.",
-    "home": "Home"
+    "home": "Home",
+    "speakersLabel": "Speakers",
+    "format": {
+      "CONFERENCE": "Conference",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote"
+    },
+    "level": {
+      "DEBUTANT": "Beginner",
+      "INTERMEDIAIRE": "Intermediate",
+      "CONFIRME": "Advanced"
+    }
   },
   "speakers": {
     "title": "Speakers",

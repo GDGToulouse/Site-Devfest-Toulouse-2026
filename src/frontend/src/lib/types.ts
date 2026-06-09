@@ -198,6 +198,21 @@ export interface SpeakerDetail {
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
 
+// Public talk detail.
+export interface TalkDetail {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
+}
+
 // Admin talk/session entity (CRUD).
 export interface Talk {
   id: number;
