@@ -2,6 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
+import { generateEditToken } from "../../lib/edit-token.js";
+import { sendEditLinkEmail } from "../../lib/edit-link-email.js";
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -12,6 +14,7 @@ interface SpeakerCreateBody {
   bioFr?: string;
   bioEn?: string;
   socialLinks?: Record<string, string>;
+  contactEmail?: string;
   isFeatured?: boolean;
   sponsorId?: number | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
@@ -70,6 +73,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         bioFr: body.bioFr || null,
         bioEn: body.bioEn || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
+        contactEmail: body.contactEmail || null,
         isFeatured: body.isFeatured ?? false,
         sponsorId: body.sponsorId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -99,6 +103,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         ...(body.socialLinks !== undefined && {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
+        ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
@@ -117,5 +122,53 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     await prisma.speaker.delete({ where: { id: Number(id) } });
     revalidateSpeakers();
     return reply.code(204).send();
+  });
+
+  // POST /api/admin/speakers/:id/edit-link — (re)generate the token, unlock it,
+  // and email the link to the given address (US-221, RG-244, RG-251).
+  app.post<{ Params: SpeakerIdParams; Body: { email?: string } }>("/speakers/:id/edit-link", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const id = Number(request.params.id);
+    const speaker = await prisma.speaker.findUnique({ where: { id } });
+    if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
+
+    const email = request.body.email?.trim() || speaker.contactEmail;
+    if (!email) return reply.code(400).send({ error: "No contact email provided" });
+
+    const token = generateEditToken();
+    await prisma.speaker.update({
+      where: { id },
+      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+    });
+
+    try {
+      await sendEditLinkEmail({ to: email, name: speaker.name, token, kind: "speaker" });
+    } catch (err) {
+      request.log.error({ err }, "Failed to send speaker edit link email");
+      return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
+    }
+    return { sent: true, email };
+  });
+
+  // DELETE /api/admin/speakers/:id/edit-link — revoke (invalidate) the link.
+  app.delete<{ Params: SpeakerIdParams }>("/speakers/:id/edit-link", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request) => {
+    const id = Number(request.params.id);
+    await prisma.speaker.update({ where: { id }, data: { editToken: null } });
+    return { revoked: true };
+  });
+
+  // PUT /api/admin/speakers/:id/edit-link/lock — lock/unlock without deleting (RG-245).
+  app.put<{ Params: SpeakerIdParams; Body: { locked: boolean } }>("/speakers/:id/edit-link/lock", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request) => {
+    const id = Number(request.params.id);
+    const s = await prisma.speaker.update({
+      where: { id },
+      data: { editLinkLocked: !!request.body.locked },
+    });
+    return { locked: s.editLinkLocked };
   });
 }

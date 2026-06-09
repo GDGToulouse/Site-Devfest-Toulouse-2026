@@ -6,6 +6,7 @@ import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, SponsorLevel } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import EditLinkActions from "@/components/admin/EditLinkActions";
 
 const LEVELS: { value: SponsorLevel; label: string }[] = [
   { value: "PLATINUM", label: "Platinum" },
@@ -293,6 +294,18 @@ export default function SponsorsTab({ editionId }: SponsorsTabProps) {
               />
               <span className="text-sm text-noir">Publié (visible sur le site)</span>
             </label>
+
+            {editingId !== null && (() => {
+              const current = sponsors.find((s) => s.id === editingId);
+              return current ? (
+                <EditLinkActions
+                  resource="sponsors"
+                  entityId={editingId}
+                  initialEmail={current.contactEmail ?? ""}
+                  initialLocked={current.editLinkLocked}
+                />
+              ) : null;
+            })()}
 
             <div className="flex items-center gap-3 pt-2">
               <button
