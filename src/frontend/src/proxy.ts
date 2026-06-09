@@ -19,6 +19,12 @@ export default function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
+  // Locale-agnostic image route handlers (e.g. speaker social cards, US-250):
+  // these render a PNG and must not be rewritten through i18n routing.
+  if (pathname.startsWith("/speakers/") && pathname.endsWith("/social-card")) {
+    return NextResponse.next();
+  }
+
   return intlMiddleware(request);
 }
 
