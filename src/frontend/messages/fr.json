@@ -39,6 +39,10 @@
       "cta": "Devenir Partenaire",
       "seeAll": "Voir tous les partenaires"
     },
+    "featuredSpeakers": {
+      "title": "Speakers en vedette",
+      "seeAll": "Voir tous les speakers"
+    },
     "about": {
       "behindTitle": "Derrière le #DevFestToulouse",
       "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
