@@ -75,6 +75,13 @@ export function revalidateSpeakers(): Promise<void> {
   ]);
 }
 
+export function revalidateConferences(): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths("/conferences"),
+  ]);
+}
+
 export function revalidateCfp(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
