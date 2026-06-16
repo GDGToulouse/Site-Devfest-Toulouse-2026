@@ -289,6 +289,85 @@ async function seedDev() {
   await prisma.sponsorPlan.createMany({ data: sponsorPlans });
   console.log(`Sponsor plans created: ${sponsorPlans.length}`);
 
+  // --- Lot 2: Categories, Sponsors, Speakers, Talks (dev sample data) ---
+  // Wipe in dependency order so re-running the dev seed is idempotent.
+  await prisma.talk.deleteMany({ where: { editionId: edition.id } });
+  await prisma.speaker.deleteMany({ where: { editionId: edition.id } });
+  await prisma.sponsor.deleteMany({ where: { editionId: edition.id } });
+  await prisma.category.deleteMany({ where: { editionId: edition.id } });
+
+  const catCloud = await prisma.category.create({
+    data: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#509EE3", sortOrder: 0, editionId: edition.id },
+  });
+  const catWeb = await prisma.category.create({
+    data: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839", sortOrder: 1, editionId: edition.id },
+  });
+  console.log("Categories created: 2");
+
+  const sponsorOvh = await prisma.sponsor.create({
+    data: {
+      slug: "ovhcloud", name: "OVHcloud", level: "PLATINUM",
+      websiteUrl: "https://www.ovhcloud.com",
+      descriptionFr: "Leader européen du cloud.", descriptionEn: "European cloud leader.",
+      logoUrl: null, publicationStatus: "PUBLISHED", editionId: edition.id,
+    },
+  });
+  await prisma.sponsor.create({
+    data: {
+      slug: "google", name: "Google", level: "GOLD",
+      websiteUrl: "https://developers.google.com",
+      descriptionFr: "Partenaire historique du DevFest.", descriptionEn: "Long-time DevFest partner.",
+      publicationStatus: "PUBLISHED", editionId: edition.id,
+    },
+  });
+  console.log("Sponsors created: 2");
+
+  const speakerMarie = await prisma.speaker.create({
+    data: {
+      slug: "marie-dupont", name: "Marie Dupont", company: "OVHcloud", city: "Toulouse",
+      bioFr: "Ingénieure cloud passionnée de Kubernetes.", bioEn: "Cloud engineer passionate about Kubernetes.",
+      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id, sponsorId: sponsorOvh.id,
+      socialLinks: JSON.stringify({ github: "https://github.com/example", linkedin: "https://linkedin.com/in/example" }),
+    },
+  });
+  const speakerJean = await prisma.speaker.create({
+    data: {
+      slug: "jean-martin", name: "Jean Martin", company: "Freelance", city: "Bordeaux",
+      bioFr: "Développeur web fullstack.", bioEn: "Fullstack web developer.",
+      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id,
+    },
+  });
+  await prisma.speaker.create({
+    data: {
+      slug: "sophie-bernard", name: "Sophie Bernard", company: "Google", city: "Paris",
+      bioFr: "Developer advocate.", bioEn: "Developer advocate.",
+      publicationStatus: "DRAFT", editionId: edition.id,
+    },
+  });
+  console.log("Speakers created: 3");
+
+  await prisma.talk.create({
+    data: {
+      slug: "kubernetes-en-production", titleFr: "Kubernetes en production", titleEn: "Kubernetes in production",
+      descriptionFr: "Retour d'expérience sur l'exploitation de Kubernetes à grande échelle.",
+      descriptionEn: "Lessons learned running Kubernetes at scale.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr",
+      publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catCloud.id,
+      speakers: { connect: [{ id: speakerMarie.id }] },
+    },
+  });
+  await prisma.talk.create({
+    data: {
+      slug: "react-server-components", titleFr: "React Server Components", titleEn: "React Server Components",
+      descriptionFr: "Comprendre les Server Components et leur impact.",
+      descriptionEn: "Understanding Server Components and their impact.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr",
+      publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catWeb.id,
+      speakers: { connect: [{ id: speakerJean.id }] },
+    },
+  });
+  console.log("Talks created: 2");
+
   // --- Social Links ---
   const socialSettings = [
     { key: "social_linkedin", value: "https://www.linkedin.com/company/gdg-toulouse/" },

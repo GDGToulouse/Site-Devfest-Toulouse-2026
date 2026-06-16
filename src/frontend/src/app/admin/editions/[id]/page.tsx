@@ -10,6 +10,11 @@ import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
+import SponsorsTab from "@/components/admin/edition-detail/SponsorsTab";
+import SpeakersTab from "@/components/admin/edition-detail/SpeakersTab";
+import CategoriesTab from "@/components/admin/edition-detail/CategoriesTab";
+import ConferencesTab from "@/components/admin/edition-detail/ConferencesTab";
+import ImportTab from "@/components/admin/edition-detail/ImportTab";
 
 interface EditionData {
   id: number;
@@ -37,9 +42,11 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 const TABS = [
   { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
-  { key: "speakers", label: "Speakers (0)" },
-  { key: "conferences", label: "Conférences (0)" },
-  { key: "sponsors", label: "Sponsors (0)" },
+  { key: "speakers", label: "Speakers" },
+  { key: "conferences", label: "Conférences" },
+  { key: "categories", label: "Catégories" },
+  { key: "import", label: "Import" },
+  { key: "sponsors", label: "Sponsors" },
   { key: "sponsoring", label: "Sponsoring" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
@@ -96,22 +103,19 @@ export default function EditionDetailPage() {
           <TicketingTab editionId={edition.id} />
         )}
         {activeTab === "speakers" && (
-          <div className="py-12 text-center text-gris">
-            <p className="text-lg font-medium">Speakers</p>
-            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des speakers de l&apos;édition.</p>
-          </div>
+          <SpeakersTab editionId={edition.id} />
         )}
         {activeTab === "conferences" && (
-          <div className="py-12 text-center text-gris">
-            <p className="text-lg font-medium">Conférences</p>
-            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des conférences de l&apos;édition.</p>
-          </div>
+          <ConferencesTab editionId={edition.id} />
+        )}
+        {activeTab === "categories" && (
+          <CategoriesTab editionId={edition.id} />
+        )}
+        {activeTab === "import" && (
+          <ImportTab editionId={edition.id} />
         )}
         {activeTab === "sponsors" && (
-          <div className="py-12 text-center text-gris">
-            <p className="text-lg font-medium">Sponsors</p>
-            <p className="mt-2 text-sm">Fonctionnalité à venir — gestion des sponsors de l&apos;édition.</p>
-          </div>
+          <SponsorsTab editionId={edition.id} />
         )}
         {activeTab === "sponsoring" && (
           <SponsoringTab editionId={edition.id} />

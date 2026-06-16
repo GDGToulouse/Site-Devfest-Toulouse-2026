@@ -13,6 +13,11 @@ import type {
   ContactCategory,
   PaginatedArticles,
   SponsorPlan,
+  SponsorPublic,
+  SponsorDetail,
+  SpeakerPublic,
+  SpeakerDetail,
+  TalkDetail,
   EcosystemPartner,
 } from "./types";
 
@@ -125,4 +130,28 @@ export async function getEcosystemPartners(): Promise<EcosystemPartner[]> {
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {
   return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
+}
+
+export async function getSponsors(): Promise<SponsorPublic[]> {
+  return (await fetchAPI<SponsorPublic[]>("/api/sponsors")) || [];
+}
+
+export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | null> {
+  return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
+}
+
+export async function getSpeakers(): Promise<SpeakerPublic[]> {
+  return (await fetchAPI<SpeakerPublic[]>("/api/speakers")) || [];
+}
+
+export async function getFeaturedSpeakers(): Promise<SpeakerPublic[]> {
+  return (await fetchAPI<SpeakerPublic[]>("/api/speakers/featured")) || [];
+}
+
+export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | null> {
+  return fetchAPI<SpeakerDetail>(`/api/speakers/${slug}`);
+}
+
+export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {
+  return fetchAPI<TalkDetail>(`/api/talks/${slug}`);
 }

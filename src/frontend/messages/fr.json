@@ -34,6 +34,15 @@
     "stats": {
       "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
     },
+    "sponsors": {
+      "title": "Ils soutiennent le #DevFestToulouse",
+      "cta": "Devenir Partenaire",
+      "seeAll": "Voir tous les partenaires"
+    },
+    "featuredSpeakers": {
+      "title": "Speakers en vedette",
+      "seeAll": "Voir tous les speakers"
+    },
     "about": {
       "behindTitle": "Derrière le #DevFestToulouse",
       "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
@@ -238,7 +247,18 @@
     "heading": "Programme du DevFest Toulouse {year}",
     "comingSoonTitle": "Le programme arrive bientôt",
     "comingSoonBody": "Le programme des conférences, quickies et keynotes du DevFest Toulouse {year} sera publié ici dès qu'il sera finalisé. En attendant, consultez l'aftermovie et les chiffres clés de l'édition précédente.",
-    "home": "Accueil"
+    "home": "Accueil",
+    "speakersLabel": "Speakers",
+    "format": {
+      "CONFERENCE": "Conférence",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote"
+    },
+    "level": {
+      "DEBUTANT": "Débutant",
+      "INTERMEDIAIRE": "Intermédiaire",
+      "CONFIRME": "Confirmé"
+    }
   },
   "speakers": {
     "title": "Conférenciers",
@@ -246,7 +266,10 @@
     "heading": "Conférenciers du DevFest Toulouse {year}",
     "comingSoonTitle": "Les conférenciers seront annoncés prochainement",
     "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
-    "home": "Accueil"
+    "home": "Accueil",
+    "empty": "Les conférenciers seront annoncés prochainement.",
+    "sessionsTitle": "Sessions",
+    "backToList": "Tous les conférenciers"
   },
   "sponsors": {
     "title": "Sponsors",
@@ -255,6 +278,16 @@
     "comingSoonTitle": "Les sponsors seront annoncés prochainement",
     "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
     "becomeSponsorCta": "Devenir sponsor",
-    "home": "Accueil"
+    "home": "Accueil",
+    "empty": "Les sponsors seront annoncés prochainement.",
+    "visitWebsite": "Visiter le site",
+    "speakersOf": "Speakers de {name}",
+    "level": {
+      "PLATINUM": "Platinum",
+      "GOLD": "Gold",
+      "SILVER": "Silver",
+      "SOUTIEN": "Soutien",
+      "COMMUNAUTE": "Communauté"
+    }
   }
 }

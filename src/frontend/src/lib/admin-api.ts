@@ -48,9 +48,30 @@ export async function getAdminSession(): Promise<AdminUser | null> {
   return data.user;
 }
 
-export function getAuthUrl(provider: "google" | "github"): string {
+// Better Auth's sign-in/social endpoint is POST-only: it returns the provider
+// authorization URL as JSON ({ url, redirect }) instead of issuing a 302. A
+// plain <a href> performed a GET and got back `null` (404). We POST, then
+// navigate to the returned URL.
+export async function signInWithSocial(
+  provider: "google" | "github",
+): Promise<{ ok: boolean; error?: string }> {
   const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/admin` : "/admin";
-  return `/api/auth/sign-in/social?provider=${provider}&callbackURL=${encodeURIComponent(callbackURL)}`;
+  try {
+    const res = await fetch(`/api/auth/sign-in/social`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, callbackURL }),
+    });
+    const data = await res.json().catch(() => null);
+    if (res.ok && data?.url) {
+      window.location.href = data.url;
+      return { ok: true };
+    }
+    return { ok: false, error: data?.message || `Erreur ${res.status}` };
+  } catch {
+    return { ok: false, error: "Impossible de contacter le serveur" };
+  }
 }
 
 export async function signOut(): Promise<void> {
