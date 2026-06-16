@@ -118,6 +118,152 @@ export interface SponsorPlan {
   isFeatured: boolean;
 }
 
+export type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
+
+export interface Sponsor {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  socialLinks: Record<string, string>;
+  contactEmail: string | null;
+  editLinkLocked: boolean;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
+// Public list item (lighter than the admin Sponsor).
+export interface SponsorPublic {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+}
+
+export interface SponsorSpeakerRef {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+}
+
+export interface SponsorDetail {
+  id: number;
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  websiteUrl: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  socialLinks: Record<string, string>;
+  speakers: SponsorSpeakerRef[];
+}
+
+// Public speaker list item.
+export interface SpeakerPublic {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  isFeatured?: boolean;
+}
+
+export interface SpeakerTalkRef {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  format: string;
+}
+
+export interface SpeakerDetail {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  city: string | null;
+  bioFr: string | null;
+  bioEn: string | null;
+  socialLinks: Record<string, string>;
+  sponsor: { slug: string; name: string } | null;
+  talks: SpeakerTalkRef[];
+}
+
+export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
+export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
+
+// Public talk detail.
+export interface TalkDetail {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
+}
+
+// Admin talk/session entity (CRUD).
+export interface Talk {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  room: string | null;
+  categoryId: number | null;
+  category: { id: number; nameFr: string; color: string } | null;
+  speakerIds: number[];
+  speakers: { id: number; name: string }[];
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
+// Session category / track.
+export interface Category {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+  color: string;
+  sortOrder: number;
+  editionId: number;
+}
+
+// Admin speaker entity (CRUD).
+export interface Speaker {
+  id: number;
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  city: string | null;
+  bioFr: string | null;
+  bioEn: string | null;
+  socialLinks: Record<string, string>;
+  contactEmail: string | null;
+  editLinkLocked: boolean;
+  isFeatured: boolean;
+  sponsorId: number | null;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  editionId: number;
+}
+
 export interface EditionDetail {
   id: number;
   year: number;

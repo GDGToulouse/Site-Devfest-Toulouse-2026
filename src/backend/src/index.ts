@@ -15,6 +15,11 @@ import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import contactRoutes from "./routes/contact.js";
 import brochureRoutes from "./routes/brochure.js";
+import sponsorRoutes from "./routes/sponsors.js";
+import speakerRoutes from "./routes/speakers.js";
+import categoryRoutes from "./routes/categories.js";
+import talkRoutes from "./routes/talks.js";
+import editRoutes from "./routes/edit.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
 
@@ -193,6 +198,11 @@ await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });
 await app.register(contactRoutes, { prefix: "/api" });
 await app.register(brochureRoutes, { prefix: "/api" });
+await app.register(sponsorRoutes, { prefix: "/api" });
+await app.register(speakerRoutes, { prefix: "/api" });
+await app.register(categoryRoutes, { prefix: "/api" });
+await app.register(talkRoutes, { prefix: "/api" });
+await app.register(editRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)
 await app.register(myApiKeysRoutes, { prefix: "/api/me" });

@@ -45,6 +45,10 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/brochure/:token`,
       },
       {
+        source: "/api/edit/:token",
+        destination: `${backendUrl}/api/edit/:token`,
+      },
+      {
         source: "/api/editions/:path*",
         destination: `${backendUrl}/api/editions/:path*`,
       },
