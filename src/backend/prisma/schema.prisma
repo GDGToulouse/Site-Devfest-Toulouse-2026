@@ -486,6 +486,9 @@ model Talk {
   level            TalkLevel?
   // Spoken language of the talk, e.g. "fr" | "en".
   language         String
+  // Optional replay / recording URL (e.g. YouTube). Used for past editions
+  // (issue #63) and future ones once recordings are available.
+  videoUrl         String?
   publicationStatus PublicationStatus @default(DRAFT)
 
   // Room and time slot are assigned in Lot 3 (Programme) — optional here (RG-216).
