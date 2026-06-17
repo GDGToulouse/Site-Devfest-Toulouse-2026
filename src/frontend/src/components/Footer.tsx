@@ -130,9 +130,12 @@ export default async function Footer() {
             {/* Previous editions — from database */}
             {previousEditions.length > 0 && (
               <div>
-                <p className="text-blanc text-xl font-bold mb-2 leading-snug">
+                <Link
+                  href="/editions"
+                  className="block text-blanc text-xl font-bold mb-2 leading-snug hover:opacity-70 transition-opacity"
+                >
                   {tFooter("previousEditions")}
-                </p>
+                </Link>
                 <ul className="flex flex-col gap-1">
                   {previousEditions.map((e) => (
                     <li key={e.id}>

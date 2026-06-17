@@ -18,6 +18,8 @@ import type {
   SpeakerPublic,
   SpeakerDetail,
   TalkDetail,
+  EditionSpeaker,
+  EditionTalk,
   EcosystemPartner,
 } from "./types";
 
@@ -154,4 +156,14 @@ export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | nu
 
 export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {
   return fetchAPI<TalkDetail>(`/api/talks/${slug}`);
+}
+
+// Past-edition history (issue #63): speakers/talks of a given year, regardless
+// of which edition is currently featured.
+export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]> {
+  return (await fetchAPI<EditionSpeaker[]>(`/api/editions/${year}/speakers`)) || [];
+}
+
+export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
+  return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
 }

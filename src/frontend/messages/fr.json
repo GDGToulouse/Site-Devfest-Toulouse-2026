@@ -195,7 +195,16 @@
     "noEdition": "Aucune édition trouvée pour cette année.",
     "allEditions": "Toutes les éditions",
     "previousEdition": "Édition précédente",
-    "nextEdition": "Édition suivante"
+    "nextEdition": "Édition suivante",
+    "speakers": "Speakers ({count})",
+    "sessions": "Conférences ({count})",
+    "replay": "Revoir"
+  },
+  "editionsList": {
+    "home": "Accueil",
+    "pageTitle": "Éditions précédentes",
+    "description": "Revivez les éditions passées du DevFest Toulouse : speakers, conférences et replays.",
+    "empty": "Aucune édition précédente pour le moment."
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
