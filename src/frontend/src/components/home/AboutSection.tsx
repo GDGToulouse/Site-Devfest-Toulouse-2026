@@ -24,7 +24,7 @@ export default async function AboutSection() {
 
           <div
             className={`relative z-10 p-8 lg:p-16 w-full ${
-              hasCarousel ? "grid gap-8 lg:grid-cols-2 lg:items-center" : "max-w-2xl"
+              hasCarousel ? "grid gap-8 lg:grid-cols-2 lg:items-stretch" : "max-w-2xl"
             }`}
           >
             <div className="max-w-2xl">
