@@ -1,21 +1,16 @@
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
-import AboutCarousel, { type CarouselSlide } from "./AboutCarousel";
+import { getAboutCarousel } from "@/lib/api";
+import AboutCarousel from "./AboutCarousel";
 
-// Ambiance photos shown in the "Derrière le DevFest Toulouse" carousel (#59).
-// Drop the images in public/images/about-carousel/ and list them here; the
-// carousel renders only when this array is non-empty, so the block degrades
-// gracefully to text-only until photos are added. `alt` keys are resolved from
-// the home.about namespace.
-const CAROUSEL_SLIDES: CarouselSlide[] = [
-  // Example once photos are available:
-  // { src: "/images/about-carousel/ambiance-2024-1.jpg", alt: "Le public du DevFest Toulouse 2024" },
-];
+// "Derrière le DevFest Toulouse" home block. The ambiance carousel images are
+// managed from the back-office (#99) and stored under the `about_carousel`
+// setting; the block degrades to text-only when no image is configured.
+export default async function AboutSection() {
+  const t = await getTranslations("home.about");
+  const slides = await getAboutCarousel();
 
-export default function AboutSection() {
-  const t = useTranslations("home.about");
-
-  const hasCarousel = CAROUSEL_SLIDES.length > 0;
+  const hasCarousel = slides.length > 0;
 
   return (
     <section className="px-6 py-10 lg:py-14">
@@ -45,7 +40,7 @@ export default function AboutSection() {
 
             {hasCarousel && (
               <AboutCarousel
-                slides={CAROUSEL_SLIDES}
+                slides={slides}
                 prevLabel={t("carouselPrev")}
                 nextLabel={t("carouselNext")}
               />

@@ -1,21 +1,19 @@
 # Carrousel « Derrière le DevFest Toulouse »
 
 Photos d'ambiance affichées dans le bloc « Derrière le DevFest Toulouse » de la
-page d'accueil (issue #59), uniquement pendant la phase **annonce**.
+page d'accueil (issues #59 / #99), uniquement pendant la phase **annonce**.
 
-## Ajouter des photos
+## Gestion des images
 
-1. Déposez vos images dans ce dossier (`public/images/about-carousel/`).
-   - Format conseillé : JPG/WebP, ratio **16:10**, ~1200×750 px, optimisées.
-2. Listez-les dans `CAROUSEL_SLIDES` de
-   `src/components/home/AboutSection.tsx`, avec un `alt` descriptif :
+Depuis #99, les images se gèrent **depuis le back-office** — plus besoin de
+toucher au code :
 
-   ```ts
-   const CAROUSEL_SLIDES: CarouselSlide[] = [
-     { src: "/images/about-carousel/ambiance-2024-1.jpg", alt: "Le public du DevFest Toulouse 2024" },
-     { src: "/images/about-carousel/ambiance-2024-2.jpg", alt: "Atelier pendant le DevFest Toulouse 2024" },
-   ];
-   ```
+1. Admin → **Paramètres → Carrousel**.
+2. Ajouter une image (upload ou bibliothèque), renseigner son texte alternatif,
+   réordonner / supprimer.
+3. Enregistrer : la page d'accueil est revalidée automatiquement.
 
-Tant que `CAROUSEL_SLIDES` est vide, le bloc reste en texte seul (aucun
-carrousel affiché) — pas de régression.
+Les images uploadées atterrissent dans `public/uploads/`. Ce dossier
+(`about-carousel/`) n'est plus utilisé pour stocker des fichiers ; la liste est
+persistée dans le réglage `about_carousel`. Tant qu'aucune image n'est
+configurée, le bloc reste en texte seul.

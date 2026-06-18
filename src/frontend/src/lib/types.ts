@@ -46,6 +46,12 @@ export interface EcosystemPartner {
   isFeatured: boolean;
 }
 
+// Ambiance image for the home "Derrière le DevFest" carousel (#99).
+export interface CarouselSlide {
+  url: string;
+  alt: string;
+}
+
 export interface Article {
   id: number;
   slug: string;

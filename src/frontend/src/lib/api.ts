@@ -21,6 +21,7 @@ import type {
   EditionSpeaker,
   EditionTalk,
   EcosystemPartner,
+  CarouselSlide,
 } from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -128,6 +129,10 @@ export async function getIdentitySettings(): Promise<Record<string, string>> {
 
 export async function getEcosystemPartners(): Promise<EcosystemPartner[]> {
   return (await fetchAPI<EcosystemPartner[]>("/api/settings/ecosystem")) || [];
+}
+
+export async function getAboutCarousel(): Promise<CarouselSlide[]> {
+  return (await fetchAPI<CarouselSlide[]>("/api/settings/carousel")) || [];
 }
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {

@@ -84,6 +84,30 @@ export default async function settingsRoutes(app: FastifyInstance) {
     return result;
   });
 
+  // GET /api/settings/carousel — returns the ordered list of ambiance images
+  // for the home "Derrière le DevFest" block (#99). Stored as a JSON-encoded
+  // array under the single key `about_carousel`.
+  app.get("/settings/carousel", async () => {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "about_carousel" },
+    });
+    if (!setting?.value) return [];
+    try {
+      const parsed = JSON.parse(setting.value) as unknown;
+      if (!Array.isArray(parsed)) return [];
+      return parsed
+        .filter(
+          (s): s is { url: string; alt?: string } =>
+            typeof s === "object" &&
+            s !== null &&
+            typeof (s as { url?: unknown }).url === "string",
+        )
+        .map((s) => ({ url: s.url, alt: typeof s.alt === "string" ? s.alt : "" }));
+    } catch {
+      return [];
+    }
+  });
+
   // GET /api/settings/ecosystem — returns the ordered list of ecosystem partners
   // displayed on the home page and in the footer. Stored as a JSON-encoded
   // array under the single key `ecosystem_partners`.
