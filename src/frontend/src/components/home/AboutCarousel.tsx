@@ -28,16 +28,16 @@ export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCar
   if (slides.length === 0) return null;
 
   return (
-    <div className="relative">
+    <div className="relative flex h-full flex-col">
       <ul
         ref={trackRef}
         tabIndex={0}
-        className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory rounded-m [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blanc"
+        className="flex flex-1 min-h-[260px] gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory rounded-m [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blanc"
       >
         {slides.map((slide, i) => (
           <li
             key={slide.url}
-            className="relative shrink-0 snap-start w-full sm:w-[80%] aspect-[16/10] overflow-hidden rounded-m bg-noir/20"
+            className="relative shrink-0 snap-start w-full sm:w-[85%] h-full overflow-hidden rounded-m bg-noir/20"
           >
             <Image
               src={slide.url}
@@ -52,7 +52,7 @@ export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCar
       </ul>
 
       {slides.length > 1 && (
-        <div className="mt-4 flex justify-end gap-2">
+        <div className="mt-4 flex shrink-0 justify-end gap-2">
           <button
             type="button"
             onClick={() => scrollByDir(-1)}
