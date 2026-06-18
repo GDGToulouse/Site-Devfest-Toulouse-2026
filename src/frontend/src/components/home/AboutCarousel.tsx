@@ -3,10 +3,7 @@
 import { useRef } from "react";
 import Image from "next/image";
 
-export interface CarouselSlide {
-  src: string;
-  alt: string;
-}
+import type { CarouselSlide } from "@/lib/types";
 
 interface AboutCarouselProps {
   slides: CarouselSlide[];
@@ -39,11 +36,11 @@ export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCar
       >
         {slides.map((slide, i) => (
           <li
-            key={slide.src}
+            key={slide.url}
             className="relative shrink-0 snap-start w-full sm:w-[80%] aspect-[16/10] overflow-hidden rounded-m bg-noir/20"
           >
             <Image
-              src={slide.src}
+              src={slide.url}
               alt={slide.alt}
               fill
               sizes="(min-width: 640px) 60vw, 90vw"

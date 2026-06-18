@@ -10,7 +10,7 @@ interface CfpBody {
   closeDate?: string;
 }
 
-const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_"];
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_", "about_"];
 
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/general
@@ -39,10 +39,10 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
         update: { value },
         create: { key, value },
       });
-      // Identity assets (logos/favicons) and ecosystem partners both affect
-      // the home render (layout identity + EcosystemSection). Purge the
-      // home so visitors see the change without waiting for the cache TTL.
-      if (key.startsWith("identity_") || key.startsWith("ecosystem_")) {
+      // Identity assets (logos/favicons), ecosystem partners and the about
+      // carousel all affect the home render. Purge the home so visitors see
+      // the change without waiting for the cache TTL.
+      if (key.startsWith("identity_") || key.startsWith("ecosystem_") || key.startsWith("about_")) {
         touchedHomeRender = true;
       }
     }
