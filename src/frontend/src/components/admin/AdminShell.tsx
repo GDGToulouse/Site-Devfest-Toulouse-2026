@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 
-import { getAdminSession, signOut } from "@/lib/admin-api";
+import { adminFetch, getAdminSession, signOut } from "@/lib/admin-api";
 import AdminLogin from "./AdminLogin";
 import AdminSidebar from "./AdminSidebar";
 import { isAdminPathAllowed, type AdminRole } from "./nav-items";
@@ -17,6 +17,28 @@ interface AdminUser {
   role: AdminRole;
 }
 
+interface CurrentEdition {
+  id: number;
+  year: number;
+}
+
+interface EditionSummary {
+  id: number;
+  year: number;
+  status: string;
+}
+
+// The "current edition" is the one being actively worked on: an edition in the
+// ANNOUNCEMENT phase, otherwise one in PREPARATION, otherwise the most recent.
+function pickCurrentEdition(editions: EditionSummary[]): CurrentEdition | null {
+  if (editions.length === 0) return null;
+  const byPriority =
+    editions.find((e) => e.status === "ANNOUNCEMENT") ??
+    editions.find((e) => e.status === "PREPARATION") ??
+    [...editions].sort((a, b) => b.year - a.year)[0];
+  return { id: byPriority.id, year: byPriority.year };
+}
+
 // Public admin paths that render their own content without requiring a session.
 // A user resetting their password precisely does NOT have a valid session.
 const PUBLIC_ADMIN_PATHS = ["/admin/reset-password"];
@@ -26,14 +48,20 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const isPublicPath = PUBLIC_ADMIN_PATHS.some((p) => pathname.startsWith(p));
 
   const [user, setUser] = useState<AdminUser | null>(null);
+  const [currentEdition, setCurrentEdition] = useState<CurrentEdition | null>(null);
   const [isLoading, setIsLoading] = useState(!isPublicPath);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (isPublicPath) return;
     getAdminSession()
-      .then((session) => {
+      .then(async (session) => {
         setUser(session);
+        // Editions are ADMIN-only; skip the call for editors to avoid a 403.
+        if (session?.role === "ADMIN") {
+          const { data } = await adminFetch<EditionSummary[]>("/editions");
+          if (data) setCurrentEdition(pickCurrentEdition(data));
+        }
         setIsLoading(false);
       })
       .catch(() => {
@@ -84,6 +112,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       >
         <AdminSidebar
           user={user}
+          currentEdition={currentEdition}
           onLogout={handleLogout}
           onNavigate={() => setIsSidebarOpen(false)}
         />
