@@ -9,6 +9,15 @@ import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import FilePickerDialog from "@/components/admin/FilePickerDialog";
 
 type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
+type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
+
+const SPONSOR_LEVELS: { value: SponsorLevel; label: string }[] = [
+  { value: "PLATINUM", label: "Platinum" },
+  { value: "GOLD", label: "Gold" },
+  { value: "SILVER", label: "Silver" },
+  { value: "SOUTIEN", label: "Soutien" },
+  { value: "COMMUNAUTE", label: "Communauté" },
+];
 
 interface EditionSettings {
   sponsorPageStatus: SponsorPageStatus;
@@ -92,8 +101,12 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
   const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
   const [isHeroPickerOpen, setIsHeroPickerOpen] = useState(false);
 
+  // Open sponsoring levels — which levels are offered when creating a sponsor.
+  const [openLevels, setOpenLevels] = useState<SponsorLevel[]>([]);
+  const [levelsSaved, setLevelsSaved] = useState(false);
+
   async function loadSettings() {
-    const { data } = await adminFetch<EditionSettings>(`/editions/${editionId}`);
+    const { data } = await adminFetch<EditionSettings & { openSponsorLevels?: SponsorLevel[] }>(`/editions/${editionId}`);
     if (data) {
       setSettings({
         sponsorPageStatus: data.sponsorPageStatus ?? "PRE_ANNOUNCEMENT",
@@ -101,7 +114,21 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         sponsorBrochureUrl: data.sponsorBrochureUrl ?? null,
         sponsorHeroImageUrl: data.sponsorHeroImageUrl ?? null,
       });
+      setOpenLevels(data.openSponsorLevels ?? []);
     }
+  }
+
+  function toggleOpenLevel(level: SponsorLevel) {
+    setOpenLevels((prev) => (prev.includes(level) ? prev.filter((l) => l !== level) : [...prev, level]));
+  }
+
+  async function saveOpenLevels() {
+    await adminFetch(`/editions/${editionId}`, {
+      method: "PUT",
+      body: JSON.stringify({ openSponsorLevels: openLevels }),
+    });
+    setLevelsSaved(true);
+    setTimeout(() => setLevelsSaved(false), 3000);
   }
 
   async function saveSettings() {
@@ -238,6 +265,34 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   return (
     <div>
+      {/* Open sponsoring levels — which levels are offered when creating a sponsor */}
+      <div className="bg-blanc-casse/50 rounded-xl p-6 mb-6">
+        <h3 className="text-lg font-bold text-noir mb-1">Niveaux de sponsoring ouverts</h3>
+        <p className="text-sm text-gris mb-4">Seuls les niveaux cochés sont proposés à la création d&apos;un sponsor.</p>
+        <div className="flex flex-wrap gap-3">
+          {SPONSOR_LEVELS.map((l) => (
+            <label key={l.value} className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={openLevels.includes(l.value)}
+                onChange={() => toggleOpenLevel(l.value)}
+                className="rounded border-gris/30 text-malachite focus:ring-malachite"
+              />
+              <span className="text-sm text-noir">{l.label}</span>
+            </label>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center gap-3">
+          <button
+            onClick={saveOpenLevels}
+            className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
+          >
+            Enregistrer les niveaux
+          </button>
+          {levelsSaved && <span className="text-sm text-malachite">Enregistré !</span>}
+        </div>
+      </div>
+
       {/* Page settings */}
       <div className="bg-blanc-casse/50 rounded-xl p-6 mb-6 space-y-4">
         <h3 className="text-lg font-bold text-noir">Statut de la page « Devenir sponsor »</h3>
