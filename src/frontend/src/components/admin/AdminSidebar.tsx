@@ -13,10 +13,15 @@ import {
   faUsers,
   faGear,
   faKey,
+  faUser,
+  faMicrophone,
+  faHandshake,
+  faTag,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
-import { adminNavItems, type AdminRole } from "./nav-items";
+import { adminNavGroups, type AdminNavItem, type AdminRole } from "./nav-items";
 
 interface AdminUser {
   email: string;
@@ -24,8 +29,14 @@ interface AdminUser {
   role: AdminRole;
 }
 
+interface CurrentEdition {
+  id: number;
+  year: number;
+}
+
 interface AdminSidebarProps {
   user: AdminUser;
+  currentEdition?: CurrentEdition | null;
   onLogout: () => void;
   onNavigate?: () => void;
 }
@@ -40,13 +51,65 @@ const iconMap: Record<string, IconDefinition> = {
   users: faUsers,
   settings: faGear,
   key: faKey,
+  user: faUser,
+  microphone: faMicrophone,
+  handshake: faHandshake,
+  tag: faTag,
+  star: faStar,
 };
 
-export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
+function SectionTitle({ title }: { title: string }) {
+  return (
+    <p className="px-6 pt-5 pb-2 text-[11px] font-bold uppercase tracking-wider text-blanc/40">
+      {title}
+    </p>
+  );
+}
+
+export default function AdminSidebar({ user, currentEdition, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
-  const visibleItems = adminNavItems
-    .filter((item) => item.roles.includes(user.role))
-    .map((item) => ({ ...item, href: item.path }));
+
+  function renderItem(item: AdminNavItem) {
+    const icon = iconMap[item.icon];
+
+    if (item.disabled) {
+      return (
+        <span
+          key={item.path}
+          aria-disabled="true"
+          className="flex items-center gap-3 px-6 py-3 text-sm border-l-4 border-transparent text-blanc/30 cursor-not-allowed"
+        >
+          {icon && <FontAwesomeIcon icon={icon} className="w-4 h-4" aria-hidden="true" />}
+          {item.label}
+          {item.badge && (
+            <span className="ml-auto rounded-full bg-blanc/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-blanc/40">
+              {item.badge}
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    const isActive = pathname === item.path || (item.path !== "/admin" && pathname.startsWith(item.path));
+    return (
+      <Link
+        key={item.path}
+        href={item.path}
+        onClick={onNavigate}
+        className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4 ${
+          isActive
+            ? "bg-blanc/10 text-blanc font-bold border-malachite"
+            : "text-blanc/70 hover:bg-blanc/5 hover:text-blanc border-transparent"
+        }`}
+      >
+        {icon && <FontAwesomeIcon icon={icon} className="w-4 h-4" aria-hidden="true" />}
+        {item.label}
+      </Link>
+    );
+  }
+
+  const editionHref = currentEdition ? `/admin/editions/${currentEdition.id}` : null;
+  const isEditionActive = editionHref ? pathname.startsWith(editionHref) : false;
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
@@ -64,25 +127,35 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
         </Link>
       </div>
 
-      <nav className="flex-1 py-4 overflow-y-auto">
-        {visibleItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(item.href));
+      <nav className="flex-1 py-2 overflow-y-auto">
+        {adminNavGroups.map((group, index) => {
+          const visibleItems = group.items.filter((item) => item.roles.includes(user.role));
+          if (visibleItems.length === 0) return null;
+
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              onClick={onNavigate}
-              className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4 ${
-                isActive
-                  ? "bg-blanc/10 text-blanc font-bold border-malachite"
-                  : "text-blanc/70 hover:bg-blanc/5 hover:text-blanc border-transparent"
-              }`}
-            >
-              {iconMap[item.icon] && (
-                <FontAwesomeIcon icon={iconMap[item.icon]} className="w-4 h-4" aria-hidden="true" />
+            <div key={group.title ?? `group-${index}`}>
+              {group.title && <SectionTitle title={group.title} />}
+              {visibleItems.map(renderItem)}
+
+              {/* Dynamic "current edition" block, right after the top group */}
+              {index === 0 && currentEdition && editionHref && (
+                <>
+                  <SectionTitle title={`Édition en cours · ${currentEdition.year}`} />
+                  <Link
+                    href={editionHref}
+                    onClick={onNavigate}
+                    className={`flex items-center gap-3 px-6 py-3 text-sm transition-colors border-l-4 ${
+                      isEditionActive
+                        ? "bg-blanc/10 text-blanc font-bold border-malachite"
+                        : "text-blanc/70 hover:bg-blanc/5 hover:text-blanc border-transparent"
+                    }`}
+                  >
+                    <FontAwesomeIcon icon={faStar} className="w-4 h-4" aria-hidden="true" />
+                    Voir l&apos;édition
+                  </Link>
+                </>
               )}
-              {item.label}
-            </Link>
+            </div>
           );
         })}
       </nav>
