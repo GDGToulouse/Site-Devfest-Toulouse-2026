@@ -21,16 +21,16 @@ interface CategoryListQuery {
 }
 
 export default async function adminCategoryRoutes(app: FastifyInstance) {
-  // GET /api/admin/categories?editionId=X
+  // GET /api/admin/categories?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: CategoryListQuery }>("/categories", {
     schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     return prisma.category.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: { sortOrder: "asc" },
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId ? { sortOrder: "asc" } : [{ edition: { year: "desc" } }, { sortOrder: "asc" }],
     });
   });
 

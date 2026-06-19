@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import Tabs from "@/components/admin/Tabs";
@@ -55,11 +55,20 @@ const TABS = [
 export default function EditionDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const editionId = Number(params.id);
+
+  const tabFromUrl = searchParams.get("tab");
+  const initialTab = TABS.some((t) => t.key === tabFromUrl) ? (tabFromUrl as string) : "general";
 
   const [edition, setEdition] = useState<EditionData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("general");
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  function handleTabChange(tab: string) {
+    setActiveTab(tab);
+    router.replace(`/admin/editions/${editionId}?tab=${tab}`, { scroll: false });
+  }
 
   async function loadEdition() {
     const { data, status } = await adminFetch<EditionData>(`/editions/${editionId}`);
@@ -94,7 +103,7 @@ export default function EditionDetailPage() {
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6">
-        <Tabs tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab} />
+        <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
 
         {activeTab === "general" && (
           <GeneralTab edition={edition} onSaved={loadEdition} />

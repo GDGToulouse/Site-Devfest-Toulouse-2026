@@ -24,10 +24,10 @@ export const adminNavGroups: AdminNavGroup[] = [
   {
     title: "Données",
     items: [
-      { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"], disabled: true, badge: "Bientôt" },
-      { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"], disabled: true, badge: "Bientôt" },
-      { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"], disabled: true, badge: "Bientôt" },
-      { label: "Catégories", path: "/admin/categories", icon: "tag", roles: ["ADMIN", "EDITOR"], disabled: true, badge: "Bientôt" },
+      { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
+      { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"] },
+      { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"] },
+      { label: "Catégories", path: "/admin/categories", icon: "tag", roles: ["ADMIN", "EDITOR"] },
     ],
   },
   {
