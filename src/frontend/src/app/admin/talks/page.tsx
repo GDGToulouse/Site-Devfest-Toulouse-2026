@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Talk, TalkFormat } from "@/lib/types";
@@ -20,9 +20,10 @@ const FORMAT_LABELS: Record<TalkFormat, string> = {
 
 export default function TalksDataPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [talks, setTalks] = useState<TalkRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [year, setYear] = useState<string>("");
+  const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [format, setFormat] = useState<string>("");
   const [search, setSearch] = useState("");
 

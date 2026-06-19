@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, SponsorLevel } from "@/lib/types";
@@ -22,9 +22,10 @@ const LEVEL_LABELS: Record<SponsorLevel, string> = {
 
 export default function SponsorsDataPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [sponsors, setSponsors] = useState<SponsorRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [year, setYear] = useState<string>("");
+  const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [level, setLevel] = useState<string>("");
   const [search, setSearch] = useState("");
 
