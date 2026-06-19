@@ -34,6 +34,18 @@ export default async function adminCategoryRoutes(app: FastifyInstance) {
     });
   });
 
+  // GET /api/admin/categories/:id
+  app.get<{ Params: CategoryIdParams }>("/categories/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const category = await prisma.category.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!category) return reply.code(404).send({ error: "Category not found" });
+    return category;
+  });
+
   // POST /api/admin/categories
   app.post<{ Body: CategoryCreateBody }>("/categories", async (request, reply) => {
     const body = request.body;

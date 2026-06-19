@@ -62,6 +62,22 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     return talks.map(serialize);
   });
 
+  // GET /api/admin/talks/:id
+  app.get<{ Params: TalkIdParams }>("/talks/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const talk = await prisma.talk.findUnique({
+      where: { id: Number(request.params.id) },
+      include: {
+        speakers: { select: { id: true, name: true } },
+        category: { select: { id: true, nameFr: true, color: true } },
+        edition: { select: { id: true, year: true } },
+      },
+    });
+    if (!talk) return reply.code(404).send({ error: "Talk not found" });
+    return serialize(talk);
+  });
+
   // POST /api/admin/talks
   app.post<{ Body: TalkCreateBody }>("/talks", async (request, reply) => {
     const body = request.body;

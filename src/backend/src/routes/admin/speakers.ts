@@ -49,6 +49,18 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     return speakers.map(serialize);
   });
 
+  // GET /api/admin/speakers/:id
+  app.get<{ Params: SpeakerIdParams }>("/speakers/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const speaker = await prisma.speaker.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
+    return serialize(speaker);
+  });
+
   // POST /api/admin/speakers
   app.post<{ Body: SpeakerCreateBody }>("/speakers", async (request, reply) => {
     const body = request.body;
