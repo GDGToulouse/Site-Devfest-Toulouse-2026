@@ -10,11 +10,6 @@ import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
-import SponsorsTab from "@/components/admin/edition-detail/SponsorsTab";
-import SpeakersTab from "@/components/admin/edition-detail/SpeakersTab";
-import CategoriesTab from "@/components/admin/edition-detail/CategoriesTab";
-import ConferencesTab from "@/components/admin/edition-detail/ConferencesTab";
-import ImportTab from "@/components/admin/edition-detail/ImportTab";
 
 interface EditionData {
   id: number;
@@ -42,11 +37,6 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 const TABS = [
   { key: "general", label: "Général" },
   { key: "ticketing", label: "Billetterie" },
-  { key: "speakers", label: "Speakers" },
-  { key: "conferences", label: "Conférences" },
-  { key: "categories", label: "Catégories" },
-  { key: "import", label: "Import" },
-  { key: "sponsors", label: "Sponsors" },
   { key: "sponsoring", label: "Sponsoring" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
@@ -110,21 +100,6 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "ticketing" && (
           <TicketingTab editionId={edition.id} />
-        )}
-        {activeTab === "speakers" && (
-          <SpeakersTab editionId={edition.id} />
-        )}
-        {activeTab === "conferences" && (
-          <ConferencesTab editionId={edition.id} />
-        )}
-        {activeTab === "categories" && (
-          <CategoriesTab editionId={edition.id} />
-        )}
-        {activeTab === "import" && (
-          <ImportTab editionId={edition.id} />
-        )}
-        {activeTab === "sponsors" && (
-          <SponsorsTab editionId={edition.id} />
         )}
         {activeTab === "sponsoring" && (
           <SponsoringTab editionId={edition.id} />

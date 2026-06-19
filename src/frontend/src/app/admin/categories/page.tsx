@@ -57,9 +57,17 @@ export default function CategoriesDataPage() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-noir">Catégories</h1>
-        <p className="mt-1 text-sm text-gris">Toutes éditions confondues. La modification se fait dans l&apos;édition concernée.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-noir">Catégories</h1>
+          <p className="mt-1 text-sm text-gris">Toutes éditions confondues.</p>
+        </div>
+        <button
+          onClick={() => router.push("/admin/categories/new")}
+          className="shrink-0 px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
+        >
+          + Ajouter
+        </button>
       </div>
 
       {isLoading ? (
@@ -91,7 +99,7 @@ export default function CategoriesDataPage() {
             columns={columns}
             data={filtered}
             emptyMessage="Aucune catégorie"
-            onEdit={(c) => router.push(`/admin/editions/${c.editionId}?tab=categories`)}
+            onEdit={(c) => router.push(`/admin/categories/${c.id}`)}
           />
         </>
       )}
