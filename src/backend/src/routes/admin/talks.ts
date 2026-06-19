@@ -44,19 +44,19 @@ function serialize(t: {
 }
 
 export default async function adminTalkRoutes(app: FastifyInstance) {
-  // GET /api/admin/talks?editionId=X
+  // GET /api/admin/talks?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: TalkListQuery }>("/talks", {
     schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const talks = await prisma.talk.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: { titleFr: "asc" },
+      where: editionId ? { editionId: Number(editionId) } : {},
+      orderBy: editionId ? { titleFr: "asc" } : [{ edition: { year: "desc" } }, { titleFr: "asc" }],
       include: {
         speakers: { select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
+        ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
       },
     });
     return talks.map(serialize);

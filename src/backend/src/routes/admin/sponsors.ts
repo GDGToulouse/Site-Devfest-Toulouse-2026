@@ -39,18 +39,20 @@ function serialize(s: {
 }
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
-  // GET /api/admin/sponsors?editionId=X
+  // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: SponsorListQuery }>("/sponsors", {
     schema: {
       querystring: { type: "object", properties: { editionId: { type: "string" } } },
     },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const sponsors = await prisma.sponsor.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: [{ level: "asc" }, { name: "asc" }],
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId
+        ? [{ level: "asc" }, { name: "asc" }]
+        : [{ edition: { year: "desc" } }, { level: "asc" }, { name: "asc" }],
     });
     return sponsors.map(serialize);
   });
