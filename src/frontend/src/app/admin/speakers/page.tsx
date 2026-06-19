@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Speaker } from "@/lib/types";
@@ -14,9 +14,10 @@ interface SpeakerRow extends Speaker {
 
 export default function SpeakersDataPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [speakers, setSpeakers] = useState<SpeakerRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [year, setYear] = useState<string>("");
+  const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [search, setSearch] = useState("");
 
   useEffect(() => {

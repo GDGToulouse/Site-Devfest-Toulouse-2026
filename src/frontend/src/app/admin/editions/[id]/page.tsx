@@ -10,6 +10,7 @@ import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
+import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
 
 interface EditionData {
   id: number;
@@ -26,6 +27,10 @@ interface EditionData {
   archivedSiteUrl: string | null;
   ticketTiersCount: number;
   articlesCount: number;
+  speakersCount: number;
+  talksCount: number;
+  sponsorsCount: number;
+  categoriesCount: number;
 }
 
 const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
@@ -91,6 +96,17 @@ export default function EditionDetailPage() {
         <h1 className="text-3xl font-bold text-noir">DevFest {edition.year}</h1>
         <StatusBadge status={statusInfo.label} variant={statusInfo.variant} />
       </div>
+
+      <SynthesisOverview
+        editionId={edition.id}
+        year={edition.year}
+        counts={{
+          speakers: edition.speakersCount,
+          talks: edition.talksCount,
+          sponsors: edition.sponsorsCount,
+          categories: edition.categoriesCount,
+        }}
+      />
 
       <div className="bg-blanc rounded-xl shadow-card p-6">
         <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />

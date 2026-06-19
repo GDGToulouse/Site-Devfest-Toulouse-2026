@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Category } from "@/lib/types";
@@ -13,9 +13,10 @@ interface CategoryRow extends Category {
 
 export default function CategoriesDataPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [categories, setCategories] = useState<CategoryRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [year, setYear] = useState<string>("");
+  const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [search, setSearch] = useState("");
 
   useEffect(() => {
