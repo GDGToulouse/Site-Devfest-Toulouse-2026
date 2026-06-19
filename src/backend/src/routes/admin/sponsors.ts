@@ -57,6 +57,18 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     return sponsors.map(serialize);
   });
 
+  // GET /api/admin/sponsors/:id
+  app.get<{ Params: SponsorIdParams }>("/sponsors/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const sponsor = await prisma.sponsor.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
+    return serialize(sponsor);
+  });
+
   // POST /api/admin/sponsors
   app.post<{ Body: SponsorCreateBody }>("/sponsors", async (request, reply) => {
     const body = request.body;
