@@ -220,13 +220,16 @@ body {
   --hero-radius: clamp(24px, 3vw, 48px);
   --header-h: 60px;
   position: relative;
-  padding: clamp(16px, 2vw, 28px) var(--hero-pad) clamp(28px, 3.5vw, 56px);
+  padding: 0 var(--hero-pad) clamp(28px, 3.5vw, 56px);
 }
 /* First screen: header (60px sticky) + this block fill the viewport, so the
    catch-phrase lands at the bottom of the fold and the stats card needs a
-   scroll (#134). */
+   scroll (#134). Its own vertical padding is included in the min-height
+   (border-box), so header + .hero-screen = exactly 100vh. */
 .hero-screen {
   min-height: calc(100dvh - var(--header-h));
+  box-sizing: border-box;
+  padding-block: clamp(16px, 2vw, 28px);
   display: flex;
   flex-direction: column;
   gap: clamp(24px, 3vw, 48px);
