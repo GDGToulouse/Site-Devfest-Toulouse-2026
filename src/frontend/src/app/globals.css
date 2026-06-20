@@ -218,8 +218,21 @@ body {
   --hero-pad: clamp(20px, 4vw, 56px);
   --hero-gap: clamp(20px, 3vw, 48px);
   --hero-radius: clamp(24px, 3vw, 48px);
+  --header-h: 60px;
   position: relative;
   padding: clamp(16px, 2vw, 28px) var(--hero-pad) clamp(28px, 3.5vw, 56px);
+}
+/* First screen: header (60px sticky) + this block fill the viewport, so the
+   catch-phrase lands at the bottom of the fold and the stats card needs a
+   scroll (#134). */
+.hero-screen {
+  min-height: calc(100dvh - var(--header-h));
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 48px);
+}
+.hero-screen > .hero-inner {
+  flex: 1 1 auto;
 }
 .hero-inner {
   display: grid;
@@ -367,16 +380,16 @@ body {
   }
 }
 
-/* Key-figures block rendered inside the hero (#134) — the big centred
- * catch-phrase title + stats card, kept compact so the whole hero fits on
- * the first screen of a 1366x768 laptop. */
-.hero-figures {
-  margin-top: clamp(8px, 1vw, 16px);
-}
+/* Key-figures inside the hero (#134). The catch-phrase title is pinned at the
+ * bottom of the first screen (.hero-screen flex column); the stats card flows
+ * just below the fold, so reaching the figures requires a scroll. */
 .hero-figures-title {
-  margin-bottom: clamp(28px, 4vw, 56px);
+  margin: 0;
   line-height: 1.1;
   text-wrap: balance;
+}
+.hero-figures {
+  margin-top: clamp(24px, 3vw, 48px);
 }
 
 /* ========================================

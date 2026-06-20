@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { useTranslations } from "next-intl";
 
 import StatIcon from "./StatIcon";
 import { localizedField } from "@/lib/i18n-helpers";
@@ -10,12 +9,9 @@ interface KeyFiguresSectionProps {
   locale: string;
 }
 
-// Rendered inside the hero (#134): big centred catch-phrase title above the
-// stats card, sized to fit on the first screen without scrolling. Uses a div
-// (not a <section>) since it lives within the hero <section>.
+// Stats card only (#134). The catch-phrase title is rendered by the hero so it
+// can pin to the bottom of the first screen; this card sits just below the fold.
 export default function KeyFiguresSection({ figures, locale }: KeyFiguresSectionProps) {
-  const t = useTranslations("home.stats");
-
   if (figures.length === 0) return null;
 
   return (
@@ -35,13 +31,6 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <h2 className="hero-figures-title text-2xl sm:text-3xl lg:text-4xl font-bold text-noir text-center">
-          {t.rich("title", {
-            tech: (chunks) => <span className="text-malachite">{chunks}</span>,
-            toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
-          })}
-        </h2>
-
         <div className="relative bg-blanc rounded-4xl shadow-section p-5 lg:p-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
             {figures.map((figure) => (
