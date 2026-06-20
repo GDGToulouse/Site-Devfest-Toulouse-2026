@@ -250,7 +250,7 @@ body {
 .hero-tagline {
   font-size: clamp(16px, 1.4vw, 22px);
   line-height: 1.45;
-  max-width: 36ch;
+  max-width: 50ch;
   margin: 0;
 }
 .hero-tagline strong {
