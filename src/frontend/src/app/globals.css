@@ -256,6 +256,15 @@ body {
 .hero-tagline strong {
   font-weight: 700;
 }
+.hero-catchphrase {
+  font-size: clamp(22px, 2.6vw, 40px);
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  max-width: 22ch;
+  margin: 0;
+  text-wrap: balance;
+}
 .hero-meta {
   display: flex;
   flex-wrap: wrap;

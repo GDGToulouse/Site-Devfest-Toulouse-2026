@@ -20,6 +20,7 @@ interface HeroSectionProps {
 
 export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) {
   const t = useTranslations("home.hero");
+  const tStats = useTranslations("home.stats");
 
   const heroImageUrl = edition?.heroImageUrl || null;
   const dateLabel = edition?.startDate ? formatDate(edition.startDate, locale) : null;
@@ -60,6 +61,15 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
             {t("subtitleLine1")} <strong>{t("subtitleLine2devs")}</strong>
             {t("subtitleLine2end")}
             <strong>{t("subtitleLine2devs2")}</strong>
+          </p>
+
+          {/* Catch-phrase moved up from the key-figures section so it shows on
+              the first screen (#134). Same i18n key (home.stats.title). */}
+          <p className="hero-catchphrase text-noir">
+            {tStats.rich("title", {
+              tech: (chunks) => <span className="text-malachite">{chunks}</span>,
+              toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
+            })}
           </p>
 
           {(dateLabel || venueLabel) && (
