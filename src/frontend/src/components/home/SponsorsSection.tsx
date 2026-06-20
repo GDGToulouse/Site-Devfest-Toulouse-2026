@@ -22,7 +22,7 @@ export default async function SponsorsSection() {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <section className="relative overflow-hidden px-6 py-10 lg:py-14">
+    <section className="section-y relative overflow-hidden px-6">
       {/* Croix occitane decoration (top-right). Placeholder geometric mark
           until the brand asset is provided; kept subtle and decorative. */}
       <div
@@ -35,7 +35,7 @@ export default async function SponsorsSection() {
       </div>
 
       <div className="relative mx-auto max-w-6xl">
-        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+        <div className="section-title flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-noir lg:text-4xl">{t("title")}</h2>
           <Link
             href="/devenir-sponsor"

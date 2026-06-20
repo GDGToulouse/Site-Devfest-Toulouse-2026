@@ -4,7 +4,7 @@ export default function AboutSection() {
   const t = useTranslations("home.about");
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className="section-y px-6">
       <div className="mx-auto max-w-6xl">
         <div className="relative overflow-hidden rounded-3xl bg-bismarck min-h-[400px] flex items-center">
           {/* Warm orange filter over the (future) background photo, replacing

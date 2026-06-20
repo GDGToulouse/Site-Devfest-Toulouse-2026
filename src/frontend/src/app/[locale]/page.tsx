@@ -174,9 +174,9 @@ export default async function HomePage() {
       )}
 
       {isSeeYouNextYear && edition?.galleryUrl && (
-        <section className="px-6 py-16 lg:py-24 bg-blanc-casse">
+        <section className="section-y px-6 bg-blanc-casse">
           <div className="mx-auto max-w-6xl text-center">
-            <h2 className="text-3xl lg:text-5xl font-bold text-noir mb-6">
+            <h2 className="section-title text-3xl lg:text-5xl font-bold text-noir">
               {locale === "fr" ? "Galerie photos" : "Photo gallery"}
             </h2>
             <a

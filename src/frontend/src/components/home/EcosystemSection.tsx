@@ -11,9 +11,9 @@ export default async function EcosystemSection() {
   if (partners.length === 0) return null;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className="section-y px-6">
       <div className="mx-auto max-w-6xl text-center">
-        <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
+        <h2 className="section-title text-2xl lg:text-4xl font-bold text-noir">
           {t("ecosystemTitle")}
         </h2>
         <div className="flex flex-wrap justify-center gap-4">

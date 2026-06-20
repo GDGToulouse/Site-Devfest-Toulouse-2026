@@ -15,9 +15,9 @@ export default function LatestNewsSection({ articles, locale }: LatestNewsSectio
   if (articles.length === 0) return null;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className="section-y px-6">
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between mb-10">
+        <div className="section-title flex items-center justify-between">
           <h2 className="text-3xl lg:text-5xl font-bold text-noir">
             {t("title")}
           </h2>

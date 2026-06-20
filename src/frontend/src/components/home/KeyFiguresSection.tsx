@@ -15,8 +15,10 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
 
   if (figures.length === 0) return null;
 
+  // Reduced top padding keeps the title on the first PC screen (#134);
+  // bottom padding matches the shared section rhythm (.section-y, #135).
   return (
-    <section className="relative px-6 pt-6 pb-12 lg:pt-8 lg:pb-16">
+    <section className="relative px-6 pt-6 lg:pt-8 pb-[clamp(40px,5vw,72px)]">
       {/* La Grave illustration — sits on the page background, behind the card,
           peeking out from the bottom-left rather than being boxed inside the
           white card. */}
@@ -32,7 +34,7 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-8 lg:mb-12">
+        <h2 className="section-title text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center">
           {t.rich("title", {
             tech: (chunks) => <span className="text-malachite">{chunks}</span>,
             toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
