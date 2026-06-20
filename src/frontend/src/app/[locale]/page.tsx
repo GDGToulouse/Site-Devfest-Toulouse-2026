@@ -10,7 +10,6 @@ import {
 } from "@/lib/api";
 
 import HeroSection from "@/components/home/HeroSection";
-import KeyFiguresSection from "@/components/home/KeyFiguresSection";
 import TicketingSection from "@/components/home/TicketingSection";
 import ReplaySection from "@/components/home/ReplaySection";
 import LatestNewsSection from "@/components/home/LatestNewsSection";
@@ -125,7 +124,14 @@ export default async function HomePage() {
         />
       )}
 
-      <HeroSection edition={edition} cfp={cfp} locale={locale} />
+      {/* Key figures live inside the hero (announcement only) so the
+          catch-phrase title shows on the first screen (#134). */}
+      <HeroSection
+        edition={edition}
+        cfp={cfp}
+        locale={locale}
+        figures={isAnnouncement ? figures : []}
+      />
 
       {/* PREPARATION: teasing + replay from previous edition */}
       {isPreparation && edition?.previousAfterMovieUrl && (
@@ -134,11 +140,6 @@ export default async function HomePage() {
           galleryUrl={edition.previousGalleryUrl}
           editionYear={edition.previousYear}
         />
-      )}
-
-      {/* ANNOUNCEMENT: full content */}
-      {isAnnouncement && figures.length > 0 && (
-        <KeyFiguresSection figures={figures} locale={locale} />
       )}
 
       {isAnnouncement && tiers.length > 0 && (

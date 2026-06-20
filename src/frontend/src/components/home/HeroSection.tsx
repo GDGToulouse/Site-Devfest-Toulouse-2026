@@ -1,7 +1,8 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import KeyFiguresSection from "./KeyFiguresSection";
 import { getCfpCtaUrl } from "@/lib/cfp";
-import type { CfpSettings, Edition } from "@/lib/types";
+import type { CfpSettings, Edition, KeyFigure } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
@@ -16,11 +17,11 @@ interface HeroSectionProps {
   edition: Edition | null;
   cfp: CfpSettings | null;
   locale: string;
+  figures?: KeyFigure[];
 }
 
-export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale, figures = [] }: HeroSectionProps) {
   const t = useTranslations("home.hero");
-  const tStats = useTranslations("home.stats");
 
   const heroImageUrl = edition?.heroImageUrl || null;
   const dateLabel = edition?.startDate ? formatDate(edition.startDate, locale) : null;
@@ -61,15 +62,6 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
             {t("subtitleLine1")} <strong>{t("subtitleLine2devs")}</strong>
             {t("subtitleLine2end")}
             <strong>{t("subtitleLine2devs2")}</strong>
-          </p>
-
-          {/* Catch-phrase moved up from the key-figures section so it shows on
-              the first screen (#134). Same i18n key (home.stats.title). */}
-          <p className="hero-catchphrase text-noir">
-            {tStats.rich("title", {
-              tech: (chunks) => <span className="text-malachite">{chunks}</span>,
-              toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
-            })}
           </p>
 
           {(dateLabel || venueLabel) && (
@@ -121,6 +113,11 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
           {yearMonogram && <span className="hero-photo-wordmark">{yearMonogram}</span>}
         </div>
       </div>
+
+      {/* Key-figures (title + stats card) rendered inside the hero so the
+          catch-phrase stays big and centred yet shows on the first screen
+          without scrolling (#134). */}
+      {figures.length > 0 && <KeyFiguresSection figures={figures} locale={locale} />}
     </section>
   );
 }
