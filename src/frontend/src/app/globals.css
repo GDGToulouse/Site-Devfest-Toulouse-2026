@@ -219,7 +219,7 @@ body {
   --hero-gap: clamp(20px, 3vw, 48px);
   --hero-radius: clamp(24px, 3vw, 48px);
   position: relative;
-  padding: clamp(16px, 2vw, 28px) var(--hero-pad) clamp(24px, 3vw, 48px);
+  padding: clamp(14px, 1.6vw, 24px) var(--hero-pad) clamp(20px, 2.4vw, 32px);
 }
 .hero-inner {
   display: grid;
@@ -233,8 +233,8 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(20px, 2.4vw, 36px);
-  padding-block: clamp(12px, 2vw, 32px);
+  gap: clamp(16px, 1.8vw, 24px);
+  padding-block: clamp(4px, 1vw, 16px);
 }
 .hero-title {
   font-size: clamp(56px, 9.5vw, 168px);
@@ -286,7 +286,7 @@ body {
 }
 .hero-photo {
   position: relative;
-  min-height: clamp(280px, 42vw, 640px);
+  min-height: clamp(260px, 35vw, 520px);
   background-size: cover;
   background-position: center;
   border-radius: var(--hero-radius);
