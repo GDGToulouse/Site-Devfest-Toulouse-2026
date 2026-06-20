@@ -68,6 +68,62 @@ describe("Admin Articles API", () => {
     await app.close();
   });
 
+  it("POST with an explicit publishedAt should preserve that date", async () => {
+    const app = await buildAdminApp();
+    const slug = `dated-article-${Date.now()}`;
+    const originalDate = "2023-04-10T08:00:00.000Z";
+
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: {
+        slug,
+        titleFr: "Daté FR",
+        titleEn: "Dated EN",
+        contentFr: "",
+        contentEn: "",
+        publicationStatus: "PUBLISHED",
+        publishedAt: originalDate,
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const { id } = createRes.json();
+
+    const getRes = await app.inject({ method: "GET", url: `/api/admin/articles/${id}` });
+    expect(new Date(getRes.json().publishedAt).toISOString()).toBe(originalDate);
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
+    await app.close();
+  });
+
+  it("POST without publishedAt stamps the current date when published", async () => {
+    const app = await buildAdminApp();
+    const slug = `now-article-${Date.now()}`;
+    const before = Date.now();
+
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: {
+        slug,
+        titleFr: "Now FR",
+        titleEn: "Now EN",
+        contentFr: "",
+        contentEn: "",
+        publicationStatus: "PUBLISHED",
+      },
+    });
+    expect(createRes.statusCode).toBe(201);
+    const { id } = createRes.json();
+
+    const getRes = await app.inject({ method: "GET", url: `/api/admin/articles/${id}` });
+    const published = new Date(getRes.json().publishedAt).getTime();
+    expect(published).toBeGreaterThanOrEqual(before);
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
+    await app.close();
+  });
+
   it("POST /api/admin/articles should reject duplicate slug", async () => {
     const app = await buildAdminApp();
     const slug = `dup-test-${Date.now()}`;

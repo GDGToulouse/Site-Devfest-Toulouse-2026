@@ -10,6 +10,15 @@ import {
   type Lang,
 } from "../../lib/translation/index.js";
 
+// Returns a valid Date when an ISO string is supplied, otherwise null.
+// Used to let callers (e.g. content imports) preserve an original date
+// instead of stamping "now".
+function parsePublishedAt(value: string | undefined): Date | null {
+  if (!value) return null;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? null : date;
+}
+
 interface ArticleBody {
   slug: string;
   titleFr: string;
@@ -21,6 +30,9 @@ interface ArticleBody {
   imageUrl?: string;
   author?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
+  // ISO date string. When provided (e.g. imports preserving an original
+  // publication date), it overrides the default "now" stamp.
+  publishedAt?: string;
   editionIds?: number[];
   tagIds?: number[];
   // When the editor manually edits a field that was AI-translated, the UI
@@ -123,6 +135,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     }
 
     const isPublished = body.publicationStatus === "PUBLISHED";
+    const overrideDate = parsePublishedAt(body.publishedAt);
 
     const article = await prisma.article.create({
       data: {
@@ -136,7 +149,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         imageUrl: body.imageUrl?.trim() || null,
         author: body.author?.trim() || null,
         publicationStatus: body.publicationStatus || "DRAFT",
-        publishedAt: isPublished ? new Date() : null,
+        publishedAt: isPublished ? overrideDate ?? new Date() : null,
         editions: body.editionIds?.length ? { connect: body.editionIds.map((id) => ({ id })) } : undefined,
         tags: body.tagIds?.length ? { connect: body.tagIds.map((id) => ({ id })) } : undefined,
       },
@@ -161,6 +174,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const body = request.body;
     const isPublished = body.publicationStatus === "PUBLISHED";
     const wasPublished = existing.publicationStatus === "PUBLISHED";
+    const overrideDate = parsePublishedAt(body.publishedAt);
 
     const newContentFr = body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr;
     const newContentEn = body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn;
@@ -188,7 +202,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         imageUrl: body.imageUrl?.trim() ?? existing.imageUrl,
         author: body.author?.trim() ?? existing.author,
         publicationStatus: body.publicationStatus || existing.publicationStatus,
-        publishedAt: isPublished && !wasPublished ? new Date() : existing.publishedAt,
+        publishedAt: overrideDate ?? (isPublished && !wasPublished ? new Date() : existing.publishedAt),
         autoTranslatedFr: nextAutoFr,
         autoTranslatedEn: nextAutoEn,
         editions: body.editionIds !== undefined
