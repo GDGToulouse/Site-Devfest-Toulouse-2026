@@ -14,9 +14,9 @@ export default async function FeaturedSpeakersSection() {
   if (speakers.length === 0) return null;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className="section-y px-6">
       <div className="mx-auto max-w-6xl">
-        <h2 className="mb-8 text-2xl font-bold text-noir lg:text-4xl">{t("title")}</h2>
+        <h2 className="section-title text-2xl font-bold text-noir lg:text-4xl">{t("title")}</h2>
 
         <div className="grid grid-cols-2 gap-8 sm:grid-cols-3 lg:grid-cols-4">
           {speakers.map((s) => (

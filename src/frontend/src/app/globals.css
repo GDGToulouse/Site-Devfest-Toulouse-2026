@@ -366,3 +366,16 @@ body {
     animation: none;
   }
 }
+
+/* ========================================
+ * Home — vertical rhythm
+ * Single source of truth for section spacing so every home section shares
+ * the same responsive vertical padding and title spacing instead of ad-hoc
+ * per-section values. Densified from the previous py-16 lg:py-24 (#135).
+ * ======================================== */
+.section-y {
+  padding-block: clamp(40px, 5vw, 72px);
+}
+.section-title {
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
