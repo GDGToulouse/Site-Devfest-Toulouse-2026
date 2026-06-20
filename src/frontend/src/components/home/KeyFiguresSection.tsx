@@ -16,7 +16,7 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
   if (figures.length === 0) return null;
 
   return (
-    <section className="relative px-6 py-16 lg:py-24">
+    <section className="relative px-6 pt-6 pb-12 lg:pt-8 lg:pb-16">
       {/* La Grave illustration — sits on the page background, behind the card,
           peeking out from the bottom-left rather than being boxed inside the
           white card. */}
@@ -32,7 +32,7 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-12 lg:mb-20">
+        <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-8 lg:mb-12">
           {t.rich("title", {
             tech: (chunks) => <span className="text-malachite">{chunks}</span>,
             toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
