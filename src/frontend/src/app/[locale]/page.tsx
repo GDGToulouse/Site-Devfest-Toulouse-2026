@@ -16,7 +16,6 @@ import {
 import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
-import KeyFiguresSection from "@/components/home/KeyFiguresSection";
 import TicketingSection from "@/components/home/TicketingSection";
 import ReplaySection from "@/components/home/ReplaySection";
 import LatestNewsSection from "@/components/home/LatestNewsSection";
@@ -125,11 +124,9 @@ export default async function HomePage() {
 
   // Background alternation is computed at render over the sections that are
   // actually visible, so the blanc / blanc-cassé rhythm stays regular even when
-  // a conditional section (sponsors, speakers, news…) is empty (#135). The
-  // key-figures section is an "accent" outside the binary alternation (#136).
+  // a conditional section (sponsors, speakers, news…) is empty (#135).
   type HomeSection = {
     show: boolean;
-    accent?: boolean;
     render: (surface: SectionSurface) => ReactNode;
   };
 
@@ -138,25 +135,15 @@ export default async function HomePage() {
     return sections
       .filter((s) => s.show)
       .map((s, idx) => {
-        // The accent section (key figures, #136) is a tinted slot of its own:
-        // it still advances the parity so the next section flips and we never
-        // get two tinted backgrounds in a row.
-        if (s.accent) {
-          i += 1;
-          return <Fragment key={idx}>{s.render("accent")}</Fragment>;
-        }
         const surface: SectionSurface = i % 2 === 0 ? "blanc-casse" : "blanc";
         i += 1;
         return <Fragment key={idx}>{s.render(surface)}</Fragment>;
       });
   }
 
+  // Key figures are rendered inside the hero (#134); the remaining sections
+  // alternate blanc / blanc-cassé over whichever ones are visible (#135).
   const announcementSections: HomeSection[] = [
-    {
-      show: figures.length > 0,
-      accent: true,
-      render: (surface) => <KeyFiguresSection figures={figures} locale={locale} surface={surface} />,
-    },
     {
       show: tiers.length > 0,
       render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} />,
@@ -242,7 +229,14 @@ export default async function HomePage() {
         />
       )}
 
-      <HeroSection edition={edition} cfp={cfp} locale={locale} />
+      {/* Key figures live inside the hero (announcement only) so the
+          catch-phrase title shows on the first screen (#134). */}
+      <HeroSection
+        edition={edition}
+        cfp={cfp}
+        locale={locale}
+        figures={isAnnouncement ? figures : []}
+      />
 
       {/* PREPARATION: teasing + replay from previous edition */}
       {isPreparation && edition?.previousAfterMovieUrl && (
@@ -253,7 +247,9 @@ export default async function HomePage() {
         />
       )}
 
-      {/* ANNOUNCEMENT: full content, with computed background alternation */}
+      {/* ANNOUNCEMENT: full content, with computed background alternation.
+          Key figures are rendered inside the hero (#134), so they are not in
+          this list. */}
       {isAnnouncement && renderWithAlternation(announcementSections)}
 
       {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}

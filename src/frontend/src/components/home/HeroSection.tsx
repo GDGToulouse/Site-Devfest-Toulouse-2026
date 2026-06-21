@@ -1,7 +1,8 @@
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import KeyFiguresSection from "./KeyFiguresSection";
 import { getCfpCtaUrl } from "@/lib/cfp";
-import type { CfpSettings, Edition } from "@/lib/types";
+import type { CfpSettings, Edition, KeyFigure } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
@@ -16,10 +17,12 @@ interface HeroSectionProps {
   edition: Edition | null;
   cfp: CfpSettings | null;
   locale: string;
+  figures?: KeyFigure[];
 }
 
-export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale, figures = [] }: HeroSectionProps) {
   const t = useTranslations("home.hero");
+  const tStats = useTranslations("home.stats");
 
   const heroImageUrl = edition?.heroImageUrl || null;
   const dateLabel = edition?.startDate ? formatDate(edition.startDate, locale) : null;
@@ -40,8 +43,14 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
     ? `linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('${heroImageUrl}')`
     : "linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('https://picsum.photos/1600/1000?random=devfest')";
 
+  const hasFigures = figures.length > 0;
+
   return (
     <section className="hero w-full bg-blanc" aria-label="DevFest Toulouse">
+      {/* First screen: header + this block are sized to fill 100vh so the
+          catch-phrase sits at the bottom of the fold and the figures card
+          below it requires a scroll (#134). */}
+      <div className="hero-screen">
       <div className="hero-inner">
         <div className="hero-content">
           {/* Visually hidden H1 holds the semantic page heading so crawlers
@@ -111,6 +120,20 @@ export default function HeroSection({ edition, cfp, locale }: HeroSectionProps) 
           {yearMonogram && <span className="hero-photo-wordmark">{yearMonogram}</span>}
         </div>
       </div>
+
+        {/* Catch-phrase pinned at the bottom of the first screen. */}
+        {hasFigures && (
+          <h2 className="hero-figures-title text-2xl sm:text-3xl lg:text-4xl font-bold text-noir text-center px-6">
+            {tStats.rich("title", {
+              tech: (chunks) => <span className="text-malachite">{chunks}</span>,
+              toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
+            })}
+          </h2>
+        )}
+      </div>
+
+      {/* Stats card — sits just below the fold so it needs a scroll (#134). */}
+      {hasFigures && <KeyFiguresSection figures={figures} locale={locale} />}
     </section>
   );
 }
