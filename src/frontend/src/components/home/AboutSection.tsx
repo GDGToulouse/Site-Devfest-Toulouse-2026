@@ -1,10 +1,16 @@
 import { useTranslations } from "next-intl";
 
-export default function AboutSection() {
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
+
+interface AboutSectionProps {
+  surface?: SectionSurface;
+}
+
+export default function AboutSection({ surface = "blanc" }: AboutSectionProps) {
   const t = useTranslations("home.about");
 
   return (
-    <section className="section-y px-6">
+    <section className={`section-y px-6 ${surfaceBgClass(surface)}`}>
       <div className="mx-auto max-w-6xl">
         <div className="relative overflow-hidden rounded-3xl bg-bismarck min-h-[400px] flex items-center">
           {/* Warm orange filter over the (future) background photo, replacing
