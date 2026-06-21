@@ -236,6 +236,13 @@ body {
 }
 .hero-screen > .hero-inner {
   flex: 1 1 auto;
+  /* In a flex column, margin:0 auto on the grid cancels the default stretch
+     and shrinks it to content width; force full width so the hero spans the
+     row (max-width still caps it, margin auto still centres it). */
+  width: 100%;
+}
+.hero-screen > .hero-figures-title {
+  align-self: stretch;
 }
 .hero-inner {
   display: grid;
