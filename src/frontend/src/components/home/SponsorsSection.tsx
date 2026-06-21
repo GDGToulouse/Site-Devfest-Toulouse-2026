@@ -1,17 +1,21 @@
 import { getTranslations } from "next-intl/server";
 
-import { getSponsors } from "@/lib/api";
-import type { SponsorLevel } from "@/lib/types";
+import type { SponsorLevel, SponsorPublic } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
 import SponsorCard from "@/components/sponsors/SponsorCard";
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
 
 const LEVEL_ORDER: SponsorLevel[] = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"];
 
-export default async function SponsorsSection() {
-  const [t, sponsors] = await Promise.all([
-    getTranslations("home.sponsors"),
-    getSponsors(),
-  ]);
+interface SponsorsSectionProps {
+  sponsors: SponsorPublic[];
+  surface?: SectionSurface;
+}
+
+// Sponsors are fetched by the page so it can compute the section alternation
+// over the visible sections (#135).
+export default async function SponsorsSection({ sponsors, surface = "blanc" }: SponsorsSectionProps) {
+  const t = await getTranslations("home.sponsors");
 
   // Hidden when no sponsor is published (US-212).
   if (sponsors.length === 0) return null;
@@ -22,7 +26,7 @@ export default async function SponsorsSection() {
   })).filter((g) => g.items.length > 0);
 
   return (
-    <section className="section-y relative overflow-hidden px-6">
+    <section className={`section-y relative overflow-hidden px-6 ${surfaceBgClass(surface)}`}>
       {/* Croix occitane decoration (top-right). Placeholder geometric mark
           until the brand asset is provided; kept subtle and decorative. */}
       <div
