@@ -1,3 +1,4 @@
+import { Fragment, type ReactNode } from "react";
 import { getLocale } from "next-intl/server";
 
 import {
@@ -7,7 +8,12 @@ import {
   getLatestArticles,
   getCurrentTicketTiers,
   getKeyFigures,
+  getSponsors,
+  getFeaturedSpeakers,
+  getEcosystemPartners,
 } from "@/lib/api";
+
+import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
 import KeyFiguresSection from "@/components/home/KeyFiguresSection";
@@ -95,12 +101,15 @@ function buildEventJsonLd(
 export default async function HomePage() {
   const locale = await getLocale();
 
-  const [edition, tiers, figures, cfp, editions] = await Promise.all([
+  const [edition, tiers, figures, cfp, editions, sponsors, speakers, partners] = await Promise.all([
     getCurrentEdition(),
     getCurrentTicketTiers(),
     getKeyFigures(),
     getCfpSettings(),
     getEditions(),
+    getSponsors(),
+    getFeaturedSpeakers(),
+    getEcosystemPartners(),
   ]);
 
   const articles = await getLatestArticles(4, edition?.id);
@@ -113,6 +122,114 @@ export default async function HomePage() {
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
   const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
+
+  // Background alternation is computed at render over the sections that are
+  // actually visible, so the blanc / blanc-cassé rhythm stays regular even when
+  // a conditional section (sponsors, speakers, news…) is empty (#135). The
+  // key-figures section is an "accent" outside the binary alternation (#136).
+  type HomeSection = {
+    show: boolean;
+    accent?: boolean;
+    render: (surface: SectionSurface) => ReactNode;
+  };
+
+  function renderWithAlternation(sections: HomeSection[]): ReactNode[] {
+    let i = 0;
+    return sections
+      .filter((s) => s.show)
+      .map((s, idx) => {
+        // The accent section (key figures, #136) is a tinted slot of its own:
+        // it still advances the parity so the next section flips and we never
+        // get two tinted backgrounds in a row.
+        if (s.accent) {
+          i += 1;
+          return <Fragment key={idx}>{s.render("accent")}</Fragment>;
+        }
+        const surface: SectionSurface = i % 2 === 0 ? "blanc-casse" : "blanc";
+        i += 1;
+        return <Fragment key={idx}>{s.render(surface)}</Fragment>;
+      });
+  }
+
+  const announcementSections: HomeSection[] = [
+    {
+      show: figures.length > 0,
+      accent: true,
+      render: (surface) => <KeyFiguresSection figures={figures} locale={locale} surface={surface} />,
+    },
+    {
+      show: tiers.length > 0,
+      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} />,
+    },
+    {
+      show: Boolean(edition?.previousAfterMovieUrl),
+      render: (surface) => (
+        <ReplaySection
+          aftermovieUrl={edition!.previousAfterMovieUrl!}
+          galleryUrl={edition?.previousGalleryUrl}
+          editionYear={edition?.previousYear}
+          surface={surface}
+        />
+      ),
+    },
+    {
+      show: sponsors.length > 0,
+      render: (surface) => <SponsorsSection sponsors={sponsors} surface={surface} />,
+    },
+    {
+      show: speakers.length > 0,
+      render: (surface) => <FeaturedSpeakersSection speakers={speakers} surface={surface} />,
+    },
+    {
+      show: articles.length > 0,
+      render: (surface) => <LatestNewsSection articles={articles} locale={locale} surface={surface} />,
+    },
+    {
+      show: true,
+      render: (surface) => <AboutSection surface={surface} />,
+    },
+    {
+      show: partners.length > 0,
+      render: (surface) => <EcosystemSection partners={partners} surface={surface} />,
+    },
+  ];
+
+  const seeYouNextYearSections: HomeSection[] = [
+    {
+      show: Boolean(edition?.aftermovieUrl),
+      render: (surface) => (
+        <ReplaySection
+          aftermovieUrl={edition!.aftermovieUrl!}
+          editionYear={edition?.year}
+          surface={surface}
+        />
+      ),
+    },
+    {
+      show: Boolean(edition?.galleryUrl),
+      render: (surface) => (
+        <section className={`section-y px-6 ${surface === "blanc" ? "bg-blanc" : "bg-blanc-casse"}`}>
+          <div className="mx-auto max-w-6xl text-center">
+            <h2 className="section-title text-3xl lg:text-5xl font-bold text-noir">
+              {locale === "fr" ? "Galerie photos" : "Photo gallery"}
+            </h2>
+            <a
+              href={edition!.galleryUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-[12px] bg-bleu px-8 py-3 text-lg font-bold text-blanc hover:bg-bleu/90 transition-colors"
+            >
+              {locale === "fr" ? "Voir les photos" : "View photos"}
+            </a>
+          </div>
+        </section>
+      ),
+    },
+    {
+      show: articles.length > 0,
+      render: (surface) => <LatestNewsSection articles={articles} locale={locale} surface={surface} />,
+    },
+  ];
 
   return (
     <>
@@ -136,64 +253,11 @@ export default async function HomePage() {
         />
       )}
 
-      {/* ANNOUNCEMENT: full content */}
-      {isAnnouncement && figures.length > 0 && (
-        <KeyFiguresSection figures={figures} locale={locale} />
-      )}
-
-      {isAnnouncement && tiers.length > 0 && (
-        <TicketingSection tiers={tiers} locale={locale} />
-      )}
-
-      {isAnnouncement && edition?.previousAfterMovieUrl && (
-        <ReplaySection
-          aftermovieUrl={edition.previousAfterMovieUrl}
-          galleryUrl={edition.previousGalleryUrl}
-          editionYear={edition.previousYear}
-        />
-      )}
-
-      {isAnnouncement && <SponsorsSection />}
-
-      {isAnnouncement && <FeaturedSpeakersSection />}
-
-      {isAnnouncement && articles.length > 0 && (
-        <LatestNewsSection articles={articles} locale={locale} />
-      )}
-
-      {isAnnouncement && <AboutSection />}
-
-      {isAnnouncement && <EcosystemSection />}
+      {/* ANNOUNCEMENT: full content, with computed background alternation */}
+      {isAnnouncement && renderWithAlternation(announcementSections)}
 
       {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
-      {isSeeYouNextYear && edition?.aftermovieUrl && (
-        <ReplaySection
-          aftermovieUrl={edition.aftermovieUrl}
-          editionYear={edition.year}
-        />
-      )}
-
-      {isSeeYouNextYear && edition?.galleryUrl && (
-        <section className="section-y px-6 bg-blanc-casse">
-          <div className="mx-auto max-w-6xl text-center">
-            <h2 className="section-title text-3xl lg:text-5xl font-bold text-noir">
-              {locale === "fr" ? "Galerie photos" : "Photo gallery"}
-            </h2>
-            <a
-              href={edition.galleryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block rounded-[12px] bg-bleu px-8 py-3 text-lg font-bold text-blanc hover:bg-bleu/90 transition-colors"
-            >
-              {locale === "fr" ? "Voir les photos" : "View photos"}
-            </a>
-          </div>
-        </section>
-      )}
-
-      {isSeeYouNextYear && articles.length > 0 && (
-        <LatestNewsSection articles={articles} locale={locale} />
-      )}
+      {isSeeYouNextYear && renderWithAlternation(seeYouNextYearSections)}
     </>
   );
 }
