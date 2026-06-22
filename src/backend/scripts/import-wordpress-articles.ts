@@ -35,6 +35,8 @@
  *   WP_BASE        (default https://devfesttoulouse.fr) source WordPress site.
  */
 
+import { normalizeWordpressHtml } from "./lib/normalize-wordpress-html.js";
+
 const WP_BASE = process.env.WP_BASE || "https://devfesttoulouse.fr";
 const TARGET_API = process.env.TARGET_API || "http://localhost:4000";
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY || "";
@@ -43,6 +45,29 @@ const isDryRun = process.argv.includes("--dry-run");
 const shouldUpdate = process.argv.includes("--update");
 
 const IGNORED_CATEGORY_SLUGS = new Set(["non-classe"]);
+
+// Image mimes the backend upload endpoint accepts (see admin/files.ts). We
+// only re-host these; anything else is left as-is (and likely dropped).
+const ALLOWED_IMAGE_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "image/x-icon",
+]);
+const MAX_UPLOAD_BYTES = 20_000_000;
+
+// Maps an accepted mime to a file extension, used only to name the multipart
+// upload (the server derives the stored filename's extension from it).
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
+  "image/x-icon": "ico",
+};
 
 interface WpRendered {
   rendered: string;
@@ -119,12 +144,124 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<{ status
   return { status: res.status, body: body as T };
 }
 
+// WordPress turns text emojis into <img class="emoji"> whose real src is a
+// data:-URI placeholder (the true glyph sits in data-orig-src). The backend
+// sanitizer strips data: schemes, leaving a src-less <img> that renders as a
+// broken image. The alt attribute already holds the Unicode character, so we
+// restore it as plain text before the rest of the pipeline runs.
+function stripEmojiImages(html: string): string {
+  return html.replace(
+    /<img\b[^>]*\bclass=["'][^"']*\bemoji\b[^"']*["'][^>]*>/gi,
+    (tag) => {
+      const alt = tag.match(/\balt=["']([^"']*)["']/i);
+      return alt ? alt[1] : "";
+    },
+  );
+}
+
 // Replace YouTube/Vimeo <iframe> embeds with clickable links so the URL
 // survives the backend sanitizer (which strips iframes entirely).
 function rewriteIframes(html: string): string {
   return html.replace(/<iframe\b[^>]*\bsrc=["']([^"']+)["'][^>]*>\s*<\/iframe>/gi, (_match, src) => {
     const url = String(src).replace(/^\/\//, "https://");
     return `<p><a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a></p>`;
+  });
+}
+
+// Matches every <img> tag and captures its src attribute. Shared by the
+// collection and replacement passes of rewriteImages.
+const IMG_SRC_REGEX = /<img\b[^>]*?\bsrc=["']([^"']+)["'][^>]*>/gi;
+
+// Dedup cache across the whole run: a remote image URL maps to its local
+// /uploads/... URL once re-hosted, or null if it failed (never retried).
+const uploadedImages = new Map<string, string | null>();
+
+// Build a filename for the multipart upload. The server names the stored file
+// from this extension, so we must preserve a sensible one.
+function deriveFilename(remoteUrl: string, mime: string): string {
+  let base = "";
+  try {
+    base = decodeURIComponent(new URL(remoteUrl).pathname.split("/").pop() || "");
+  } catch {
+    base = "";
+  }
+  if (base && /\.[a-z0-9]+$/i.test(base)) return base;
+  return `image.${MIME_TO_EXT[mime] ?? "bin"}`;
+}
+
+// Download a remote image and re-host it through the backend upload endpoint.
+// Returns the local /uploads/... URL, or null on any failure (logged, never
+// throws — this is a best-effort per-item step in a batch import).
+async function uploadRemoteImage(remoteUrl: string): Promise<string | null> {
+  if (uploadedImages.has(remoteUrl)) return uploadedImages.get(remoteUrl) ?? null;
+
+  try {
+    const res = await fetch(remoteUrl);
+    if (!res.ok) {
+      console.warn(`  ! image fetch failed (${res.status}): ${remoteUrl}`);
+      uploadedImages.set(remoteUrl, null);
+      return null;
+    }
+    const mime = (res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!ALLOWED_IMAGE_MIMES.has(mime)) {
+      console.warn(`  ! image skipped (mime ${mime || "unknown"}): ${remoteUrl}`);
+      uploadedImages.set(remoteUrl, null);
+      return null;
+    }
+    const bytes = Buffer.from(await res.arrayBuffer());
+    if (bytes.length > MAX_UPLOAD_BYTES) {
+      console.warn(`  ! image too large (${bytes.length} bytes): ${remoteUrl}`);
+      uploadedImages.set(remoteUrl, null);
+      return null;
+    }
+
+    const form = new FormData();
+    form.append("file", new Blob([bytes], { type: mime }), deriveFilename(remoteUrl, mime));
+    // Do NOT set Content-Type: fetch adds the multipart boundary itself.
+    const upload = await fetch(`${TARGET_API}/api/admin/files`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${ADMIN_API_KEY}` },
+      body: form,
+    });
+    if (!upload.ok) {
+      console.warn(`  ! image upload failed (${upload.status}): ${remoteUrl}`);
+      uploadedImages.set(remoteUrl, null);
+      return null;
+    }
+    const { url } = (await upload.json()) as { url: string };
+    uploadedImages.set(remoteUrl, url);
+    return url;
+  } catch (err) {
+    console.warn(`  ! image error (${(err as Error).message}): ${remoteUrl}`);
+    uploadedImages.set(remoteUrl, null);
+    return null;
+  }
+}
+
+// Re-host every inline <img> whose src is an absolute http(s) URL, rewriting
+// the src to the local /uploads/... path. Non-http(s) srcs (relative,
+// protocol-relative, data:, already-local) are left untouched. In dry-run we
+// only log the candidates and return the HTML unchanged.
+async function rewriteImages(html: string): Promise<string> {
+  const srcs = new Set<string>();
+  for (const match of html.matchAll(IMG_SRC_REGEX)) {
+    if (/^https?:\/\//i.test(match[1])) srcs.add(match[1]);
+  }
+  if (srcs.size === 0) return html;
+
+  if (isDryRun) {
+    for (const src of srcs) console.log(`  [dry-run] would re-host inline image ${src}`);
+    return html;
+  }
+
+  const rewrites = new Map<string, string>();
+  for (const src of srcs) {
+    const local = await uploadRemoteImage(src);
+    if (local) rewrites.set(src, local);
+  }
+  return html.replace(IMG_SRC_REGEX, (tag, src) => {
+    const local = rewrites.get(src);
+    return local ? tag.replace(src, local) : tag;
   });
 }
 
@@ -292,10 +429,23 @@ async function main() {
       }
 
       const titleFr = decodeEntities(stripHtml(post.title.rendered));
-      const contentFr = rewriteIframes(post.content.rendered);
+      const cleaned = normalizeWordpressHtml(stripEmojiImages(post.content.rendered));
+      const contentFr = await rewriteImages(rewriteIframes(cleaned));
       const excerptFr = stripHtml(post.excerpt.rendered) || undefined;
-      const imageUrl = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || undefined;
       const author = post._embedded?.author?.[0]?.name || undefined;
+
+      // Re-host the cover image so the frontend (next/image) never points at
+      // the old WordPress host. On failure we drop to undefined rather than
+      // keeping the external URL, which would crash next/image.
+      const rawImageUrl = post._embedded?.["wp:featuredmedia"]?.[0]?.source_url || undefined;
+      let imageUrl: string | undefined = undefined;
+      if (rawImageUrl) {
+        if (isDryRun) {
+          console.log(`  [dry-run] would download cover ${rawImageUrl}`);
+        } else {
+          imageUrl = (await uploadRemoteImage(rawImageUrl)) ?? undefined;
+        }
+      }
 
       const payload: ArticlePayload = {
         slug,
@@ -318,7 +468,7 @@ async function main() {
         console.log(
           `- ${slug}: would ${alreadyExists ? "update" : "create"} ` +
             `(date=${post.date.slice(0, 10)}, editions=[${editionIds}], tags=${tagIds.length}, ` +
-            `img=${imageUrl ? "yes" : "no"}, author=${author ?? "—"})`,
+            `img=${rawImageUrl ? "yes" : "no"}, author=${author ?? "—"})`,
         );
         alreadyExists ? (updated += 1) : (created += 1);
         continue;
