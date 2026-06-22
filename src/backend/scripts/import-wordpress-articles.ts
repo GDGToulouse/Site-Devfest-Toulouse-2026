@@ -46,6 +46,9 @@ const shouldUpdate = process.argv.includes("--update");
 
 const IGNORED_CATEGORY_SLUGS = new Set(["non-classe"]);
 
+// Author shown for imported articles when WordPress exposes none.
+const DEFAULT_AUTHOR = "GDG Toulouse";
+
 // Image mimes the backend upload endpoint accepts (see admin/files.ts). We
 // only re-host these; anything else is left as-is (and likely dropped).
 const ALLOWED_IMAGE_MIMES = new Set([
@@ -434,7 +437,9 @@ async function main() {
       const cleaned = normalizeWordpressHtml(stripEmojiImages(post.content.rendered));
       const contentFr = await rewriteImages(rewriteIframes(cleaned));
       const excerptFr = stripHtml(post.excerpt.rendered) || undefined;
-      const author = post._embedded?.author?.[0]?.name || undefined;
+      // WordPress no longer exposes post authors (they come back null), so
+      // fall back to the organizing team for imported articles.
+      const author = post._embedded?.author?.[0]?.name || DEFAULT_AUTHOR;
 
       // Re-host the cover image so the frontend (next/image) never points at
       // the old WordPress host. On failure we drop to undefined rather than
