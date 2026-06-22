@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+/* Safelist for utility classes emitted by the WordPress import normalizer
+ * (scripts/lib/normalize-wordpress-html.ts in the backend). Article content is
+ * stored as HTML in the database and rendered via dangerouslySetInnerHTML, so
+ * Tailwind's source scanner never sees these classes — they must be declared
+ * here or the imported article layout (grids, captions, buttons) won't render.
+ * @source inline() treats each directive as a single class/pattern, so the
+ * classes are grouped with brace expansion rather than space-separated. */
+@source inline("grid");
+@source inline("grid-cols-1");
+@source inline("{sm:,md:}grid-cols-{2,4,5}");
+@source inline("md:col-span-{2,3}");
+@source inline("gap-{6,8}");
+@source inline("items-center");
+@source inline("w-full");
+@source inline("rounded-lg");
+@source inline("mx-auto");
+@source inline("block");
+@source inline("inline-block");
+@source inline("no-underline");
+@source inline("px-5");
+@source inline("py-2");
+@source inline("font-bold");
+@source inline("text-{center,left,right,sm,blanc,gris}");
+@source inline("p-4");
+@source inline("bg-{bismarck,blanc-casse}");
+
 /* ========================================
  * DevFest Toulouse 2026 — Design Tokens
  * Source: docs/design-system.md
@@ -87,71 +113,70 @@ body {
 }
 
 /* --- TipTap editor content — mirrors public prose styles --- */
-.tiptap-content {
-  min-height: inherit;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-}
-.tiptap-content h2 {
+/* Shared article body typography — applied both in the TipTap admin editor
+ * (.tiptap-content) and on the public article page (.article-content) so the
+ * rendering is identical in both. The editor adds its own chrome (padding,
+ * outline) on top via .tiptap-content below. */
+.article-content h2 {
   font-size: 2rem;
   font-weight: 700;
   margin-top: 2.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h3 {
+.article-content h3 {
   font-size: 1.75rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h4 {
+.article-content h4 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h5 {
+.article-content h5 {
   font-size: 1.25rem;
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
 }
-.tiptap-content p {
+.article-content p {
   line-height: 1.625;
   margin-bottom: 1rem;
 }
-.tiptap-content a {
+.article-content a {
   color: var(--color-bismarck);
   text-decoration: underline;
 }
-.tiptap-content ul {
+.article-content ul {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content ol {
+.article-content ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content li {
+.article-content li {
   margin-bottom: 0.25rem;
 }
-.tiptap-content blockquote {
+.article-content blockquote {
   border-left: 4px solid var(--color-gris-placeholder);
   padding-left: 1rem;
   margin: 1rem 0;
   color: var(--color-gris);
   font-style: italic;
 }
-.tiptap-content code {
+.article-content code {
   background: var(--color-blanc-casse);
   border-radius: 4px;
   padding: 0.15rem 0.4rem;
   font-size: 0.9em;
   font-family: ui-monospace, monospace;
 }
-.tiptap-content pre {
+.article-content pre {
   background: var(--color-noir);
   color: var(--color-blanc);
   border-radius: 0.5rem;
@@ -161,6 +186,13 @@ body {
   font-family: ui-monospace, monospace;
   font-size: 0.9em;
   line-height: 1.6;
+}
+
+/* Editor-only chrome layered on top of the shared body styles. */
+.tiptap-content {
+  min-height: inherit;
+  padding: 0.5rem 0.75rem;
+  outline: none;
 }
 .tiptap-content pre code {
   background: none;

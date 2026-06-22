@@ -123,13 +123,7 @@ export default async function ArticleDetailPage({
         )}
 
         <div
-          className="mt-8 prose prose-lg max-w-none text-noir
-            [&_h4]:text-2xl [&_h4]:font-bold [&_h4]:mt-8 [&_h4]:mb-4
-            [&_h5]:text-xl [&_h5]:font-bold [&_h5]:mt-6 [&_h5]:mb-3
-            [&_p]:leading-relaxed [&_p]:mb-4
-            [&_a]:text-bismarck [&_a]:underline
-            [&_ul]:list-disc [&_ul]:pl-6 [&_ul]:mb-4
-            [&_li]:mb-1"
+          className="article-content mt-8 max-w-none text-noir"
           dangerouslySetInnerHTML={{ __html: content }}
         />
 

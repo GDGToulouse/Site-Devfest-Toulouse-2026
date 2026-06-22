@@ -78,7 +78,7 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: "tiptap-content",
+        class: "article-content tiptap-content",
       },
     },
   });
