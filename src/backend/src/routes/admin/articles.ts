@@ -150,6 +150,8 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         author: body.author?.trim() || null,
         publicationStatus: body.publicationStatus || "DRAFT",
         publishedAt: isPublished ? overrideDate ?? new Date() : null,
+        autoTranslatedFr: body.autoTranslatedFr ?? false,
+        autoTranslatedEn: body.autoTranslatedEn ?? false,
         editions: body.editionIds?.length ? { connect: body.editionIds.map((id) => ({ id })) } : undefined,
         tags: body.tagIds?.length ? { connect: body.tagIds.map((id) => ({ id })) } : undefined,
       },
