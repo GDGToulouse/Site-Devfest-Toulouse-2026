@@ -268,18 +268,20 @@ async function rewriteImages(html: string): Promise<string> {
 // Decode the most common HTML entities WordPress emits in titles/excerpts.
 function decodeEntities(text: string): string {
   return text
-    .replace(/&#8217;|&#039;|&#39;/g, "'")
-    .replace(/&#8216;/g, "'")
-    .replace(/&#8230;/g, "…")
-    .replace(/&#8211;/g, "–")
-    .replace(/&#8212;/g, "—")
+    .replace(/&#8217;|&#039;|&#39;|&rsquo;/g, "'")
+    .replace(/&#8216;|&lsquo;/g, "'")
+    .replace(/&#8220;|&ldquo;/g, "“")
+    .replace(/&#8221;|&rdquo;/g, "”")
+    .replace(/&#8230;|&hellip;/g, "…")
+    .replace(/&#8211;|&ndash;/g, "–")
+    .replace(/&#8212;|&mdash;/g, "—")
     .replace(/&laquo;/g, "«")
     .replace(/&raquo;/g, "»")
     .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }
 
 // WordPress slugs can be URL-encoded and carry trailing emojis; clean them up.
