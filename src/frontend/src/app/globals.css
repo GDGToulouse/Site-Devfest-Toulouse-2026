@@ -448,3 +448,11 @@ body {
 .section-title {
   margin-bottom: clamp(24px, 3vw, 40px);
 }
+/* The first section after the hero sits right under the stats card. Its title
+   (48px / line-height 1) has ~6px of cap-height overshoot above the text box,
+   so the *perceived* gap above the heading reads smaller than the equal 72px
+   box gap below the card. Add that overshoot back to the top padding so the
+   visible space under the card matches the space above the first title (#135). */
+.hero + section.section-y {
+  padding-top: clamp(46px, 5vw, 78px);
+}
