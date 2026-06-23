@@ -454,5 +454,5 @@ body {
    box gap below the card. Add that overshoot back to the top padding so the
    visible space under the card matches the space above the first title (#135). */
 .hero + section.section-y {
-  padding-top: clamp(46px, 5vw, 78px);
+  padding-top: calc(clamp(40px, 5vw, 72px) + 6px);
 }
