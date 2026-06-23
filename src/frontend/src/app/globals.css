@@ -256,17 +256,23 @@ body {
      same vertical rhythm as the gap above the first section's title (#135). */
   padding: 0 var(--hero-pad) clamp(40px, 5vw, 72px);
 }
-/* First screen: header (60px sticky) + this block fill the viewport, so the
-   catch-phrase lands at the bottom of the fold and the stats card needs a
-   scroll (#134). Its own vertical padding is included in the min-height
-   (border-box), so header + .hero-screen = exactly 100vh. */
+/* First screen layout. The min-height that fills the viewport (header + this
+   block = 100vh, catch-phrase pinned to the fold, stats card just below) is
+   applied only on tablet / standard screens (768–1600px). On phones (<768px)
+   and large screens (>1600px) the block keeps its natural content height so
+   the hero shows at its own size and as much content as fits is visible
+   without a forced full-height fold (#134). */
 .hero-screen {
-  min-height: calc(100dvh - var(--header-h));
   box-sizing: border-box;
   padding-block: clamp(16px, 2vw, 28px);
   display: flex;
   flex-direction: column;
   gap: clamp(24px, 3vw, 48px);
+}
+@media (min-width: 768px) and (max-width: 1600px) {
+  .hero-screen {
+    min-height: calc(100dvh - var(--header-h));
+  }
 }
 .hero-screen > .hero-inner {
   flex: 1 1 auto;
