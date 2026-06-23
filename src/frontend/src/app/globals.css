@@ -454,3 +454,14 @@ body {
 .section-title {
   margin-bottom: clamp(24px, 3vw, 40px);
 }
+/* Trim the font's intrinsic leading above caps and below the baseline so the
+   heading box hugs the visible glyphs. Without this the font reserves ~16px of
+   blank space above a 48px title (half-leading + ascender vs cap-height), which
+   adds to the padding and makes the space above a heading read larger than the
+   equal space below the preceding element (#153). text-box has partial browser
+   support (Chromium yes, Firefox/Safari later); where unsupported the heading
+   keeps today's spacing — graceful degradation, no breakage. */
+.hero-screen > .hero-figures-title,
+.section-y h2 {
+  text-box: trim-both cap alphabetic;
+}
