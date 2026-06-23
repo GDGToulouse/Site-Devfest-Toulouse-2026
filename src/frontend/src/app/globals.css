@@ -252,7 +252,9 @@ body {
   --hero-radius: clamp(24px, 3vw, 48px);
   --header-h: 60px;
   position: relative;
-  padding: 0 var(--hero-pad) clamp(28px, 3.5vw, 56px);
+  /* Bottom padding matches .section-y so the space under the stats card has the
+     same vertical rhythm as the gap above the first section's title (#135). */
+  padding: 0 var(--hero-pad) clamp(40px, 5vw, 72px);
 }
 /* First screen: header (60px sticky) + this block fill the viewport, so the
    catch-phrase lands at the bottom of the fold and the stats card needs a
