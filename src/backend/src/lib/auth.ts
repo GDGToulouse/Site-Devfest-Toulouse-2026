@@ -37,6 +37,10 @@ const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrig
 );
 
 export const auth = betterAuth({
+  // Reuse SESSION_SECRET so we keep a single secret to manage. Better Auth
+  // otherwise reads BETTER_AUTH_SECRET and, in production, throws at startup
+  // when it falls back to its built-in default secret.
+  secret: process.env.SESSION_SECRET || process.env.BETTER_AUTH_SECRET,
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
