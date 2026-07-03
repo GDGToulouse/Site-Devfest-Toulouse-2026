@@ -4,11 +4,18 @@ services:
       context: .
       dockerfile: src/frontend/Dockerfile
     environment:
+      - NODE_ENV=production
       - BASE_URL=${BASE_URL}
       # Pinned to the env-scoped backend container name. Resolving the bare
       # `backend` hostname picks up other Coolify projects' backends via the
       # shared `coolify` network (IPv6 priority), causing cross-env requests.
       - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+      # Shared with the backend to authorise POST /api/revalidate (on-demand
+      # cache invalidation when the admin edits content). If unset, revalidation
+      # is disabled and public pages stay cached until the s-maxage TTL.
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Plausible analytics script URL. If unset, analytics stays off.
+      - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     expose:
       - "3000"
     depends_on:
@@ -32,12 +39,21 @@ services:
     volumes:
       - uploads:/app/uploads
     environment:
+      - NODE_ENV=production
       - BASE_URL=${BASE_URL}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - SESSION_SECRET=${SESSION_SECRET}
       - MAGIC_LINK_SECRET=${MAGIC_LINK_SECRET:-}
+      # Shared with the frontend to sign POST /api/revalidate (see frontend).
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # HMAC secret to sign per-message brochure download links sent by email.
+      # If unset, confirmation emails fall back to the raw URL (no tracking).
+      - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
+      # Google Gemini key for the back-office FR<->EN translator. If unset,
+      # POST /api/admin/translate returns 503 and the UI button is disabled.
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
