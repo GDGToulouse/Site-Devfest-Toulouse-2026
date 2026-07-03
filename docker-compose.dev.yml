@@ -1,0 +1,101 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: src/frontend/Dockerfile
+    environment:
+      - BASE_URL=${BASE_URL}
+      # Pinned to the env-scoped backend container name. Resolving the bare
+      # `backend` hostname picks up other Coolify projects' backends via the
+      # shared `coolify` network (IPv6 priority), causing cross-env requests.
+      - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+    expose:
+      - "3000"
+    depends_on:
+      - backend
+    # Persist Next.js' on-the-fly image optimization cache across rebuilds.
+    # Without this, every redeploy throws away all the AVIF/WebP variants
+    # that next/image generated and the first visitor pays the CPU cost
+    # again for each image.
+    volumes:
+      - next_image_cache:/app/.next/cache/images
+    networks:
+      - default
+      - coolify
+
+  backend:
+    build:
+      context: .
+      dockerfile: src/backend/Dockerfile
+      args:
+        - SEED_SCRIPT=prisma/seed-dev.ts
+    volumes:
+      - uploads:/app/uploads
+    environment:
+      - BASE_URL=${BASE_URL}
+      - FRONTEND_URL=http://frontend:3000
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
+      - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr,editor@devfesttoulouse.fr}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
+      - BILLETWEB_USER=${BILLETWEB_USER:-}
+      - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+    # Intentionally NOT on the shared `coolify` network. The backend isn't
+    # exposed via Traefik — the frontend proxies /api/* to it through the
+    # Next.js rewrites. Joining `coolify` would put it side-by-side with the
+    # backend of every other Coolify project that uses the same service name,
+    # and Docker DNS would round-robin between them.
+    #
+    # Network alias gives the backend a unique, env-scoped hostname inside
+    # the project's `default` network. The frontend points BACKEND_URL at
+    # this alias instead of the bare `backend` to avoid resolving against
+    # other projects' backends through the shared `coolify` network (Coolify
+    # ignores `container_name` so we can't rely on that).
+    networks:
+      default:
+        aliases:
+          - devfest-${ENV_NAME:-local}-backend
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-devfest}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devfest}
+      - POSTGRES_DB=${POSTGRES_DB:-devfest}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devfest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: devfest-${ENV_NAME:-local}-mailhog
+    expose:
+      - "8025"
+    networks:
+      - default
+      - coolify
+
+networks:
+  coolify:
+    external: true
+
+volumes:
+  pgdata:
+  uploads:
+  next_image_cache:

@@ -1,0 +1,568 @@
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  // tsc compiles the generated client to dist/ and Node runs it as pure ESM,
+  // which requires explicit .js extensions on relative imports. Without this
+  // the runtime throws ERR_MODULE_NOT_FOUND on ./internal/class.
+  importFileExtension = "js"
+  moduleFormat        = "esm"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================
+// Lot 1 — Fondations
+// ============================================
+
+enum EditionStatus {
+  PREPARATION
+  ANNOUNCEMENT
+  SEE_YOU_NEXT_YEAR
+}
+
+enum PublicationStatus {
+  DRAFT
+  PUBLISHED
+}
+
+// Drives what /devenir-sponsor displays for the featured edition.
+enum SponsorPageStatus {
+  PRE_ANNOUNCEMENT  // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
+  TEMPORARY         // Plans visible (if any) but contact still goes through the temporary external form
+  OPEN              // Full mode: plans + brochure download + integrated contact form
+  SOLD_OUT          // All slots taken: short message + link to /contact
+}
+
+
+enum UserRole {
+  ADMIN
+  EDITOR
+}
+
+// ============================================
+// Lot 2 — Speakers, Sessions & Sponsors (enums)
+// ============================================
+
+// Sponsoring levels, ordered by decreasing importance (RG-221).
+enum SponsorLevel {
+  PLATINUM
+  GOLD
+  SILVER
+  SOUTIEN
+  COMMUNAUTE
+}
+
+// Talk formats (RG-211).
+enum TalkFormat {
+  CONFERENCE // 40 min
+  QUICKIE    // 15 min
+  KEYNOTE
+}
+
+// Talk difficulty levels (RG-212). Absence means "Tous niveaux".
+enum TalkLevel {
+  DEBUTANT
+  INTERMEDIAIRE
+  CONFIRME
+}
+
+// --- Edition ---
+
+model Edition {
+  id                  Int             @id @default(autoincrement())
+  year                Int             @unique
+  startDate           DateTime?
+  endDate             DateTime?
+  status              EditionStatus   @default(PREPARATION)
+  venueName           String?
+  venueAddress        String?
+  heroImageUrl        String?
+  sponsorFormUrl      String?
+  aftermovieUrl       String?
+  galleryUrl          String?
+  archivedSiteUrl     String?
+  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
+  sponsorBrochureUrl       String?
+  // Optional hero image specific to the /devenir-sponsor page. When null,
+  // the page falls back to heroImageUrl.
+  sponsorHeroImageUrl      String?
+  // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
+  sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
+  // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
+  sponsorTemporaryFormUrl  String?
+  // Which SponsorLevel values are offered when creating a sponsor for this
+  // edition (US-245, RG-230). JSON array of SponsorLevel names; null/empty
+  // means all levels are allowed.
+  openSponsorLevels        String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+
+  ticketTiers         TicketTier[]
+  articles            Article[]
+  keyFigures          KeyFigure[]
+  sponsorPlans        SponsorPlan[]
+  speakers            Speaker[]
+  talks               Talk[]
+  sponsors            Sponsor[]
+  categories          Category[]
+}
+
+// --- Key Figures ---
+
+model KeyFigure {
+  id        Int     @id @default(autoincrement())
+  icon      String
+  value     String
+  labelFr   String
+  labelEn   String
+  sortOrder Int     @default(0)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+}
+
+// --- Blog / Articles ---
+
+model Article {
+  id               Int               @id @default(autoincrement())
+  slug             String            @unique
+  titleFr          String
+  titleEn          String
+  contentFr        String
+  contentEn        String
+  excerptFr        String?
+  excerptEn        String?
+  imageUrl         String?
+  author           String?
+  publicationStatus PublicationStatus @default(DRAFT)
+  publishedAt      DateTime?
+  // AI-translation tracking (see docs/traduction-ia.md). The flag stays true
+  // until an editor actively reviews/edits the field and unchecks it from
+  // the back-office. translatedAt* records the last fill timestamp.
+  autoTranslatedFr Boolean           @default(false)
+  autoTranslatedEn Boolean           @default(false)
+  translatedAtFr   DateTime?
+  translatedAtEn   DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  tags             Tag[]
+  editions         Edition[]
+}
+
+model Tag {
+  id               Int       @id @default(autoincrement())
+  name             String    @unique
+  slug             String    @unique
+  articles         Article[]
+}
+
+// --- Sponsor Plans ---
+
+model SponsorPlan {
+  id               Int       @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  subtitleFr       String?
+  subtitleEn       String?
+  descriptionFr    String?
+  descriptionEn    String?
+  price            String?
+  standSize        String?
+  advantages       String?   // JSON array of { fr: string, en: string }
+  color            String    @default("#109E6E")
+  isFeatured       Boolean   @default(false)
+  isVisible        Boolean   @default(true)
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  editionId        Int
+  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+}
+
+// --- Ticketing ---
+
+model TicketTier {
+  id               Int              @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  price            Decimal          @db.Decimal(8, 2)
+  isVisible        Boolean          @default(true)
+  saleStartDate    DateTime?
+  saleEndDate      DateTime?
+  externalUrl      String?
+  sortOrder        Int              @default(0)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  editionId        Int
+  edition          Edition          @relation(fields: [editionId], references: [id])
+
+  @@unique([editionId, sortOrder])
+}
+
+// --- Contact ---
+
+model ContactCategory {
+  id                     Int       @id @default(autoincrement())
+  nameFr                 String
+  nameEn                 String
+  emailRecipients        String
+  sortOrder              Int       @default(0)
+  isActive               Boolean   @default(true)
+  // Stable identifier used in code to target a specific category (e.g. "sponsoring")
+  slug                   String?   @unique
+  // System categories cannot be deleted from the admin UI
+  isSystem               Boolean   @default(false)
+  // When false, the category is hidden from the public /contact <select> but
+  // still usable via forceCategoryId on dedicated pages (e.g. the sponsor
+  // brochure form on /devenir-sponsor). Lets us separate generic sponsoring
+  // questions from explicit brochure requests so the email templates and the
+  // tracking can diverge.
+  isPublic               Boolean   @default(true)
+  // Per-category confirmation email sent to the person who submitted the form.
+  // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
+  confirmationSubjectFr  String?
+  confirmationSubjectEn  String?
+  confirmationBodyFr     String?
+  confirmationBodyEn     String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  messages               ContactMessage[]
+}
+
+model ContactMessage {
+  id               Int              @id @default(autoincrement())
+  firstName        String
+  lastName         String
+  email            String
+  phone            String?
+  // Company and job title — required on the public form, stored as "" on
+  // legacy rows predating the column. Empty strings are never surfaced as
+  // valid in the admin UI / webhook; they stand in for "unknown from a
+  // pre-migration row" without breaking NOT NULL assumptions.
+  company          String           @default("")
+  jobTitle         String           @default("")
+  categoryLabel    String?
+  message          String
+  locale           String?
+  isRead           Boolean          @default(false)
+  createdAt        DateTime         @default(now())
+
+  // Tracks how many times the per-message brochure link has been opened.
+  // Populated by the public /api/brochure/:token redirector.
+  brochureDownloadCount Int        @default(0)
+  brochureDownloadedAt  DateTime?
+
+  // Outcome of the last contact_webhook_url POST attempt for this message.
+  // Status string (avoids a Postgres enum so we can add new states without
+  // a migration): "not_attempted" | "success" | "failed" | "skipped".
+  // - skipped: no URL configured, or URL failed SSRF validation.
+  // - failed: HTTP error / network error / non-2xx response.
+  // - success: 2xx received from the webhook target.
+  // webhookError stores the last error string (truncated) when status=failed.
+  webhookStatus    String           @default("not_attempted")
+  webhookAttemptedAt DateTime?
+  webhookError     String?
+
+  categoryId       Int?
+  category         ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+}
+
+// --- Content Pages (CoC, Legal) ---
+
+model ContentPage {
+  id               Int       @id @default(autoincrement())
+  slug             String    @unique
+  titleFr          String
+  titleEn          String
+  contentFr        String
+  contentEn        String
+  updatedAt        DateTime  @updatedAt
+}
+
+// --- Auth (Better Auth compatible) ---
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String?
+  emailVerified    Boolean   @default(false)
+  image            String?
+  // Default to EDITOR so a leaked/forgotten user insertion path never
+  // elevates to ADMIN. Admins are explicitly promoted via the seed
+  // (from ADMIN_EMAILS) or by another admin through the back-office.
+  role             UserRole  @default(EDITOR)
+  banned           Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sessions         Session[]
+  accounts         Account[]
+  apiKeys          ApiKey[]
+
+  @@map("user")
+}
+
+// --- API Keys ---
+// Personal API tokens. Inherit their owner's role dynamically (no scopes in v1).
+// The raw key is shown once at creation, then only its argon2 hash is stored.
+
+model ApiKey {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  prefix      String    @unique
+  hashedKey   String
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([prefix])
+  @@map("api_key")
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  expiresAt        DateTime
+  token            String    @unique
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  ipAddress        String?
+  userAgent        String?
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id               String    @id @default(cuid())
+  identifier       String
+  value            String
+  expiresAt        DateTime
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+// --- Site Settings ---
+
+model SiteSetting {
+  id               Int       @id @default(autoincrement())
+  key              String    @unique
+  value            String
+  updatedAt        DateTime  @updatedAt
+}
+
+// --- Translation Log ---
+// One row per Gemini translation request. Used for usage stats, quota
+// monitoring, and per-editor activity. Status values are kept as strings
+// (no enum) so we can add new ones without a migration:
+//   "success" | "failed" | "validation_error" | "quota_exhausted" | "upstream_error"
+// errorCode is a short machine-readable tag (e.g. "tag_mismatch", "rate_limit").
+model TranslationLog {
+  id             Int       @id @default(autoincrement())
+  userId         String?
+  sourceLang     String
+  targetLang     String
+  format         String
+  model          String
+  inputChars     Int       @default(0)
+  outputChars    Int       @default(0)
+  inputTokens    Int       @default(0)
+  outputTokens   Int       @default(0)
+  durationMs     Int       @default(0)
+  status         String
+  errorCode      String?
+  createdAt      DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([status])
+}
+
+// --- File Metadata ---
+// Per-file editor metadata for assets uploaded under /uploads/. Kept as
+// a separate table so we don't need to alter the filesystem layout.
+// Only created on demand — files without metadata simply have no row.
+model FileMetadata {
+  filename       String    @id
+  alt            String?   // Default alt text for accessibility
+  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime  @default(now())
+}
+
+// ============================================
+// Lot 2 — Speakers, Sessions & Sponsors
+// ============================================
+
+// --- Speakers (RG-200 to RG-208) ---
+
+model Speaker {
+  id               Int               @id @default(autoincrement())
+  // Slug derived from the full name, unique per edition (RG-206).
+  slug             String
+  name             String
+  photoUrl         String?
+  company          String?
+  city             String?
+  bioFr            String?
+  bioEn            String?
+  // JSON object of social links, e.g. {"twitter":"...","github":"...","linkedin":"...","bluesky":"...","website":"..."}
+  socialLinks      String?
+  // Contact email used to send the modification link (RG-243). Optional.
+  contactEmail     String?
+  // Shown in the homepage "featured speakers" section (RG-202).
+  isFeatured       Boolean           @default(false)
+  publicationStatus PublicationStatus @default(DRAFT)
+
+  // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
+  // Stored now to avoid a second migration. editToken is a crypto-random
+  // secret; editLinkLocked freezes editing without deleting the token.
+  editToken        String?           @unique
+  editLinkLocked   Boolean           @default(false)
+  editTokenSentAt  DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  editionId        Int
+  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
+  sponsorId        Int?
+  sponsor          Sponsor?          @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+
+  talks            Talk[]
+
+  @@unique([editionId, slug])
+  @@index([editionId])
+  @@index([sponsorId])
+}
+
+// --- Talks / Sessions (RG-210 to RG-217) ---
+// Named Talk to avoid colliding with the Better Auth `Session` model.
+
+model Talk {
+  id               Int               @id @default(autoincrement())
+  // Slug derived from the title (RG-214). Unique per edition.
+  slug             String
+  titleFr          String
+  titleEn          String
+  descriptionFr    String
+  descriptionEn    String
+  format           TalkFormat
+  level            TalkLevel?
+  // Spoken language of the talk, e.g. "fr" | "en".
+  language         String
+  publicationStatus PublicationStatus @default(DRAFT)
+
+  // Room and time slot are assigned in Lot 3 (Programme) — optional here (RG-216).
+  room             String?
+  startsAt         DateTime?
+  endsAt           DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  editionId        Int
+  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  // A talk belongs to one category/track (RG-213). Optional so a talk can be
+  // created before its track exists; SetNull keeps the talk if the track is removed.
+  categoryId       Int?
+  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  speakers         Speaker[]
+
+  @@unique([editionId, slug])
+  @@index([editionId])
+  @@index([categoryId])
+}
+
+// --- Sponsors (RG-220 to RG-231) ---
+
+model Sponsor {
+  id               Int               @id @default(autoincrement())
+  // Slug derived from the name (RG-227). Unique per edition.
+  slug             String
+  name             String
+  logoUrl          String?
+  level            SponsorLevel
+  websiteUrl       String?
+  descriptionFr    String?
+  descriptionEn    String?
+  // JSON object of social links (same shape as Speaker.socialLinks).
+  socialLinks      String?
+  // Contact email used to send the modification link (RG-243). Optional.
+  contactEmail     String?
+  publicationStatus PublicationStatus @default(DRAFT)
+
+  // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
+  editToken        String?           @unique
+  editLinkLocked   Boolean           @default(false)
+  editTokenSentAt  DateTime?
+
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  editionId        Int
+  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  // Speakers working for this sponsor's company (RG-226).
+  speakers         Speaker[]
+
+  @@unique([editionId, slug])
+  @@index([editionId])
+}
+
+// --- Categories / Tracks (RG-213, US-246) ---
+
+model Category {
+  id               Int       @id @default(autoincrement())
+  nameFr           String
+  nameEn           String
+  // Track colour used to tint the talk cards (hex string).
+  color            String    @default("#109E6E")
+  sortOrder        Int       @default(0)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  editionId        Int
+  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  talks            Talk[]
+
+  @@index([editionId])
+}

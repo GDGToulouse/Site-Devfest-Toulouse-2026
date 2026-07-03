@@ -1,0 +1,91 @@
+services:
+  frontend:
+    container_name: devfest-local-frontend
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./src/frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - BACKEND_URL=http://backend:4000
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+    command: sh -c "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
+    depends_on:
+      - backend
+
+  backend:
+    container_name: devfest-local-backend
+    image: node:22-alpine
+    working_dir: /app
+    volumes:
+      - ./src/backend:/app
+      - backend_node_modules:/app/node_modules
+      - ./uploads:/app/uploads
+    ports:
+      - "${BACKEND_PORT:-4000}:4000"
+    environment:
+      - NODE_ENV=development
+      - BASE_URL=${BASE_URL:-http://localhost:3000}
+      - FRONTEND_URL=http://frontend:3000
+      - PORT=4000
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
+      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
+      - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
+      - OAUTH_GITHUB_CLIENT_SECRET=${OAUTH_GITHUB_CLIENT_SECRET:-}
+      - ADMIN_EMAILS=${ADMIN_EMAILS:-admin@devfesttoulouse.fr,editor@devfesttoulouse.fr}
+      - SMTP_HOST=mailhog
+      - SMTP_PORT=1025
+      - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
+      - BILLETWEB_USER=${BILLETWEB_USER:-}
+      - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+    command: >
+      sh -c "
+        corepack enable &&
+        corepack prepare pnpm@9.15.4 --activate &&
+        pnpm install --config.confirmModulesPurge=false &&
+        pnpm exec prisma generate &&
+        pnpm dev
+      "
+    depends_on:
+      db:
+        condition: service_healthy
+      mailhog:
+        condition: service_started
+
+  db:
+    container_name: devfest-local-db
+    image: postgres:16-alpine
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-devfest}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devfest}
+      - POSTGRES_DB=${POSTGRES_DB:-devfest}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-devfest}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  mailhog:
+    container_name: devfest-local-mailhog
+    image: mailhog/mailhog:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  frontend_node_modules:
+  backend_node_modules:
+  pgdata:

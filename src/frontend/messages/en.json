@@ -1,0 +1,293 @@
+{
+  "site": {
+    "title": "DevFest Toulouse 2026",
+    "description": "Join DevFest Toulouse 2026, the largest Google Developer Group tech conference in southwestern France: web, cloud, AI, mobile, security and more."
+  },
+  "langBanner": {
+    "message": "Cette page est disponible dans votre langue.",
+    "switch": "Passer en {lang}",
+    "dismiss": "Fermer"
+  },
+  "nav": {
+    "home": "Home",
+    "program": "Schedule",
+    "speakers": "Speakers",
+    "sponsors": "Sponsors",
+    "blog": "News"
+  },
+  "cta": {
+    "becomeSponsor": "Become a sponsor",
+    "submitTalk": "Submit a talk",
+    "contactUs": "Contact us"
+  },
+  "home": {
+    "title": "DevFest Toulouse",
+    "hero": {
+      "subtitleLine1": "The Toulouse conference by",
+      "subtitleLine2devs": "devs",
+      "subtitleLine2end": ", for ",
+      "subtitleLine2devs2": "devs.",
+      "ctaSponsor": "Become a sponsor",
+      "ctaTalk": "Submit a talk",
+      "cfpBadge": "CFP open"
+    },
+    "stats": {
+      "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
+    },
+    "sponsors": {
+      "title": "They support #DevFestToulouse",
+      "cta": "Become a partner",
+      "seeAll": "See all partners"
+    },
+    "featuredSpeakers": {
+      "title": "Featured speakers",
+      "seeAll": "See all speakers"
+    },
+    "about": {
+      "behindTitle": "Behind #DevFestToulouse",
+      "gdgDescription": "DevFest Toulouse is organized by GDG Toulouse, a passionate developer community. Since 2016, we bring together the Toulouse tech community every year around talks, workshops, and networking.",
+      "ecosystemTitle": "Dive into our ecosystem"
+    },
+    "news": {
+      "title": "Latest news",
+      "readMore": "Read more articles",
+      "readArticle": "Read"
+    },
+    "ticketing": {
+      "title": "Tickets",
+      "available": "Available",
+      "comingSoon": "Coming soon",
+      "soldOut": "Sold out",
+      "buy": "Buy",
+      "viewAll": "View all tickets"
+    },
+    "replay": {
+      "title": "Relive the {year} edition in 2 minutes!",
+      "titleFallback": "Relive the last edition in 2 minutes!",
+      "viewGallery": "View the photo gallery",
+      "viewEdition": "View the {year} edition"
+    }
+  },
+  "footer": {
+    "tagline": "Bug-free since 2016 - DevFest Toulouse by GDG Toulouse",
+    "navigation": "Navigation",
+    "ecosystems": "Our tech ecosystems",
+    "previousEditions": "Previous editions",
+    "followUs": "Follow the adventure online:",
+    "legalNotice": "Legal notice",
+    "codeOfConduct": "Code of conduct",
+    "sitemap": "Sitemap"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "header": {
+    "menu": "Menu",
+    "close": "Close"
+  },
+  "lang": {
+    "switchTo": "Passer en français",
+    "suggestion": "Cette page est aussi disponible en français."
+  },
+  "articles": {
+    "title": "News",
+    "description": "Latest news from DevFest Toulouse 2026: CFP announcements, ticket releases, speaker reveals and tech community updates from the Toulouse area.",
+    "home": "Home",
+    "noArticles": "No articles yet.",
+    "by": "by",
+    "backToList": "Back to news",
+    "taggedWith": "Articles tagged",
+    "autoTranslated": "Automatic translation not yet reviewed by the team."
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "ticketing": {
+    "pageTitle": "Tickets",
+    "description": "Book your tickets for DevFest Toulouse 2026, the largest tech conference in southwestern France. Blind Bird, Normal and Late Bird tiers available.",
+    "home": "Home",
+    "available": "Available",
+    "comingSoon": "Coming soon",
+    "soldOut": "Sold out",
+    "buy": "Buy",
+    "notOpenYet": "Ticketing is not yet open.",
+    "allSoldOut": "All tickets are sold out.",
+    "externalNote": "Ticket sales are handled by Billetweb. You will be redirected to their payment platform."
+  },
+  "cfp": {
+    "pageTitle": "Submit a talk",
+    "description": "Call for Papers for DevFest Toulouse 2026: submit your talk, quickie or keynote on web, cloud, AI, mobile, security and emerging tech topics.",
+    "home": "Home",
+    "intro": "DevFest Toulouse welcomes speakers from all backgrounds. Whether you're a beginner or an expert, your experience and passion matter. Submit a talk and share your knowledge with the community.",
+    "statusOpen": "The CFP is currently open!",
+    "statusClosed": "The CFP is now closed. Thank you for your submissions!",
+    "dates": "From {open} to {close}",
+    "ctaSubmit": "Submit a talk",
+    "formatsTitle": "Accepted formats",
+    "formats": {
+      "conference": "Conference",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plenary session"
+    },
+    "topicsTitle": "What topics?",
+    "topicsDescription": "Web, Cloud, Mobile, AI, Security, DevOps, Data, IoT... All tech topics are welcome. We also look for experience reports, inspiring talks and cross-cutting topics (culture, diversity, green IT)."
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Contact the DevFest Toulouse organising team for sponsorship, speaker or press inquiries about the 2026 tech conference.",
+    "home": "Home",
+    "form": {
+      "firstName": "First name",
+      "firstNamePlaceholder": "Your first name",
+      "firstNameError": "First name is required",
+      "lastName": "Last name",
+      "lastNamePlaceholder": "Your last name",
+      "lastNameError": "Last name is required",
+      "email": "Email",
+      "emailPlaceholder": "you@example.com",
+      "emailError": "Invalid email",
+      "phone": "Phone (optional)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "company": "Company",
+      "companyPlaceholder": "Your company name",
+      "companyError": "Company is required",
+      "jobTitle": "Job title",
+      "jobTitlePlaceholder": "Your role",
+      "jobTitleError": "Job title is required",
+      "category": "Subject",
+      "categoryPlaceholder": "Select a category",
+      "categoryError": "Please select a category",
+      "categoryOther": "Other",
+      "message": "Message",
+      "messagePlaceholder": "Your message...",
+      "messageError": "Message must be at least 10 characters",
+      "submit": "Send",
+      "sending": "Sending...",
+      "success": "Thank you! We received your message and will respond as soon as possible.",
+      "error": "An error occurred. Please try again.",
+      "honeypotError": "Your browser (or password manager) filled a hidden field we use to filter out bots. Try again in a private window, or temporarily disable autofill, then resubmit."
+    },
+    "sidebar": {
+      "responseTime": "We are volunteers, thank you for your patience. We do our best to respond within 48 hours.",
+      "followUs": "Follow us:"
+    }
+  },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Recap of DevFest Toulouse {year}: talks, speakers, attendance figures, aftermovie and highlights from the {year} Google Developer Group conference.",
+    "home": "Home",
+    "editions": "Editions",
+    "keyFigures": "The edition in numbers",
+    "aftermovie": "Aftermovie",
+    "gallery": "Photo gallery",
+    "galleryLink": "View gallery",
+    "news": "News from this edition",
+    "venue": "Venue",
+    "date": "Date",
+    "archivedSite": "View archived site",
+    "noEdition": "No edition found for this year.",
+    "allEditions": "All editions",
+    "previousEdition": "Previous edition",
+    "nextEdition": "Next edition"
+  },
+  "sponsor": {
+    "pageTitle": "Become a sponsor",
+    "description": "Sponsorship packages for DevFest Toulouse 2026: boost your employer brand, recruit top tech talent and support the Toulouse developer community.",
+    "home": "Home",
+    "intro": "DevFest Toulouse is the opportunity to gain visibility among thousands of tech enthusiasts. Join us as a sponsor and benefit from unique exposure to the Toulouse tech community.",
+    "whyTitle": "Why become a sponsor?",
+    "whyVisibility": "Visibility within the tech community",
+    "whyVisibilityDesc": "Get noticed by our attendees: developers, engineers, technical decision-makers and students.",
+    "whyBrand": "Employer branding",
+    "whyBrandDesc": "Show your commitment to innovation and attract top tech talent.",
+    "whyProducts": "Product promotion",
+    "whyProductsDesc": "Present your solutions and technologies directly to your target audience.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Connect with the Toulouse tech community in a friendly and professional setting.",
+    "plansTitle": "Our packages",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Included benefits",
+    "ctaContact": "Contact us",
+    "ctaDownload": "Receive sponsorship package",
+    "noPlans": "Sponsorship packages will be available soon.",
+    "visible": "Visible",
+    "hidden": "Hidden",
+    "formTitle": "Contact us",
+    "formIntro": "Fill out the form below and we will send you our sponsorship brochure. We will get back to you shortly.",
+    "formSubmit": "Receive the sponsorship brochure",
+    "preAnnouncementTitle": "Coming soon",
+    "preAnnouncementMessage": "Sponsorships are opening soon. Sign up to be notified as soon as packages are available.",
+    "preAnnouncementCta": "Sign up to be notified",
+    "temporaryCta": "Receive the sponsorship brochure",
+    "soldOutTitle": "Fully booked",
+    "soldOutMessage": "All sponsor slots for this edition have been filled. See you next year! In the meantime, feel free to reach out with any questions.",
+    "soldOutCta": "Contact us"
+  },
+  "codeOfConduct": {
+    "title": "Code of Conduct",
+    "description": "DevFest Toulouse Code of Conduct.",
+    "home": "Home"
+  },
+  "legalNotice": {
+    "title": "Legal Notice",
+    "description": "DevFest Toulouse legal notice.",
+    "home": "Home"
+  },
+  "conferences": {
+    "title": "Schedule",
+    "description": "Discover the conference schedule for DevFest Toulouse 2026: web, cloud, AI, mobile and more.",
+    "heading": "DevFest Toulouse {year} schedule",
+    "comingSoonTitle": "Schedule coming soon",
+    "comingSoonBody": "The conference, quickie and keynote schedule for DevFest Toulouse {year} will be published here once finalized. Meanwhile, check out the aftermovie and key figures from last year's edition.",
+    "home": "Home",
+    "speakersLabel": "Speakers",
+    "format": {
+      "CONFERENCE": "Conference",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote"
+    },
+    "level": {
+      "DEBUTANT": "Beginner",
+      "INTERMEDIAIRE": "Intermediate",
+      "CONFIRME": "Advanced"
+    }
+  },
+  "speakers": {
+    "title": "Speakers",
+    "description": "Discover the speakers of DevFest Toulouse 2026: tech experts from Toulouse, France and abroad.",
+    "heading": "DevFest Toulouse {year} speakers",
+    "comingSoonTitle": "Speakers will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} speaker list will be published here after the talk selection process. Past editions hosted over 300 speakers from France and beyond.",
+    "home": "Home",
+    "empty": "Speakers will be announced soon.",
+    "sessionsTitle": "Sessions",
+    "backToList": "All speakers"
+  },
+  "sponsors": {
+    "title": "Sponsors",
+    "description": "Discover the sponsors of DevFest Toulouse 2026: tech companies from Toulouse and beyond who support the developer ecosystem.",
+    "heading": "DevFest Toulouse {year} sponsors",
+    "comingSoonTitle": "Sponsors will be announced soon",
+    "comingSoonBody": "The DevFest Toulouse {year} sponsor list will be published here. Does your company want to support the Toulouse tech ecosystem?",
+    "becomeSponsorCta": "Become a sponsor",
+    "home": "Home",
+    "empty": "Sponsors will be announced soon.",
+    "visitWebsite": "Visit website",
+    "speakersOf": "Speakers from {name}",
+    "level": {
+      "PLATINUM": "Platinum",
+      "GOLD": "Gold",
+      "SILVER": "Silver",
+      "SOUTIEN": "Supporter",
+      "COMMUNAUTE": "Community"
+    }
+  }
+}

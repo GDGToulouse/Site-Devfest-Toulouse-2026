@@ -1,0 +1,293 @@
+{
+  "site": {
+    "title": "DevFest Toulouse 2026",
+    "description": "La plus grande conférence tech du bassin toulousain, organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité et plus encore."
+  },
+  "langBanner": {
+    "message": "This page is available in your language.",
+    "switch": "Switch to {lang}",
+    "dismiss": "Dismiss"
+  },
+  "nav": {
+    "home": "Accueil",
+    "program": "Programme",
+    "speakers": "Speakers",
+    "sponsors": "Sponsors",
+    "blog": "Actus"
+  },
+  "cta": {
+    "becomeSponsor": "Devenir sponsor",
+    "submitTalk": "Proposer un talk",
+    "contactUs": "Contactez-nous"
+  },
+  "home": {
+    "title": "DevFest Toulouse",
+    "hero": {
+      "subtitleLine1": "La conférence Toulousaine par",
+      "subtitleLine2devs": "les devs",
+      "subtitleLine2end": " et pour les ",
+      "subtitleLine2devs2": "devs.",
+      "ctaSponsor": "Devenir sponsor",
+      "ctaTalk": "Proposer un talk",
+      "cfpBadge": "CFP ouvert"
+    },
+    "stats": {
+      "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
+    },
+    "sponsors": {
+      "title": "Ils soutiennent le #DevFestToulouse",
+      "cta": "Devenir Partenaire",
+      "seeAll": "Voir tous les partenaires"
+    },
+    "featuredSpeakers": {
+      "title": "Speakers en vedette",
+      "seeAll": "Voir tous les speakers"
+    },
+    "about": {
+      "behindTitle": "Derrière le #DevFestToulouse",
+      "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
+      "ecosystemTitle": "Plongez dans notre écosystème"
+    },
+    "news": {
+      "title": "Dernières actualités",
+      "readMore": "Lire plus d'articles",
+      "readArticle": "Lire"
+    },
+    "ticketing": {
+      "title": "Billetterie",
+      "available": "Disponible",
+      "comingSoon": "Bientôt",
+      "soldOut": "Épuisé",
+      "buy": "Acheter",
+      "viewAll": "Voir la billetterie"
+    },
+    "replay": {
+      "title": "Revivez l'édition {year} en 2 minutes !",
+      "titleFallback": "Revivez la dernière édition en 2 minutes !",
+      "viewGallery": "Voir l'album photo",
+      "viewEdition": "Voir l'édition {year}"
+    }
+  },
+  "footer": {
+    "tagline": "Sans bug depuis 2016 - DevFest Toulouse by GDG Toulouse",
+    "navigation": "Navigation",
+    "ecosystems": "Nos écosystèmes tech",
+    "previousEditions": "Éditions précédentes",
+    "followUs": "Suivez l'aventure en ligne :",
+    "legalNotice": "Mentions légales",
+    "codeOfConduct": "Code de conduite",
+    "sitemap": "Plan du site"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "backHome": "Retour à l'accueil"
+  },
+  "header": {
+    "menu": "Menu",
+    "close": "Fermer"
+  },
+  "lang": {
+    "switchTo": "Switch to English",
+    "suggestion": "This page is also available in English."
+  },
+  "articles": {
+    "title": "Actualités",
+    "description": "Toutes les actualités du DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "noArticles": "Aucun article pour le moment.",
+    "by": "par",
+    "backToList": "Retour aux actualités",
+    "taggedWith": "Articles tagués",
+    "autoTranslated": "Traduction automatique non relue par l'équipe."
+  },
+  "pagination": {
+    "label": "Pagination",
+    "previous": "Précédent",
+    "next": "Suivant"
+  },
+  "ticketing": {
+    "pageTitle": "Billetterie",
+    "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "available": "Disponible",
+    "comingSoon": "Bientôt",
+    "soldOut": "Épuisé",
+    "buy": "Acheter",
+    "notOpenYet": "La billetterie n'est pas encore ouverte.",
+    "allSoldOut": "Billetterie complète — tous les billets sont épuisés.",
+    "externalNote": "La vente de billets est gérée par Billetweb. Vous serez redirigé vers la plateforme de paiement."
+  },
+  "cfp": {
+    "pageTitle": "Proposer un talk",
+    "description": "Soumettez votre présentation pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse accueille des speakers de tous horizons. Que vous soyez débutant ou expert, votre expérience et votre passion comptent. Proposez un talk et partagez vos connaissances avec la communauté.",
+    "statusOpen": "Le CFP est actuellement ouvert !",
+    "statusClosed": "Le CFP est fermé. Merci pour vos soumissions !",
+    "dates": "Du {open} au {close}",
+    "ctaSubmit": "Proposer un talk",
+    "formatsTitle": "Formats acceptés",
+    "formats": {
+      "conference": "Conférence",
+      "conferenceDuration": "40 minutes",
+      "quickie": "Quickie",
+      "quickieDuration": "20 minutes",
+      "keynote": "Keynote",
+      "keynoteDuration": "Plénière"
+    },
+    "topicsTitle": "Quels sujets ?",
+    "topicsDescription": "Web, Cloud, Mobile, IA, Sécurité, DevOps, Data, IoT... Tous les sujets tech sont les bienvenus. Nous recherchons aussi des retours d'expérience, des talks inspirants et des sujets transverses (culture, diversité, green IT)."
+  },
+  "contact": {
+    "title": "Contact",
+    "description": "Contactez l'équipe du DevFest Toulouse.",
+    "home": "Accueil",
+    "form": {
+      "firstName": "Prénom",
+      "firstNamePlaceholder": "Votre prénom",
+      "firstNameError": "Le prénom est obligatoire",
+      "lastName": "Nom",
+      "lastNamePlaceholder": "Votre nom",
+      "lastNameError": "Le nom est obligatoire",
+      "email": "Email",
+      "emailPlaceholder": "vous@example.com",
+      "emailError": "Email invalide",
+      "phone": "Téléphone (optionnel)",
+      "phonePlaceholder": "+33 6 12 34 56 78",
+      "company": "Entreprise",
+      "companyPlaceholder": "Nom de votre entreprise",
+      "companyError": "L'entreprise est obligatoire",
+      "jobTitle": "Poste",
+      "jobTitlePlaceholder": "Votre fonction",
+      "jobTitleError": "Le poste est obligatoire",
+      "category": "Objet",
+      "categoryPlaceholder": "Sélectionnez une catégorie",
+      "categoryError": "Veuillez sélectionner une catégorie",
+      "categoryOther": "Autre",
+      "message": "Message",
+      "messagePlaceholder": "Votre message...",
+      "messageError": "Le message doit contenir au moins 10 caractères",
+      "submit": "Envoyer",
+      "sending": "Envoi en cours...",
+      "success": "Merci ! Nous avons reçu votre message et vous répondrons dans les meilleurs délais.",
+      "error": "Une erreur s'est produite. Veuillez réessayer.",
+      "honeypotError": "Votre navigateur (ou votre gestionnaire de mots de passe) a rempli un champ caché qui nous sert à filtrer les robots. Essayez en navigation privée, ou désactivez temporairement l'auto-remplissage, puis soumettez à nouveau."
+    },
+    "sidebar": {
+      "responseTime": "Nous sommes bénévoles, merci pour votre patience. Nous faisons de notre mieux pour répondre sous 48h.",
+      "followUs": "Suivez-nous :"
+    }
+  },
+  "bilan": {
+    "pageTitle": "DevFest Toulouse {year}",
+    "description": "Bilan de l'édition {year} du DevFest Toulouse.",
+    "home": "Accueil",
+    "editions": "Éditions",
+    "keyFigures": "L'édition en chiffres",
+    "aftermovie": "Aftermovie",
+    "gallery": "Galerie photos",
+    "galleryLink": "Voir la galerie",
+    "news": "Actualités de cette édition",
+    "venue": "Lieu",
+    "date": "Date",
+    "archivedSite": "Voir le site archivé",
+    "noEdition": "Aucune édition trouvée pour cette année.",
+    "allEditions": "Toutes les éditions",
+    "previousEdition": "Édition précédente",
+    "nextEdition": "Édition suivante"
+  },
+  "sponsor": {
+    "pageTitle": "Devenir sponsor",
+    "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",
+    "home": "Accueil",
+    "intro": "Le DevFest Toulouse est l'opportunité de vous rendre visible auprès de milliers de passionnés de technologie. Rejoignez-nous en tant que sponsor et bénéficiez d'une visibilité unique auprès de la communauté tech toulousaine.",
+    "whyTitle": "Pourquoi devenir sponsor ?",
+    "whyVisibility": "Visibilité auprès de la communauté tech",
+    "whyVisibilityDesc": "Rendez-vous visible auprès de nos participants, développeurs, ingénieurs, décideurs techniques et étudiants.",
+    "whyBrand": "Marque employeur",
+    "whyBrandDesc": "Montrez votre engagement pour l'innovation et attirez les meilleurs talents de la tech.",
+    "whyProducts": "Promotion de vos produits",
+    "whyProductsDesc": "Présentez vos solutions et technologies directement à votre public cible.",
+    "whyNetwork": "Networking",
+    "whyNetworkDesc": "Échangez avec les acteurs de la tech toulousaine dans un cadre convivial et professionnel.",
+    "plansTitle": "Nos formules",
+    "standSize": "Stand {size}",
+    "planPrice": "{price}",
+    "advantages": "Avantages inclus",
+    "ctaContact": "Nous contacter",
+    "ctaDownload": "Recevoir le dossier de sponsoring",
+    "noPlans": "Les formules de sponsoring seront bientôt disponibles.",
+    "visible": "Visible",
+    "hidden": "Masqué",
+    "formTitle": "Contactez-nous",
+    "formIntro": "Remplissez le formulaire ci-dessous et nous vous enverrons notre dossier de sponsoring. Nous reviendrons vers vous dans les plus brefs délais.",
+    "formSubmit": "Recevoir le dossier de sponsoring",
+    "preAnnouncementTitle": "Bientôt disponible",
+    "preAnnouncementMessage": "Les sponsorings ouvrent prochainement. Inscrivez-vous pour être informé dès que les formules seront disponibles.",
+    "preAnnouncementCta": "S'inscrire pour être informé",
+    "temporaryCta": "Recevoir le dossier de sponsoring",
+    "soldOutTitle": "Sponsoring complet",
+    "soldOutMessage": "Tous les emplacements sponsors de cette édition sont attribués. Rendez-vous l'année prochaine ! En attendant, vous pouvez nous contacter pour toute question.",
+    "soldOutCta": "Nous contacter"
+  },
+  "codeOfConduct": {
+    "title": "Code de conduite",
+    "description": "Code de conduite du DevFest Toulouse.",
+    "home": "Accueil"
+  },
+  "legalNotice": {
+    "title": "Mentions légales",
+    "description": "Mentions légales du site DevFest Toulouse.",
+    "home": "Accueil"
+  },
+  "conferences": {
+    "title": "Programme",
+    "description": "Découvrez le programme des conférences du DevFest Toulouse 2026 : web, cloud, IA, mobile et bien plus.",
+    "heading": "Programme du DevFest Toulouse {year}",
+    "comingSoonTitle": "Le programme arrive bientôt",
+    "comingSoonBody": "Le programme des conférences, quickies et keynotes du DevFest Toulouse {year} sera publié ici dès qu'il sera finalisé. En attendant, consultez l'aftermovie et les chiffres clés de l'édition précédente.",
+    "home": "Accueil",
+    "speakersLabel": "Speakers",
+    "format": {
+      "CONFERENCE": "Conférence",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote"
+    },
+    "level": {
+      "DEBUTANT": "Débutant",
+      "INTERMEDIAIRE": "Intermédiaire",
+      "CONFIRME": "Confirmé"
+    }
+  },
+  "speakers": {
+    "title": "Conférenciers",
+    "description": "Découvrez les conférenciers du DevFest Toulouse 2026 : experts tech de Toulouse, France et international.",
+    "heading": "Conférenciers du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les conférenciers seront annoncés prochainement",
+    "comingSoonBody": "La liste des speakers du DevFest Toulouse {year} sera publiée ici après la sélection des talks. Les éditions précédentes ont accueilli plus de 300 conférenciers venus de toute la France et d'ailleurs.",
+    "home": "Accueil",
+    "empty": "Les conférenciers seront annoncés prochainement.",
+    "sessionsTitle": "Sessions",
+    "backToList": "Tous les conférenciers"
+  },
+  "sponsors": {
+    "title": "Sponsors",
+    "description": "Découvrez les sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
+    "heading": "Sponsors du DevFest Toulouse {year}",
+    "comingSoonTitle": "Les sponsors seront annoncés prochainement",
+    "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
+    "becomeSponsorCta": "Devenir sponsor",
+    "home": "Accueil",
+    "empty": "Les sponsors seront annoncés prochainement.",
+    "visitWebsite": "Visiter le site",
+    "speakersOf": "Speakers de {name}",
+    "level": {
+      "PLATINUM": "Platinum",
+      "GOLD": "Gold",
+      "SILVER": "Silver",
+      "SOUTIEN": "Soutien",
+      "COMMUNAUTE": "Communauté"
+    }
+  }
+}

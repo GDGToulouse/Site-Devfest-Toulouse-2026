@@ -1,0 +1,317 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "next-intl";
+
+import { localizedField } from "@/lib/i18n-helpers";
+import type { ContactCategory } from "@/lib/types";
+
+interface ContactFormProps {
+  categories: ContactCategory[];
+  locale: string;
+  forceCategoryId?: number;
+  submitLabel?: string;
+}
+
+export default function ContactForm({ categories, locale, forceCategoryId, submitLabel }: ContactFormProps) {
+  const t = useTranslations("contact.form");
+
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    company: "",
+    jobTitle: "",
+    categoryId: "",
+    message: "",
+    confirmUrl: "", // honeypot
+  });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [status, setStatus] = useState<"idle" | "sending" | "success" | "error">("idle");
+
+  // Categories with isPublic !== false are shown in the generic <select>.
+  // We treat undefined as public for backward compat with old API responses.
+  const publicCategories = categories.filter((c) => c.isPublic !== false);
+
+  // Company + jobTitle are only mandatory for sponsor-brochure requests —
+  // the generic /contact form leaves them optional since most inbound
+  // messages are simple questions where forcing a company name would
+  // just add friction.
+  const effectiveCategoryId = forceCategoryId ?? (formData.categoryId ? Number(formData.categoryId) : undefined);
+  const effectiveCategory = categories.find((c) => c.id === effectiveCategoryId);
+  const requiresCompanyInfo = effectiveCategory?.slug === "sponsor-brochure";
+
+  function validate(): Record<string, string> {
+    const errs: Record<string, string> = {};
+    if (!formData.firstName.trim()) errs.firstName = t("firstNameError");
+    if (!formData.lastName.trim()) errs.lastName = t("lastNameError");
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      errs.email = t("emailError");
+    if (requiresCompanyInfo && !formData.company.trim()) errs.company = t("companyError");
+    if (requiresCompanyInfo && !formData.jobTitle.trim()) errs.jobTitle = t("jobTitleError");
+    if (!forceCategoryId && publicCategories.length > 0 && !formData.categoryId) errs.categoryId = t("categoryError");
+    if (!formData.message.trim() || formData.message.trim().length < 10)
+      errs.message = t("messageError");
+    return errs;
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+    if (Object.keys(validationErrors).length > 0) return;
+
+    setStatus("sending");
+    try {
+      const categoryId = forceCategoryId ?? (formData.categoryId ? Number(formData.categoryId) : undefined);
+      const res = await fetch(`/api/contact/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          phone: formData.phone || undefined,
+          company: formData.company,
+          jobTitle: formData.jobTitle,
+          categoryId,
+          message: formData.message,
+          locale,
+          confirmUrl: formData.confirmUrl, // honeypot
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        if (data.errors) setErrors(data.errors);
+        setStatus("error");
+        return;
+      }
+
+      setStatus("success");
+      setFormData({ firstName: "", lastName: "", email: "", phone: "", company: "", jobTitle: "", categoryId: "", message: "", confirmUrl: "" });
+      setErrors({});
+    } catch {
+      setStatus("error");
+    }
+  }
+
+  function handleChange(field: string, value: string) {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => { const n = { ...prev }; delete n[field]; return n; });
+  }
+
+  return (
+    <form onSubmit={handleSubmit} noValidate className="space-y-6">
+      {/* Honeypot — hidden from users. Name is intentionally neutral
+          (not "website"/"url"/"company") so Chrome/password-managers
+          don't auto-fill it. We kept a legit-looking type and autoComplete
+          value so bots that blindly fill every text field still trip it. */}
+      <div aria-hidden="true" className="absolute -left-[9999px] opacity-0 pointer-events-none">
+        <input
+          type="text"
+          name="confirm_url"
+          tabIndex={-1}
+          autoComplete="new-password"
+          value={formData.confirmUrl}
+          onChange={(e) => handleChange("confirmUrl", e.target.value)}
+        />
+      </div>
+
+      {/* Name row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="firstName" className="block text-sm font-bold text-noir mb-1">
+            {t("firstName")} *
+          </label>
+          <input
+            id="firstName"
+            type="text"
+            value={formData.firstName}
+            onChange={(e) => handleChange("firstName", e.target.value)}
+            placeholder={t("firstNamePlaceholder")}
+            aria-invalid={!!errors.firstName}
+            aria-describedby={errors.firstName ? "firstName-error" : undefined}
+            className={`w-full px-4 py-3 rounded-m border ${errors.firstName ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+          />
+          {errors.firstName && (
+            <p id="firstName-error" className="mt-1 text-sm text-rouge">{errors.firstName}</p>
+          )}
+        </div>
+        <div>
+          <label htmlFor="lastName" className="block text-sm font-bold text-noir mb-1">
+            {t("lastName")} *
+          </label>
+          <input
+            id="lastName"
+            type="text"
+            value={formData.lastName}
+            onChange={(e) => handleChange("lastName", e.target.value)}
+            placeholder={t("lastNamePlaceholder")}
+            aria-invalid={!!errors.lastName}
+            aria-describedby={errors.lastName ? "lastName-error" : undefined}
+            className={`w-full px-4 py-3 rounded-m border ${errors.lastName ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+          />
+          {errors.lastName && (
+            <p id="lastName-error" className="mt-1 text-sm text-rouge">{errors.lastName}</p>
+          )}
+        </div>
+      </div>
+
+      {/* Email */}
+      <div>
+        <label htmlFor="email" className="block text-sm font-bold text-noir mb-1">
+          {t("email")} *
+        </label>
+        <input
+          id="email"
+          type="email"
+          value={formData.email}
+          onChange={(e) => handleChange("email", e.target.value)}
+          placeholder={t("emailPlaceholder")}
+          aria-invalid={!!errors.email}
+          aria-describedby={errors.email ? "email-error" : undefined}
+          className={`w-full px-4 py-3 rounded-m border ${errors.email ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+        />
+        {errors.email && (
+          <p id="email-error" className="mt-1 text-sm text-rouge">{errors.email}</p>
+        )}
+      </div>
+
+      {/* Phone */}
+      <div>
+        <label htmlFor="phone" className="block text-sm font-bold text-noir mb-1">
+          {t("phone")}
+        </label>
+        <input
+          id="phone"
+          type="tel"
+          value={formData.phone}
+          onChange={(e) => handleChange("phone", e.target.value)}
+          placeholder={t("phonePlaceholder")}
+          className="w-full px-4 py-3 rounded-m border border-gris-clair text-noir focus:outline-none focus:ring-2 focus:ring-bleu"
+        />
+      </div>
+
+      {/* Category — hidden when forceCategoryId is set.
+          Internal categories (isPublic=false) are excluded from the
+          generic <select>; they're meant to be reached only through
+          dedicated pages that pass forceCategoryId. */}
+      {!forceCategoryId && publicCategories.length > 0 && (
+        <div>
+          <label htmlFor="categoryId" className="block text-sm font-bold text-noir mb-1">
+            {t("category")} *
+          </label>
+          <select
+            id="categoryId"
+            value={formData.categoryId}
+            onChange={(e) => handleChange("categoryId", e.target.value)}
+            aria-invalid={!!errors.categoryId}
+            aria-describedby={errors.categoryId ? "categoryId-error" : undefined}
+            className={`w-full px-4 py-3 rounded-m border ${errors.categoryId ? "border-rouge" : "border-gris-clair"} text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-bleu`}
+          >
+            <option value="">{t("categoryPlaceholder")}</option>
+            {publicCategories.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {localizedField(cat, "name", locale)}
+              </option>
+            ))}
+            <option value="other">{t("categoryOther")}</option>
+          </select>
+          {errors.categoryId && (
+            <p id="categoryId-error" className="mt-1 text-sm text-rouge">{errors.categoryId}</p>
+          )}
+        </div>
+      )}
+
+      {/* Company + Job title — only shown when the selected category is
+          sponsor-brochure. The generic /contact flow doesn't surface
+          these to keep friction low on simple inquiries. */}
+      {requiresCompanyInfo && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="company" className="block text-sm font-bold text-noir mb-1">
+              {t("company")} *
+            </label>
+            <input
+              id="company"
+              type="text"
+              autoComplete="organization"
+              value={formData.company}
+              onChange={(e) => handleChange("company", e.target.value)}
+              placeholder={t("companyPlaceholder")}
+              aria-invalid={!!errors.company}
+              aria-describedby={errors.company ? "company-error" : undefined}
+              className={`w-full px-4 py-3 rounded-m border ${errors.company ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+            />
+            {errors.company && (
+              <p id="company-error" className="mt-1 text-sm text-rouge">{errors.company}</p>
+            )}
+          </div>
+          <div>
+            <label htmlFor="jobTitle" className="block text-sm font-bold text-noir mb-1">
+              {t("jobTitle")} *
+            </label>
+            <input
+              id="jobTitle"
+              type="text"
+              autoComplete="organization-title"
+              value={formData.jobTitle}
+              onChange={(e) => handleChange("jobTitle", e.target.value)}
+              placeholder={t("jobTitlePlaceholder")}
+              aria-invalid={!!errors.jobTitle}
+              aria-describedby={errors.jobTitle ? "jobTitle-error" : undefined}
+              className={`w-full px-4 py-3 rounded-m border ${errors.jobTitle ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu`}
+            />
+            {errors.jobTitle && (
+              <p id="jobTitle-error" className="mt-1 text-sm text-rouge">{errors.jobTitle}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Message */}
+      <div>
+        <label htmlFor="message" className="block text-sm font-bold text-noir mb-1">
+          {t("message")} *
+        </label>
+        <textarea
+          id="message"
+          rows={8}
+          value={formData.message}
+          onChange={(e) => handleChange("message", e.target.value)}
+          placeholder={t("messagePlaceholder")}
+          aria-invalid={!!errors.message}
+          aria-describedby={errors.message ? "message-error" : undefined}
+          className={`w-full px-4 py-3 rounded-m border ${errors.message ? "border-rouge" : "border-gris-clair"} text-noir focus:outline-none focus:ring-2 focus:ring-bleu resize-vertical`}
+        />
+        {errors.message && (
+          <p id="message-error" className="mt-1 text-sm text-rouge">{errors.message}</p>
+        )}
+      </div>
+
+      {/* Submit */}
+      <button
+        type="submit"
+        disabled={status === "sending"}
+        className="px-8 py-3 rounded-[12px] bg-bleu text-blanc font-bold text-lg hover:bg-bleu/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        {status === "sending" ? t("sending") : (submitLabel || t("submit"))}
+      </button>
+
+      {/* Status messages */}
+      {status === "success" && (
+        <p role="alert" className="mt-4 p-4 rounded-m bg-malachite/10 text-malachite font-bold">
+          {t("success")}
+        </p>
+      )}
+      {status === "error" && (
+        <p role="alert" className="mt-4 p-4 rounded-m bg-rouge/10 text-rouge font-bold">
+          {errors.honeypot === "autofill_detected" ? t("honeypotError") : t("error")}
+        </p>
+      )}
+    </form>
+  );
+}

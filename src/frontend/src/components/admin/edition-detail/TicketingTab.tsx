@@ -1,0 +1,374 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { adminFetch } from "@/lib/admin-api";
+import FormField from "@/components/admin/FormField";
+import BilingualInput from "@/components/admin/BilingualInput";
+import StatusBadge from "@/components/admin/StatusBadge";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+
+interface TicketTier {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+  price: number;
+  isVisible: boolean;
+  saleStartDate: string | null;
+  saleEndDate: string | null;
+  status: string;
+  externalUrl: string | null;
+  sortOrder: number;
+}
+
+interface BilletwebEvent {
+  id: string;
+  name: string;
+  date: string;
+  shop: string;
+}
+
+const TICKET_STATUS = [
+  { value: "COMING_SOON", label: "Bientôt disponible", variant: "gray" as const },
+  { value: "AVAILABLE", label: "Disponible", variant: "green" as const },
+  { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
+];
+
+function toInputDate(isoDate: string | null): string {
+  if (!isoDate) return "";
+  return isoDate.substring(0, 10);
+}
+
+const emptyTier = {
+  nameFr: "",
+  nameEn: "",
+  price: "",
+  isVisible: true,
+  saleStartDate: "",
+  saleEndDate: "",
+  externalUrl: "",
+  sortOrder: "0",
+};
+
+function TierTable({
+  title,
+  tiers,
+  onEdit,
+  onDelete,
+  collapsed,
+}: {
+  title: string;
+  tiers: TicketTier[];
+  onEdit: (tier: TicketTier) => void;
+  onDelete: (tier: TicketTier) => void;
+  collapsed?: boolean;
+}) {
+  const [isOpen, setIsOpen] = useState(!collapsed);
+
+  if (tiers.length === 0) return null;
+
+  return (
+    <div className="mb-6">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2 text-sm font-bold text-noir mb-2 hover:text-malachite transition-colors"
+      >
+        <span className={`transition-transform ${isOpen ? "rotate-90" : ""}`}>&#9654;</span>
+        {title} ({tiers.length})
+      </button>
+      {isOpen && (
+        <div className="overflow-x-auto rounded-xl border border-gris/20">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-blanc-casse/60 border-b border-gris/20">
+                <th className="text-left px-4 py-3 font-medium text-gris">Nom</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Prix</th>
+                <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
+                <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tiers.map((tier) => (
+                <tr key={tier.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
+                  <td className="px-4 py-3 text-noir font-medium">{tier.nameFr}</td>
+                  <td className="px-4 py-3 text-noir">{tier.price} EUR</td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
+                  </td>
+                  <td className="px-4 py-3 text-right space-x-2">
+                    <button onClick={() => onEdit(tier)} className="text-bleu hover:underline text-sm">Modifier</button>
+                    <button onClick={() => onDelete(tier)} className="text-terre-cuite hover:underline text-sm">Supprimer</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+interface TicketingTabProps {
+  editionId: number;
+}
+
+export default function TicketingTab({ editionId }: TicketingTabProps) {
+  const [tiers, setTiers] = useState<TicketTier[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [form, setForm] = useState(emptyTier);
+  const [isSaving, setIsSaving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<TicketTier | null>(null);
+
+  // Billetweb import state
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [bwEvents, setBwEvents] = useState<BilletwebEvent[]>([]);
+  const [isLoadingEvents, setIsLoadingEvents] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<BilletwebEvent | null>(null);
+
+  async function loadTiers() {
+    setIsLoading(true);
+    const { data } = await adminFetch<TicketTier[]>(`/tickets?editionId=${editionId}`);
+    if (data) setTiers(data);
+    setIsLoading(false);
+  }
+
+  useEffect(() => {
+    loadTiers();
+  }, [editionId]);
+
+  function startEdit(tier: TicketTier) {
+    setEditingId(tier.id);
+    setForm({
+      nameFr: tier.nameFr,
+      nameEn: tier.nameEn,
+      price: String(tier.price),
+      isVisible: tier.isVisible,
+      saleStartDate: toInputDate(tier.saleStartDate),
+      saleEndDate: toInputDate(tier.saleEndDate),
+      externalUrl: tier.externalUrl || "",
+      sortOrder: String(tier.sortOrder),
+    });
+    setShowForm(true);
+  }
+
+  function startNew() {
+    setEditingId(null);
+    setForm({ ...emptyTier });
+    setShowForm(true);
+  }
+
+  async function handleSave() {
+    setIsSaving(true);
+    const payload = {
+      nameFr: form.nameFr,
+      nameEn: form.nameEn,
+      price: Number(form.price) || 0,
+      isVisible: form.isVisible,
+      saleStartDate: form.saleStartDate || null,
+      saleEndDate: form.saleEndDate || null,
+      externalUrl: form.externalUrl || undefined,
+      sortOrder: Number(form.sortOrder) || 0,
+      editionId,
+    };
+
+    if (editingId) {
+      await adminFetch(`/tickets/${editingId}`, { method: "PUT", body: JSON.stringify(payload) });
+    } else {
+      await adminFetch("/tickets", { method: "POST", body: JSON.stringify(payload) });
+    }
+
+    setIsSaving(false);
+    setShowForm(false);
+    loadTiers();
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    await adminFetch(`/tickets/${deleteTarget.id}`, { method: "DELETE" });
+    setDeleteTarget(null);
+    loadTiers();
+  }
+
+  // Billetweb import
+  async function openImportModal() {
+    setShowImportModal(true);
+    setImportError(null);
+    setSelectedEvent(null);
+    setIsLoadingEvents(true);
+
+    const { data, status } = await adminFetch<BilletwebEvent[]>("/tickets/billetweb/events");
+    if (status === 200 && data) {
+      setBwEvents(data);
+    } else {
+      setImportError("Impossible de charger les événements Billetweb. Vérifiez la configuration API.");
+      setBwEvents([]);
+    }
+    setIsLoadingEvents(false);
+  }
+
+  async function handleImport() {
+    if (!selectedEvent) return;
+    setIsImporting(true);
+    setImportError(null);
+
+    const { data, status } = await adminFetch<{ imported: number }>("/tickets/import/billetweb", {
+      method: "POST",
+      body: JSON.stringify({ editionId, billetwebEventId: selectedEvent.id }),
+    });
+
+    setIsImporting(false);
+
+    if (status === 201 && data) {
+      setShowImportModal(false);
+      setSelectedEvent(null);
+      loadTiers();
+    } else {
+      setImportError("Erreur lors de l'import des tarifs.");
+    }
+  }
+
+  if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-lg font-bold text-noir">Tarifs</h3>
+        <div className="flex gap-3">
+          <button
+            onClick={openImportModal}
+            className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90"
+          >
+            Importer depuis Billetweb
+          </button>
+          <button onClick={startNew} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90">
+            Nouveau tarif
+          </button>
+        </div>
+      </div>
+
+      {showForm && (
+        <div className="bg-blanc-casse/50 rounded-xl p-6 mb-6 space-y-4">
+          <h4 className="text-sm font-bold text-noir">{editingId ? "Modifier le tarif" : "Nouveau tarif"}</h4>
+
+          <BilingualInput label="Nom" nameFr="nameFr" nameEn="nameEn" valueFr={form.nameFr} valueEn={form.nameEn} onChangeFr={(v) => setForm({ ...form, nameFr: v })} onChangeEn={(v) => setForm({ ...form, nameEn: v })} required />
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField label="Prix (EUR)" name="price" type="number" value={form.price} onChange={(v) => setForm({ ...form, price: v })} required />
+            <FormField label="Début des ventes" name="saleStartDate" type="date" value={form.saleStartDate} onChange={(v) => setForm({ ...form, saleStartDate: v })} />
+            <FormField label="Fin des ventes" name="saleEndDate" type="date" value={form.saleEndDate} onChange={(v) => setForm({ ...form, saleEndDate: v })} />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <FormField label="Ordre" name="sortOrder" type="number" value={form.sortOrder} onChange={(v) => setForm({ ...form, sortOrder: v })} />
+            <FormField label="URL externe" name="externalUrl" type="url" value={form.externalUrl} onChange={(v) => setForm({ ...form, externalUrl: v })} />
+            <div className="flex items-center pt-6">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.isVisible}
+                  onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
+                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                />
+                <span className="text-sm text-noir">Visible sur le site</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end">
+            <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse">Annuler</button>
+            <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
+              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {tiers.length === 0 ? (
+        <p className="text-gris text-sm">Aucun tarif pour cette édition.</p>
+      ) : (
+        <>
+          <TierTable
+            title="Tarifs visibles sur le site"
+            tiers={tiers.filter((t) => t.isVisible)}
+            onEdit={startEdit}
+            onDelete={setDeleteTarget}
+          />
+          <TierTable
+            title="Tarifs masqués"
+            tiers={tiers.filter((t) => !t.isVisible)}
+            onEdit={startEdit}
+            onDelete={setDeleteTarget}
+            collapsed
+          />
+        </>
+      )}
+
+      <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer le tarif" message={`Supprimer "${deleteTarget?.nameFr}" ?`} confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+
+      {/* Billetweb import modal */}
+      {showImportModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-noir/50">
+          <div className="bg-blanc rounded-xl shadow-card w-full max-w-lg mx-4 max-h-[80vh] flex flex-col">
+            <div className="px-6 py-4 border-b border-gris/20">
+              <h3 className="text-lg font-bold text-noir">Importer depuis Billetweb</h3>
+              <p className="text-sm text-gris mt-1">
+                Sélectionnez un événement. Les tarifs existants seront remplacés.
+              </p>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {isLoadingEvents && <p className="text-gris text-sm">Chargement des événements...</p>}
+
+              {importError && (
+                <div className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
+                  {importError}
+                </div>
+              )}
+
+              {!isLoadingEvents && bwEvents.length === 0 && !importError && (
+                <p className="text-gris text-sm">Aucun événement trouvé.</p>
+              )}
+
+              {bwEvents.map((event) => (
+                <button
+                  key={event.id}
+                  onClick={() => setSelectedEvent(event)}
+                  className={`w-full text-left px-4 py-3 rounded-lg mb-2 border transition-colors ${
+                    selectedEvent?.id === event.id
+                      ? "border-malachite bg-malachite/5"
+                      : "border-gris/20 hover:bg-blanc-casse"
+                  }`}
+                >
+                  <p className="font-medium text-noir text-sm">{event.name}</p>
+                  <p className="text-xs text-gris mt-0.5">
+                    {event.date ? new Date(event.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "Date non définie"}
+                  </p>
+                </button>
+              ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gris/20 flex gap-3 justify-end">
+              <button
+                onClick={() => { setShowImportModal(false); setSelectedEvent(null); }}
+                className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleImport}
+                disabled={!selectedEvent || isImporting}
+                className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
+              >
+                {isImporting ? "Import en cours..." : "Importer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

@@ -1,0 +1,467 @@
+@import "tailwindcss";
+
+/* Safelist for utility classes emitted by the WordPress import normalizer
+ * (scripts/lib/normalize-wordpress-html.ts in the backend). Article content is
+ * stored as HTML in the database and rendered via dangerouslySetInnerHTML, so
+ * Tailwind's source scanner never sees these classes — they must be declared
+ * here or the imported article layout (grids, captions, buttons) won't render.
+ * @source inline() treats each directive as a single class/pattern, so the
+ * classes are grouped with brace expansion rather than space-separated. */
+@source inline("grid");
+@source inline("grid-cols-1");
+@source inline("{sm:,md:}grid-cols-{2,4,5}");
+@source inline("md:col-span-{2,3}");
+@source inline("gap-{6,8}");
+@source inline("items-center");
+@source inline("w-full");
+@source inline("rounded-lg");
+@source inline("mx-auto");
+@source inline("block");
+@source inline("inline-block");
+@source inline("no-underline");
+@source inline("px-5");
+@source inline("py-2");
+@source inline("font-bold");
+@source inline("text-{center,left,right,sm,blanc,gris}");
+@source inline("p-4");
+@source inline("bg-{bismarck,blanc-casse}");
+
+/* ========================================
+ * DevFest Toulouse 2026 — Design Tokens
+ * Source: docs/design-system.md
+ *
+ * Literal tokens go in @theme so utilities like bg-noir compile to
+ * `background-color: var(--color-noir)` and stay themable at runtime.
+ * Tokens that reference other CSS variables (font stack pulled from
+ * the next/font className) need @theme inline so the resolved value
+ * is inlined into the utility.
+ * ======================================== */
+
+@theme {
+  /* --- Colors: Primary ---
+   * Values tuned to clear WCAG 2.1 AA (4.5:1 min) when used as foreground
+   * text or interactive element on white. The palette names keep the
+   * original design system naming; the exact hex values have shifted
+   * slightly from docs/design-system.md for accessibility.
+   */
+  --color-bismarck: #B94420;
+  --color-terre-cuite: #C24A1F;  /* was #EC6839 — ratio 5.3:1 on white */
+  --color-incarnadin: #F4A598;
+  --color-malachite: #0B7350;    /* was #109E6E — ratio 6.1:1 on white */
+  --color-emeraude: #2E8F6B;     /* was #41B38E — ratio 4.6:1 on white */
+  --color-menthe: #8BCBB7;
+  --color-eau: #C0E1D7;
+
+  /* --- Colors: Secondary --- */
+  --color-bleu: #3B6BB0;          /* was #507BBD — ratio 5.6:1 on white */
+  --color-bleu-2: #1E7FB8;        /* was #63C6F2 — ratio 4.7:1 on white */
+  --color-bleu-3: #C4E6F1;
+  --color-vert-1: #1C7D3C;        /* was #31A853 — ratio 5.2:1 on white */
+  --color-vert-2: #4A8A42;        /* was #72BA69 — ratio 4.5:1 on white */
+  --color-vert-3: #CDE3C0;
+  --color-orange: #B57700;        /* was #F8AB06 — ratio 4.5:1 on white */
+  --color-jaune: #FFD428;
+  --color-jaune-clair: #FFE8A5;
+  --color-rouge: #C53226;         /* was #E84336 — ratio 5.7:1 on white */
+  --color-rose: #B3437D;          /* was #EE7CAD — ratio 4.6:1 on white */
+  --color-rose-clair: #F8D8D8;
+
+  /* --- Colors: Neutrals --- */
+  --color-noir: #1D1D1B;
+  --color-gris: #737372;
+  --color-gris-clair: #767675;
+  --color-gris-placeholder: #808080;
+  --color-blanc: #FFFFFF;
+  --color-blanc-casse: #FDF0EB;
+
+  /* --- Colors: Semantic --- */
+  --color-link: #703B27;
+  --color-link-footer: #FDF0EB;
+
+  /* --- Shadows --- */
+  --shadow-header: 0 4px 12px rgba(29, 29, 27, 0.10);
+  --shadow-card: 0 12px 16px 4px rgba(29, 29, 27, 0.14);
+  --shadow-section: 0 4px 64px 4px rgba(29, 29, 27, 0.12);
+
+  /* --- Border Radius --- */
+  --radius-s: 12px;
+  --radius-m: 16px;
+  --radius-l: 18px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+  --radius-4xl: 40px;
+  --radius-5xl: 56px;
+  --radius-hero: 64px;
+}
+
+@theme inline {
+  /* --- Typography (references --font-google-sans set by next/font) --- */
+  --font-sans: var(--font-google-sans), system-ui, sans-serif;
+}
+
+/* --- Focus visible (accessibility) --- */
+:focus-visible {
+  outline: 3px solid var(--color-bleu);
+  outline-offset: 2px;
+}
+
+body {
+  background: var(--color-blanc);
+  color: var(--color-noir);
+  font-family: var(--font-sans);
+}
+
+/* --- TipTap editor content — mirrors public prose styles --- */
+/* Shared article body typography — applied both in the TipTap admin editor
+ * (.tiptap-content) and on the public article page (.article-content) so the
+ * rendering is identical in both. The editor adds its own chrome (padding,
+ * outline) on top via .tiptap-content below. */
+.article-content h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin-top: 2.5rem;
+  margin-bottom: 1rem;
+}
+.article-content h3 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.article-content h4 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-top: 2rem;
+  margin-bottom: 1rem;
+}
+.article-content h5 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+.article-content p {
+  line-height: 1.625;
+  margin-bottom: 1rem;
+}
+.article-content a {
+  color: var(--color-bismarck);
+  text-decoration: underline;
+}
+.article-content ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.article-content ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1rem;
+}
+.article-content li {
+  margin-bottom: 0.25rem;
+}
+.article-content blockquote {
+  border-left: 4px solid var(--color-gris-placeholder);
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: var(--color-gris);
+  font-style: italic;
+}
+.article-content code {
+  background: var(--color-blanc-casse);
+  border-radius: 4px;
+  padding: 0.15rem 0.4rem;
+  font-size: 0.9em;
+  font-family: ui-monospace, monospace;
+}
+.article-content pre {
+  background: var(--color-noir);
+  color: var(--color-blanc);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin: 1rem 0;
+  overflow-x: auto;
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+}
+
+/* Editor-only chrome layered on top of the shared body styles. */
+.tiptap-content {
+  min-height: inherit;
+  padding: 0.5rem 0.75rem;
+  outline: none;
+}
+.tiptap-content pre code {
+  background: none;
+  padding: 0;
+  border-radius: 0;
+  color: inherit;
+  font-size: inherit;
+}
+.tiptap-content mark {
+  background-color: var(--color-jaune);
+  border-radius: 2px;
+  padding: 0.1rem 0.2rem;
+}
+.tiptap-content hr {
+  border: none;
+  border-top: 2px solid var(--color-gris-placeholder);
+  margin: 2rem 0;
+}
+.tiptap-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+  cursor: pointer;
+}
+.tiptap-content img.ProseMirror-selectednode {
+  outline: 3px solid var(--color-malachite);
+  outline-offset: 2px;
+}
+.tiptap-content img[data-align="center"] {
+  margin-left: auto;
+  margin-right: auto;
+  display: block;
+}
+.tiptap-content img[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+  display: block;
+}
+.tiptap-content p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: var(--color-gris-placeholder);
+  pointer-events: none;
+  height: 0;
+}
+
+/* ========================================
+ * Home hero — fluid layout, ultra-wide to mobile.
+ * clamp()-based sizing isn't expressible with Tailwind utilities, so the
+ * fluid rules live here; colors still come from design tokens via the
+ * component's Tailwind color classes.
+ * ======================================== */
+.hero {
+  --hero-pad: clamp(20px, 4vw, 56px);
+  --hero-gap: clamp(20px, 3vw, 48px);
+  --hero-radius: clamp(24px, 3vw, 48px);
+  --header-h: 60px;
+  position: relative;
+  /* Bottom padding matches .section-y so the space under the stats card has the
+     same vertical rhythm as the gap above the first section's title (#135). */
+  padding: 0 var(--hero-pad) clamp(40px, 5vw, 72px);
+}
+/* First screen layout. The min-height that fills the viewport (header + this
+   block = 100vh, catch-phrase pinned to the fold, stats card just below) is
+   applied only on tablet / standard screens (768–1600px). On phones (<768px)
+   and large screens (>1600px) the block keeps its natural content height so
+   the hero shows at its own size and as much content as fits is visible
+   without a forced full-height fold (#134). */
+.hero-screen {
+  box-sizing: border-box;
+  padding-block: clamp(16px, 2vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 48px);
+}
+@media (min-width: 768px) and (max-width: 1600px) {
+  .hero-screen {
+    min-height: calc(100dvh - var(--header-h));
+  }
+}
+.hero-screen > .hero-inner {
+  flex: 1 1 auto;
+  /* In a flex column, margin:0 auto on the grid cancels the default stretch
+     and shrinks it to content width; force full width so the hero spans the
+     row (max-width still caps it, margin auto still centres it). */
+  width: 100%;
+}
+.hero-screen > .hero-figures-title {
+  align-self: stretch;
+}
+.hero-inner {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(380px, 1.15fr);
+  gap: var(--hero-gap);
+  align-items: stretch;
+  max-width: 1760px;
+  margin: 0 auto;
+}
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: clamp(16px, 2vw, 30px);
+  padding-block: clamp(8px, 1.4vw, 24px);
+}
+.hero-title {
+  font-size: clamp(48px, 8vw, 140px);
+  line-height: 0.92;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  margin: 0;
+  text-wrap: balance;
+}
+.hero-title span {
+  display: block;
+}
+.hero-tagline {
+  font-size: clamp(16px, 1.4vw, 22px);
+  line-height: 1.45;
+  max-width: 50ch;
+  margin: 0;
+}
+.hero-tagline strong {
+  font-weight: 700;
+}
+.hero-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 24px;
+  font-size: clamp(14px, 1.05vw, 17px);
+}
+.hero-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-meta-item strong {
+  font-weight: 700;
+}
+.hero-meta-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gris);
+  display: inline-block;
+}
+.hero-ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 0;
+}
+.hero-photo {
+  position: relative;
+  min-height: clamp(260px, 34vw, 500px);
+  background-size: cover;
+  background-position: center;
+  border-radius: var(--hero-radius);
+  overflow: hidden;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: clamp(20px, 2vw, 36px);
+}
+.hero-photo-wordmark {
+  font-size: clamp(72px, 14vw, 240px);
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.22);
+  letter-spacing: -0.04em;
+  line-height: 0.85;
+  user-select: none;
+  pointer-events: none;
+  font-style: italic;
+}
+.hero-photo-badge {
+  position: absolute;
+  top: clamp(16px, 1.6vw, 28px);
+  right: clamp(16px, 1.6vw, 28px);
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.hero-photo-badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--color-malachite);
+  box-shadow: 0 0 0 0 rgba(11, 115, 80, 0.6);
+  animation: heroPulse 1.8s infinite;
+}
+@keyframes heroPulse {
+  0% { box-shadow: 0 0 0 0 rgba(11, 115, 80, 0.6); }
+  70% { box-shadow: 0 0 0 10px rgba(11, 115, 80, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(11, 115, 80, 0); }
+}
+
+/* Tablet & below — stack vertically, photo on top */
+@media (max-width: 900px) {
+  .hero-inner {
+    grid-template-columns: 1fr;
+    gap: clamp(20px, 4vw, 32px);
+  }
+  .hero-photo {
+    order: -1;
+    min-height: clamp(220px, 50vw, 360px);
+  }
+  .hero-content {
+    padding-block: 0;
+  }
+}
+
+/* Ultra-wide — cap the type so it doesn't blow up past 1900px */
+@media (min-width: 1900px) {
+  .hero-title {
+    font-size: 140px;
+  }
+  .hero-photo-wordmark {
+    font-size: 240px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-photo-badge::before {
+    animation: none;
+  }
+}
+
+/* Key-figures inside the hero (#134). The catch-phrase title is pinned at the
+ * bottom of the first screen (.hero-screen flex column); the stats card flows
+ * just below the fold, so reaching the figures requires a scroll. */
+.hero-figures-title {
+  margin: 0;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.hero-figures {
+  margin-top: clamp(24px, 3vw, 48px);
+}
+
+/* ========================================
+ * Home — vertical rhythm
+ * Single source of truth for section spacing so every home section shares
+ * the same responsive vertical padding and title spacing instead of ad-hoc
+ * per-section values. Densified from the previous py-16 lg:py-24 (#135).
+ * ======================================== */
+.section-y {
+  padding-block: clamp(40px, 5vw, 72px);
+}
+.section-title {
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+/* Trim the font's intrinsic leading above caps and below the baseline so the
+   heading box hugs the visible glyphs. Without this the font reserves ~16px of
+   blank space above a 48px title (half-leading + ascender vs cap-height), which
+   adds to the padding and makes the space above a heading read larger than the
+   equal space below the preceding element (#153). text-box has partial browser
+   support (Chromium yes, Firefox/Safari later); where unsupported the heading
+   keeps today's spacing — graceful degradation, no breakage. */
+.hero-screen > .hero-figures-title,
+.section-y h2 {
+  text-box: trim-both cap alphabetic;
+}

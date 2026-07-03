@@ -1,0 +1,20 @@
+{
+  "name": "devfest-toulouse-2026",
+  "private": true,
+  "description": "DevFest Toulouse 2026 — monorepo root",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "db:generate": "pnpm --dir src/backend exec prisma generate"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "@img/sharp-libvips-linux-x64",
+      "@img/sharp-libvips-linuxmusl-x64",
+      "@img/sharp-linux-x64",
+      "@img/sharp-linuxmusl-x64",
+      "@next/swc-linux-x64-musl"
+    ]
+  }
+}
