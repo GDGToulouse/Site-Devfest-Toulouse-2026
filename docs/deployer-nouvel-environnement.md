@@ -4,6 +4,7 @@ Ce document explique comment ajouter un nouvel environnement (`dev-x`, `beta`, `
 
 > Pour le contexte général sur la structure des branches/environnements, voir [`.claude/rules/git-workflow.md`](../.claude/rules/git-workflow.md).
 > Pour la liste des variables d'environnement disponibles, voir [`variables-environnement.md`](variables-environnement.md).
+> Pour la mise en production complète (déploiement + migration des données + pièges prod), voir [`mise-en-production.md`](mise-en-production.md).
 
 ---
 
