@@ -3,6 +3,9 @@ import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
 import { revalidateBilletterie } from "../../lib/revalidate.js";
 
+type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
+const TICKET_STATUSES: TicketStatus[] = ["AVAILABLE", "SOLD_OUT", "COMING_SOON"];
+
 interface TicketTierBody {
   nameFr: string;
   nameEn: string;
@@ -12,10 +15,50 @@ interface TicketTierBody {
   saleEndDate?: string | null;
   externalUrl?: string;
   sortOrder?: number;
+  // Admin status override. "AUTO" (or null) clears it → falls back to
+  // the BilletWeb sync / date-based computation.
+  manualStatus?: TicketStatus | "AUTO" | null;
   editionId: number;
 }
 
 const BILLETWEB_API = "https://www.billetweb.fr/api";
+
+// Maps BilletWeb's /event/:id/avail "avail" field to a sold-out flag.
+// "-1" (or a negative number) means unlimited → not sold out. A remaining
+// quantity of 0 or less means sold out. Anything unparseable → unknown (null).
+export function availToIsSoldOut(avail: unknown): boolean | null {
+  if (avail === undefined || avail === null || avail === "") return null;
+  const n = Number(avail);
+  if (isNaN(n)) return null;
+  if (n < 0) return false;
+  return n <= 0;
+}
+
+// Fetches per-ticket sold-out flags from /event/:id/avail, keyed by ticket id.
+// Returns an empty map on any failure — the import must not break if BilletWeb's
+// availability endpoint is unavailable.
+async function fetchBilletwebSoldOut(
+  billetwebEventId: string,
+  params: URLSearchParams,
+): Promise<Map<string, boolean | null>> {
+  const map = new Map<string, boolean | null>();
+  try {
+    const res = await fetch(
+      `${BILLETWEB_API}/event/${encodeURIComponent(billetwebEventId)}/avail?${params}`,
+    );
+    if (!res.ok) return map;
+    const rows = (await res.json()) as Array<Record<string, unknown>>;
+    for (const row of rows) {
+      if (row.type !== "ticket") continue;
+      const id = String(row.id ?? "");
+      if (!id) continue;
+      map.set(id, availToIsSoldOut(row.avail));
+    }
+  } catch {
+    // Availability is best-effort; leave the map empty on network errors.
+  }
+  return map;
+}
 
 function getBilletwebParams(): URLSearchParams | null {
   const user = process.env.BILLETWEB_USER;
@@ -101,6 +144,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
     const tickets = (await ticketsRes.json()) as Array<Record<string, unknown>>;
 
+    // Fetch per-ticket availability (sold-out) to seed isSoldOut (best-effort).
+    const soldOutByTicket = await fetchBilletwebSoldOut(billetwebEventId, params);
+
     // Delete existing tiers for this edition
     await prisma.ticketTier.deleteMany({ where: { editionId } });
 
@@ -121,6 +167,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
           saleStartDate: unixToDate(t.start_time),
           saleEndDate: unixToDate(t.end_time),
           externalUrl: shopUrl || null,
+          isSoldOut: soldOutByTicket.get(String(t.id ?? "")) ?? null,
           sortOrder: i,
           editionId,
         },
@@ -154,7 +201,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       isVisible: t.isVisible,
       saleStartDate: t.saleStartDate,
       saleEndDate: t.saleEndDate,
-      status: computeTicketStatus(t.saleStartDate, t.saleEndDate, now),
+      status: computeTicketStatus(t, now),
+      manualStatus: t.manualStatus,
+      isSoldOut: t.isSoldOut,
       externalUrl: t.externalUrl,
       sortOrder: t.sortOrder,
       editionId: t.editionId,
@@ -201,6 +250,18 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
     const body = request.body;
 
+    // manualStatus: "AUTO" or null clears the override; a valid enum sets it.
+    let manualStatus = existing.manualStatus;
+    if (body.manualStatus !== undefined) {
+      if (body.manualStatus === null || body.manualStatus === "AUTO") {
+        manualStatus = null;
+      } else if (TICKET_STATUSES.includes(body.manualStatus)) {
+        manualStatus = body.manualStatus;
+      } else {
+        return reply.status(400).send({ error: "Invalid manualStatus" });
+      }
+    }
+
     const tier = await prisma.ticketTier.update({
       where: { id },
       data: {
@@ -211,6 +272,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         saleStartDate: body.saleStartDate !== undefined ? toDateOrNull(body.saleStartDate) : existing.saleStartDate,
         saleEndDate: body.saleEndDate !== undefined ? toDateOrNull(body.saleEndDate) : existing.saleEndDate,
         externalUrl: body.externalUrl !== undefined ? (body.externalUrl?.trim() || null) : existing.externalUrl,
+        manualStatus,
         sortOrder: body.sortOrder ?? existing.sortOrder,
       },
     });
