@@ -58,7 +58,7 @@ export default async function articleRoutes(app: FastifyInstance) {
     Querystring: { page?: string; limit?: string; tag?: string };
   }>("/articles", async (request) => {
     const page = Math.max(Number(request.query.page) || 1, 1);
-    const limit = Math.min(Number(request.query.limit) || 9, 50);
+    const limit = Math.min(Number(request.query.limit) || 12, 50);
     const tagSlug = request.query.tag;
 
     const where = {
