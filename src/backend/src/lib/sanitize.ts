@@ -22,7 +22,7 @@ const OPTIONS: sanitizeHtml.IOptions = {
     "span", "div",
   ],
   allowedAttributes: {
-    a: ["href", "title", "target"],
+    a: ["href", "title", "target", "rel"],
     img: ["src", "alt", "title", "width", "height", "data-align"],
     "*": ["class"],
   },
@@ -33,9 +33,23 @@ const OPTIONS: sanitizeHtml.IOptions = {
     img: ["http", "https"],
   },
   allowedSchemesAppliedToAttributes: ["href", "src"],
-  // Force target=_blank links to carry safe rel attributes.
   transformTags: {
-    a: sanitizeHtml.simpleTransform("a", { rel: "noopener noreferrer" }, false),
+    // Force safe rel on every link, and prefix https:// on schemeless hrefs
+    // (e.g. "www.devfest.fr") so they don't render as broken relative links
+    // (#167). In-page anchors (#…) and root-relative paths (/…) are left as is.
+    a: (tagName, attribs) => {
+      const href = attribs.href;
+      const normalizedHref =
+        href && !/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(href) ? `https://${href}` : href;
+      return {
+        tagName,
+        attribs: {
+          ...attribs,
+          ...(normalizedHref ? { href: normalizedHref } : {}),
+          rel: "noopener noreferrer",
+        },
+      };
+    },
   },
   // Strip entirely (don't keep text content) for clearly malicious tags.
   nonTextTags: ["script", "style", "textarea", "option", "noscript"],
