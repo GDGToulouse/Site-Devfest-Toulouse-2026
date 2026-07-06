@@ -64,7 +64,7 @@ export async function getKeyFigures(): Promise<KeyFigure[]> {
 
 export async function getArticles(
   page = 1,
-  limit = 9,
+  limit = 12,
   tag?: string,
 ): Promise<PaginatedArticles> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
