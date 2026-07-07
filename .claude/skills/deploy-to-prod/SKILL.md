@@ -35,10 +35,23 @@ git tag -l 'v*' --sort=-v:refname | head -1
 
 # Version actuelle dans le code
 git show origin/dev:src/backend/src/lib/version.ts | grep APP_VERSION
+
+# MIGRATIONS Prisma qui s'exécuteraient en prod (au boot) — les LIRE
+git diff origin/main..origin/dev -- src/backend/prisma/migrations/
 ```
 
 - **Aucun commit** `origin/main..origin/dev` → rien à promouvoir, s'arrêter.
-- Noter le **dernier tag** et la **version code** : ils doivent être cohérents avant de commencer (sinon signaler l'écart).
+- Noter le **dernier tag** et la **version code** : cohérents avant de commencer (sinon signaler l'écart).
+- **Migrations** : si le diff en contient, repérer les opérations **destructives**
+  (`DROP`, `ALTER … DROP COLUMN`, `TRUNCATE`, renommages) → backup DB obligatoire (étape 4),
+  et le signaler à l'utilisateur.
+- **Secrets** : vérifier qu'aucun secret n'est dans le diff promu (chercher `SECRET`/`KEY`/`PASSWORD`/`TOKEN`).
+
+### Fenêtre de déploiement
+
+Rappeler à l'utilisateur : **ne pas déployer à J-1 du DevFest** ni pendant un pic
+(ouverture billetterie, annonce), **prévenir l'équipe**, préférer un créneau où
+quelqu'un peut réagir. Si le timing est sensible, demander confirmation explicite.
 
 ---
 
@@ -65,6 +78,10 @@ Le bump se fait **sur la branche de promotion**, avant le merge. Mettre à jour 
 1. `APP_VERSION` dans [`src/backend/src/lib/version.ts`](../../../src/backend/src/lib/version.ts)
 2. `version` dans [`src/backend/package.json`](../../../src/backend/package.json)
 3. `version` dans [`src/frontend/package.json`](../../../src/frontend/package.json)
+
+Dans la même PR, mettre à jour [`CHANGELOG.md`](../../../CHANGELOG.md) : déplacer les
+entrées de `## [Non publié]` vers une nouvelle section `## [X.Y.Z] - AAAA-MM-JJ`
+(Ajouté / Corrigé / Modifié). Ce texte sert aussi de notes de release.
 
 > ⚠️ Oublier ce bump = la prod affiche l'ancien numéro. C'est l'erreur la plus fréquente.
 
@@ -95,7 +112,18 @@ gh pr create --base main --head promote/vX.Y.Z-to-main \
 
 ---
 
-## Étape 4 — Déployer + vérifier
+## Étape 4 — Sauvegarder la base prod (si migration)
+
+**Si le pre-flight a détecté une migration Prisma**, faire un `pg_dump` horodaté
+de la prod **avant** de déployer (le backend joue les migrations au boot ; sans
+dump, une migration destructrice est irrécupérable). Commandes : voir
+[`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §4.
+
+Sans migration, cette étape est facultative.
+
+---
+
+## Étape 5 — Déployer + vérifier
 
 Le déploiement Coolify se déclenche sur le push `main`. Rappeler la config prod
 critique (détails : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §3) :
@@ -112,14 +140,22 @@ curl -s https://site.devfesttoulouse.fr/api/health
 
 Si la version ne correspond pas : bump oublié ou build non régénéré (Redeploy without cache).
 
+**Smoke tests** — tester les parcours critiques (idéalement dans un navigateur) :
+home, **login admin**, **billetterie** (tarifs + statut), **article**, **contact**
+(envoi), chargement des **images** `/uploads/`. Détail : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §6.
+
 ---
 
-## Étape 5 — Taguer + publier la release
+## Étape 6 — Taguer + publier la release
 
 **Seulement après déploiement vérifié.** Le tag pointe sur le `main` en prod.
 
 ```bash
 git checkout main && git pull origin main
+
+# GARDE-FOU : vérifier AVANT de taguer que main porte bien le numéro
+git show main:src/backend/src/lib/version.ts | grep APP_VERSION   # == X.Y.Z
+
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin vX.Y.Z
 gh release create vX.Y.Z \
@@ -128,41 +164,61 @@ gh release create vX.Y.Z \
 ```
 
 Garde-fous :
-- Le tag **doit** être identique à `APP_VERSION`. Vérifier :
-  `git show vX.Y.Z:src/backend/src/lib/version.ts | grep APP_VERSION`
+- Le tag **doit** être identique à `APP_VERSION` — vérifié **avant** le push.
 - **Un seul tag par version**, jamais déplacé une fois poussé.
 - `--generate-notes` compile les PR mergées depuis le tag précédent.
 
 ---
 
-## Étape 6 — Migrer les données (si nécessaire)
+## Étape 7 — Migrer les données — **à la demande UNIQUEMENT**
 
-Uniquement si le contenu prod doit être synchronisé depuis la beta. C'est un
-**écrasement complet** (`pg_dump --clean`) + copie des uploads (`docker cp`).
-Voir [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §7 pour les commandes exactes.
+> 🚫 **N'est PAS une étape systématique.** Un déploiement de prod ne migre **jamais**
+> les données par défaut — on ne déploie que du **code**. Ne proposer cette étape que
+> si l'utilisateur la **demande explicitement** (ex. première mise en prod, sync ponctuelle).
+
+C'est un **écrasement complet** (`pg_dump --clean`) de la base prod par celle de la
+beta + copie des uploads (`docker cp`). Voir
+[`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §8 pour les commandes.
 
 ⚠️ **Confirmer explicitement** avant : identifier le BON conteneur source (vérifier
-le `BASE_URL`, pas le hash — beta ≠ dev-j), l'opération remplace toute la base prod.
+le `BASE_URL`, pas le hash — beta ≠ dev-j), l'opération **détruit** la base prod actuelle.
+
+---
+
+## En cas de problème — Rollback
+
+Ne pas improviser. Voir [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) (section « Rollback ») :
+- **Sans migration** : redéployer le tag précédent (Coolify), vérifier `/api/health`.
+- **Avec migration** : redéployer l'ancien code **ne suffit pas** — restaurer le
+  dump pris à l'étape 4, puis redéployer. Sans dump, pas de rollback propre.
+- Ne **jamais** supprimer/déplacer le tag fautif : créer un correctif `vX.Y.Z+1`.
 
 ---
 
 ## Checklist finale
 
-- [ ] Diff réel `main..dev` revu, bump SemVer choisi et **confirmé**
-- [ ] `APP_VERSION` + 2× `package.json` bumpés dans la PR de promotion
+- [ ] Fenêtre de déploiement OK (pas J-1 DevFest / pic), équipe prévenue
+- [ ] Diff réel `main..dev` revu, **migrations Prisma lues** (destructives repérées)
+- [ ] Bump SemVer choisi et **confirmé**
+- [ ] `APP_VERSION` + 2× `package.json` + `CHANGELOG.md` mis à jour dans la PR de promotion
 - [ ] PR `dev → main` squashée, approuvée, mergée (faux conflit géré si besoin)
+- [ ] (si migration) **Backup DB prod** effectué avant déploiement
 - [ ] Déploiement Coolify OK, `/api/health` renvoie la **nouvelle** version
-- [ ] Tag `vX.Y.Z` poussé + release GitHub publiée
-- [ ] (si besoin) Données migrées beta → prod, uploads compris
+- [ ] **Smoke tests** passés (home, login, billetterie, article, contact, images)
+- [ ] Tag `vX.Y.Z` poussé (après vérif tag==APP_VERSION) + release GitHub publiée
+- [ ] (à la demande seulement) Données migrées beta → prod, uploads compris
 
 ## What NOT to do
 
 - **Ne jamais** push direct / force-push sur `main`.
 - **Ne jamais** taguer/release **avant** d'avoir vérifié le déploiement.
 - **Ne jamais** déplacer un tag déjà poussé (créer un nouveau numéro à la place).
-- **Ne pas** merger la PR de promotion sans que le bump de version y soit inclus.
-- **Ne pas** lancer la migration de données sans confirmation + vérification du conteneur source.
-- **Ne pas** exécuter les gestes irréversibles (merge main, push tag, migration) sans montrer la commande et faire valider.
+- **Ne jamais** jouer une migration en prod sans **backup DB** préalable.
+- **Ne pas** merger la PR de promotion sans le bump de version + CHANGELOG.
+- **Ne pas** migrer les données par défaut : c'est **opt-in**, sur demande explicite,
+  avec confirmation + vérification du conteneur source (écrase la base prod).
+- **Ne pas** exécuter les gestes irréversibles (merge main, push tag, backup/restore,
+  migration) sans montrer la commande et faire valider.
 
 ## Quand cette skill s'applique
 

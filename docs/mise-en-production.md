@@ -14,15 +14,61 @@ et migrer le contenu depuis la beta.
 ## Vue d'ensemble
 
 ```
+0. Pré-vol : fenêtre de déploiement + revue des migrations Prisma
 1. Choisir le numéro de version + bumper (dans la PR de promotion)
 2. Promouvoir le code sur main (PR dev → main)
 3. Créer / configurer la ressource Coolify prod
-4. Déployer
-5. Vérifier (checklist)
-6. Taguer + publier la release GitHub
-7. Migrer les données depuis la beta
-8. (plus tard) Basculer le DNS sur le domaine final → active le SEO
+4. Sauvegarder la base prod (si la release contient une migration)
+5. Déployer
+6. Vérifier (checklist + smoke tests)
+7. Taguer + publier la release GitHub
+8. (à la demande) Migrer les données depuis la beta
+9. (plus tard) Basculer le DNS sur le domaine final → active le SEO
+
+En cas de problème → Rollback (voir la section dédiée en fin de document).
 ```
+
+---
+
+## 0. Pré-vol
+
+Avant de lancer quoi que ce soit :
+
+### Fenêtre de déploiement
+
+- **Ne pas déployer à J-1 du DevFest** ni pendant un pic connu (ouverture de
+  billetterie, campagne d'annonce). Un bug en prod à ce moment est très coûteux.
+- **Prévenir l'équipe** avant de pousser en prod (canal habituel).
+- Privilégier un créneau où quelqu'un peut réagir en cas de souci (pas un vendredi soir).
+
+### Revue des migrations Prisma
+
+Le backend joue les migrations **automatiquement au boot**. Il faut donc savoir
+**ce qui va s'exécuter sur la base prod** avant de déployer :
+
+```bash
+# Migrations qui partiraient en prod
+git diff --stat origin/main..origin/dev -- src/backend/prisma/migrations/
+
+# Lire le SQL — repérer les opérations DESTRUCTIVES (DROP, ALTER … DROP COLUMN,
+# TRUNCATE, renommages) qui peuvent perdre des données
+git diff origin/main..origin/dev -- src/backend/prisma/migrations/
+```
+
+- **Aucune migration** → déploiement à faible risque, backup DB facultatif.
+- **Migration présente** → backup obligatoire (étape 4). Toute opération destructive
+  doit être **consciente et assumée** (une colonne `DROP` ne se rollback pas en
+  redéployant l'ancien code — la donnée est déjà partie).
+
+### Hygiène des secrets
+
+- **Aucun secret dans le diff promu** : vérifier qu'aucune clé/mot de passe/token
+  n'a été committé (`git diff origin/main..origin/dev` — chercher `SECRET`, `KEY`,
+  `PASSWORD`, `TOKEN`). Les secrets vivent **uniquement** côté Coolify (runtime).
+- **Ne jamais logger un secret** : ni en clair dans les logs, ni dans un message
+  d'erreur renvoyé au client.
+- **Rotation** : après tout doute de fuite (secret affiché en clair, poussé par
+  erreur), le régénérer (`openssl rand -hex 32`) et le remplacer dans Coolify.
 
 ---
 
@@ -113,14 +159,36 @@ complète. Spécifique prod :
 
 ---
 
-## 4. Déployer
+## 4. Sauvegarder la base prod (si la release contient une migration)
+
+**Obligatoire dès qu'une migration Prisma est présente** (étape 0). Le déploiement
+joue les migrations au boot ; sans dump préalable, une migration qui corrompt ou
+supprime des données est **irrécupérable**.
+
+```bash
+PROD_DB=<db-prod>   # le conteneur db dont le BASE_URL est site.devfesttoulouse.fr
+STAMP=$(date +%Y%m%d-%H%M%S)
+
+sudo docker exec "$PROD_DB" pg_dump -U devfest -d devfest \
+  --no-owner --no-privileges > "/root/backups/prod-$STAMP.sql"
+
+# Vérifier que le dump n'est pas vide
+ls -lh "/root/backups/prod-$STAMP.sql"
+```
+
+Garder au moins le dernier dump avant chaque déploiement à migration. En cas de
+problème, il sert au rollback (voir section dédiée).
+
+---
+
+## 5. Déployer
 
 Lancer **Deploy** dans Coolify. Le build compile frontend + backend puis le
 backend joue les migrations Prisma et le seed idempotent au démarrage.
 
 ---
 
-## 5. Vérifications obligatoires
+## 6. Vérifications obligatoires
 
 En plus de la checklist de [`deployer-nouvel-environnement.md`](deployer-nouvel-environnement.md)
 (BACKEND_URL runtime + build, alias DNS, sign-in) :
@@ -149,9 +217,21 @@ curl -s https://site.devfesttoulouse.fr/api/health
 # → {"status":"ok","version":"1.2.3","environment":"prod", ...}
 ```
 
+### Smoke tests — parcours critiques
+
+Au-delà des sondes techniques, tester **manuellement** les parcours qui cassent le
+plus souvent après un déploiement (idéalement dans un navigateur, sur le domaine prod) :
+
+- [ ] **Home** `/fr` : rendu correct, pas d'erreur console.
+- [ ] **Login admin** `/admin` : connexion OK, dashboard s'affiche.
+- [ ] **Billetterie** `/fr/billetterie` : les tarifs s'affichent avec le bon statut.
+- [ ] **Article** : une page d'actualité s'ouvre et affiche son contenu.
+- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté MailHog/Postfix).
+- [ ] **Images** : logos et images d'articles se chargent (pas de 404 sur `/uploads/`).
+
 ---
 
-## 6. Taguer + publier la release GitHub
+## 7. Taguer + publier la release GitHub
 
 Une fois le déploiement **vérifié**, figer l'état avec un tag git et une release.
 Le tag pointe sur le commit de `main` réellement en prod.
@@ -161,7 +241,12 @@ Le tag pointe sur le commit de `main` réellement en prod.
 git checkout main
 git pull origin main
 
-# Taguer (annotated) — le numéro DOIT correspondre à APP_VERSION bumpé à l'étape 1
+# GARDE-FOU : vérifier AVANT de taguer que le code de main porte bien le numéro
+git show main:src/backend/src/lib/version.ts | grep APP_VERSION
+# → doit afficher APP_VERSION = "1.2.3". Si ce n'est pas le cas, le bump de
+#   l'étape 1 n'a pas été promu : NE PAS taguer, corriger d'abord.
+
+# Taguer (annotated) — numéro identique à APP_VERSION
 git tag -a v1.2.3 -m "Release v1.2.3"
 git push origin v1.2.3
 
@@ -174,8 +259,16 @@ gh release create v1.2.3 \
 
 - `--generate-notes` compile les PR mergées depuis le tag précédent.
 - Le tag doit être **identique** à `APP_VERSION` (sinon l'admin et la release
-  divergent). Vérifier : `git show v1.2.3:src/backend/src/lib/version.ts | grep APP_VERSION`.
+  divergent) — vérifié **avant** le push ci-dessus.
 - **Un seul tag par version.** Ne jamais déplacer un tag déjà poussé.
+
+### Mettre à jour le CHANGELOG
+
+Reporter la release dans [`CHANGELOG.md`](../CHANGELOG.md) (format
+[Keep a Changelog](https://keepachangelog.com/fr/)) — donne un historique lisible
+hors GitHub, versionné avec le code. En pratique, l'ajouter dans la **PR de
+promotion** (étape 1) : une section `## [1.2.3] - AAAA-MM-JJ` listant les
+changements (Ajouté / Corrigé / Modifié). La release GitHub peut réutiliser ce texte.
 
 > ℹ️ La skill **`deploy-to-prod`** (`.claude/skills/deploy-to-prod`) automatise
 > le choix du bump, le rappel de tous ces garde-fous et la génération de ces
@@ -183,7 +276,17 @@ gh release create v1.2.3 \
 
 ---
 
-## 7. Migrer les données depuis la beta
+## 8. Migrer les données depuis la beta — **à la demande uniquement**
+
+> 🚫 **Cette étape n'est PAS systématique.** Un déploiement de prod **ne migre
+> jamais** les données par défaut. La migration beta → prod est un geste **explicite**,
+> déclenché **à la demande du développeur** dans un cas précis (ex. première mise en
+> prod, ou synchronisation ponctuelle décidée). En routine, la prod garde ses
+> propres données ; on ne déploie que du **code**.
+
+> ⚠️ **C'est un écrasement complet** (`pg_dump --clean`) : elle **détruit** le
+> contenu prod actuel pour le remplacer par celui de la beta. Ne jamais la lancer
+> « par acquit de conscience ».
 
 La base prod démarre avec un seed minimal. Pour l'alimenter avec le contenu réel,
 copier depuis la **beta** (base + fichiers uploadés).
@@ -258,7 +361,7 @@ sudo docker exec <db-prod> psql -U devfest -d devfest -c \
 
 ---
 
-## 8. Basculer le DNS sur le domaine final (SEO)
+## 9. Basculer le DNS sur le domaine final (SEO)
 
 Tant que `BASE_URL` ≠ `https://devfesttoulouse.fr`, le site est **volontairement
 non indexé par Google mais reste partageable sur les réseaux sociaux**
@@ -275,6 +378,41 @@ Le jour du basculement DNS, **sans modifier le code** :
 3. **Redeploy without cache** (pour régénérer le bundle Next figé au build)
 
 → l'indexation SEO s'active automatiquement.
+
+---
+
+## Rollback — revenir en arrière
+
+Si la prod est cassée après un déploiement, **ne pas improviser**. Deux cas.
+
+### Cas 1 — la release ne contenait PAS de migration (code seul)
+
+Le rollback est simple : **redéployer le tag précédent**.
+
+1. Dans Coolify, pointer la ressource sur le commit/tag précédent (`vX.Y.(Z-1)`)
+   ou revert la PR de promotion, puis **Redeploy without cache**.
+2. Vérifier `/api/health` → la version doit redescendre au numéro précédent.
+
+> Ne **jamais** supprimer/déplacer le tag fautif. Créer plutôt un correctif
+> (`vX.Y.Z+1`) ou assumer le retour au tag précédent.
+
+### Cas 2 — la release contenait une migration Prisma
+
+Redéployer l'ancien code **ne suffit pas** : la base a déjà changé (une colonne
+`DROP` est perdue). Il faut **restaurer le dump** pris à l'étape 4.
+
+```bash
+PROD_DB=<db-prod>
+DUMP=/root/backups/prod-<STAMP>.sql     # le dump d'avant CE déploiement
+
+# Restauration COMPLÈTE (écrase l'état courant)
+cat "$DUMP" | sudo docker exec -i "$PROD_DB" psql -U devfest -d devfest
+
+# Puis redéployer le code de la version précédente (cas 1)
+```
+
+- **Sans dump préalable, pas de rollback propre possible** → d'où l'étape 4 obligatoire.
+- Après restauration, revérifier les smoke tests (étape 6).
 
 ---
 
