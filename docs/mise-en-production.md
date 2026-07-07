@@ -14,17 +14,54 @@ et migrer le contenu depuis la beta.
 ## Vue d'ensemble
 
 ```
-1. Promouvoir le code sur main (PR dev → main)
-2. Créer / configurer la ressource Coolify prod
-3. Déployer
-4. Vérifier (checklist)
-5. Migrer les données depuis la beta
-6. (plus tard) Basculer le DNS sur le domaine final → active le SEO
+1. Choisir le numéro de version + bumper (dans la PR de promotion)
+2. Promouvoir le code sur main (PR dev → main)
+3. Créer / configurer la ressource Coolify prod
+4. Déployer
+5. Vérifier (checklist)
+6. Taguer + publier la release GitHub
+7. Migrer les données depuis la beta
+8. (plus tard) Basculer le DNS sur le domaine final → active le SEO
 ```
 
 ---
 
-## 1. Promouvoir le code sur `main`
+## 1. Choisir le numéro de version et le bumper
+
+**Règle : une mise en prod = une nouvelle version.** Chaque déploiement sur
+`main` porte un numéro **SemVer** (`MAJOR.MINOR.PATCH`) tagué et publié en release.
+
+### Choisir le bump (SemVer)
+
+Regarder les commits promus (`git log --oneline origin/main..origin/dev`) et
+appliquer les préfixes Conventional Commits déjà en place :
+
+| Bump | Quand | Exemple |
+|------|-------|---------|
+| **MAJOR** (`2.0.0`) | Changement cassant, refonte, migration lourde du modèle | Refonte du modèle Speaker (#123) |
+| **MINOR** (`1.1.0`) | Nouvelle fonctionnalité (`feat:`), sans casse | Badge version admin (#171) |
+| **PATCH** (`1.0.1`) | Correctif de bug (`fix:`), doc, chore | Fix pagination articles (#165) |
+
+En cas de mix, le plus haut l'emporte (un `feat:` parmi des `fix:` → MINOR).
+
+### Bumper la source de vérité (dans la PR de promotion)
+
+La version affichée dans l'admin vient de [`APP_VERSION`](../src/backend/src/lib/version.ts)
+(exposée par `GET /api/health`, cf. #171). Elle **doit** être incrémentée
+**dans la PR `dev → main`**, sinon la prod afficherait l'ancien numéro.
+
+Mettre à jour, dans la même PR :
+
+1. `APP_VERSION` dans [`src/backend/src/lib/version.ts`](../src/backend/src/lib/version.ts)
+2. `version` dans [`src/backend/package.json`](../src/backend/package.json)
+3. `version` dans [`src/frontend/package.json`](../src/frontend/package.json) (cohérence)
+
+> Le tag git (`v1.2.3`) et la release GitHub, eux, se posent **après** le
+> déploiement vérifié (étape 6) — pas maintenant.
+
+---
+
+## 2. Promouvoir le code sur `main`
 
 La prod tourne sur `main`. Toute correction doit y arriver via une PR `dev → main`.
 
@@ -38,7 +75,7 @@ La prod tourne sur `main`. Toute correction doit y arriver via une PR `dev → m
 
 ---
 
-## 2. Créer / configurer la ressource Coolify prod
+## 3. Créer / configurer la ressource Coolify prod
 
 Suivre [`deployer-nouvel-environnement.md`](deployer-nouvel-environnement.md), avec
 pour la prod :
@@ -76,14 +113,14 @@ complète. Spécifique prod :
 
 ---
 
-## 3. Déployer
+## 4. Déployer
 
 Lancer **Deploy** dans Coolify. Le build compile frontend + backend puis le
 backend joue les migrations Prisma et le seed idempotent au démarrage.
 
 ---
 
-## 4. Vérifications obligatoires
+## 5. Vérifications obligatoires
 
 En plus de la checklist de [`deployer-nouvel-environnement.md`](deployer-nouvel-environnement.md)
 (BACKEND_URL runtime + build, alias DNS, sign-in) :
@@ -103,9 +140,50 @@ sudo docker exec "$FRONT" wget -qO- http://localhost:3000/fr | head -c 200
 Résultats attendus : `dig` renvoie l'IP du VPS ; `curl` renvoie 200/redirection ;
 le frontend interne renvoie du HTML.
 
+**Vérifier la version déployée** (cf. #171) : le badge `v{version} · prod` dans
+la sidebar admin doit afficher le **nouveau** numéro. Sinon, `APP_VERSION` n'a pas
+été bumpé (étape 1) ou le build n'a pas été régénéré.
+
+```bash
+curl -s https://site.devfesttoulouse.fr/api/health
+# → {"status":"ok","version":"1.2.3","environment":"prod", ...}
+```
+
 ---
 
-## 5. Migrer les données depuis la beta
+## 6. Taguer + publier la release GitHub
+
+Une fois le déploiement **vérifié**, figer l'état avec un tag git et une release.
+Le tag pointe sur le commit de `main` réellement en prod.
+
+```bash
+# Se placer sur le main à jour
+git checkout main
+git pull origin main
+
+# Taguer (annotated) — le numéro DOIT correspondre à APP_VERSION bumpé à l'étape 1
+git tag -a v1.2.3 -m "Release v1.2.3"
+git push origin v1.2.3
+
+# Publier la release avec des notes auto-générées depuis les PR mergées
+gh release create v1.2.3 \
+  --repo GDGToulouse/Site-Devfest-Toulouse-2026 \
+  --title "v1.2.3" \
+  --generate-notes
+```
+
+- `--generate-notes` compile les PR mergées depuis le tag précédent.
+- Le tag doit être **identique** à `APP_VERSION` (sinon l'admin et la release
+  divergent). Vérifier : `git show v1.2.3:src/backend/src/lib/version.ts | grep APP_VERSION`.
+- **Un seul tag par version.** Ne jamais déplacer un tag déjà poussé.
+
+> ℹ️ La skill **`deploy-to-prod`** (`.claude/skills/deploy-to-prod`) automatise
+> le choix du bump, le rappel de tous ces garde-fous et la génération de ces
+> commandes.
+
+---
+
+## 7. Migrer les données depuis la beta
 
 La base prod démarre avec un seed minimal. Pour l'alimenter avec le contenu réel,
 copier depuis la **beta** (base + fichiers uploadés).
@@ -180,7 +258,7 @@ sudo docker exec <db-prod> psql -U devfest -d devfest -c \
 
 ---
 
-## 6. Basculer le DNS sur le domaine final (SEO)
+## 8. Basculer le DNS sur le domaine final (SEO)
 
 Tant que `BASE_URL` ≠ `https://devfesttoulouse.fr`, le site est **volontairement
 non indexé par Google mais reste partageable sur les réseaux sociaux**
