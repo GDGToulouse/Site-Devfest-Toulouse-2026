@@ -1,13 +1,22 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 
-export function computeTicketStatus(
-  saleStartDate: Date | null,
-  saleEndDate: Date | null,
-  now: Date,
-): "AVAILABLE" | "SOLD_OUT" | "COMING_SOON" {
-  if (saleEndDate && saleEndDate < now) return "SOLD_OUT";
-  if (saleStartDate && saleStartDate > now) return "COMING_SOON";
+type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
+
+// Resolves the effective ticket status by priority:
+//   1. manualStatus — admin override, always wins when set
+//   2. isSoldOut    — synced from BilletWeb (/event/:id/avail)
+//   3. dates        — sale window fallback
+export function computeTicketStatus(tier: {
+  manualStatus?: TicketStatus | null;
+  isSoldOut?: boolean | null;
+  saleStartDate: Date | null;
+  saleEndDate: Date | null;
+}, now: Date): TicketStatus {
+  if (tier.manualStatus) return tier.manualStatus;
+  if (tier.isSoldOut) return "SOLD_OUT";
+  if (tier.saleEndDate && tier.saleEndDate < now) return "SOLD_OUT";
+  if (tier.saleStartDate && tier.saleStartDate > now) return "COMING_SOON";
   return "AVAILABLE";
 }
 
@@ -201,7 +210,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       nameFr: tier.nameFr,
       nameEn: tier.nameEn,
       price: Number(tier.price),
-      status: computeTicketStatus(tier.saleStartDate, tier.saleEndDate, now),
+      status: computeTicketStatus(tier, now),
       externalUrl: tier.externalUrl,
       sortOrder: tier.sortOrder,
     }));

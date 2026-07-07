@@ -16,6 +16,8 @@ interface TicketTier {
   saleStartDate: string | null;
   saleEndDate: string | null;
   status: string;
+  manualStatus: string | null;
+  isSoldOut: boolean | null;
   externalUrl: string | null;
   sortOrder: number;
 }
@@ -33,6 +35,15 @@ const TICKET_STATUS = [
   { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
 ];
 
+// Admin override choices. "AUTO" clears the override → status is derived from
+// the BilletWeb sync and sale dates.
+const MANUAL_STATUS_OPTIONS = [
+  { value: "AUTO", label: "Auto (dates / Billetweb)" },
+  { value: "AVAILABLE", label: "Disponible" },
+  { value: "SOLD_OUT", label: "Complet" },
+  { value: "COMING_SOON", label: "Bientôt disponible" },
+];
+
 function toInputDate(isoDate: string | null): string {
   if (!isoDate) return "";
   return isoDate.substring(0, 10);
@@ -47,6 +58,7 @@ const emptyTier = {
   saleEndDate: "",
   externalUrl: "",
   sortOrder: "0",
+  manualStatus: "AUTO",
 };
 
 function TierTable({
@@ -92,7 +104,10 @@ function TierTable({
                   <td className="px-4 py-3 text-noir font-medium">{tier.nameFr}</td>
                   <td className="px-4 py-3 text-noir">{tier.price} EUR</td>
                   <td className="px-4 py-3">
-                    <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={TICKET_STATUS.find((s) => s.value === tier.status)?.label || tier.status} variant={TICKET_STATUS.find((s) => s.value === tier.status)?.variant || "gray"} />
+                      {tier.manualStatus && <span className="text-xs text-gris" title="Statut forcé manuellement">forcé</span>}
+                    </div>
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
                     <button onClick={() => onEdit(tier)} className="text-bleu hover:underline text-sm">Modifier</button>
@@ -151,6 +166,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       saleEndDate: toInputDate(tier.saleEndDate),
       externalUrl: tier.externalUrl || "",
       sortOrder: String(tier.sortOrder),
+      manualStatus: tier.manualStatus || "AUTO",
     });
     setShowForm(true);
   }
@@ -172,6 +188,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       saleEndDate: form.saleEndDate || null,
       externalUrl: form.externalUrl || undefined,
       sortOrder: Number(form.sortOrder) || 0,
+      manualStatus: form.manualStatus,
       editionId,
     };
 
@@ -265,17 +282,33 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <FormField label="Ordre" name="sortOrder" type="number" value={form.sortOrder} onChange={(v) => setForm({ ...form, sortOrder: v })} />
             <FormField label="URL externe" name="externalUrl" type="url" value={form.externalUrl} onChange={(v) => setForm({ ...form, externalUrl: v })} />
-            <div className="flex items-center pt-6">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={form.isVisible}
-                  onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
-                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
-                />
-                <span className="text-sm text-noir">Visible sur le site</span>
-              </label>
+            <div>
+              <label className="block text-sm font-medium text-noir mb-1">Statut</label>
+              <select
+                value={form.manualStatus}
+                onChange={(e) => setForm({ ...form, manualStatus: e.target.value })}
+                className="w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              >
+                {MANUAL_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gris mt-1">
+                « Auto » calcule le statut selon les dates de vente et l&apos;épuisement Billetweb.
+              </p>
             </div>
+          </div>
+
+          <div className="flex items-center">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={form.isVisible}
+                onChange={(e) => setForm({ ...form, isVisible: e.target.checked })}
+                className="rounded border-gris/30 text-malachite focus:ring-malachite"
+              />
+              <span className="text-sm text-noir">Visible sur le site</span>
+            </label>
           </div>
 
           <div className="flex gap-3 justify-end">
