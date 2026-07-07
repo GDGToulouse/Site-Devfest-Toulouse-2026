@@ -110,6 +110,12 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
         })}
       </nav>
 
+      {health && (
+        <p className="px-4 pb-2 text-xs text-blanc/40">
+          v{health.version} · {health.environment}
+        </p>
+      )}
+
       <div className="p-4 border-t border-blanc/10">
         <Link href="/admin/profile" onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
           {user.name && <p className="text-sm text-blanc truncate">{user.name}</p>}
@@ -122,11 +128,6 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
         >
           Déconnexion
         </button>
-        {health && (
-          <p className="mt-3 text-xs text-blanc/30">
-            v{health.version} · {health.environment}
-          </p>
-        )}
       </div>
     </aside>
   );
