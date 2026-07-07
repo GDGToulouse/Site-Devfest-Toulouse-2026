@@ -183,8 +183,11 @@ sudo docker exec <db-prod> psql -U devfest -d devfest -c \
 ## 6. Basculer le DNS sur le domaine final (SEO)
 
 Tant que `BASE_URL` ≠ `https://devfesttoulouse.fr`, le site est **volontairement
-non indexé** (`robots.txt` = `Disallow: /`, `robots: noindex`). C'est un test
-d'égalité stricte dans [`robots.ts`](../src/frontend/src/app/robots.ts) et
+non indexé par Google mais reste partageable sur les réseaux sociaux**
+(`robots.txt` = `Disallow: /` + une meta `noindex` ciblée **uniquement sur
+Googlebot** — pas de `noindex` global, sinon `facebookexternalhit` refuse
+l'aperçu Open Graph, cf. #169). C'est un test d'égalité stricte dans
+[`robots.ts`](../src/frontend/src/app/robots.ts) et
 [`layout.tsx`](../src/frontend/src/app/[locale]/layout.tsx).
 
 Le jour du basculement DNS, **sans modifier le code** :
