@@ -29,7 +29,9 @@ export default async function ArticlesPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
 
-  const { articles, totalPages } = await getArticles(page, 9);
+  // 12 = 3 full rows of the 4-column grid (see grid-cols-4 below); 9 left a
+  // trailing row of one item with three empty slots (#165).
+  const { articles, totalPages } = await getArticles(page, 12);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },

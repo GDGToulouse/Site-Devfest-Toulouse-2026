@@ -9,6 +9,7 @@ import { auth } from "./lib/auth.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
+import { APP_VERSION, APP_ENVIRONMENT } from "./lib/version.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
@@ -106,13 +107,20 @@ app.get("/api/health", {
         properties: {
           status: { type: "string", enum: ["ok"] },
           timestamp: { type: "string", format: "date-time" },
+          version: { type: "string" },
+          environment: { type: "string" },
         },
-        required: ["status", "timestamp"],
+        required: ["status", "timestamp", "version", "environment"],
       },
     },
   },
 }, async () => {
-  return { status: "ok", timestamp: new Date().toISOString() };
+  return {
+    status: "ok",
+    timestamp: new Date().toISOString(),
+    version: APP_VERSION,
+    environment: APP_ENVIRONMENT,
+  };
 });
 
 // Auth providers availability

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -42,11 +43,33 @@ const iconMap: Record<string, IconDefinition> = {
   key: faKey,
 };
 
+interface HealthInfo {
+  version: string;
+  environment: string;
+}
+
 export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSidebarProps) {
   const pathname = usePathname();
   const visibleItems = adminNavItems
     .filter((item) => item.roles.includes(user.role))
     .map((item) => ({ ...item, href: item.path }));
+
+  // Surface the running backend's version + environment so admins know which
+  // deployment they're on (#171). Best-effort: a failed fetch just hides the
+  // badge, it never blocks the sidebar.
+  const [health, setHealth] = useState<HealthInfo | null>(null);
+  useEffect(() => {
+    fetch("/api/health")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.version && data?.environment) {
+          setHealth({ version: data.version, environment: data.environment });
+        }
+      })
+      .catch(() => {
+        // Silently ignore — the version badge is non-essential.
+      });
+  }, []);
 
   return (
     <aside className="w-64 bg-noir text-blanc flex flex-col h-full">
@@ -86,6 +109,12 @@ export default function AdminSidebar({ user, onLogout, onNavigate }: AdminSideba
           );
         })}
       </nav>
+
+      {health && (
+        <p className="px-4 pb-2 text-xs text-blanc/40">
+          v{health.version} · {health.environment}
+        </p>
+      )}
 
       <div className="p-4 border-t border-blanc/10">
         <Link href="/admin/profile" onClick={onNavigate} className="block hover:bg-blanc/5 -mx-2 px-2 py-1 rounded transition-colors">
