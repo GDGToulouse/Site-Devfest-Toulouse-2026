@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { useTranslations } from "next-intl";
 
 import StatIcon from "./StatIcon";
 import { localizedField } from "@/lib/i18n-helpers";
@@ -10,13 +9,13 @@ interface KeyFiguresSectionProps {
   locale: string;
 }
 
+// Stats card only (#134). The catch-phrase title is rendered by the hero so it
+// can pin to the bottom of the first screen; this card sits just below the fold.
 export default function KeyFiguresSection({ figures, locale }: KeyFiguresSectionProps) {
-  const t = useTranslations("home.stats");
-
   if (figures.length === 0) return null;
 
   return (
-    <section className="relative px-6 py-16 lg:py-24">
+    <div className="hero-figures relative px-6">
       {/* La Grave illustration — sits on the page background, behind the card,
           peeking out from the bottom-left rather than being boxed inside the
           white card. */}
@@ -32,25 +31,18 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
       </div>
 
       <div className="relative z-10 mx-auto max-w-6xl">
-        <h2 className="text-3xl sm:text-4xl lg:text-[64px] lg:leading-[120%] font-bold text-noir text-center mb-12 lg:mb-20">
-          {t.rich("title", {
-            tech: (chunks) => <span className="text-malachite">{chunks}</span>,
-            toulousain: (chunks) => <span className="text-terre-cuite">{chunks}</span>,
-          })}
-        </h2>
-
-        <div className="relative bg-blanc rounded-4xl shadow-section p-8 lg:p-12">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-12">
+        <div className="relative bg-blanc rounded-4xl shadow-section p-5 lg:p-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-8">
             {figures.map((figure) => (
               <div
                 key={figure.icon}
-                className="flex flex-col items-center text-center p-6 rounded-xl"
+                className="flex flex-col items-center text-center p-2 rounded-xl"
               >
-                <StatIcon name={figure.icon} className="text-4xl lg:text-[56px]" />
-                <span className="mt-3 text-4xl lg:text-[56px] lg:leading-[140%] font-bold text-noir">
+                <StatIcon name={figure.icon} className="text-2xl lg:text-4xl" />
+                <span className="mt-1 text-3xl lg:text-[40px] font-bold text-noir">
                   {figure.value}
                 </span>
-                <span className="mt-2 text-lg lg:text-2xl text-gris">
+                <span className="mt-1 text-sm lg:text-lg text-gris">
                   {localizedField(figure, "label", locale)}
                 </span>
               </div>
@@ -58,6 +50,6 @@ export default function KeyFiguresSection({ figures, locale }: KeyFiguresSection
           </div>
         </div>
       </div>
-    </section>
+    </div>
   );
 }

@@ -71,8 +71,14 @@ export async function generateMetadata({
         "x-default": "/fr",
       },
     },
+    // On non-production hosts (beta), keep the site out of Google without
+    // killing social sharing: emit noindex *only for Googlebot* rather than a
+    // global `robots` meta. facebookexternalhit / LinkedInBot respect the
+    // global `robots` noindex and refuse to render an OG preview, so a global
+    // noindex made the beta unshareable (#169). Scoping it to googleBot leaves
+    // the page shareable while robots.txt (Disallow: /) still gates crawlers.
     ...(!isProduction && {
-      robots: { index: false, follow: false },
+      robots: { googleBot: { index: false, follow: false } },
     }),
   };
 }

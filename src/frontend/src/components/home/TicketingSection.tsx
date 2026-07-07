@@ -1,14 +1,16 @@
 import { useTranslations } from "next-intl";
 
 import { localizedField } from "@/lib/i18n-helpers";
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
 import type { TicketTier } from "@/lib/types";
 
 interface TicketingSectionProps {
   tiers: TicketTier[];
   locale: string;
+  surface?: SectionSurface;
 }
 
-export default function TicketingSection({ tiers, locale }: TicketingSectionProps) {
+export default function TicketingSection({ tiers, locale, surface = "blanc-casse" }: TicketingSectionProps) {
   const t = useTranslations("home.ticketing");
 
   if (tiers.length === 0) return null;
@@ -24,9 +26,9 @@ export default function TicketingSection({ tiers, locale }: TicketingSectionProp
   const smCols = tiers.length === 1 ? "sm:grid-cols-1" : "sm:grid-cols-2";
 
   return (
-    <section className="px-6 py-16 lg:py-24 bg-blanc-casse">
+    <section className={`section-y px-6 ${surfaceBgClass(surface)}`}>
       <div className="mx-auto max-w-6xl text-center">
-        <h2 className="text-3xl lg:text-5xl font-bold text-noir mb-10">
+        <h2 className="section-title text-3xl lg:text-5xl font-bold text-noir">
           {t("title")}
         </h2>
 

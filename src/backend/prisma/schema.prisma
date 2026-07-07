@@ -184,6 +184,12 @@ model SponsorPlan {
 
 // --- Ticketing ---
 
+enum TicketStatus {
+  AVAILABLE
+  SOLD_OUT
+  COMING_SOON
+}
+
 model TicketTier {
   id               Int              @id @default(autoincrement())
   nameFr           String
@@ -194,6 +200,12 @@ model TicketTier {
   saleEndDate      DateTime?
   externalUrl      String?
   sortOrder        Int              @default(0)
+  // Admin override: when set, it wins over both the BilletWeb sync and the
+  // date-based computation. Null means "Auto" (fall back to isSoldOut/dates).
+  manualStatus     TicketStatus?
+  // Sold-out flag synced from BilletWeb (/event/:id/avail). Null means the
+  // tier was never synced from BilletWeb (created manually or legacy import).
+  isSoldOut        Boolean?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 

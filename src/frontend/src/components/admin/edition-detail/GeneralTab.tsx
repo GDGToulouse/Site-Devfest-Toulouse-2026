@@ -58,17 +58,22 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     setSaved(false);
     await adminFetch(`/editions/${edition.id}`, {
       method: "PUT",
+      // Optional text/URL fields are sent as "" (not undefined) when cleared, so
+      // the key stays in the payload and the backend applies its "" → null
+      // branch; `|| undefined` dropped the key and left the old value (#166).
+      // Dates keep `|| undefined`: the backend has no clear branch for them
+      // (falsy → keep existing), so clearing a date is a no-op either way.
       body: JSON.stringify({
         status: form.status,
         startDate: form.startDate || undefined,
         endDate: form.endDate || undefined,
-        venueName: form.venueName || undefined,
-        venueAddress: form.venueAddress || undefined,
-        heroImageUrl: form.heroImageUrl || undefined,
-        sponsorFormUrl: form.sponsorFormUrl || undefined,
-        aftermovieUrl: form.aftermovieUrl || undefined,
-        galleryUrl: form.galleryUrl || undefined,
-        archivedSiteUrl: form.archivedSiteUrl || undefined,
+        venueName: form.venueName,
+        venueAddress: form.venueAddress,
+        heroImageUrl: form.heroImageUrl,
+        sponsorFormUrl: form.sponsorFormUrl,
+        aftermovieUrl: form.aftermovieUrl,
+        galleryUrl: form.galleryUrl,
+        archivedSiteUrl: form.archivedSiteUrl,
       }),
     });
     setIsSaving(false);

@@ -36,4 +36,28 @@ describe("sanitizeRichHtml", () => {
     expect(sanitizeRichHtml(undefined)).toBe("");
     expect(sanitizeRichHtml("")).toBe("");
   });
+
+  // Schemeless links (e.g. from imported WordPress content or hand-typed
+  // domains) must be prefixed with https:// so they don't render as broken
+  // relative links (#167).
+  it("prefixes https:// on a schemeless href", () => {
+    expect(sanitizeRichHtml('<a href="www.devfest.fr">x</a>')).toContain(
+      'href="https://www.devfest.fr"',
+    );
+  });
+
+  it("keeps absolute http(s) hrefs untouched", () => {
+    const output = sanitizeRichHtml('<a href="https://example.com">x</a>');
+    expect(output).toContain('href="https://example.com"');
+    expect(output).not.toContain("https://https://");
+  });
+
+  it("does not touch mailto:, tel:, anchors or root-relative hrefs", () => {
+    expect(sanitizeRichHtml('<a href="mailto:a@b.fr">m</a>')).toContain('href="mailto:a@b.fr"');
+    expect(sanitizeRichHtml('<a href="tel:+33600000000">t</a>')).toContain(
+      'href="tel:+33600000000"',
+    );
+    expect(sanitizeRichHtml('<a href="#section">a</a>')).toContain('href="#section"');
+    expect(sanitizeRichHtml('<a href="/fr/actualites">a</a>')).toContain('href="/fr/actualites"');
+  });
 });

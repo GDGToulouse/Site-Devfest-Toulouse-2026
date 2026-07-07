@@ -2,22 +2,24 @@ import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
 import ArticleCard from "@/components/ArticleCard";
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
 import type { Article } from "@/lib/types";
 
 interface LatestNewsSectionProps {
   articles: Article[];
   locale: string;
+  surface?: SectionSurface;
 }
 
-export default function LatestNewsSection({ articles, locale }: LatestNewsSectionProps) {
+export default function LatestNewsSection({ articles, locale, surface = "blanc" }: LatestNewsSectionProps) {
   const t = useTranslations("home.news");
 
   if (articles.length === 0) return null;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className={`section-y px-6 ${surfaceBgClass(surface)}`}>
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between mb-10">
+        <div className="section-title flex items-center justify-between">
           <h2 className="text-3xl lg:text-5xl font-bold text-noir">
             {t("title")}
           </h2>

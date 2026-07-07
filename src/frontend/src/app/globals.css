@@ -1,5 +1,31 @@
 @import "tailwindcss";
 
+/* Safelist for utility classes emitted by the WordPress import normalizer
+ * (scripts/lib/normalize-wordpress-html.ts in the backend). Article content is
+ * stored as HTML in the database and rendered via dangerouslySetInnerHTML, so
+ * Tailwind's source scanner never sees these classes — they must be declared
+ * here or the imported article layout (grids, captions, buttons) won't render.
+ * @source inline() treats each directive as a single class/pattern, so the
+ * classes are grouped with brace expansion rather than space-separated. */
+@source inline("grid");
+@source inline("grid-cols-1");
+@source inline("{sm:,md:}grid-cols-{2,4,5}");
+@source inline("md:col-span-{2,3}");
+@source inline("gap-{6,8}");
+@source inline("items-center");
+@source inline("w-full");
+@source inline("rounded-lg");
+@source inline("mx-auto");
+@source inline("block");
+@source inline("inline-block");
+@source inline("no-underline");
+@source inline("px-5");
+@source inline("py-2");
+@source inline("font-bold");
+@source inline("text-{center,left,right,sm,blanc,gris}");
+@source inline("p-4");
+@source inline("bg-{bismarck,blanc-casse}");
+
 /* ========================================
  * DevFest Toulouse 2026 — Design Tokens
  * Source: docs/design-system.md
@@ -87,71 +113,70 @@ body {
 }
 
 /* --- TipTap editor content — mirrors public prose styles --- */
-.tiptap-content {
-  min-height: inherit;
-  padding: 0.5rem 0.75rem;
-  outline: none;
-}
-.tiptap-content h2 {
+/* Shared article body typography — applied both in the TipTap admin editor
+ * (.tiptap-content) and on the public article page (.article-content) so the
+ * rendering is identical in both. The editor adds its own chrome (padding,
+ * outline) on top via .tiptap-content below. */
+.article-content h2 {
   font-size: 2rem;
   font-weight: 700;
   margin-top: 2.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h3 {
+.article-content h3 {
   font-size: 1.75rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h4 {
+.article-content h4 {
   font-size: 1.5rem;
   font-weight: 700;
   margin-top: 2rem;
   margin-bottom: 1rem;
 }
-.tiptap-content h5 {
+.article-content h5 {
   font-size: 1.25rem;
   font-weight: 700;
   margin-top: 1.5rem;
   margin-bottom: 0.75rem;
 }
-.tiptap-content p {
+.article-content p {
   line-height: 1.625;
   margin-bottom: 1rem;
 }
-.tiptap-content a {
+.article-content a {
   color: var(--color-bismarck);
   text-decoration: underline;
 }
-.tiptap-content ul {
+.article-content ul {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content ol {
+.article-content ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-bottom: 1rem;
 }
-.tiptap-content li {
+.article-content li {
   margin-bottom: 0.25rem;
 }
-.tiptap-content blockquote {
+.article-content blockquote {
   border-left: 4px solid var(--color-gris-placeholder);
   padding-left: 1rem;
   margin: 1rem 0;
   color: var(--color-gris);
   font-style: italic;
 }
-.tiptap-content code {
+.article-content code {
   background: var(--color-blanc-casse);
   border-radius: 4px;
   padding: 0.15rem 0.4rem;
   font-size: 0.9em;
   font-family: ui-monospace, monospace;
 }
-.tiptap-content pre {
+.article-content pre {
   background: var(--color-noir);
   color: var(--color-blanc);
   border-radius: 0.5rem;
@@ -161,6 +186,13 @@ body {
   font-family: ui-monospace, monospace;
   font-size: 0.9em;
   line-height: 1.6;
+}
+
+/* Editor-only chrome layered on top of the shared body styles. */
+.tiptap-content {
+  min-height: inherit;
+  padding: 0.5rem 0.75rem;
+  outline: none;
 }
 .tiptap-content pre code {
   background: none;
@@ -218,8 +250,39 @@ body {
   --hero-pad: clamp(20px, 4vw, 56px);
   --hero-gap: clamp(20px, 3vw, 48px);
   --hero-radius: clamp(24px, 3vw, 48px);
+  --header-h: 60px;
   position: relative;
-  padding: clamp(20px, 3vw, 40px) var(--hero-pad) clamp(48px, 6vw, 96px);
+  /* Bottom padding matches .section-y so the space under the stats card has the
+     same vertical rhythm as the gap above the first section's title (#135). */
+  padding: 0 var(--hero-pad) clamp(40px, 5vw, 72px);
+}
+/* First screen layout. The min-height that fills the viewport (header + this
+   block = 100vh, catch-phrase pinned to the fold, stats card just below) is
+   applied only on tablet / standard screens (768–1600px). On phones (<768px)
+   and large screens (>1600px) the block keeps its natural content height so
+   the hero shows at its own size and as much content as fits is visible
+   without a forced full-height fold (#134). */
+.hero-screen {
+  box-sizing: border-box;
+  padding-block: clamp(16px, 2vw, 28px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(24px, 3vw, 48px);
+}
+@media (min-width: 768px) and (max-width: 1600px) {
+  .hero-screen {
+    min-height: calc(100dvh - var(--header-h));
+  }
+}
+.hero-screen > .hero-inner {
+  flex: 1 1 auto;
+  /* In a flex column, margin:0 auto on the grid cancels the default stretch
+     and shrinks it to content width; force full width so the hero spans the
+     row (max-width still caps it, margin auto still centres it). */
+  width: 100%;
+}
+.hero-screen > .hero-figures-title {
+  align-self: stretch;
 }
 .hero-inner {
   display: grid;
@@ -233,11 +296,11 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(20px, 2.4vw, 36px);
-  padding-block: clamp(12px, 2vw, 32px);
+  gap: clamp(16px, 2vw, 30px);
+  padding-block: clamp(8px, 1.4vw, 24px);
 }
 .hero-title {
-  font-size: clamp(56px, 9.5vw, 168px);
+  font-size: clamp(48px, 8vw, 140px);
   line-height: 0.92;
   letter-spacing: -0.02em;
   font-weight: 700;
@@ -250,7 +313,7 @@ body {
 .hero-tagline {
   font-size: clamp(16px, 1.4vw, 22px);
   line-height: 1.45;
-  max-width: 36ch;
+  max-width: 50ch;
   margin: 0;
 }
 .hero-tagline strong {
@@ -286,7 +349,7 @@ body {
 }
 .hero-photo {
   position: relative;
-  min-height: clamp(280px, 42vw, 640px);
+  min-height: clamp(260px, 34vw, 500px);
   background-size: cover;
   background-position: center;
   border-radius: var(--hero-radius);
@@ -354,7 +417,7 @@ body {
 /* Ultra-wide — cap the type so it doesn't blow up past 1900px */
 @media (min-width: 1900px) {
   .hero-title {
-    font-size: 168px;
+    font-size: 140px;
   }
   .hero-photo-wordmark {
     font-size: 240px;
@@ -365,4 +428,40 @@ body {
   .hero-photo-badge::before {
     animation: none;
   }
+}
+
+/* Key-figures inside the hero (#134). The catch-phrase title is pinned at the
+ * bottom of the first screen (.hero-screen flex column); the stats card flows
+ * just below the fold, so reaching the figures requires a scroll. */
+.hero-figures-title {
+  margin: 0;
+  line-height: 1.1;
+  text-wrap: balance;
+}
+.hero-figures {
+  margin-top: clamp(24px, 3vw, 48px);
+}
+
+/* ========================================
+ * Home — vertical rhythm
+ * Single source of truth for section spacing so every home section shares
+ * the same responsive vertical padding and title spacing instead of ad-hoc
+ * per-section values. Densified from the previous py-16 lg:py-24 (#135).
+ * ======================================== */
+.section-y {
+  padding-block: clamp(40px, 5vw, 72px);
+}
+.section-title {
+  margin-bottom: clamp(24px, 3vw, 40px);
+}
+/* Trim the font's intrinsic leading above caps and below the baseline so the
+   heading box hugs the visible glyphs. Without this the font reserves ~16px of
+   blank space above a 48px title (half-leading + ascender vs cap-height), which
+   adds to the padding and makes the space above a heading read larger than the
+   equal space below the preceding element (#153). text-box has partial browser
+   support (Chromium yes, Firefox/Safari later); where unsupported the heading
+   keeps today's spacing — graceful degradation, no breakage. */
+.hero-screen > .hero-figures-title,
+.section-y h2 {
+  text-box: trim-both cap alphabetic;
 }

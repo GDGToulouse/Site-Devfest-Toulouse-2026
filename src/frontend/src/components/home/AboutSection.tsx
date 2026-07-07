@@ -2,18 +2,23 @@ import { getTranslations } from "next-intl/server";
 
 import { getAboutCarousel } from "@/lib/api";
 import AboutCarousel from "./AboutCarousel";
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
+
+interface AboutSectionProps {
+  surface?: SectionSurface;
+}
 
 // "Derrière le DevFest Toulouse" home block. The ambiance carousel images are
 // managed from the back-office (#99) and stored under the `about_carousel`
 // setting; the block degrades to text-only when no image is configured.
-export default async function AboutSection() {
+export default async function AboutSection({ surface = "blanc" }: AboutSectionProps) {
   const t = await getTranslations("home.about");
   const slides = await getAboutCarousel();
 
   const hasCarousel = slides.length > 0;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className={`section-y px-6 ${surfaceBgClass(surface)}`}>
       <div className="mx-auto max-w-6xl">
         <div className="relative overflow-hidden rounded-3xl bg-bismarck min-h-[400px] flex items-center">
           {/* Warm orange filter over the (future) background photo, replacing

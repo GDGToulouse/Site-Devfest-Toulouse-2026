@@ -27,6 +27,15 @@ const Image = ImageBase.extend({
   },
 });
 
+// Prefix https:// when the user types a bare domain (e.g. "www.devfest.fr"),
+// otherwise the browser treats it as a relative link and it 404s (#167).
+// Leave absolute URLs and mailto:/tel: links untouched, and don't touch
+// in-page anchors (#...) or root-relative paths (/...).
+function normalizeLinkHref(href: string): string {
+  if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(href)) return href;
+  return `https://${href}`;
+}
+
 interface RichTextEditorProps {
   label: string;
   name: string;
@@ -59,7 +68,12 @@ export default function RichTextEditor({
       }),
       Link.configure({
         openOnClick: false,
-        HTMLAttributes: { rel: "noopener noreferrer" },
+        // Prefix https:// when a pasted/autolinked URL has no protocol, so a
+        // bare domain doesn't render as a relative (broken) link (#167).
+        defaultProtocol: "https",
+        // Links open in a new tab; keep rel for security. target is added here
+        // (not lost) because the Link extension adds none by default.
+        HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
       }),
       Image.configure({
         inline: false,
@@ -78,7 +92,7 @@ export default function RichTextEditor({
     },
     editorProps: {
       attributes: {
-        class: "tiptap-content",
+        class: "article-content tiptap-content",
       },
     },
   });
@@ -148,8 +162,9 @@ function Toolbar({
 
   function applyLink() {
     if (!editor) return;
-    if (linkUrl.trim()) {
-      editor.chain().focus().setLink({ href: linkUrl.trim() }).run();
+    const trimmed = linkUrl.trim();
+    if (trimmed) {
+      editor.chain().focus().setLink({ href: normalizeLinkHref(trimmed) }).run();
     } else {
       editor.chain().focus().unsetLink().run();
     }

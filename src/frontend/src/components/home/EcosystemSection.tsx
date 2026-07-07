@@ -1,19 +1,24 @@
 import { getTranslations } from "next-intl/server";
 
-import { getEcosystemPartners } from "@/lib/api";
+import { surfaceBgClass, type SectionSurface } from "./section-surface";
+import type { EcosystemPartner } from "@/lib/types";
 
-export default async function EcosystemSection() {
-  const [t, partners] = await Promise.all([
-    getTranslations("home.about"),
-    getEcosystemPartners(),
-  ]);
+interface EcosystemSectionProps {
+  partners: EcosystemPartner[];
+  surface?: SectionSurface;
+}
+
+// Partners are fetched by the page so it can compute the section alternation
+// over the visible sections (#135).
+export default async function EcosystemSection({ partners, surface = "blanc" }: EcosystemSectionProps) {
+  const t = await getTranslations("home.about");
 
   if (partners.length === 0) return null;
 
   return (
-    <section className="px-6 py-10 lg:py-14">
+    <section className={`section-y px-6 ${surfaceBgClass(surface)}`}>
       <div className="mx-auto max-w-6xl text-center">
-        <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
+        <h2 className="section-title text-2xl lg:text-4xl font-bold text-noir">
           {t("ecosystemTitle")}
         </h2>
         <div className="flex flex-wrap justify-center gap-4">
