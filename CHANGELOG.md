@@ -12,6 +12,23 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.1.2] - 2026-07-09
+
+Correctif d'infrastructure : permet à la production et à la bêta de cohabiter sur
+le réseau Docker partagé sans se marcher dessus.
+
+### Corrigé
+
+- Les variables lues par `next build` (`BACKEND_URL`, `BASE_URL`,
+  `NEXT_PUBLIC_PLAUSIBLE_SRC`) sont désormais passées en **arguments de build**.
+  Faute de quoi le `routes-manifest.json` figeait la valeur par défaut du
+  `Dockerfile` (`http://backend:4000`) au lieu de l'alias propre à
+  l'environnement, et les *rewrites* Next.js pointaient sur le nom nu `backend`
+  (#189).
+- Conséquence de ce défaut, apparue lorsque les deux backends ont rejoint le
+  réseau partagé `coolify` : ils répondaient tous deux au nom `backend`, et la
+  **production servait des requêtes depuis la base de données de la bêta**.
+
 ## [1.1.1] - 2026-07-09
 
 Correctif d'infrastructure : rétablit l'envoi des emails, cassé en production
@@ -69,7 +86,8 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.1...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.2...dev
+[1.1.2]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/releases/tag/v1.0.0
