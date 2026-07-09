@@ -12,6 +12,22 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.1.1] - 2026-07-09
+
+Correctif d'infrastructure : rétablit l'envoi des emails, cassé en production
+depuis un redéploiement.
+
+### Corrigé
+
+- Le backend n'était pas rattaché au réseau Docker partagé `coolify` : le service
+  `postfix` ne résolvait plus et **tout envoi d'email échouait** (formulaire de
+  contact, réinitialisation de mot de passe, liens de modification). Une clé
+  `coolify:` nue sous le `networks:` d'un service se sérialise en `coolify: null`,
+  et Compose ignore alors silencieusement le rattachement (#184).
+- L'alias réseau propre à l'environnement est désormais posé sur le réseau partagé
+  `coolify` — et non plus sur `default`, qui est privé au stack et n'y protégeait
+  de rien — évitant la collision avec le backend des autres projets Coolify.
+
 ## [1.1.0] - 2026-07-07
 
 Alignement de la production sur la beta : promotion du travail accumulé sur `dev`
@@ -53,6 +69,7 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.0...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.1...dev
+[1.1.1]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/releases/tag/v1.0.0
