@@ -3,6 +3,13 @@ services:
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
+      # `next build` reads these to generate the rewrites, so they have to reach
+      # the image at build time — the runtime `environment:` block below comes
+      # too late and the Dockerfile's ARG defaults get baked into
+      # routes-manifest.json instead (see #189).
+      args:
+        - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+        - BASE_URL=${BASE_URL}
     environment:
       - BASE_URL=${BASE_URL}
       # Pinned to the env-scoped backend container name. Resolving the bare
