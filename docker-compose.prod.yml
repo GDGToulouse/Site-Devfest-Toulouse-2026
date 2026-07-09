@@ -75,14 +75,25 @@ services:
     # The backend itself is NOT exposed via Traefik (the frontend proxies
     # /api/* to it through the Next.js rewrites). It joins the shared
     # `coolify` network only to reach the standalone `postfix` service
-    # deployed at the Coolify level. Inbound resolution from other projects
-    # is mitigated by the env-scoped network alias on `default` —
-    # `BACKEND_URL` points at that alias, never at the bare `backend` name.
+    # deployed at the Coolify level.
+    #
+    # The env-scoped alias must sit on `coolify`, not on `default`: `default` is
+    # private to this stack, so an alias there protects nothing. On the shared
+    # network the service would otherwise answer to the bare `backend` name and
+    # collide with every other project's backend (see
+    # docs/coolify-pieges-multi-environnements.md).
+    #
+    # Both networks are declared as mappings with content. A bare `coolify:`
+    # key serialises to `coolify: null`, and Compose then silently skips the
+    # attachment — the container comes up without the shared network and
+    # `postfix` stops resolving, breaking every outgoing email.
     networks:
       default:
         aliases:
           - devfest-${ENV_NAME:-local}-backend
       coolify:
+        aliases:
+          - devfest-${ENV_NAME:-local}-backend
 
   db:
     image: postgres:16-alpine
