@@ -3,6 +3,15 @@ services:
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
+      # `next build` reads these to generate the rewrites, the CSP and the
+      # NEXT_PUBLIC_* bundle, so they have to reach the image at build time —
+      # the runtime `environment:` block below comes too late. Without them the
+      # Dockerfile's ARG defaults get baked into routes-manifest.json, pinning
+      # the rewrites to the bare `backend` hostname (see #189).
+      args:
+        - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+        - BASE_URL=${BASE_URL}
+        - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     environment:
       - NODE_ENV=production
       - BASE_URL=${BASE_URL}
