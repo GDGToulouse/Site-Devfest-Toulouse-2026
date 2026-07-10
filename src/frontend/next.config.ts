@@ -53,6 +53,18 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/editions/:path*`,
       },
       {
+        source: "/api/speakers/:path*",
+        destination: `${backendUrl}/api/speakers/:path*`,
+      },
+      {
+        source: "/api/sponsors/:path*",
+        destination: `${backendUrl}/api/sponsors/:path*`,
+      },
+      {
+        source: "/api/talks/:path*",
+        destination: `${backendUrl}/api/talks/:path*`,
+      },
+      {
         source: "/api/me/:path*",
         destination: `${backendUrl}/api/me/:path*`,
       },

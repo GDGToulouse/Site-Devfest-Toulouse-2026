@@ -46,6 +46,12 @@ export interface EcosystemPartner {
   isFeatured: boolean;
 }
 
+// Ambiance image for the home "Derrière le DevFest" carousel (#99).
+export interface CarouselSlide {
+  url: string;
+  alt: string;
+}
+
 export interface Article {
   id: number;
   slug: string;
@@ -199,6 +205,28 @@ export interface SpeakerDetail {
 
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
+
+// Past-edition history items (issue #63), keyed by year (not by featured edition).
+export interface EditionSpeaker {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+}
+
+export interface EditionTalk {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  videoUrl: string | null;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string }[];
+}
 
 // Public talk detail.
 export interface TalkDetail {

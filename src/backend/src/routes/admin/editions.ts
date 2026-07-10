@@ -90,7 +90,18 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
       const edition = await prisma.edition.findUnique({
         where: { id },
-        include: { _count: { select: { ticketTiers: true, articles: true } } },
+        include: {
+          _count: {
+            select: {
+              ticketTiers: true,
+              articles: true,
+              speakers: true,
+              talks: true,
+              sponsors: true,
+              categories: true,
+            },
+          },
+        },
       });
 
       if (!edition) return reply.status(404).send({ error: "Edition not found" });
@@ -115,6 +126,10 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         openSponsorLevels: edition.openSponsorLevels ? JSON.parse(edition.openSponsorLevels) : [],
         ticketTiersCount: edition._count.ticketTiers,
         articlesCount: edition._count.articles,
+        speakersCount: edition._count.speakers,
+        talksCount: edition._count.talks,
+        sponsorsCount: edition._count.sponsors,
+        categoriesCount: edition._count.categories,
       };
     }
   );

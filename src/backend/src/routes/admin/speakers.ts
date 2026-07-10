@@ -35,18 +35,30 @@ function serialize(s: { socialLinks: string | null; [k: string]: unknown }) {
 }
 
 export default async function adminSpeakerRoutes(app: FastifyInstance) {
-  // GET /api/admin/speakers?editionId=X
+  // GET /api/admin/speakers?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: SpeakerListQuery }>("/speakers", {
     schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const speakers = await prisma.speaker.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: { name: "asc" },
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId ? { name: "asc" } : [{ edition: { year: "desc" } }, { name: "asc" }],
     });
     return speakers.map(serialize);
+  });
+
+  // GET /api/admin/speakers/:id
+  app.get<{ Params: SpeakerIdParams }>("/speakers/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const speaker = await prisma.speaker.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
+    return serialize(speaker);
   });
 
   // POST /api/admin/speakers

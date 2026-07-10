@@ -39,20 +39,34 @@ function serialize(s: {
 }
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
-  // GET /api/admin/sponsors?editionId=X
+  // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: SponsorListQuery }>("/sponsors", {
     schema: {
       querystring: { type: "object", properties: { editionId: { type: "string" } } },
     },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const sponsors = await prisma.sponsor.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: [{ level: "asc" }, { name: "asc" }],
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId
+        ? [{ level: "asc" }, { name: "asc" }]
+        : [{ edition: { year: "desc" } }, { level: "asc" }, { name: "asc" }],
     });
     return sponsors.map(serialize);
+  });
+
+  // GET /api/admin/sponsors/:id
+  app.get<{ Params: SponsorIdParams }>("/sponsors/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const sponsor = await prisma.sponsor.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
+    return serialize(sponsor);
   });
 
   // POST /api/admin/sponsors
