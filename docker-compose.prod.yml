@@ -29,16 +29,19 @@ services:
       - "3000"
     # Without a healthcheck Coolify cannot tell when the new container is ready,
     # so it stops the old one first and Traefik serves 503 for the whole swap
-    # (#192). `/healthz` is a dedicated route that renders nothing and never
-    # calls the API — probing `/` would mark the frontend unhealthy whenever the
-    # backend is down.
+    # (#192). `/api/healthz` renders nothing and never calls the API — probing
+    # `/` would mark the frontend unhealthy whenever the backend is down.
+    #
+    # The route sits under `/api/` because the i18n routing redirects a bare
+    # `/healthz` to `/fr/healthz`, which does not exist. It is NOT `/api/health`,
+    # which next.config.ts rewrites to the backend.
     #
     # Address the loopback as 127.0.0.1, never `localhost`: inside the container
     # `localhost` resolves to ::1 and the server only listens on IPv4, so the
     # probe would fail every single time and block all deployments.
     # `curl` is absent from node:22-alpine; `wget` ships with BusyBox.
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/healthz"]
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/healthz"]
       interval: 10s
       timeout: 5s
       retries: 3
