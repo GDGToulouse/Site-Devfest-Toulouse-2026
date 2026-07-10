@@ -31,6 +31,12 @@ interface SponsorListQuery {
   editionId?: string;
 }
 
+interface SponsorBulkBody {
+  ids: number[];
+  action: "setStatus";
+  value: "DRAFT" | "PUBLISHED";
+}
+
 function serialize(s: {
   socialLinks: string | null;
   [k: string]: unknown;
@@ -139,6 +145,24 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
 
     revalidateSponsors();
     return serialize(sponsor);
+  });
+
+  // POST /api/admin/sponsors/bulk — apply one action to several sponsors at once.
+  app.post<{ Body: SponsorBulkBody }>("/sponsors/bulk", async (request, reply) => {
+    const { ids, action, value } = request.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
+      return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+    if (action !== "setStatus" || (value !== "DRAFT" && value !== "PUBLISHED")) {
+      return reply.code(400).send({ error: "unsupported action or value" });
+    }
+
+    const { count } = await prisma.sponsor.updateMany({
+      where: { id: { in: ids } },
+      data: { publicationStatus: value },
+    });
+    revalidateSponsors();
+    return { count };
   });
 
   // DELETE /api/admin/sponsors/:id
