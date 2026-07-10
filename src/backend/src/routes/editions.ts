@@ -186,6 +186,22 @@ export default async function editionRoutes(app: FastifyInstance) {
       select: { year: true, aftermovieUrl: true, galleryUrl: true },
     });
 
+    // Drive the Programme / Speakers / Sponsors nav links (Header/Footer):
+    // a link is shown only when the edition has at least one PUBLISHED record
+    // of that kind — matching what the public pages actually display.
+    const [publishedTalkCount, publishedSpeakerCount, publishedSponsorCount] =
+      await Promise.all([
+        prisma.talk.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        prisma.speaker.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        prisma.sponsor.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+      ]);
+
     return {
       id: edition.id,
       year: edition.year,
@@ -206,10 +222,9 @@ export default async function editionRoutes(app: FastifyInstance) {
       sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
       sponsorPageStatus: edition.sponsorPageStatus,
       sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
-      // TODO: compute from actual data when Speaker/Session/Sponsor models exist
-      isProgramPublished: false,
-      hasSpeakers: false,
-      hasSponsors: false,
+      isProgramPublished: publishedTalkCount > 0,
+      hasSpeakers: publishedSpeakerCount > 0,
+      hasSponsors: publishedSponsorCount > 0,
     };
   });
 
