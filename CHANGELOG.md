@@ -12,6 +12,25 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.1.3] - 2026-07-10
+
+Correctif d'infrastructure : prépare des déploiements sans coupure.
+
+### Ajouté
+
+- Sonde de vitalité `GET /api/healthz` côté site : répond `200` sans rendre de
+  page ni appeler l'API, pour que la santé du site ne dépende pas de celle de
+  l'API (#192).
+- Healthchecks Docker sur les conteneurs du site et de l'API. Sans eux, Coolify
+  ne pouvait pas savoir quand le nouveau conteneur était prêt : il arrêtait
+  l'ancien d'abord et le site public renvoyait **503 pendant une minute à chaque
+  déploiement**.
+
+### Note
+
+Le healthcheck est un **prérequis** : il faut encore activer *Zero Downtime
+Deployment* sur l'application Coolify pour supprimer réellement les 503.
+
 ## [1.1.2] - 2026-07-09
 
 Correctif d'infrastructure : permet à la production et à la bêta de cohabiter sur
@@ -86,7 +105,8 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.2...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.3...dev
+[1.1.3]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.0.0...v1.1.0
