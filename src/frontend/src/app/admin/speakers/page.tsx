@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Speaker } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
+import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
 
 interface SpeakerRow extends Speaker {
@@ -19,6 +20,7 @@ export default function SpeakersDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     adminFetch<SpeakerRow[]>("/speakers").then(({ data }) => {
@@ -26,6 +28,25 @@ export default function SpeakersDataPage() {
       setIsLoading(false);
     });
   }, []);
+
+  async function applyBulk(action: "setStatus" | "setFeatured", value: "DRAFT" | "PUBLISHED" | boolean) {
+    const ids = [...selectedIds];
+    const { status } = await adminFetch("/speakers/bulk", {
+      method: "POST",
+      body: JSON.stringify({ ids, action, value }),
+    });
+    if (status !== 200) return;
+    setSpeakers((prev) =>
+      prev.map((s) =>
+        selectedIds.has(s.id)
+          ? action === "setStatus"
+            ? { ...s, publicationStatus: value as "DRAFT" | "PUBLISHED" }
+            : { ...s, isFeatured: value as boolean }
+          : s,
+      ),
+    );
+    setSelectedIds(new Set());
+  }
 
   const years = useMemo(
     () => [...new Set(speakers.map((s) => s.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
@@ -40,6 +61,12 @@ export default function SpeakersDataPage() {
       return true;
     });
   }, [speakers, year, search]);
+
+  // Reset the selection whenever the filter changes so the header checkbox
+  // and the bulk bar always reflect the currently visible rows.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [year, search]);
 
   const columns = [
     {
@@ -104,11 +131,24 @@ export default function SpeakersDataPage() {
             <span className="text-sm text-gris">{filtered.length} speaker{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
+          {selectedIds.size > 0 && (
+            <BulkActionBar
+              count={selectedIds.size}
+              entitySingular="speaker"
+              entityPlural="speakers"
+              onSetStatus={(value) => applyBulk("setStatus", value)}
+              onSetFeatured={(value) => applyBulk("setFeatured", value)}
+              onClear={() => setSelectedIds(new Set())}
+            />
+          )}
+
           <DataTable<SpeakerRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucun speaker"
             onEdit={(s) => router.push(`/admin/speakers/${s.id}`)}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </>
       )}

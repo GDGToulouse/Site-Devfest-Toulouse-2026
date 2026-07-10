@@ -33,6 +33,12 @@ interface TalkListQuery {
   editionId?: string;
 }
 
+interface TalkBulkBody {
+  ids: number[];
+  action: "setStatus";
+  value: "DRAFT" | "PUBLISHED";
+}
+
 function serialize(t: {
   speakers?: { id: number; name: string }[];
   [k: string]: unknown;
@@ -161,6 +167,24 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
 
     revalidateConferences();
     return serialize(talk);
+  });
+
+  // POST /api/admin/talks/bulk — apply one action to several talks at once.
+  app.post<{ Body: TalkBulkBody }>("/talks/bulk", async (request, reply) => {
+    const { ids, action, value } = request.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
+      return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+    if (action !== "setStatus" || (value !== "DRAFT" && value !== "PUBLISHED")) {
+      return reply.code(400).send({ error: "unsupported action or value" });
+    }
+
+    const { count } = await prisma.talk.updateMany({
+      where: { id: { in: ids } },
+      data: { publicationStatus: value },
+    });
+    revalidateConferences();
+    return { count };
   });
 
   // DELETE /api/admin/talks/:id

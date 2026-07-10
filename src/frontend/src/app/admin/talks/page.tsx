@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Talk, TalkFormat } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
+import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
 
 interface TalkRow extends Talk {
@@ -26,6 +27,7 @@ export default function TalksDataPage() {
   const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [format, setFormat] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     adminFetch<TalkRow[]>("/talks").then(({ data }) => {
@@ -33,6 +35,19 @@ export default function TalksDataPage() {
       setIsLoading(false);
     });
   }, []);
+
+  async function applyBulk(value: "DRAFT" | "PUBLISHED") {
+    const ids = [...selectedIds];
+    const { status } = await adminFetch("/talks/bulk", {
+      method: "POST",
+      body: JSON.stringify({ ids, action: "setStatus", value }),
+    });
+    if (status !== 200) return;
+    setTalks((prev) =>
+      prev.map((t) => (selectedIds.has(t.id) ? { ...t, publicationStatus: value } : t)),
+    );
+    setSelectedIds(new Set());
+  }
 
   const years = useMemo(
     () => [...new Set(talks.map((t) => t.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
@@ -48,6 +63,10 @@ export default function TalksDataPage() {
       return true;
     });
   }, [talks, year, format, search]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [year, format, search]);
 
   const columns = [
     { key: "title", label: "Titre", render: (t: TalkRow) => <span className="font-medium text-noir">{t.titleFr}</span> },
@@ -133,11 +152,23 @@ export default function TalksDataPage() {
             <span className="text-sm text-gris">{filtered.length} conférence{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
+          {selectedIds.size > 0 && (
+            <BulkActionBar
+              count={selectedIds.size}
+              entitySingular="conférence"
+              entityPlural="conférences"
+              onSetStatus={applyBulk}
+              onClear={() => setSelectedIds(new Set())}
+            />
+          )}
+
           <DataTable<TalkRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucune conférence"
             onEdit={(t) => router.push(`/admin/talks/${t.id}`)}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </>
       )}
