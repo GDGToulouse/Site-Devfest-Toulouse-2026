@@ -3,6 +3,15 @@ services:
     build:
       context: .
       dockerfile: src/frontend/Dockerfile
+      # `next build` reads these to generate the rewrites, the CSP and the
+      # NEXT_PUBLIC_* bundle, so they have to reach the image at build time —
+      # the runtime `environment:` block below comes too late. Without them the
+      # Dockerfile's ARG defaults get baked into routes-manifest.json, pinning
+      # the rewrites to the bare `backend` hostname (see #189).
+      args:
+        - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+        - BASE_URL=${BASE_URL}
+        - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     environment:
       - NODE_ENV=production
       - BASE_URL=${BASE_URL}
@@ -18,6 +27,25 @@ services:
       - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     expose:
       - "3000"
+    # Without a healthcheck Coolify cannot tell when the new container is ready,
+    # so it stops the old one first and Traefik serves 503 for the whole swap
+    # (#192). `/api/healthz` renders nothing and never calls the API — probing
+    # `/` would mark the frontend unhealthy whenever the backend is down.
+    #
+    # The route sits under `/api/` because the i18n routing redirects a bare
+    # `/healthz` to `/fr/healthz`, which does not exist. It is NOT `/api/health`,
+    # which next.config.ts rewrites to the backend.
+    #
+    # Address the loopback as 127.0.0.1, never `localhost`: inside the container
+    # `localhost` resolves to ::1 and the server only listens on IPv4, so the
+    # probe would fail every single time and block all deployments.
+    # `curl` is absent from node:22-alpine; `wget` ships with BusyBox.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     depends_on:
       - backend
     # Persist Next.js' on-the-fly image optimization cache across rebuilds.
@@ -69,20 +97,43 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+    # `start_period` is generous because the entrypoint runs `prisma migrate
+    # deploy` and the seed before Fastify ever listens (see scripts/db-boot.sh).
+    # Overshooting costs nothing — the window only suppresses early failures —
+    # whereas undershooting marks the container unhealthy and blocks the deploy.
+    # 127.0.0.1, not `localhost`: the latter resolves to ::1 and Fastify binds
+    # 0.0.0.0 (IPv4 only), so every probe would be refused.
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:4000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
     depends_on:
       db:
         condition: service_healthy
     # The backend itself is NOT exposed via Traefik (the frontend proxies
     # /api/* to it through the Next.js rewrites). It joins the shared
     # `coolify` network only to reach the standalone `postfix` service
-    # deployed at the Coolify level. Inbound resolution from other projects
-    # is mitigated by the env-scoped network alias on `default` —
-    # `BACKEND_URL` points at that alias, never at the bare `backend` name.
+    # deployed at the Coolify level.
+    #
+    # The env-scoped alias must sit on `coolify`, not on `default`: `default` is
+    # private to this stack, so an alias there protects nothing. On the shared
+    # network the service would otherwise answer to the bare `backend` name and
+    # collide with every other project's backend (see
+    # docs/coolify-pieges-multi-environnements.md).
+    #
+    # Both networks are declared as mappings with content. A bare `coolify:`
+    # key serialises to `coolify: null`, and Compose then silently skips the
+    # attachment — the container comes up without the shared network and
+    # `postfix` stops resolving, breaking every outgoing email.
     networks:
       default:
         aliases:
           - devfest-${ENV_NAME:-local}-backend
       coolify:
+        aliases:
+          - devfest-${ENV_NAME:-local}-backend
 
   db:
     image: postgres:16-alpine
