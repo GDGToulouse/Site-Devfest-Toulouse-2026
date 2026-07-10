@@ -21,6 +21,7 @@ export interface Edition {
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
+  isScheduleReady: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
 }

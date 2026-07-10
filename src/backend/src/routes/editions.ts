@@ -186,13 +186,19 @@ export default async function editionRoutes(app: FastifyInstance) {
       select: { year: true, aftermovieUrl: true, galleryUrl: true },
     });
 
-    // Drive the Programme / Speakers / Sponsors nav links (Header/Footer):
+    // Drive the Conférences / Speakers / Sponsors nav links (Header/Footer):
     // a link is shown only when the edition has at least one PUBLISHED record
     // of that kind — matching what the public pages actually display.
-    const [publishedTalkCount, publishedSpeakerCount, publishedSponsorCount] =
+    // scheduledTalkCount additionally tells whether the schedule (planning) is
+    // ready: at least one published talk has been given a time slot (startsAt),
+    // which promotes the flat "Conférences" link to a "Programme" menu (#203).
+    const [publishedTalkCount, scheduledTalkCount, publishedSpeakerCount, publishedSponsorCount] =
       await Promise.all([
         prisma.talk.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        prisma.talk.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", startsAt: { not: null } },
         }),
         prisma.speaker.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
@@ -223,6 +229,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       sponsorPageStatus: edition.sponsorPageStatus,
       sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
       isProgramPublished: publishedTalkCount > 0,
+      isScheduleReady: scheduledTalkCount > 0,
       hasSpeakers: publishedSpeakerCount > 0,
       hasSponsors: publishedSponsorCount > 0,
     };

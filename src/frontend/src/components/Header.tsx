@@ -9,13 +9,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { useCfpSettings, useEdition, useIdentitySettings, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
-
-const ALL_NAV_LINKS = [
-  { key: "program", href: "/conferences" },
-  { key: "speakers", href: "/speakers" },
-  { key: "sponsors", href: "/sponsors" },
-  { key: "blog", href: "/actualites" },
-] as const;
+import { getPublicNavEntries } from "@/lib/nav";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,12 +28,7 @@ export default function Header() {
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = getCfpCtaUrl(cfp);
 
-  const navLinks = ALL_NAV_LINKS.filter((link) => {
-    if (link.key === "program" && !edition?.isProgramPublished) return false;
-    if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-    if (link.key === "sponsors" && !edition?.hasSponsors) return false;
-    return true;
-  });
+  const navEntries = getPublicNavEntries(edition);
 
   return (
     <header
@@ -61,15 +50,41 @@ export default function Header() {
 
           {/* Desktop nav — right of logo */}
           <nav className="hidden lg:flex items-center gap-6" aria-label="Main navigation">
-            {navLinks.map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                className="text-gris text-base hover:text-noir transition-colors"
-              >
-                {t(link.key)}
-              </Link>
-            ))}
+            {navEntries.map((entry) =>
+              entry.children ? (
+                <div key={entry.key} className="group relative">
+                  <Link
+                    href={entry.href}
+                    className="flex items-center gap-1 text-gris text-base hover:text-noir transition-colors"
+                    aria-haspopup="true"
+                  >
+                    {t(entry.labelKey)}
+                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </Link>
+                  <div className="absolute left-0 top-full hidden min-w-[180px] flex-col rounded-[12px] bg-blanc py-2 shadow-card group-hover:flex group-focus-within:flex">
+                    {entry.children.map((child) => (
+                      <Link
+                        key={child.key}
+                        href={child.href}
+                        className="px-4 py-2 text-gris text-base hover:text-noir hover:bg-blanc-casse transition-colors"
+                      >
+                        {t(child.labelKey)}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <Link
+                  key={entry.key}
+                  href={entry.href}
+                  className="text-gris text-base hover:text-noir transition-colors"
+                >
+                  {t(entry.labelKey)}
+                </Link>
+              ),
+            )}
           </nav>
         </div>
 
@@ -126,15 +141,26 @@ export default function Header() {
           aria-label="Mobile navigation"
         >
           <div className="flex flex-col gap-4">
-            {navLinks.map((link) => (
-              <Link
-                key={link.key}
-                href={link.href}
-                className="text-gris text-base hover:text-noir transition-colors"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {t(link.key)}
-              </Link>
+            {navEntries.map((entry) => (
+              <div key={entry.key} className="flex flex-col gap-4">
+                <Link
+                  href={entry.href}
+                  className="text-gris text-base hover:text-noir transition-colors"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {t(entry.labelKey)}
+                </Link>
+                {entry.children?.map((child) => (
+                  <Link
+                    key={child.key}
+                    href={child.href}
+                    className="pl-4 text-gris text-base hover:text-noir transition-colors"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
+                    {t(child.labelKey)}
+                  </Link>
+                ))}
+              </div>
             ))}
             {(showSponsorCta || cfpUrl) && <hr className="border-gray-100" />}
             {showSponsorCta && (

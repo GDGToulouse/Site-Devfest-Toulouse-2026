@@ -10,14 +10,8 @@ import {
   getSocialLinks,
 } from "@/lib/api";
 import { getLogoUrl } from "@/lib/identity";
+import { getPublicNavEntries } from "@/lib/nav";
 import SocialIcons from "./SocialIcons";
-
-const NAV_LINKS = [
-  { key: "program", href: "/conferences" },
-  { key: "speakers", href: "/speakers" },
-  { key: "sponsors", href: "/sponsors" },
-  { key: "blog", href: "/actualites" },
-] as const;
 
 export default async function Footer() {
   const [tNav, tFooter, tCta, edition, editions, socialLinks, identity, ecosystemPartners] =
@@ -76,26 +70,26 @@ export default async function Footer() {
             {/* Navigation — always shown; links appear as their content goes
                 live (Actus is always available). */}
             {(() => {
-              const footerLinks = NAV_LINKS.filter((link) => {
-                if (link.key === "program" && !edition?.isProgramPublished) return false;
-                if (link.key === "speakers" && !edition?.hasSpeakers) return false;
-                if (link.key === "sponsors" && !edition?.hasSponsors) return false;
-                return true;
-              });
-              if (footerLinks.length === 0) return null;
+              // Flatten parent + children into one list (the footer has no
+              // dropdowns); children render indented under their parent (#203).
+              const footerEntries = getPublicNavEntries(edition).flatMap((entry) => [
+                { ...entry, indented: false },
+                ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
+              ]);
+              if (footerEntries.length === 0) return null;
               return (
                 <div>
                   <p className="text-blanc text-xl font-bold mb-2 leading-snug">
                     {tFooter("navigation")}
                   </p>
                   <ul className="flex flex-col gap-1">
-                    {footerLinks.map((link) => (
-                      <li key={link.key}>
+                    {footerEntries.map((entry) => (
+                      <li key={entry.key}>
                         <Link
-                          href={link.href}
-                          className="text-blanc text-base hover:opacity-70 transition-opacity"
+                          href={entry.href}
+                          className={`text-blanc text-base hover:opacity-70 transition-opacity ${entry.indented ? "pl-4" : ""}`}
                         >
-                          {tNav(link.key)}
+                          {tNav(entry.labelKey)}
                         </Link>
                       </li>
                     ))}
