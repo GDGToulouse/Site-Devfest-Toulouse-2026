@@ -4,8 +4,9 @@ import crypto from "node:crypto";
 import sharp from "sharp";
 
 // Single source of truth for where uploaded media lives. Served publicly at
-// /uploads/ (see index.ts static route).
-export const UPLOADS_DIR = "/app/uploads";
+// /uploads/ (see index.ts static route). The container mounts it at /app/uploads;
+// UPLOADS_DIR overrides the path when running outside Docker.
+export const UPLOADS_DIR = process.env.UPLOADS_DIR || "/app/uploads";
 
 // Raster images larger than this width (px) are downscaled before storage.
 export const COMPRESS_MAX_WIDTH = 2560;
