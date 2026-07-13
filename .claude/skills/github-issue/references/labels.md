@@ -1,6 +1,6 @@
 # Labels — repo `GDGToulouse/Site-Devfest-Toulouse-2026`
 
-Chaque issue **doit** avoir au minimum 1 label de **type**. Le repo n'utilise pas de labels de domaine custom : la **structuration fonctionnelle passe par les milestones « Lot N »** (voir [milestones.md](milestones.md)), pas par des labels.
+Chaque issue **doit** avoir au minimum 1 label de **type**. Trois familles : **type** (obligatoire), **domaine** (optionnel), **état** (posé au fil de l'eau, jamais à la création).
 
 ## Famille type — nature du ticket
 
@@ -13,6 +13,30 @@ Chaque issue **doit** avoir au minimum 1 label de **type**. Le repo n'utilise pa
 
 > `bug` et `enhancement` sont **mutuellement exclusifs**. `documentation` / `question` peuvent se combiner avec un autre type si besoin.
 
+## Famille domaine — où ça se passe
+
+| Label | Périmètre |
+|---|---|
+| `frontend` | Application Next.js (UI publique) |
+| `backend` | API Fastify / Prisma / base de données |
+| `admin` | Back-office d'administration |
+| `seo` | SEO, métadonnées, Open Graph, sitemap |
+| `infra` | Docker Compose, Coolify, réseau, déploiement, SMTP |
+
+Cumulables (ex. `bug` + `backend` + `admin`).
+
+## Famille état
+
+| Label | Sens | Couleur |
+|---|---|---|
+| `corrigé` | Correction mergée, en attente de mise en production | `#1a7f37` |
+
+**Ne jamais poser `corrigé` à la création d'une issue.** Il est posé au **merge vers
+`dev-{initiale}`**, avec un commentaire citant les commits — voir
+[`.claude/rules/git-workflow.md`](../../../rules/git-workflow.md) § « Label `corrigé` ».
+
+Filtre associé : `is:issue is:open -label:corrigé` = ce qu'il reste à corriger.
+
 ## User Story
 
 Le repo **n'a pas de label `user-story`**. Une US se reconnaît à son **format de body** (« En tant que… je veux… afin que… ») ; le label reste `enhancement`. Ne pas créer de label `user-story` sauf demande explicite de l'utilisateur.
@@ -23,7 +47,7 @@ Présents dans le repo, utilisables ponctuellement : `duplicate`, `invalid`, `wo
 
 ## Création de labels
 
-Le repo se contente volontairement des labels par défaut. **Ne pas créer de nouveaux labels** (domaine, priorité…) sans accord explicite de l'utilisateur — la granularité fonctionnelle est portée par les milestones.
+Les trois familles ci-dessus couvrent les besoins. **Ne pas créer de nouveau label** (priorité, statut supplémentaire…) sans accord explicite de l'utilisateur.
 
 Si l'utilisateur valide la création d'un label :
 

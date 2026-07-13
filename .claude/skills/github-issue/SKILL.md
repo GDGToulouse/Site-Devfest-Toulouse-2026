@@ -1,6 +1,6 @@
 ---
 name: github-issue
-description: Rédige une issue GitHub cohérente pour le repo GDGToulouse/Site-Devfest-Toulouse-2026 — création d'une nouvelle issue OU enrichissement d'une issue existante via commentaire (sans écraser le body). Interview l'utilisateur sur les détails manquants, applique les conventions du repo (labels bug/enhancement/documentation/question, rattachement à un milestone « Lot N »), cite de vrais fichiers/lignes du repo et des specs docs/. Trigger phrases — création « crée une issue pour… », « ouvre un ticket… », « ajoute une issue sur… », « ouvre une issue GitHub pour… ». Refine « rédige l'issue #X », « clean up issue #X », « commente l'issue #X », « enrichis l'issue #X », « transforme cette issue ».
+description: Rédige une issue GitHub cohérente pour le repo GDGToulouse/Site-Devfest-Toulouse-2026 — création d'une nouvelle issue OU enrichissement d'une issue existante via commentaire (sans écraser le body). Interview l'utilisateur sur les détails manquants, applique les conventions du repo (labels bug/enhancement/documentation/question, milestone « Lot N » uniquement si l'issue relève du périmètre du lot), cite de vrais fichiers/lignes du repo et des specs docs/. Trigger phrases — création « crée une issue pour… », « ouvre un ticket… », « ajoute une issue sur… », « ouvre une issue GitHub pour… ». Refine « rédige l'issue #X », « clean up issue #X », « commente l'issue #X », « enrichis l'issue #X », « transforme cette issue ».
 ---
 
 # Rédaction d'issue GitHub — site DevFest Toulouse
@@ -11,7 +11,9 @@ Skill bi-mode :
 
 Repo cible : `GDGToulouse/Site-Devfest-Toulouse-2026` sur `github.com`. CLI : `gh` (authentifiée). Langue : **français**.
 
-> **Contexte projet** : site Next.js (`src/frontend/`) + API Fastify/Prisma (`src/backend/`), bilingue FR/EN. Le travail est découpé en **milestones « Lot 1 → Lot 5 »** — rattacher chaque issue au bon Lot est une convention forte du repo. Voir [CLAUDE.md](../../../CLAUDE.md) et les specs `docs/`.
+> **Contexte projet** : site Next.js (`src/frontend/`) + API Fastify/Prisma (`src/backend/`), bilingue FR/EN. Voir [CLAUDE.md](../../../CLAUDE.md) et les specs `docs/`.
+>
+> **Milestones « Lot 1 → Lot 5 »** : ils mesurent la couverture du **périmètre initial**, pas les versions. Une issue n'y est rattachée que si elle appartient à ce périmètre. Un **bug ou une amélioration découverts après la livraison du Lot n'ont pas de milestone** — juste un label. Règle complète : [`.claude/rules/git-workflow.md`](../../rules/git-workflow.md) § « Issues, milestones et versions ».
 
 ## Pre-flight — éviter le travail dupliqué
 
@@ -51,7 +53,9 @@ Ne jamais lancer `gh issue create` sans avoir fait cette recherche.
 À partir du brief utilisateur :
 - Identifier la **nature** → label de type (`bug`, `enhancement`, `documentation`, `question`)
 - Déterminer si c'est une **User Story** → la structurer comme telle dans le body (le repo n'a pas de label `user-story` ; le format suffit)
-- Identifier le **milestone** (« Lot N ») le plus pertinent → voir [references/milestones.md](references/milestones.md). Demander si ambigu.
+- Décider s'il y a un **milestone**. Test : *« peut-on déclarer le Lot terminé en laissant cette issue ouverte ? »*
+  - **Non** (l'issue fait partie du périmètre du Lot, y compris un bug qui l'empêche d'être « done ») → rattacher au Lot → voir [references/milestones.md](references/milestones.md). Demander si ambigu.
+  - **Oui** (bug / amélioration découverts **après** la livraison du Lot) → **pas de milestone**, le label suffit.
 - Identifier les **specs concernées** dans `docs/` → à citer dans le body (`docs/fonctionnalites-2026.md`, `docs/modele-donnees-metier.md`, etc.)
 
 Voir [references/labels.md](references/labels.md) pour les labels disponibles.
@@ -176,7 +180,7 @@ gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone "Lot 3 �
 - **Pas de secrets** : pas de tokens, mots de passe, clés, `DATABASE_URL`, secrets OAuth/SMTP. Hostnames publics (`*.site.devfesttoulouse.fr`), noms de modèles, versions OK.
 - **Liens** : `[AboutSection.tsx](src/frontend/src/components/home/AboutSection.tsx)` ou `[editions.ts:36](src/backend/src/routes/editions.ts#L36)` (relatif au repo) ; `#NN` pour issues liées ; specs `docs/fonctionnalites-2026.md` ; URL pleine pour ressources externes.
 - **Label obligatoire min.** : 1 label de type (`bug` / `enhancement` / `documentation` / `question`).
-- **Milestone** : rattacher au Lot pertinent dès que possible — c'est la structuration principale du repo.
+- **Milestone** : optionnel, et réservé au **périmètre d'un Lot**. Un bug ou une amélioration post-livraison n'en ont pas. Jamais de milestone fourre-tout (`Backlog`, `v1.x`, `Maintenance`).
 - **Validation utilisateur** : toujours afficher l'issue / commentaire complet AVANT exécution.
 
 ## What NOT to do
@@ -187,7 +191,8 @@ gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone "Lot 3 �
 - **Ne pas inventer de fichiers / lignes** — vérifier avec `Read`/`Grep` d'abord
 - **Ne pas assumer la nature (bug vs feature)** — demander si flou
 - **Ne pas chaîner les `gh issue edit`** : un seul call pour titre + labels + milestone
-- **Ne pas inventer un milestone** — utiliser un Lot existant ou demander
+- **Ne pas inventer un milestone** — utiliser un Lot existant, ou aucun
+- **Ne pas rattacher un bug post-livraison à un Lot** juste pour lui donner un milestone (ça fausse la mesure du périmètre) — le label suffit
 - **Ne pas ajouter d'assignee / project** tant que l'utilisateur n'en a pas convenu
 - **Ne pas inclure de signature « Generated with Claude Code »** ou équivalent dans le body / commentaire
 
