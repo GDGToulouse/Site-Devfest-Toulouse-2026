@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import KeyFiguresSection from "./KeyFiguresSection";
@@ -38,10 +39,6 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
 
   // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
   const yearMonogram = edition?.year ? `'${String(edition.year).slice(-2)}` : null;
-
-  const photoBackground = heroImageUrl
-    ? `linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('${heroImageUrl}')`
-    : "linear-gradient(0deg, rgba(29,29,27,0.28), rgba(29,29,27,0.28)), url('https://picsum.photos/1600/1000?random=devfest')";
 
   const hasFigures = figures.length > 0;
 
@@ -111,11 +108,26 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
           )}
         </div>
 
-        <div
-          className="hero-photo"
-          aria-hidden="true"
-          style={{ backgroundImage: photoBackground }}
-        >
+        {/* The hero image is the LCP element. It used to be a CSS
+            background-image, which never reaches next/image: the raw 3.4 MB
+            upload was served as-is and the browser only discovered it after
+            parsing the CSS, pushing LCP past 20 s on slow 4G (#197). Rendering
+            it through <Image priority> gets it WebP/AVIF conversion, a size
+            matched to the viewport, a preload in the document head and
+            fetchpriority=high. The overlay reproduces the darkening gradient
+            the background used to carry. */}
+        <div className="hero-photo" aria-hidden="true">
+          {heroImageUrl && (
+            <Image
+              src={heroImageUrl}
+              alt=""
+              fill
+              priority
+              sizes="(max-width: 1024px) 100vw, 50vw"
+              className="hero-photo-img"
+            />
+          )}
+          <span className="hero-photo-overlay" />
           {cfpUrl && <span className="hero-photo-badge text-noir">{t("cfpBadge")}</span>}
           {yearMonogram && <span className="hero-photo-wordmark">{yearMonogram}</span>}
         </div>

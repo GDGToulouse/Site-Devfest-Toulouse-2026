@@ -350,14 +350,35 @@ body {
 .hero-photo {
   position: relative;
   min-height: clamp(260px, 34vw, 500px);
-  background-size: cover;
-  background-position: center;
+  /* Fallback tint while the image loads, and the whole visual when no hero
+     image is set on the edition. */
+  background-color: rgba(29, 29, 27, 0.28);
   border-radius: var(--hero-radius);
   overflow: hidden;
   display: flex;
   align-items: flex-end;
   justify-content: flex-start;
   padding: clamp(20px, 2vw, 36px);
+}
+/* The photo now goes through next/image (#197); it fills the box the way
+   background-size: cover used to. */
+.hero-photo-img {
+  object-fit: cover;
+  object-position: center;
+}
+/* Reproduces the darkening gradient the CSS background used to carry, so the
+   badge and the year monogram stay readable over any photo. */
+.hero-photo-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(29, 29, 27, 0.28);
+  pointer-events: none;
+}
+/* Keep the monogram above the image and its overlay. The badge already sets
+   position: absolute in its own rule, so it only needs the stacking order. */
+.hero-photo-wordmark {
+  position: relative;
+  z-index: 1;
 }
 .hero-photo-wordmark {
   font-size: clamp(72px, 14vw, 240px);
@@ -371,6 +392,7 @@ body {
 }
 .hero-photo-badge {
   position: absolute;
+  z-index: 1;
   top: clamp(16px, 1.6vw, 28px);
   right: clamp(16px, 1.6vw, 28px);
   background: rgba(255, 255, 255, 0.92);

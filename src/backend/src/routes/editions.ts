@@ -293,6 +293,8 @@ export default async function editionRoutes(app: FastifyInstance) {
       status: computeTicketStatus(tier, now),
       externalUrl: tier.externalUrl,
       sortOrder: tier.sortOrder,
+      // Feeds Schema.org Offer.validFrom on the home page (#185).
+      saleStartDate: tier.saleStartDate,
     }));
   });
 }

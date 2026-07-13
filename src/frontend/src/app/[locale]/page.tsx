@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import {
   getCfpSettings,
@@ -8,11 +8,13 @@ import {
   getLatestArticles,
   getCurrentTicketTiers,
   getKeyFigures,
+  getSeoSettings,
   getSponsors,
   getFeaturedSpeakers,
   getEcosystemPartners,
 } from "@/lib/api";
 
+import { absoluteUrl } from "@/lib/seo";
 import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
@@ -31,9 +33,16 @@ function buildEventJsonLd(
     endDate: string | null;
     venueName: string | null;
     venueAddress: string | null;
+    heroImageUrl: string | null;
   },
-  tiers: { nameFr: string; price: number; status: string; externalUrl: string | null }[],
+  tiers: { nameFr: string; price: number; status: string; externalUrl: string | null; saleStartDate: string | null }[],
   previousStartDates: string[] = [],
+  // Recommended-but-missing fields flagged by Search Console (#185).
+  extras: {
+    description: string;
+    ogImage: string | null;
+    speakerNames: string[];
+  },
 ) {
   // Dedup offers by (name, price, status) — protects Schema.org output from
   // accidental duplicates in seed data or admin double-imports, which
@@ -56,12 +65,21 @@ function buildEventJsonLd(
         ? "https://schema.org/InStock"
         : "https://schema.org/PreOrder",
       url: t.externalUrl ?? undefined,
+      // When the tier opens for sale (recommended by Google, #185).
+      validFrom: t.saleStartDate?.split("T")[0] ?? undefined,
     }));
+
+  // Google recommends `image` on an Event, so always emit one: the admin's OG
+  // override if set, else the edition hero, else the site's default OG image
+  // (#185). `performer` stays conditional — an empty array would be invalid.
+  const image = extras.ogImage ?? edition.heroImageUrl ?? "/images/og-default.png";
 
   return {
     "@context": "https://schema.org",
     "@type": "Event",
     name: `DevFest Toulouse ${edition.year}`,
+    description: extras.description,
+    image: absoluteUrl(image),
     startDate: edition.startDate?.split("T")[0] ?? undefined,
     endDate: edition.endDate?.split("T")[0] ?? undefined,
     eventStatus: "https://schema.org/EventScheduled",
@@ -83,11 +101,16 @@ function buildEventJsonLd(
       name: "GDG Toulouse",
       url: "https://gdg.community.dev/gdg-toulouse/",
     },
-    superEvent: {
-      "@type": "Event",
-      name: "DevFest",
-      url: "https://developers.google.com/community/devfest",
-    },
+    // Speakers, once announced (#185). Omitted entirely while the line-up is
+    // empty rather than emitting an empty array.
+    ...(extras.speakerNames.length > 0 && {
+      performer: extras.speakerNames.map((name) => ({ "@type": "Person" as const, name })),
+    }),
+    // No `superEvent`: Google treats any nested `Event` as a full Event and
+    // demands startDate/location on it, so pointing at the generic DevFest page
+    // produced two critical errors in Search Console — for a property Google
+    // does not even use for rich results (#185). `organizer` already ties the
+    // event to GDG Toulouse.
     // Past edition start dates signal the event's recurrence to search engines.
     ...(previousStartDates.length > 0 && {
       previousStartDate:
@@ -99,6 +122,10 @@ function buildEventJsonLd(
 
 export default async function HomePage() {
   const locale = await getLocale();
+  const [tSite, seoSettings] = await Promise.all([
+    getTranslations({ locale, namespace: "site" }),
+    getSeoSettings(),
+  ]);
 
   const [edition, tiers, figures, cfp, editions, sponsors, speakers, partners] = await Promise.all([
     getCurrentEdition(),
@@ -224,7 +251,13 @@ export default async function HomePage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildEventJsonLd(edition, tiers, previousStartDates)),
+            __html: JSON.stringify(
+              buildEventJsonLd(edition, tiers, previousStartDates, {
+                description: tSite("description"),
+                ogImage: seoSettings.seo_og_image || null,
+                speakerNames: speakers.map((s) => s.name),
+              }),
+            ),
           }}
         />
       )}

@@ -8,6 +8,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import PlausibleProvider from "next-plausible";
+import WebVitals from "@/components/WebVitals";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
@@ -129,7 +130,12 @@ export default async function LocaleLayout({
 
   return (
     <>
-      {plausibleSrc && <PlausibleProvider src={plausibleSrc} />}
+      {plausibleSrc && (
+        <>
+          <PlausibleProvider src={plausibleSrc} />
+          <WebVitals />
+        </>
+      )}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
