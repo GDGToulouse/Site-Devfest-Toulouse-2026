@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import compress from "@fastify/compress";
 import helmet from "@fastify/helmet";
@@ -6,6 +6,7 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
+import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
@@ -45,6 +46,34 @@ const app = Fastify({
 // preHandler runs returns undefined.
 app.decorateRequest("adminUser");
 app.decorateRequest("authContext");
+
+// Server errors are logged as today, and additionally pushed to the alert
+// webhook when one is configured (#118). Only 5xx are alerted: 4xx are client
+// mistakes, not incidents. The reply itself keeps Fastify's default shape.
+app.setErrorHandler((err: FastifyError, request, reply) => {
+  const statusCode = err.statusCode ?? 500;
+
+  if (statusCode >= 500) {
+    request.log.error({ err, route: request.routeOptions.url }, "Server error");
+
+    // Fire-and-forget: alerting must never delay or break the response.
+    void sendAlert(
+      buildAlertPayload({
+        method: request.method,
+        // Route pattern, not the raw URL — keeps identifying data out of the alert.
+        route: request.routeOptions.url ?? request.url.split("?")[0],
+        statusCode,
+        error: err,
+      }),
+    ).then((result) => {
+      if (result.status === "failed") {
+        request.log.warn({ error: result.error }, "Alert webhook delivery failed");
+      }
+    });
+  }
+
+  reply.send(err);
+});
 
 const corsOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
