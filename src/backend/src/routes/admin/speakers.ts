@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { rotateFeaturedSpeakers } from "../../lib/featured-speakers.js";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
@@ -133,6 +134,13 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/speakers/bulk — apply one action to several speakers at once.
+  // POST /api/admin/speakers/rotate-featured — run the nightly rotation now.
+  // The scheduled job fires at 1 AM Paris time (#214); this lets an admin
+  // trigger it (or test it) without waiting for the small hours.
+  app.post("/speakers/rotate-featured", async () => {
+    return rotateFeaturedSpeakers();
+  });
+
   app.post<{ Body: SpeakerBulkBody }>("/speakers/bulk", async (request, reply) => {
     const { ids, action, value } = request.body;
     if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {

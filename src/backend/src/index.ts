@@ -7,6 +7,7 @@ import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
+import { startScheduledTasks } from "./lib/scheduler.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
@@ -39,6 +40,31 @@ const app = Fastify({
   logger: { level: process.env.LOG_LEVEL || "info" },
   trustProxy: true,
 });
+
+// Fastify rejects `content-type: application/json` with an empty payload
+// (FST_ERR_CTP_EMPTY_JSON_BODY) — yet that is exactly what a plain fetch()
+// with a JSON content-type and no body sends, as our own admin calls do for
+// action-only endpoints (e.g. POST /speakers/rotate-featured). Treat an empty
+// JSON body as `{}` rather than a client error.
+// Fastify already registers a built-in JSON parser, so ours has to replace it.
+app.removeContentTypeParser("application/json");
+app.addContentTypeParser(
+  "application/json",
+  { parseAs: "string" },
+  (_request, body: string, done) => {
+    if (!body || body.trim() === "") return done(null, {});
+    try {
+      done(null, JSON.parse(body));
+    } catch {
+      // Malformed JSON is a client error. Without an explicit statusCode the
+      // default handler would turn it into a 500 — and, since #118, raise a
+      // bogus server-error alert.
+      const err = new Error("Invalid JSON body") as Error & { statusCode?: number };
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  },
+);
 
 // Per-request decorations attached by auth middleware. Declared without a
 // default so Fastify treats them as optional getters (the typings live in
@@ -249,6 +275,7 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 
 try {
   await app.listen({ port, host });
+  startScheduledTasks(app.log);
 } catch (err) {
   app.log.error(err);
   process.exit(1);
