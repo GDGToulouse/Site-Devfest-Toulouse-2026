@@ -5,9 +5,14 @@ import crypto from "node:crypto";
 import sharp from "sharp";
 import { prisma } from "../../lib/prisma.js";
 import { generateAltText } from "../../lib/alt-text.js";
+import {
+  COMPRESSIBLE_MIMES,
+  COMPRESS_MAX_WIDTH,
+  COMPRESS_QUALITY,
+  UPLOADS_DIR,
+} from "../../lib/image-store.js";
 import { TranslationError, QuotaExhaustedError } from "../../lib/translation/errors.js";
 
-const UPLOADS_DIR = "/app/uploads";
 const ALLOWED_MIMES = [
   // Images
   "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
@@ -22,17 +27,6 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
-
-// Raster images larger than this width (px) are downscaled before storage.
-// 2560 fits modern desktop hero images (1920–2560 logical width × 2 DPR
-// covered by Next.js srcset) without keeping multi-megapixel originals
-// that nobody ever displays at full size.
-const COMPRESS_MAX_WIDTH = 2560;
-const COMPRESS_QUALITY = 85;
-// Mimetypes we run through sharp. SVG (vector) and ICO (multi-res icon
-// container) are intentionally excluded — re-encoding them would lose
-// information or fail outright.
-const COMPRESSIBLE_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 export default async function adminFileRoutes(app: FastifyInstance) {
   // POST /api/admin/files — upload a single file (image or document)
