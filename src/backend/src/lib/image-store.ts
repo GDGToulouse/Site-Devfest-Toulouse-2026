@@ -1,0 +1,103 @@
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+import sharp from "sharp";
+
+// Single source of truth for where uploaded media lives. Served publicly at
+// /uploads/ (see index.ts static route). The container mounts it at /app/uploads;
+// UPLOADS_DIR overrides the path when running outside Docker.
+export const UPLOADS_DIR = process.env.UPLOADS_DIR || "/app/uploads";
+
+// Raster images larger than this width (px) are downscaled before storage.
+export const COMPRESS_MAX_WIDTH = 2560;
+export const COMPRESS_QUALITY = 85;
+// Mimetypes we run through sharp. SVG (vector) and ICO (multi-res icon
+// container) are intentionally excluded — re-encoding them would lose
+// information or fail outright.
+export const COMPRESSIBLE_MIMES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+// Remote fetches are bounded: a hostile or broken source must not hang the
+// import nor exhaust memory.
+const FETCH_TIMEOUT_MS = 10_000;
+const MAX_REMOTE_IMAGE_SIZE = 10_000_000; // 10 MB
+
+const EXT_BY_MIME: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+// Compress a raster image buffer, keeping the original when re-encoding would
+// not save bytes. Returns the buffer to persist.
+function compress(buffer: Buffer, mimetype: string): Promise<Buffer> {
+  if (!COMPRESSIBLE_MIMES.has(mimetype)) return Promise.resolve(buffer);
+
+  return (async () => {
+    try {
+      const pipeline = sharp(buffer, { failOn: "none" }).rotate(); // honor EXIF orientation
+      const meta = await pipeline.metadata();
+
+      const needsResize = (meta.width ?? 0) > COMPRESS_MAX_WIDTH;
+      if (needsResize) {
+        pipeline.resize({ width: COMPRESS_MAX_WIDTH, withoutEnlargement: true });
+      }
+
+      if (mimetype === "image/jpeg") {
+        pipeline.jpeg({ quality: COMPRESS_QUALITY, mozjpeg: true });
+      } else if (mimetype === "image/webp") {
+        pipeline.webp({ quality: COMPRESS_QUALITY });
+      } else {
+        pipeline.png({ compressionLevel: 9 });
+      }
+
+      const processed = await pipeline.toBuffer();
+      return needsResize || processed.length < buffer.length ? processed : buffer;
+    } catch {
+      // Corrupt or unsupported variant — store the original rather than fail.
+      return buffer;
+    }
+  })();
+}
+
+// Persist an image buffer under /uploads/ and return its public URL.
+export async function storeImageBuffer(buffer: Buffer, mimetype: string): Promise<string> {
+  const finalBuffer = await compress(buffer, mimetype);
+  const ext = EXT_BY_MIME[mimetype] ?? ".jpg";
+  const uniqueName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
+
+  await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+  await fs.promises.writeFile(path.join(UPLOADS_DIR, uniqueName), finalBuffer);
+
+  return `/uploads/${uniqueName}`;
+}
+
+// Download a remote image and store it locally, returning its /uploads/ URL.
+// Throws on any problem (bad status, non-image, oversized, timeout) so callers
+// can decide whether to warn and carry on.
+export async function fetchAndStoreImage(url: string): Promise<string> {
+  const res = await fetch(url, {
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    headers: { accept: "image/*" },
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+  const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
+  if (!contentType.startsWith("image/")) {
+    throw new Error(`not an image (content-type: ${contentType || "none"})`);
+  }
+
+  const buffer = Buffer.from(await res.arrayBuffer());
+  if (buffer.length === 0) throw new Error("empty response");
+  if (buffer.length > MAX_REMOTE_IMAGE_SIZE) {
+    throw new Error(`too large (${buffer.length} bytes, max ${MAX_REMOTE_IMAGE_SIZE})`);
+  }
+
+  // Don't trust Content-Type alone: confirm the bytes really are an image and
+  // resolve the true format before storing.
+  const format = (await sharp(buffer, { failOn: "none" }).metadata()).format;
+  if (!format) throw new Error("unreadable image data");
+  const realMime = `image/${format === "jpg" ? "jpeg" : format}`;
+
+  return storeImageBuffer(buffer, realMime);
+}
