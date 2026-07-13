@@ -82,7 +82,8 @@ la PR de promotion est le **seul** endroit fiable pour porter les `Closes`. La s
 Une issue corrigée reste **ouverte** jusqu'à la mise en prod (cf. ci-dessus). Sans marqueur,
 elle apparaît comme « à faire » alors que le travail est fait. D'où le label `corrigé`.
 
-**Au merge d'une PR feature vers `dev-{initiale}`**, pour chaque issue traitée :
+**Dès l'arrivée du correctif sur `dev-{initiale}`** (merge de la branche feature, ou commit
+direct), pour chaque issue traitée :
 
 1. Poser le label `corrigé` sur l'issue.
 2. **Commenter l'issue** en citant le ou les commits qui la corrigent (SHA court + sujet).
@@ -91,13 +92,17 @@ elle apparaît comme « à faire » alors que le travail est fait. D'où le labe
 ```bash
 gh issue edit <NN> --repo GDGToulouse/Site-Devfest-Toulouse-2026 --add-label "corrigé"
 gh issue comment <NN> --repo GDGToulouse/Site-Devfest-Toulouse-2026 --body-file - <<'EOF'
-**Corrigé** — mergé dans `dev` (beta), en attente de mise en production.
+**Corrigé** — mergé sur `dev-j`, en attente de mise en production.
 
 - `<sha>` — `<sujet du commit>`
 
 L'issue sera fermée automatiquement lors de la promotion `dev → main` (release).
 EOF
 ```
+
+> Le label dit que **le correctif est écrit et mergé sur la branche de dev** — pas qu'il est
+> déployé en beta ni en prod. C'est voulu : il décrit l'état de l'issue, qui ne change plus.
+> L'environnement, lui, se lit dans les branches (`main..dev`) et les releases.
 
 Filtres GitHub correspondants :
 

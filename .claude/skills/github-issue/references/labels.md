@@ -29,10 +29,10 @@ Cumulables (ex. `bug` + `backend` + `admin`).
 
 | Label | Sens | Couleur |
 |---|---|---|
-| `corrigé` | Correction mergée, en attente de mise en production | `#1a7f37` |
+| `corrigé` | Correctif mergé sur `dev-{initiale}`, en attente de mise en production | `#1a7f37` |
 
-**Ne jamais poser `corrigé` à la création d'une issue.** Il est posé au **merge vers
-`dev-{initiale}`**, avec un commentaire citant les commits — voir
+**Ne jamais poser `corrigé` à la création d'une issue.** Il est posé **dès l'arrivée du
+correctif sur `dev-{initiale}`**, avec un commentaire citant les commits — voir
 [`.claude/rules/git-workflow.md`](../../../rules/git-workflow.md) § « Label `corrigé` ».
 
 Filtre associé : `is:issue is:open -label:corrigé` = ce qu'il reste à corriger.

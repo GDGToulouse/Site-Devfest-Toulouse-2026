@@ -49,8 +49,9 @@ git diff origin/main..origin/dev -- src/backend/prisma/migrations/
 
 ### Cohérence du label `corrigé`
 
-Les issues traitées portent le label `corrigé` (posé au merge vers `dev` — cf.
-[`.claude/rules/git-workflow.md`](../../rules/git-workflow.md)). Vérifier qu'aucune n'a été oubliée :
+Les issues traitées portent le label `corrigé` (posé dès l'arrivée du correctif sur
+`dev-{initiale}` — cf. [`.claude/rules/git-workflow.md`](../../rules/git-workflow.md)).
+Vérifier qu'aucune de celles qui **partent en prod** n'a été oubliée :
 
 ```bash
 # Issues ouvertes référencées par les commits promus
@@ -63,6 +64,10 @@ comm -12 /tmp/refs.txt /tmp/open.txt
 ⚠️ Un `#NN` peut être un **numéro de PR**, pas d'issue — **vérifier chaque candidat**
 (`gh issue view <NN>`) avant de conclure. Celles qui sont de vraies issues corrigées et
 qui n'ont pas le label : le poser + commenter les commits (voir la règle).
+
+> L'inverse n'est **pas** une anomalie : une issue `corrigé` absente de `main..dev` est
+> simplement restée sur une branche `dev-{initiale}` non encore promue vers `dev`. Elle
+> partira à la release suivante — ne pas la faire figurer dans les `Closes` de cette PR.
 
 ### Fenêtre de déploiement
 
