@@ -8,6 +8,9 @@ export default async function adminCacheRoutes(app: FastifyInstance) {
   }>("/cache/purge", async (request) => {
     const paths = request.body?.paths || ["/"];
     await revalidatePaths(paths);
-    return { success: true, paths };
+    // `revalidated` is what the admin UI checks, and it matches the frontend's
+    // own /api/revalidate contract. Returning `success` instead made a purge
+    // that had actually worked show up as an error (#181).
+    return { revalidated: true, paths };
   });
 }
