@@ -30,6 +30,12 @@ interface SpeakerListQuery {
   editionId?: string;
 }
 
+interface SpeakerBulkBody {
+  ids: number[];
+  action: "setStatus" | "setFeatured";
+  value: "DRAFT" | "PUBLISHED" | boolean;
+}
+
 function serialize(s: { socialLinks: string | null; [k: string]: unknown }) {
   return { ...s, socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {} };
 }
@@ -124,6 +130,33 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
     revalidateSpeakers();
     return serialize(speaker);
+  });
+
+  // POST /api/admin/speakers/bulk — apply one action to several speakers at once.
+  app.post<{ Body: SpeakerBulkBody }>("/speakers/bulk", async (request, reply) => {
+    const { ids, action, value } = request.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
+      return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+
+    let data: { publicationStatus: "DRAFT" | "PUBLISHED" } | { isFeatured: boolean };
+    if (action === "setStatus") {
+      if (value !== "DRAFT" && value !== "PUBLISHED") {
+        return reply.code(400).send({ error: "value must be DRAFT or PUBLISHED" });
+      }
+      data = { publicationStatus: value };
+    } else if (action === "setFeatured") {
+      if (typeof value !== "boolean") {
+        return reply.code(400).send({ error: "value must be a boolean" });
+      }
+      data = { isFeatured: value };
+    } else {
+      return reply.code(400).send({ error: "unknown action" });
+    }
+
+    const { count } = await prisma.speaker.updateMany({ where: { id: { in: ids } }, data });
+    revalidateSpeakers();
+    return { count };
   });
 
   // DELETE /api/admin/speakers/:id

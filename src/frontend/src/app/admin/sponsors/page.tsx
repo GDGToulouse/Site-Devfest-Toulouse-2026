@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, SponsorLevel } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
+import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
 
 interface SponsorRow extends Sponsor {
@@ -28,6 +29,7 @@ export default function SponsorsDataPage() {
   const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [level, setLevel] = useState<string>("");
   const [search, setSearch] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
   useEffect(() => {
     adminFetch<SponsorRow[]>("/sponsors").then(({ data }) => {
@@ -35,6 +37,19 @@ export default function SponsorsDataPage() {
       setIsLoading(false);
     });
   }, []);
+
+  async function applyBulk(value: "DRAFT" | "PUBLISHED") {
+    const ids = [...selectedIds];
+    const { status } = await adminFetch("/sponsors/bulk", {
+      method: "POST",
+      body: JSON.stringify({ ids, action: "setStatus", value }),
+    });
+    if (status !== 200) return;
+    setSponsors((prev) =>
+      prev.map((s) => (selectedIds.has(s.id) ? { ...s, publicationStatus: value } : s)),
+    );
+    setSelectedIds(new Set());
+  }
 
   const years = useMemo(
     () => [...new Set(sponsors.map((s) => s.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
@@ -50,6 +65,10 @@ export default function SponsorsDataPage() {
       return true;
     });
   }, [sponsors, year, level, search]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [year, level, search]);
 
   const columns = [
     { key: "name", label: "Sponsor", render: (s: SponsorRow) => <span className="font-medium text-noir">{s.name}</span> },
@@ -117,11 +136,23 @@ export default function SponsorsDataPage() {
             <span className="text-sm text-gris">{filtered.length} sponsor{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
+          {selectedIds.size > 0 && (
+            <BulkActionBar
+              count={selectedIds.size}
+              entitySingular="sponsor"
+              entityPlural="sponsors"
+              onSetStatus={applyBulk}
+              onClear={() => setSelectedIds(new Set())}
+            />
+          )}
+
           <DataTable<SponsorRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucun sponsor"
             onEdit={(s) => router.push(`/admin/sponsors/${s.id}`)}
+            selectedIds={selectedIds}
+            onSelectionChange={setSelectedIds}
           />
         </>
       )}

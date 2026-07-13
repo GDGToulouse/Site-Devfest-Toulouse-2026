@@ -1,6 +1,20 @@
 # Milestones « Lot N » — repo `GDGToulouse/Site-Devfest-Toulouse-2026`
 
-Le travail est découpé en **5 lots** = 5 milestones GitHub. **Rattacher chaque issue au bon Lot** est une convention forte de ce repo. En cas d'ambiguïté, demander à l'utilisateur.
+Le périmètre initial du site est découpé en **5 lots** = 5 milestones GitHub. Un milestone mesure **la couverture du périmètre d'un lot** — pas une version, pas le flux de maintenance.
+
+## D'abord : cette issue a-t-elle un milestone ?
+
+> **Test** : *« peut-on déclarer le Lot terminé en laissant cette issue ouverte ? »*
+>
+> - **Non** → l'issue relève du périmètre du Lot → la rattacher (tableau ci-dessous).
+>   Vaut aussi pour un **bug qui empêche la feature d'être « done »** (ex. #205, import
+>   Sessionize incomplet → reste dans le Lot 2).
+> - **Oui** → **pas de milestone**. C'est le cas des bugs et améliorations **découverts
+>   après la livraison du Lot** (ex. #197 perf LCP, #133 césure — détachés du Lot 1).
+>   Le label (`bug`, `enhancement`) suffit ; l'issue apparaîtra dans les notes de la
+>   release qui l'embarque.
+
+Ne **jamais** créer de milestone fourre-tout (`Backlog`, `v1.x`, `Maintenance`) : sans fin, la progression ne veut rien dire. Règle complète : [`.claude/rules/git-workflow.md`](../../../rules/git-workflow.md) § « Issues, milestones et versions ».
 
 Vérifier les intitulés exacts (ils peuvent évoluer) avant de poser un milestone :
 
@@ -30,4 +44,6 @@ gh api repos/GDGToulouse/Site-Devfest-Toulouse-2026/milestones --jq '.[].title'
 
 ## Note
 
-Les Lots 1, 2 et 4 ont déjà des issues livrées ; les Lots 3 et 5 sont encore vides (à décomposer le moment venu). Quand on crée la première issue d'un lot vide, c'est normal — pas besoin de demander confirmation du milestone pour autant, mais signaler que le lot démarre.
+Les 5 lots ont désormais des issues. Les Lots 1 et 2 sont largement livrés — d'où la vigilance sur le test ci-dessus : les issues qui arrivent maintenant sur leur périmètre sont le plus souvent des **bugs post-livraison**, donc **sans milestone**.
+
+Une fois un lot livré, son milestone se ferme et **ne se rouvre pas**. Ne pas y ranger de nouvelles issues pour « garder l'outil vivant ».

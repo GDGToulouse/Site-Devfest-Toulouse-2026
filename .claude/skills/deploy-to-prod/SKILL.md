@@ -47,6 +47,28 @@ git diff origin/main..origin/dev -- src/backend/prisma/migrations/
   et le signaler à l'utilisateur.
 - **Secrets** : vérifier qu'aucun secret n'est dans le diff promu (chercher `SECRET`/`KEY`/`PASSWORD`/`TOKEN`).
 
+### Cohérence du label `corrigé`
+
+Les issues traitées portent le label `corrigé` (posé dès l'arrivée du correctif sur
+`dev-{initiale}` — cf. [`.claude/rules/git-workflow.md`](../../rules/git-workflow.md)).
+Vérifier qu'aucune de celles qui **partent en prod** n'a été oubliée :
+
+```bash
+# Issues ouvertes référencées par les commits promus
+git log origin/main..origin/dev --pretty=%s | grep -oE '#[0-9]+' | tr -d '#' | sort -u > /tmp/refs.txt
+gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --state open --limit 200 \
+  --json number --jq '.[].number' | sort -u > /tmp/open.txt
+comm -12 /tmp/refs.txt /tmp/open.txt
+```
+
+⚠️ Un `#NN` peut être un **numéro de PR**, pas d'issue — **vérifier chaque candidat**
+(`gh issue view <NN>`) avant de conclure. Celles qui sont de vraies issues corrigées et
+qui n'ont pas le label : le poser + commenter les commits (voir la règle).
+
+> L'inverse n'est **pas** une anomalie : une issue `corrigé` absente de `main..dev` est
+> simplement restée sur une branche `dev-{initiale}` non encore promue vers `dev`. Elle
+> partira à la release suivante — ne pas la faire figurer dans les `Closes` de cette PR.
+
 ### Fenêtre de déploiement
 
 Rappeler à l'utilisateur : **ne pas déployer à J-1 du DevFest** ni pendant un pic
@@ -90,6 +112,27 @@ entrées de `## [Non publié]` vers une nouvelle section `## [X.Y.Z] - AAAA-MM-J
 ## Étape 3 — Promouvoir (PR dev → main)
 
 La stratégie de merge vers `main` est **squash**.
+
+### Collecter les issues à fermer
+
+`main` étant la branche par défaut, **seule** cette PR peut fermer les issues (les PR
+feature vers `dev-{initiale}` écrivent `Refs #`, qui ne ferme rien). Le squash ayant
+effacé les SHA d'origine, le bloc `Closes` de cette PR est le **seul** mécanisme fiable.
+
+```bash
+# Issues référencées par les commits promus
+git log origin/main..origin/dev --pretty=%B | grep -oE '#[0-9]+' | sort -u
+```
+
+Croiser avec les entrées du CHANGELOG (étape 2) — même périmètre. **Montrer la liste à
+l'utilisateur pour validation** (un `#123` peut être une simple mention, pas une issue
+à fermer), puis ajouter dans le body de la PR :
+
+```markdown
+## Issues fermées
+Closes #123
+Closes #145
+```
 
 ### ⚠️ Faux conflit `add/add` après squash
 
@@ -168,6 +211,15 @@ Garde-fous :
 - **Un seul tag par version**, jamais déplacé une fois poussé.
 - `--generate-notes` compile les PR mergées depuis le tag précédent.
 
+Vérifier que les `Closes` de l'étape 3 ont bien fermé les issues (le merge dans `main`
+les ferme automatiquement — si l'une est encore ouverte, le mot-clé était mal écrit) :
+
+```bash
+gh issue view <NN> --repo GDGToulouse/Site-Devfest-Toulouse-2026 --json number,state
+```
+
+Fermer à la main celles qui seraient restées ouvertes.
+
 ---
 
 ## Étape 7 — Migrer les données — **à la demande UNIQUEMENT**
@@ -201,6 +253,7 @@ Ne pas improviser. Voir [`docs/mise-en-production.md`](../../../docs/mise-en-pro
 - [ ] Diff réel `main..dev` revu, **migrations Prisma lues** (destructives repérées)
 - [ ] Bump SemVer choisi et **confirmé**
 - [ ] `APP_VERSION` + 2× `package.json` + `CHANGELOG.md` mis à jour dans la PR de promotion
+- [ ] Issues embarquées listées en `Closes #NN` dans le body de la PR de promotion (validées par l'utilisateur)
 - [ ] PR `dev → main` squashée, approuvée, mergée (faux conflit géré si besoin)
 - [ ] (si migration) **Backup DB prod** effectué avant déploiement
 - [ ] Déploiement Coolify OK, `/api/health` renvoie la **nouvelle** version

@@ -1,3 +1,4 @@
+import { fetchAndStoreImage } from "./image-store.js";
 import { prisma } from "./prisma.js";
 import { slugify, uniqueSlug } from "./slug.js";
 
@@ -118,6 +119,35 @@ export function categoryRole(c: SzCategory): "format" | "level" | "track" {
   return "track";
 }
 
+export function isLocalUpload(url: string | null | undefined): boolean {
+  return !!url && url.startsWith("/uploads/");
+}
+
+// Sessionize serves speaker pictures from its own CDN, which next/image refuses
+// to load (host not in remotePatterns) — so we pull the file into /uploads/ and
+// store a local URL instead (#205). Re-imports keep an existing local photo
+// rather than downloading it again (RG-217 idempotence). A download failure is
+// never fatal: the speaker is imported without a photo and a warning is
+// reported.
+export async function resolveSpeakerPhoto(
+  remoteUrl: string | null | undefined,
+  currentPhotoUrl: string | null,
+  speakerName: string,
+  report: ImportReport,
+): Promise<string | null> {
+  if (isLocalUpload(currentPhotoUrl)) return currentPhotoUrl;
+  if (!remoteUrl?.trim()) return null;
+
+  try {
+    return await fetchAndStoreImage(remoteUrl.trim());
+  } catch (err) {
+    report.warnings.push(
+      `Photo de ${speakerName} non importée : ${(err as Error).message}.`,
+    );
+    return null;
+  }
+}
+
 // Run the idempotent import. Speakers/talks are matched by their slug derived
 // from name/title within the edition (RG-206/RG-214); re-importing the same
 // data updates existing rows instead of duplicating them (RG-217 idempotence).
@@ -174,10 +204,11 @@ export async function importSessionize(
   // 3. Upsert speakers, keyed by slug. Track the resulting db id per Sessionize id.
   const existingSpeakers = await prisma.speaker.findMany({
     where: { editionId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, photoUrl: true },
   });
   const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
   const speakerSlugToId = new Map(existingSpeakers.map((s) => [s.slug, s.id]));
+  const photoUrlBySlug = new Map(existingSpeakers.map((s) => [s.slug, s.photoUrl]));
   const dbIdBySzSpeakerId = new Map<string, number>();
 
   for (const sz of data.speakers ?? []) {
@@ -190,6 +221,13 @@ export async function importSessionize(
     const { social, count } = buildSocialLinks(sz.links);
     report.links += count;
 
+    const photoUrl = await resolveSpeakerPhoto(
+      sz.profilePicture,
+      photoUrlBySlug.get(baseSlug) ?? null,
+      name,
+      report,
+    );
+
     const existingId = speakerSlugToId.get(baseSlug);
     if (existingId) {
       const updated = await prisma.speaker.update({
@@ -198,7 +236,7 @@ export async function importSessionize(
           name,
           company: sz.tagLine?.trim() || null,
           bioFr: sz.bio?.trim() || null,
-          photoUrl: sz.profilePicture || null,
+          photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
         },
       });
@@ -214,7 +252,7 @@ export async function importSessionize(
           name,
           company: sz.tagLine?.trim() || null,
           bioFr: sz.bio?.trim() || null,
-          photoUrl: sz.profilePicture || null,
+          photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
           publicationStatus: "DRAFT",
         },

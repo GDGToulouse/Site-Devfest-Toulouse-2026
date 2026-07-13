@@ -1,13 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   socialKeyFor,
   buildSocialLinks,
   matchEnum,
   categoryRole,
+  isLocalUpload,
   loadSessionizeData,
+  resolveSpeakerPhoto,
   FORMAT_KEYWORDS,
   LEVEL_KEYWORDS,
+  type ImportReport,
 } from "./sessionize-import.js";
+import { fetchAndStoreImage } from "./image-store.js";
+
+vi.mock("./image-store.js", () => ({ fetchAndStoreImage: vi.fn() }));
 
 describe("socialKeyFor", () => {
   it("maps by linkType", () => {
@@ -76,6 +82,90 @@ describe("categoryRole", () => {
     expect(categoryRole({ id: 1, title: "Session format", items: [] })).toBe("format");
     expect(categoryRole({ id: 2, title: "Niveau", items: [] })).toBe("level");
     expect(categoryRole({ id: 3, title: "Track", items: [] })).toBe("track");
+  });
+});
+
+describe("isLocalUpload", () => {
+  it("recognizes locally stored images only", () => {
+    expect(isLocalUpload("/uploads/123-abc.jpg")).toBe(true);
+    expect(isLocalUpload("https://sessionize.com/image/abc.jpg")).toBe(false);
+    expect(isLocalUpload(null)).toBe(false);
+    expect(isLocalUpload(undefined)).toBe(false);
+  });
+});
+
+describe("resolveSpeakerPhoto", () => {
+  const emptyReport = (): ImportReport => ({
+    speakers: { created: 0, updated: 0 },
+    talks: { created: 0, updated: 0 },
+    categories: { created: 0, reused: 0 },
+    links: 0,
+    warnings: [],
+  });
+
+  beforeEach(() => {
+    vi.mocked(fetchAndStoreImage).mockReset();
+  });
+
+  it("downloads a remote picture and returns its local URL", async () => {
+    vi.mocked(fetchAndStoreImage).mockResolvedValue("/uploads/1-a.jpg");
+    const report = emptyReport();
+
+    const url = await resolveSpeakerPhoto("https://sessionize.com/image/a.jpg", null, "Jane", report);
+
+    expect(url).toBe("/uploads/1-a.jpg");
+    expect(fetchAndStoreImage).toHaveBeenCalledWith("https://sessionize.com/image/a.jpg");
+    expect(report.warnings).toEqual([]);
+  });
+
+  it("keeps an existing local photo without re-downloading (idempotence)", async () => {
+    const report = emptyReport();
+
+    const url = await resolveSpeakerPhoto(
+      "https://sessionize.com/image/a.jpg",
+      "/uploads/existing.jpg",
+      "Jane",
+      report,
+    );
+
+    expect(url).toBe("/uploads/existing.jpg");
+    expect(fetchAndStoreImage).not.toHaveBeenCalled();
+  });
+
+  it("re-downloads when the stored photo is still a remote URL", async () => {
+    vi.mocked(fetchAndStoreImage).mockResolvedValue("/uploads/2-b.jpg");
+    const report = emptyReport();
+
+    const url = await resolveSpeakerPhoto(
+      "https://sessionize.com/image/b.jpg",
+      "https://sessionize.com/image/b.jpg",
+      "Jane",
+      report,
+    );
+
+    expect(url).toBe("/uploads/2-b.jpg");
+    expect(fetchAndStoreImage).toHaveBeenCalled();
+  });
+
+  it("returns null without calling the network when there is no picture", async () => {
+    const report = emptyReport();
+
+    expect(await resolveSpeakerPhoto(null, null, "Jane", report)).toBeNull();
+    expect(await resolveSpeakerPhoto("   ", null, "Jane", report)).toBeNull();
+    expect(fetchAndStoreImage).not.toHaveBeenCalled();
+    expect(report.warnings).toEqual([]);
+  });
+
+  it("warns and keeps importing when the download fails", async () => {
+    vi.mocked(fetchAndStoreImage).mockRejectedValue(new Error("HTTP 404"));
+    const report = emptyReport();
+
+    const url = await resolveSpeakerPhoto("https://sessionize.com/image/gone.jpg", null, "Jane", report);
+
+    expect(url).toBeNull();
+    expect(report.warnings).toHaveLength(1);
+    expect(report.warnings[0]).toContain("Jane");
+    expect(report.warnings[0]).toContain("HTTP 404");
   });
 });
 
