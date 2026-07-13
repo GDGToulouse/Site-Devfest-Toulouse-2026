@@ -186,6 +186,7 @@ function ContactsTab({
   const [form, setForm] = useState({
     contact_default_email: settings.contact_default_email || "",
     contact_webhook_url: settings.contact_webhook_url || "",
+    alert_webhook_url: settings.alert_webhook_url || "",
     social_linkedin: settings.social_linkedin || "",
     social_youtube: settings.social_youtube || "",
     social_x: settings.social_x || "",
@@ -194,6 +195,7 @@ function ContactsTab({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
+  const [alertTestResult, setAlertTestResult] = useState<string | null>(null);
 
   function handleChange(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -266,6 +268,53 @@ function ContactsTab({
           {webhookTestResult && (
             <p className={`mt-1 text-xs ${webhookTestResult.startsWith("Envoyé") ? "text-malachite" : "text-terre-cuite"}`}>
               {webhookTestResult}
+            </p>
+          )}
+        </div>
+
+        <h2 className="text-lg font-bold text-noir mb-4">Monitoring</h2>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-noir mb-1">
+            URL webhook d&apos;alerte (erreurs serveur)
+          </label>
+          <input
+            type="url"
+            value={form.alert_webhook_url}
+            onChange={(e) => handleChange("alert_webhook_url", e.target.value)}
+            placeholder="https://hooks.slack.com/services/..."
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            URL appelée en POST à chaque erreur serveur (5xx). Une même erreur n&apos;est notifiée
+            qu&apos;une fois toutes les 5 minutes. Laissez vide pour désactiver.
+          </p>
+          {form.alert_webhook_url && (
+            <button
+              type="button"
+              onClick={async () => {
+                setAlertTestResult(null);
+                const { adminFetch } = await import("@/lib/admin-api");
+                const { data } = await adminFetch<{ status: string; error?: string }>(
+                  "/settings/test-alert-webhook",
+                  { method: "POST", body: JSON.stringify({ url: form.alert_webhook_url }) },
+                );
+                if (data) {
+                  setAlertTestResult(
+                    data.status === "success" ? "Envoyé" : `Échec : ${data.error?.slice(0, 100)}`,
+                  );
+                } else {
+                  setAlertTestResult("Erreur");
+                }
+                setTimeout(() => setAlertTestResult(null), 8000);
+              }}
+              className="mt-2 px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              Tester l&apos;alerte
+            </button>
+          )}
+          {alertTestResult && (
+            <p className={`mt-1 text-xs ${alertTestResult === "Envoyé" ? "text-malachite" : "text-terre-cuite"}`}>
+              {alertTestResult}
             </p>
           )}
         </div>
