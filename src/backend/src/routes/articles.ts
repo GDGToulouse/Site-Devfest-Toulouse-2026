@@ -53,17 +53,23 @@ export default async function articleRoutes(app: FastifyInstance) {
     return articles.map(mapArticleSummary);
   });
 
-  // GET /api/articles?page=1&limit=9&tag=slug — paginated list of published articles
+  // GET /api/articles?page=1&limit=9&tag=slug&editionId=2 — paginated list of
+  // published articles. `editionId` filters strictly on articles attached to
+  // that edition — unlike /articles/latest, which also pulls in the ones with
+  // no edition at all. A page titled "articles of the 2025 edition" should not
+  // show articles that belong to no edition (#178).
   app.get<{
-    Querystring: { page?: string; limit?: string; tag?: string };
+    Querystring: { page?: string; limit?: string; tag?: string; editionId?: string };
   }>("/articles", async (request) => {
     const page = Math.max(Number(request.query.page) || 1, 1);
     const limit = Math.min(Number(request.query.limit) || 12, 50);
     const tagSlug = request.query.tag;
+    const editionId = Number(request.query.editionId) || undefined;
 
     const where = {
       publicationStatus: "PUBLISHED" as const,
       ...(tagSlug ? { tags: { some: { slug: tagSlug } } } : {}),
+      ...(editionId ? { editions: { some: { id: editionId } } } : {}),
     };
 
     const [articles, total] = await Promise.all([

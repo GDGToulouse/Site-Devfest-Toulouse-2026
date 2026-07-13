@@ -69,9 +69,11 @@ export async function getArticles(
   page = 1,
   limit = 12,
   tag?: string,
+  editionId?: number,
 ): Promise<PaginatedArticles> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (tag) params.set("tag", tag);
+  if (editionId) params.set("editionId", String(editionId));
   return (
     (await fetchAPI<PaginatedArticles>(`/api/articles?${params}`)) || {
       articles: [],
