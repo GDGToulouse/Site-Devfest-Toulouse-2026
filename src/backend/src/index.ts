@@ -133,6 +133,12 @@ await app.register(fastifyStatic, {
   root: "/app/uploads",
   prefix: "/uploads/",
   decorateReply: false,
+  // Uploaded files are content-addressed by name (`${Date.now()}-${random}.ext`,
+  // see routes/admin/files.ts): a given URL never changes content, so it can be
+  // cached hard and forever. Without this, a 3 MB hero image was re-downloaded
+  // on every visit (#197).
+  maxAge: "365d",
+  immutable: true,
 });
 
 // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
