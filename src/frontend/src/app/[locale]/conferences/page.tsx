@@ -39,7 +39,7 @@ export default async function ConferencesPage() {
 
   return (
     <div className="px-6 py-8 lg:py-12">
-      <div className="mx-auto max-w-4xl">
+      <div className="mx-auto max-w-6xl">
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-[64px] lg:leading-[120%] font-bold text-noir">
