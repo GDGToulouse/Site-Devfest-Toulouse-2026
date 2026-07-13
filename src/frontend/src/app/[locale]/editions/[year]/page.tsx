@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getEditionByYear, getEditions, getEditionSpeakers, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { absoluteUrl } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
@@ -56,12 +57,10 @@ function buildCompletedEventJsonLd(edition: BilanEdition) {
       name: "GDG Toulouse",
       url: "https://gdg.community.dev/gdg-toulouse/",
     },
-    superEvent: {
-      "@type": "Event",
-      name: "DevFest",
-      url: "https://developers.google.com/community/devfest",
-    },
-    ...(edition.heroImageUrl ? { image: edition.heroImageUrl } : {}),
+    // No `superEvent` — see the home page for why it produced invalid
+    // structured data (#185).
+    // Schema.org wants absolute URLs; heroImageUrl is stored as /uploads/….
+    ...(edition.heroImageUrl ? { image: absoluteUrl(edition.heroImageUrl) } : {}),
     ...(edition.aftermovieUrl ? { video: edition.aftermovieUrl } : {}),
   };
 }
@@ -274,6 +273,17 @@ export default async function BilanPage({ params }: PageProps) {
                     </div>
                   </Link>
                 ))}
+              </div>
+
+              {/* The grid above is a preview capped at 4 articles server-side.
+                  Without this link the other ones were simply unreachable (#178). */}
+              <div className="mt-8 text-center">
+                <Link
+                  href={`/actualites?edition=${edition.year}`}
+                  className="inline-block rounded-[12px] border-2 border-bleu px-6 py-3 text-base font-bold text-bleu transition-colors hover:bg-bleu hover:text-blanc"
+                >
+                  {t("allNews")}
+                </Link>
               </div>
             </section>
           )}

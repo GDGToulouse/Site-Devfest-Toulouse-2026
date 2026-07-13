@@ -74,6 +74,7 @@ export interface TicketTier {
   status: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
   externalUrl: string | null;
   sortOrder: number;
+  saleStartDate: string | null;
 }
 
 export interface KeyFigure {

@@ -13,6 +13,9 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Unset by default: no analytics in local dev. Set it to exercise
+      # Plausible and the Core Web Vitals reporting (#118).
+      - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     command: sh -c "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm install --config.confirmModulesPurge=false && pnpm dev"
     depends_on:
       - backend
@@ -47,6 +50,7 @@ services:
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
     command: >
       sh -c "
         corepack enable &&
