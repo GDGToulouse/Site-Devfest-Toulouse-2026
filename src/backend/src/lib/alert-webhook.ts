@@ -31,11 +31,24 @@ function truncate(text: string): string {
   return text.length > ERROR_MAX_LEN ? `${text.slice(0, ERROR_MAX_LEN)}…` : text;
 }
 
+// The env var wins over the stored setting on purpose: reading SiteSetting
+// needs the database, so a database outage — the incident we most want to hear
+// about — would silence the alert. ALERT_WEBHOOK_URL keeps alerting alive when
+// nothing else works; the admin-configurable setting stays the convenient path
+// for everything else.
 async function getAlertWebhookUrl(): Promise<string | undefined> {
-  const setting = await prisma.siteSetting.findUnique({
-    where: { key: "alert_webhook_url" },
-  });
-  return setting?.value || undefined;
+  const fromEnv = process.env.ALERT_WEBHOOK_URL?.trim();
+  if (fromEnv) return fromEnv;
+
+  try {
+    const setting = await prisma.siteSetting.findUnique({
+      where: { key: "alert_webhook_url" },
+    });
+    return setting?.value || undefined;
+  } catch {
+    // Database unreachable — nothing more we can do without the env var.
+    return undefined;
+  }
 }
 
 // True when this signature was already alerted within the throttle window.

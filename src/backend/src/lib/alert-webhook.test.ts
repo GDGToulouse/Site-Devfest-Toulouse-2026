@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
 
 import { buildAlertPayload, isThrottled, resetThrottle, sendAlert } from "./alert-webhook.js";
+import { prisma } from "./prisma.js";
 
 vi.mock("./prisma.js", () => ({
   prisma: { siteSetting: { findUnique: vi.fn().mockResolvedValue(null) } },
@@ -64,10 +65,13 @@ describe("isThrottled", () => {
 describe("sendAlert", () => {
   beforeEach(() => {
     resetThrottle();
-    vi.restoreAllMocks();
+    vi.mocked(prisma.siteSetting.findUnique).mockReset().mockResolvedValue(null);
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  });
 
   const payload = () =>
     buildAlertPayload({ method: "GET", route: "/api/x", statusCode: 500, error: new Error("boom") });
@@ -116,5 +120,44 @@ describe("sendAlert", () => {
 
     expect(first.status).toBe("success");
     expect(second.status).toBe("success");
+  });
+
+  it("throttles a repeated error, but lets a different one through", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    vi.stubEnv("ALERT_WEBHOOK_URL", "https://hooks.example.com/x");
+
+    const same = () =>
+      buildAlertPayload({ method: "GET", route: "/api/a", statusCode: 500, error: new Error("boom") });
+    const other = buildAlertPayload({
+      method: "GET",
+      route: "/api/b",
+      statusCode: 500,
+      error: new Error("different"),
+    });
+
+    expect((await sendAlert(same())).status).toBe("success");
+    expect((await sendAlert(same())).status).toBe("throttled");
+    expect((await sendAlert(other)).status).toBe("success");
+  });
+
+  // Regression: reading the URL from SiteSetting needs the database, so a
+  // database outage used to silence the very alert we needed most.
+  it("still alerts from the env var when the database is unreachable", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    vi.stubEnv("ALERT_WEBHOOK_URL", "https://hooks.example.com/x");
+    vi.mocked(prisma.siteSetting.findUnique).mockRejectedValue(new Error("db down"));
+
+    const result = await sendAlert(payload());
+
+    expect(result.status).toBe("success");
+  });
+
+  it("skips (without throwing) when the database is down and no env var is set", async () => {
+    vi.stubEnv("ALERT_WEBHOOK_URL", "");
+    vi.mocked(prisma.siteSetting.findUnique).mockRejectedValue(new Error("db down"));
+
+    const result = await sendAlert(payload());
+
+    expect(result.status).toBe("skipped");
   });
 });
