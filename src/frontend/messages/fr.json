@@ -201,7 +201,8 @@
     "nextEdition": "Édition suivante",
     "speakers": "Speakers ({count})",
     "sessions": "Conférences ({count})",
-    "replay": "Revoir"
+    "replay": "Revoir",
+    "allNews": "Voir toutes les actualités"
   },
   "editionsList": {
     "home": "Accueil",

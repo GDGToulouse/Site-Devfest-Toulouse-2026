@@ -274,6 +274,17 @@ export default async function BilanPage({ params }: PageProps) {
                   </Link>
                 ))}
               </div>
+
+              {/* The grid above is a preview capped at 4 articles server-side.
+                  Without this link the other ones were simply unreachable (#178). */}
+              <div className="mt-8 text-center">
+                <Link
+                  href={`/actualites?edition=${edition.year}`}
+                  className="inline-block rounded-[12px] border-2 border-bleu px-6 py-3 text-base font-bold text-bleu transition-colors hover:bg-bleu hover:text-blanc"
+                >
+                  {t("allNews")}
+                </Link>
+              </div>
             </section>
           )}
 

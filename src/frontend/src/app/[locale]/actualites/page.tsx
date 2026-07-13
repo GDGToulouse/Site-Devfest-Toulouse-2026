@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getArticles } from "@/lib/api";
+import { getArticles, getEditions } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ArticleCard from "@/components/ArticleCard";
 import Pagination from "@/components/Pagination";
@@ -22,16 +22,26 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ArticlesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; edition?: string }>;
 }) {
   const locale = await getLocale();
   const t = await getTranslations("articles");
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, edition: editionParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
+
+  // ?edition=2025 filters the list down to that edition's articles (#178). The
+  // year is what the URL carries — it is readable and stable — so it has to be
+  // resolved to the edition id the API expects. An unknown year yields no
+  // filter rather than an empty page.
+  const editionYear = Number(editionParam) || null;
+  const editions = editionYear ? await getEditions() : [];
+  const edition = editionYear ? editions.find((e) => e.year === editionYear) ?? null : null;
 
   // 12 = 3 full rows of the 4-column grid (see grid-cols-4 below); 9 left a
   // trailing row of one item with three empty slots (#165).
-  const { articles, totalPages } = await getArticles(page, 12);
+  const { articles, totalPages } = await getArticles(page, 12, undefined, edition?.id);
+
+  const heading = edition ? `${t("title")} — DevFest Toulouse ${edition.year}` : t("title");
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -44,7 +54,7 @@ export default async function ArticlesPage({
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">
-          {t("title")}
+          {heading}
         </h1>
 
         {articles.length === 0 ? (
@@ -61,6 +71,9 @@ export default async function ArticlesPage({
               currentPage={page}
               totalPages={totalPages}
               basePath="/actualites"
+              // Carry the edition filter across pages, otherwise page 2 would
+              // silently drop back to every article.
+              queryParams={edition ? { edition: String(edition.year) } : {}}
             />
           </>
         )}
