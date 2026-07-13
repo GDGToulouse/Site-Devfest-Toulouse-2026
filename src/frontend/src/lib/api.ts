@@ -119,8 +119,11 @@ export async function getSocialLinks(): Promise<SocialLinks> {
   return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
 }
 
+// Short TTL: the OG image is read both by the layout (twitter:image) and by the
+// opengraph-image route (#183). With the default 1h TTL, changing it in the
+// admin left the old image in the social previews for up to an hour.
 export async function getSeoSettings(): Promise<Record<string, string>> {
-  return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+  return (await fetchAPI<Record<string, string>>("/api/settings/seo", 60)) || {};
 }
 
 // Brand identity (logo variants + favicons). Layout uses these to wire the

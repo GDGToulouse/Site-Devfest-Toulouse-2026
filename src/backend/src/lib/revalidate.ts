@@ -35,7 +35,13 @@ function bilingualPaths(template: string): string[] {
 }
 
 export function revalidateHome(): Promise<void> {
-  return revalidatePaths(bilingualPaths(""));
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    // The social preview image is a route of its own: without purging it, an
+    // og:image changed in the admin would keep serving the previous one until
+    // its cache expired (#183).
+    ...bilingualPaths("/opengraph-image"),
+  ]);
 }
 
 export function revalidateArticle(slug: string): Promise<void> {
