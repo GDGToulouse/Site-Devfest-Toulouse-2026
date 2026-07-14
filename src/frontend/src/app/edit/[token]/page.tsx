@@ -10,6 +10,30 @@ interface EditData {
 
 type SocialLinks = Record<string, string>;
 
+// The API tells us *why* a link is unusable (locked / frozen / expired); an
+// expired link is worth its own message since the fix is "ask for a new one",
+// not "editing is over". Falls back on the status code if the body is unusable.
+const ERROR_MESSAGES: Record<string, string> = {
+  invalid: "Ce lien de modification est invalide ou a été révoqué.",
+  expired:
+    "Ce lien a expiré. Demandez-nous un nouveau lien de modification, nous vous en enverrons un aussitôt.",
+  frozen:
+    "Les modifications sont clôturées à l'approche de l'événement. Contactez l'organisation si un changement est indispensable.",
+  locked: "Les modifications de votre fiche ont été suspendues. Contactez l'organisation.",
+  blocked: "Les modifications sont actuellement clôturées. Contactez l'organisation si nécessaire.",
+};
+
+async function readErrorKind(res: Response): Promise<string> {
+  if (res.status === 404) return "invalid";
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (body.error && body.error in ERROR_MESSAGES) return body.error;
+  } catch {
+    // Non-JSON error body — fall through to the generic message.
+  }
+  return "blocked";
+}
+
 export default function EditByTokenPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
 
@@ -20,13 +44,14 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
   const [social, setSocial] = useState<SocialLinks>({});
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetch(`/api/edit/${token}`, { cache: "no-store" });
         if (!res.ok) {
-          setErrorKind(res.status === 404 ? "invalid" : "blocked");
+          setErrorKind(await readErrorKind(res));
           setState("error");
           return;
         }
@@ -52,6 +77,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
   async function save() {
     setSaving(true);
     setSaved(false);
+    setSaveError("");
     const body: Record<string, unknown> = { ...form, socialLinks: social };
     const res = await fetch(`/api/edit/${token}`, {
       method: "PUT",
@@ -59,11 +85,24 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
       body: JSON.stringify(body),
     });
     setSaving(false);
-    if (res.ok) setSaved(true);
-    else {
-      setErrorKind(res.status === 404 ? "invalid" : "blocked");
-      setState("error");
+
+    if (res.ok) {
+      setSaved(true);
+      return;
     }
+
+    // A rejected value (bad URL, too long) must not wipe the form the user just
+    // filled in — report it in place and let them fix it. Only a link that has
+    // become unusable sends them to the error page.
+    if (res.status === 400) {
+      setSaveError(
+        "Une valeur est invalide : les liens doivent commencer par http:// ou https://, et les textes rester sous 5 000 caractères.",
+      );
+      return;
+    }
+
+    setErrorKind(await readErrorKind(res));
+    setState("error");
   }
 
   if (state === "loading") {
@@ -74,11 +113,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
     return (
       <main className="mx-auto max-w-2xl px-6 py-16 text-center">
         <h1 className="text-2xl font-bold text-noir">Lien indisponible</h1>
-        <p className="mt-4 text-gris">
-          {errorKind === "invalid"
-            ? "Ce lien de modification est invalide ou a été révoqué."
-            : "Les modifications sont actuellement clôturées. Contactez l'organisation si nécessaire."}
-        </p>
+        <p className="mt-4 text-gris">{ERROR_MESSAGES[errorKind] ?? ERROR_MESSAGES.blocked}</p>
         <a href="mailto:contact@devfesttoulouse.fr" className="mt-6 inline-block font-bold text-bleu hover:underline">
           contact@devfesttoulouse.fr
         </a>
@@ -137,6 +172,11 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           </button>
           {saved && <span className="text-malachite font-medium">Enregistré ! Les modifications seront visibles sous peu.</span>}
         </div>
+        {saveError && (
+          <p role="alert" className="text-terre-cuite font-medium">
+            {saveError}
+          </p>
+        )}
       </div>
     </main>
   );

@@ -1,5 +1,41 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeRichHtml } from "./sanitize.js";
+import { sanitizeRichHtml, isSafeUrl } from "./sanitize.js";
+
+describe("isSafeUrl", () => {
+  it("should accept http and https URLs", () => {
+    expect(isSafeUrl("https://example.com/logo.png")).toBe(true);
+    expect(isSafeUrl("http://example.com")).toBe(true);
+  });
+
+  it("should accept a site-relative path (our own uploads)", () => {
+    expect(isSafeUrl("/uploads/1784015461017-682e094d.png")).toBe(true);
+  });
+
+  // The whole point of the allowlist (#223): these end up in a public href.
+  it("should reject a javascript: URL", () => {
+    expect(isSafeUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeUrl("JavaScript:alert(1)")).toBe(false);
+  });
+
+  it("should reject data: and other executable schemes", () => {
+    expect(isSafeUrl("data:text/html;base64,PHNjcmlwdD4=")).toBe(false);
+    expect(isSafeUrl("vbscript:msgbox(1)")).toBe(false);
+    expect(isSafeUrl("file:///etc/passwd")).toBe(false);
+  });
+
+  it("should reject a protocol-relative URL (it bypasses the scheme check)", () => {
+    expect(isSafeUrl("//evil.example.com/x.png")).toBe(false);
+  });
+
+  it("should reject a schemeless value rather than coercing it", () => {
+    expect(isSafeUrl("www.example.com")).toBe(false);
+  });
+
+  it("should reject empty or blank input", () => {
+    expect(isSafeUrl("")).toBe(false);
+    expect(isSafeUrl("   ")).toBe(false);
+  });
+});
 
 describe("sanitizeRichHtml", () => {
   it("keeps allowed formatting", () => {

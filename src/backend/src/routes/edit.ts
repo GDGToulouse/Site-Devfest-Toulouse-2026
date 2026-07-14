@@ -1,7 +1,81 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { isEditingFrozen } from "../lib/edit-token.js";
+import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
+import { isSafeUrl } from "../lib/sanitize.js";
 import { revalidateSpeakers, revalidateSponsors } from "../lib/revalidate.js";
+
+// This is the only unauthenticated endpoint that writes to the database and
+// whose content is rendered on public pages, so everything below is an
+// allowlist: known fields, bounded lengths, http(s) URLs only (#223).
+const TEXT_MAX = 5_000;
+const SHORT_MAX = 200;
+const URL_MAX = 2_048;
+
+const SOCIAL_KEYS = ["linkedin", "twitter", "github", "website"] as const;
+
+const socialLinksSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: Object.fromEntries(
+    SOCIAL_KEYS.map((k) => [k, { type: "string", maxLength: URL_MAX }]),
+  ),
+};
+
+const speakerBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    bioFr: { type: "string", maxLength: TEXT_MAX },
+    bioEn: { type: "string", maxLength: TEXT_MAX },
+    company: { type: "string", maxLength: SHORT_MAX },
+    city: { type: "string", maxLength: SHORT_MAX },
+    photoUrl: { type: "string", maxLength: URL_MAX },
+    socialLinks: socialLinksSchema,
+  },
+};
+
+const sponsorBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    descriptionFr: { type: "string", maxLength: TEXT_MAX },
+    descriptionEn: { type: "string", maxLength: TEXT_MAX },
+    websiteUrl: { type: "string", maxLength: URL_MAX },
+    logoUrl: { type: "string", maxLength: URL_MAX },
+    socialLinks: socialLinksSchema,
+  },
+};
+
+// The token resolves to either kind, so the body schema can't be picked by
+// Fastify upfront — accept the union and validate the URL fields by hand.
+const editBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: { ...speakerBodySchema.properties, ...sponsorBodySchema.properties },
+};
+
+// An empty string clears the field; anything else must be a safe URL. Returns
+// the offending field name, or null when every URL is acceptable.
+function findUnsafeUrl(body: Record<string, unknown>): string | null {
+  for (const field of ["photoUrl", "logoUrl", "websiteUrl"]) {
+    const value = body[field];
+    if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
+  }
+  const social = body.socialLinks;
+  if (social && typeof social === "object") {
+    for (const [key, value] of Object.entries(social as Record<string, unknown>)) {
+      if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return `socialLinks.${key}`;
+    }
+  }
+  return null;
+}
+
+// Drop empty social entries so clearing a field doesn't persist "".
+function cleanSocial(social: Record<string, string> | undefined): string | null {
+  if (!social) return null;
+  const kept = Object.entries(social).filter(([, v]) => typeof v === "string" && v.trim());
+  return kept.length ? JSON.stringify(Object.fromEntries(kept)) : null;
+}
 
 // Resolve a modification token to either a speaker or a sponsor. Returns null
 // if no entity carries this token.
@@ -31,6 +105,20 @@ function parseSocial(raw: string | null): Record<string, string> {
   }
 }
 
+// Locked (RG-245), frozen 48h before the event (RG-246) or expired (#223).
+// Same gate on read and on write — a link one cannot save through must not
+// present an editable form either.
+function editingBlockedReason(entity: {
+  editLinkLocked: boolean;
+  editTokenSentAt: Date | null;
+  edition: { startDate: Date | null };
+}): "locked" | "frozen" | "expired" | null {
+  if (entity.editLinkLocked) return "locked";
+  if (isEditingFrozen(entity.edition.startDate)) return "frozen";
+  if (isEditTokenExpired(entity.editTokenSentAt)) return "expired";
+  return null;
+}
+
 interface SpeakerEditBody {
   bioFr?: string;
   bioEn?: string;
@@ -50,6 +138,7 @@ interface SponsorEditBody {
 export default async function editRoutes(app: FastifyInstance) {
   // GET /api/edit/:token — load the editable fields of the entity behind the token.
   app.get<{ Params: { token: string } }>("/edit/:token", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
     schema: { params: { type: "object", required: ["token"], properties: { token: { type: "string" } } } },
   }, async (request, reply) => {
     const resolved = await resolveToken(request.params.token);
@@ -57,9 +146,8 @@ export default async function editRoutes(app: FastifyInstance) {
     if (!resolved) return reply.code(404).send({ error: "invalid_token" });
 
     const { kind, entity } = resolved;
-    // Locked (RG-245) or frozen 48h before the event (RG-246) -> 403 with reason.
-    if (entity.editLinkLocked) return reply.code(403).send({ error: "locked" });
-    if (isEditingFrozen(entity.edition.startDate)) return reply.code(403).send({ error: "frozen" });
+    const blocked = editingBlockedReason(entity);
+    if (blocked) return reply.code(403).send({ error: blocked });
 
     if (kind === "speaker") {
       return {
@@ -91,17 +179,29 @@ export default async function editRoutes(app: FastifyInstance) {
   // PUT /api/edit/:token — save the editable fields. Name, sessions, level and
   // publication status are NOT editable here (RG-247).
   app.put<{ Params: { token: string }; Body: SpeakerEditBody | SponsorEditBody }>("/edit/:token", {
-    schema: { params: { type: "object", required: ["token"], properties: { token: { type: "string" } } } },
+    config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+    schema: {
+      params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
+      body: editBodySchema,
+    },
   }, async (request, reply) => {
     const resolved = await resolveToken(request.params.token);
     if (!resolved) return reply.code(404).send({ error: "invalid_token" });
 
     const { kind, entity } = resolved;
-    if (entity.editLinkLocked) return reply.code(403).send({ error: "locked" });
-    if (isEditingFrozen(entity.edition.startDate)) return reply.code(403).send({ error: "frozen" });
+    const blocked = editingBlockedReason(entity);
+    if (blocked) return reply.code(403).send({ error: blocked });
+
+    // The schema bounds the shape; scheme allowlisting is what stops a
+    // `javascript:` URL from reaching a public href.
+    const unsafeField = findUnsafeUrl(request.body as Record<string, unknown>);
+    if (unsafeField) {
+      return reply.code(400).send({ error: "invalid_url", field: unsafeField });
+    }
 
     if (kind === "speaker") {
       const body = request.body as SpeakerEditBody;
+      // A field absent from the body is left untouched; an empty string clears it.
       await prisma.speaker.update({
         where: { id: entity.id },
         data: {
@@ -110,9 +210,7 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.company !== undefined && { company: body.company || null }),
           ...(body.city !== undefined && { city: body.city || null }),
           ...(body.photoUrl !== undefined && { photoUrl: body.photoUrl || null }),
-          ...(body.socialLinks !== undefined && {
-            socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
-          }),
+          ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
         },
       });
       revalidateSpeakers();
@@ -125,9 +223,7 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn || null }),
           ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
           ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
-          ...(body.socialLinks !== undefined && {
-            socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
-          }),
+          ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
         },
       });
       revalidateSponsors();
