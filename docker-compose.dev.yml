@@ -35,7 +35,13 @@ services:
       context: .
       dockerfile: src/backend/Dockerfile
       args:
-        - SEED_SCRIPT=prisma/seed-dev.ts
+        # seed-dev.ts wipes speakers/sponsors/categories before reseeding, so it
+        # must only run where the data is disposable. That is true of dev-j (a
+        # scratch environment) but NOT of beta, where real sponsors are entered
+        # by hand — a redeploy used to erase them.
+        # Beta therefore sets SEED_SCRIPT=prisma/seed.ts (idempotent, additive)
+        # in its Coolify build args; the default below keeps dev-j disposable.
+        - SEED_SCRIPT=${SEED_SCRIPT:-prisma/seed-dev.ts}
     volumes:
       - uploads:/app/uploads
     environment:
