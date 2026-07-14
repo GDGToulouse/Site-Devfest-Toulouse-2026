@@ -47,12 +47,33 @@ const sponsorBodySchema = {
 };
 
 // The token resolves to either kind, so the body schema can't be picked by
-// Fastify upfront — accept the union and validate the URL fields by hand.
+// Fastify upfront — accept the union and validate the rest by hand.
 const editBodySchema = {
   type: "object",
   additionalProperties: false,
   properties: { ...speakerBodySchema.properties, ...sponsorBodySchema.properties },
 };
+
+const ALLOWED_FIELDS = Object.keys(editBodySchema.properties);
+
+// Fastify's Ajv runs with `removeAdditional: true`, so `additionalProperties:
+// false` silently STRIPS an unknown key instead of rejecting it: a PUT carrying
+// `name` or `publicationStatus` answered 200 while quietly ignoring them.
+// Telling a caller "saved" after discarding half their payload is worse than
+// refusing it, so unknown keys are rejected explicitly — in a preValidation
+// hook, which sees the body *before* Ajv prunes it (#223).
+function findForbiddenKey(body: Record<string, unknown>): string | null {
+  for (const key of Object.keys(body)) {
+    if (!ALLOWED_FIELDS.includes(key)) return key;
+  }
+  const social = body.socialLinks;
+  if (social && typeof social === "object") {
+    for (const key of Object.keys(social as Record<string, unknown>)) {
+      if (!(SOCIAL_KEYS as readonly string[]).includes(key)) return `socialLinks.${key}`;
+    }
+  }
+  return null;
+}
 
 // An empty string clears the field; anything else must be a safe URL. Returns
 // the offending field name, or null when every URL is acceptable.
@@ -183,6 +204,15 @@ export default async function editRoutes(app: FastifyInstance) {
     schema: {
       params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
       body: editBodySchema,
+    },
+    // Runs before Ajv, so the body still carries any unknown key the caller sent.
+    preValidation: async (request, reply) => {
+      const body = request.body;
+      if (!body || typeof body !== "object") return;
+      const forbidden = findForbiddenKey(body as Record<string, unknown>);
+      if (forbidden) {
+        return reply.code(400).send({ error: "forbidden_field", field: forbidden });
+      }
     },
   }, async (request, reply) => {
     const resolved = await resolveToken(request.params.token);
