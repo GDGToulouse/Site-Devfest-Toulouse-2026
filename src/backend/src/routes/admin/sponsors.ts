@@ -188,18 +188,21 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const email = request.body.email?.trim() || sponsor.contactEmail;
     if (!email) return reply.code(400).send({ error: "No contact email provided" });
 
+    // Send first, persist second (#223): rotating the token before a failed
+    // send would break the link the sponsor already has, and hand them nothing
+    // in return. On SMTP failure the previous link stays valid.
     const token = generateEditToken();
-    await prisma.sponsor.update({
-      where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
-    });
-
     try {
       await sendEditLinkEmail({ to: email, name: sponsor.name, token, kind: "sponsor" });
     } catch (err) {
       request.log.error({ err }, "Failed to send sponsor edit link email");
       return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
     }
+
+    await prisma.sponsor.update({
+      where: { id },
+      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+    });
     return { sent: true, email };
   });
 

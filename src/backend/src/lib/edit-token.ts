@@ -16,3 +16,15 @@ export function isEditingFrozen(editionStartDate: Date | null, now: Date = new D
   if (!editionStartDate) return false;
   return now.getTime() >= editionStartDate.getTime() - FREEZE_WINDOW_MS;
 }
+
+// A modification link is a bearer secret sitting in someone's mailbox: it must
+// not stay valid forever. It expires 30 days after being sent (#223); the admin
+// can always send a fresh one. A token with no send date predates this rule —
+// treat it as valid rather than locking out speakers retroactively.
+export const EDIT_TOKEN_TTL_DAYS = 30;
+const EDIT_TOKEN_TTL_MS = EDIT_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+export function isEditTokenExpired(sentAt: Date | null, now: Date = new Date()): boolean {
+  if (!sentAt) return false;
+  return now.getTime() - sentAt.getTime() > EDIT_TOKEN_TTL_MS;
+}
