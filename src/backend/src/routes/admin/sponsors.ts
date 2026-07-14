@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail } from "../../lib/edit-link-email.js";
+import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 
 const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
 type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
@@ -18,6 +18,7 @@ interface SponsorCreateBody {
   descriptionEn?: string;
   socialLinks?: Record<string, string>;
   contactEmail?: string;
+  locale?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
 }
 
@@ -105,6 +106,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         descriptionEn: body.descriptionEn || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
+        locale: normalizeLocale(body.locale),
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
       },
     });
@@ -139,6 +141,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
+        ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
       },
     });
@@ -193,7 +196,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     // in return. On SMTP failure the previous link stays valid.
     const token = generateEditToken();
     try {
-      await sendEditLinkEmail({ to: email, name: sponsor.name, token, kind: "sponsor" });
+      await sendEditLinkEmail({
+        to: email,
+        name: sponsor.name,
+        token,
+        kind: "sponsor",
+        locale: sponsor.locale,
+      });
     } catch (err) {
       request.log.error({ err }, "Failed to send sponsor edit link email");
       return reply.code(502).send({ error: "Email sending failed", detail: "retry" });

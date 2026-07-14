@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
+import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import { revalidateSpeakers, revalidateSponsors } from "../lib/revalidate.js";
 
@@ -167,12 +168,16 @@ export default async function editRoutes(app: FastifyInstance) {
     if (!resolved) return reply.code(404).send({ error: "invalid_token" });
 
     const { kind, entity } = resolved;
+    const locale = normalizeLocale(entity.locale);
+    // The locale rides along even on a refusal (#224): a blocked link must
+    // explain itself in the recipient's language, not in French by default.
     const blocked = editingBlockedReason(entity);
-    if (blocked) return reply.code(403).send({ error: blocked });
+    if (blocked) return reply.code(403).send({ error: blocked, locale });
 
     if (kind === "speaker") {
       return {
         kind,
+        locale,
         name: entity.name,
         fields: {
           bioFr: entity.bioFr,
@@ -186,6 +191,7 @@ export default async function editRoutes(app: FastifyInstance) {
     }
     return {
       kind,
+      locale,
       name: entity.name,
       fields: {
         descriptionFr: entity.descriptionFr,

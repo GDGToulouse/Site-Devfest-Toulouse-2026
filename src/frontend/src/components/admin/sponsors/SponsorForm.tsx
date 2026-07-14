@@ -22,6 +22,7 @@ export interface SponsorFormValue {
   descriptionEn: string;
   linkedin: string;
   twitter: string;
+  locale: "fr" | "en";
   publicationStatus: "DRAFT" | "PUBLISHED";
 }
 
@@ -34,6 +35,7 @@ export const emptySponsorForm: SponsorFormValue = {
   descriptionEn: "",
   linkedin: "",
   twitter: "",
+  locale: "fr",
   publicationStatus: "DRAFT",
 };
 
@@ -117,6 +119,21 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
           <input type="url" value={value.twitter} onChange={(e) => onChange({ ...value, twitter: e.target.value })} className={inputClass} />
         </label>
       </div>
+
+      <label className="block max-w-xs">
+        <span className="block text-sm font-medium text-noir mb-1">Langue de contact</span>
+        <select
+          value={value.locale}
+          onChange={(e) => onChange({ ...value, locale: e.target.value as "fr" | "en" })}
+          className={inputClass}
+        >
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+        <span className="block text-xs text-gris mt-1">
+          Langue des emails envoyés à ce sponsor et de sa page de modification.
+        </span>
+      </label>
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input

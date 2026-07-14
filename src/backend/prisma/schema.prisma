@@ -455,6 +455,10 @@ model Speaker {
   socialLinks      String?
   // Contact email used to send the modification link (RG-243). Optional.
   contactEmail     String?
+  // Language we write to this speaker in — "fr" | "en" (#224). Set in the
+  // admin, defaults to French so existing rows keep today's behaviour. This is
+  // NOT Talk.language: a French speaker may well present in English.
+  locale           String            @default("fr")
   // Shown in the homepage "featured speakers" section (RG-202).
   isFeatured       Boolean           @default(false)
   publicationStatus PublicationStatus @default(DRAFT)
@@ -542,6 +546,9 @@ model Sponsor {
   socialLinks      String?
   // Contact email used to send the modification link (RG-243). Optional.
   contactEmail     String?
+  // Language we write to this sponsor in — "fr" | "en" (#224). Same rule as
+  // Speaker.locale: set in the admin, defaults to French.
+  locale           String            @default("fr")
   publicationStatus PublicationStatus @default(DRAFT)
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
