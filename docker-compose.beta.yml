@@ -1,10 +1,14 @@
-# Environnements de développement personnels (dev-j, dev-m…).
+# Environnement de bêta (beta.site.devfesttoulouse.fr).
 #
-# Données JETABLES : le backend rejoue `seed-dev.ts` à chaque boot, qui efface
-# speakers, sponsors et catégories avant de recréer un jeu de démo. Tout import
-# Sessionize ou toute saisie manuelle sera perdu au prochain déploiement.
+# Identique à docker-compose.dev.yml, à UNE différence près : le seed.
 #
-# La bêta utilise docker-compose.beta.yml (seed idempotent, données conservées).
+# La bêta contient de VRAIES données saisies à la main (sponsors réels, imports
+# Sessionize). Elle utilise donc `seed.ts` — idempotent, `upsert` uniquement,
+# aucun `deleteMany` —, le même seed que la production.
+#
+# Utiliser `seed-dev.ts` ici effacerait ces données à chaque déploiement, le
+# backend rejouant le seed à chaque boot. C'est précisément ce qui s'est produit
+# tant que la bêta partageait le compose de dev-j.
 
 services:
   frontend:
@@ -16,14 +20,14 @@ services:
       # too late and the Dockerfile's ARG defaults get baked into
       # routes-manifest.json instead (see #189).
       args:
-        - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+        - BACKEND_URL=http://devfest-${ENV_NAME:-beta}-backend:4000
         - BASE_URL=${BASE_URL}
     environment:
       - BASE_URL=${BASE_URL}
       # Pinned to the env-scoped backend container name. Resolving the bare
       # `backend` hostname picks up other Coolify projects' backends via the
       # shared `coolify` network (IPv6 priority), causing cross-env requests.
-      - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+      - BACKEND_URL=http://devfest-${ENV_NAME:-beta}-backend:4000
     expose:
       - "3000"
     depends_on:
@@ -43,13 +47,10 @@ services:
       context: .
       dockerfile: src/backend/Dockerfile
       args:
-        # seed-dev.ts is DESTRUCTIVE: it deleteMany's speakers, sponsors and
-        # categories before reseeding a demo dataset, and the backend replays the
-        # seed on every boot. That is fine here — dev-j is a scratch environment
-        # whose data is meant to be thrown away.
-        # Beta must NOT use this file: it holds real sponsors entered by hand.
-        # It has its own docker-compose.beta.yml with the idempotent seed.
-        - SEED_SCRIPT=prisma/seed-dev.ts
+        # THE difference with docker-compose.dev.yml. seed.ts only upserts —
+        # it never deletes — so the sponsors and speakers entered in the admin
+        # survive every redeploy. Same seed as production.
+        - SEED_SCRIPT=prisma/seed.ts
     volumes:
       - uploads:/app/uploads
     environment:
@@ -68,6 +69,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
     depends_on:
       db:
         condition: service_healthy
@@ -87,7 +89,7 @@ services:
     networks:
       default:
         aliases:
-          - devfest-${ENV_NAME:-local}-backend
+          - devfest-${ENV_NAME:-beta}-backend
 
   db:
     image: postgres:16-alpine
@@ -105,7 +107,7 @@ services:
 
   mailhog:
     image: mailhog/mailhog:latest
-    container_name: devfest-${ENV_NAME:-local}-mailhog
+    container_name: devfest-${ENV_NAME:-beta}-mailhog
     expose:
       - "8025"
     networks:
