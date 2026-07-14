@@ -63,11 +63,29 @@ export default function ApiKeysSection() {
       setError("Le nom est obligatoire");
       return;
     }
+
+    // `datetime-local` yields "2026-12-31T23:59" — no seconds, no timezone —
+    // which the API rejects, since it requires a full ISO 8601 date-time (#228).
+    // The value is local time, and toISOString() converts it to UTC.
+    let expiresAt: string | null = null;
+    if (newExpiresAt) {
+      const parsed = new Date(newExpiresAt);
+      if (Number.isNaN(parsed.getTime())) {
+        setError("La date d'expiration est invalide.");
+        return;
+      }
+      if (parsed.getTime() <= Date.now()) {
+        setError("La date d'expiration doit être dans le futur.");
+        return;
+      }
+      expiresAt = parsed.toISOString();
+    }
+
     setIsSaving(true);
-    const { data, status } = await createApiKey(newName.trim(), newExpiresAt || null);
+    const { data, status } = await createApiKey(newName.trim(), expiresAt);
     setIsSaving(false);
     if (!data) {
-      if (status === 400) setError("Requête invalide (nom, date d'expiration ou quota dépassé)");
+      if (status === 400) setError("Requête invalide (nom, date d'expiration ou quota de jetons dépassé).");
       else if (status === 401 || status === 403) setError("Session expirée, reconnectez-vous");
       else setError("Erreur serveur");
       return;
