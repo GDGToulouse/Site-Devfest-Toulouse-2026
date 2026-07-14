@@ -171,6 +171,12 @@ export async function createApiKey(name: string, expiresAt?: string | null): Pro
   });
 }
 
+// Replace a key's secret in place, keeping its name and expiry. The old value
+// stops working immediately; the new one is returned once (#227).
+export async function rotateMyApiKey(id: string): Promise<{ data: CreatedApiKey | null; status: number }> {
+  return meFetch<CreatedApiKey>(`/api-keys/${id}/rotate`, { method: "POST" });
+}
+
 export async function revokeMyApiKey(id: string): Promise<boolean> {
   const { status } = await meFetch(`/api-keys/${id}`, { method: "DELETE" });
   return status === 200;

@@ -20,6 +20,21 @@ function getCurrentUser(request: FastifyRequest) {
   return ctx.user;
 }
 
+/**
+ * Why a key cannot be rotated, or null when it can (#227). A dead key is never
+ * resurrected: rotating a revoked one would silently un-revoke it, and rotating
+ * an expired one would hand back a secret that still cannot authenticate. In
+ * both cases the answer is to create a fresh key.
+ */
+export function rotationBlockedReason(
+  key: { revokedAt: Date | null; expiresAt: Date | null },
+  now: Date = new Date(),
+): "key_revoked" | "key_expired" | null {
+  if (key.revokedAt) return "key_revoked";
+  if (key.expiresAt && key.expiresAt <= now) return "key_expired";
+  return null;
+}
+
 function serializeApiKey(k: {
   id: string;
   name: string;
@@ -136,6 +151,71 @@ export default async function myApiKeysRoutes(app: FastifyInstance) {
       ...serializeApiKey(created),
       // The raw secret. Client must store it now; the server will never
       // expose it again.
+      key: raw,
+    };
+  });
+
+  // POST /api/me/api-keys/:id/rotate — replace the secret of an existing key.
+  //
+  // A key is only ever shown once, and it is stored hashed, so a mislaid key
+  // used to leave no option but "create a new one, then revoke the old one by
+  // hand" (#227). Rotating keeps the same row — same name, same expiry, same
+  // creation date — and only swaps its value.
+  //
+  // The old value stops working immediately: a mislaid key is a potentially
+  // compromised key, and it must not outlive its rotation. Both `prefix` and
+  // `hashedKey` are replaced in the same update — the prefix is what
+  // authentication looks the key up by (auth-context.ts), so leaving it behind
+  // would keep the old secret alive.
+  app.post<{ Params: { id: string } }>("/api-keys/:id/rotate", {
+    schema: {
+      tags: ["api-keys"],
+      summary: "Faire tourner un de ses propres jetons (nouvelle valeur, ancienne révoquée)",
+      description:
+        "Remplace la valeur du jeton en conservant son nom et son expiration. L'ancienne valeur cesse de fonctionner immédiatement. La nouvelle valeur (`key`) n'est retournée qu'une seule fois.",
+      security: [{ bearerAuth: [] }, { cookieAuth: [] }],
+      params: {
+        type: "object",
+        required: ["id"],
+        properties: { id: { type: "string" } },
+      },
+      response: {
+        200: { $ref: "CreatedApiKey#" },
+        400: { $ref: "Error#" },
+        401: { $ref: "Error#" },
+        403: { $ref: "Error#" },
+        404: { $ref: "Error#" },
+      },
+    },
+  }, async (request, reply) => {
+    const user = getCurrentUser(request);
+    const key = await prisma.apiKey.findUnique({ where: { id: request.params.id } });
+    // Same 404-on-someone-else's-key as DELETE: never confirm a key exists.
+    if (!key || key.userId !== user.id) {
+      return reply.status(404).send({ error: "not_found" });
+    }
+
+    const blocked = rotationBlockedReason(key);
+    if (blocked) {
+      return reply.status(400).send({ error: blocked });
+    }
+
+    const { raw, prefix, hashedKey } = await generateApiKey(resolveApiKeyEnv());
+
+    const rotated = await prisma.apiKey.update({
+      where: { id: key.id },
+      data: {
+        prefix,
+        hashedKey,
+        // The new secret has never been used; carrying the old timestamp over
+        // would misreport when this value was last seen.
+        lastUsedAt: null,
+      },
+    });
+
+    return {
+      ...serializeApiKey(rotated),
+      // Shown once, exactly like on creation.
       key: raw,
     };
   });
