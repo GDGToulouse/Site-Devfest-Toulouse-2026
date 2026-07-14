@@ -30,28 +30,6 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `GEMINI_API_KEY` | non (mais requise pour la traduction IA) | Clé API Google Gemini utilisée par la fonctionnalité de traduction FR⇄EN du back-office. Si absente, l'endpoint `/api/admin/translate` répond `503 not_configured` et le bouton « Traduire » est désactivé côté UI. **Free tier** : données potentiellement utilisées pour l'entraînement — ne pas activer sur du contenu confidentiel. Migrer vers Tier 1 payant si besoin. Obtenir une clé : https://aistudio.google.com/apikey | `AIzaSy...` |
 | `ENV_NAME` | non | Nom de l'environnement de déploiement. Sert à l'aliasing réseau Docker **et** est exposé dans l'admin via `GET /api/health` → badge `v{version} · {environment}` dans la sidebar (#171). Défaut `local`. | `beta`, `prod` |
 | `APP_VERSION` | non | Surcharge le numéro de version applicatif (semver) exposé par `GET /api/health`. Par défaut, la constante `APP_VERSION` du code (`1.0.0`), incrémentée à la main à chaque release et taguée sur `main`. | `1.0.0` |
-| `SEED_SCRIPT` | non | **Build arg fixé par le fichier compose** — rien à configurer dans Coolify. Voir ci-dessous. | `prisma/seed.ts` |
-
-### ⚠️ `SEED_SCRIPT` — deux seeds, un seul est destructif
-
-Le backend rejoue le seed **à chaque démarrage**, donc à chaque déploiement. Deux scripts existent, et ils ne se valent pas :
-
-| Script | Comportement | Fichier compose |
-|--------|--------------|-----------------|
-| `prisma/seed.ts` | **Idempotent** (`upsert`). N'efface rien. | `docker-compose.prod.yml`, `docker-compose.beta.yml` |
-| `prisma/seed-dev.ts` | **Destructif** : `deleteMany` sur speakers, sponsors et catégories, puis recrée un jeu de démo (3 speakers, 28 sponsors fictifs). | `docker-compose.dev.yml` (dev-j), `docker-compose.local.yml` |
-
-**Conséquence concrète** : sur un environnement lancé avec `seed-dev.ts`, tout speaker ou sponsor saisi à la main (ou importé depuis Sessionize) est **effacé au prochain déploiement**. C'est voulu pour un bac à sable, et destructeur partout ailleurs.
-
-Le seed est **codé en dur dans chaque fichier compose**, jamais dans une variable Coolify : une variable oubliée retomberait silencieusement sur le seed destructif. Le fichier choisi *est* la décision — il suffit de le lire pour savoir ce qui va se passer.
-
-**Chaque environnement Coolify doit donc pointer sur le bon fichier :**
-
-| Environnement | Fichier compose |
-|---|---|
-| Production | `docker-compose.prod.yml` |
-| Bêta | `docker-compose.beta.yml` |
-| `dev-j`, `dev-m`… | `docker-compose.dev.yml` |
 
 ## Base de données (backend uniquement)
 

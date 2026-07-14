@@ -1,11 +1,3 @@
-# Environnements de développement personnels (dev-j, dev-m…).
-#
-# Données JETABLES : le backend rejoue `seed-dev.ts` à chaque boot, qui efface
-# speakers, sponsors et catégories avant de recréer un jeu de démo. Tout import
-# Sessionize ou toute saisie manuelle sera perdu au prochain déploiement.
-#
-# La bêta utilise docker-compose.beta.yml (seed idempotent, données conservées).
-
 services:
   frontend:
     build:
@@ -43,12 +35,6 @@ services:
       context: .
       dockerfile: src/backend/Dockerfile
       args:
-        # seed-dev.ts is DESTRUCTIVE: it deleteMany's speakers, sponsors and
-        # categories before reseeding a demo dataset, and the backend replays the
-        # seed on every boot. That is fine here — dev-j is a scratch environment
-        # whose data is meant to be thrown away.
-        # Beta must NOT use this file: it holds real sponsors entered by hand.
-        # It has its own docker-compose.beta.yml with the idempotent seed.
         - SEED_SCRIPT=prisma/seed-dev.ts
     volumes:
       - uploads:/app/uploads
