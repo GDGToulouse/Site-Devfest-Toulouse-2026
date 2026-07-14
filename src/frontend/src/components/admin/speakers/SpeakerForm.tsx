@@ -16,6 +16,7 @@ export interface SpeakerFormValue {
   twitter: string;
   github: string;
   website: string;
+  locale: "fr" | "en";
   isFeatured: boolean;
   sponsorId: string;
   publicationStatus: "DRAFT" | "PUBLISHED";
@@ -32,6 +33,7 @@ export const emptySpeakerForm: SpeakerFormValue = {
   twitter: "",
   github: "",
   website: "",
+  locale: "fr",
   isFeatured: false,
   sponsorId: "",
   publicationStatus: "DRAFT",
@@ -133,6 +135,21 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
           <input type="url" value={value.website} onChange={(e) => onChange({ ...value, website: e.target.value })} className={inputClass} />
         </label>
       </div>
+
+      <label className="block max-w-xs">
+        <span className="block text-sm font-medium text-noir mb-1">Langue de contact</span>
+        <select
+          value={value.locale}
+          onChange={(e) => onChange({ ...value, locale: e.target.value as "fr" | "en" })}
+          className={inputClass}
+        >
+          <option value="fr">Français</option>
+          <option value="en">English</option>
+        </select>
+        <span className="block text-xs text-gris mt-1">
+          Langue des emails envoyés à ce speaker et de sa page de modification.
+        </span>
+      </label>
 
       <div className="flex flex-wrap items-center gap-6">
         <label className="flex items-center gap-2 cursor-pointer">

@@ -54,6 +54,7 @@ export default function SponsorEditorPage() {
           descriptionEn: data.descriptionEn || "",
           linkedin: data.socialLinks?.linkedin || "",
           twitter: data.socialLinks?.twitter || "",
+          locale: data.locale === "en" ? "en" : "fr",
           publicationStatus: data.publicationStatus,
         });
         setEditionId(data.editionId);
@@ -81,6 +82,7 @@ export default function SponsorEditorPage() {
       descriptionFr: form.descriptionFr || undefined,
       descriptionEn: form.descriptionEn || undefined,
       socialLinks,
+      locale: form.locale,
       publicationStatus: form.publicationStatus,
     };
 
