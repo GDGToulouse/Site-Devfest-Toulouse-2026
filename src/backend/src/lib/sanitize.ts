@@ -59,3 +59,26 @@ export function sanitizeRichHtml(html: string | null | undefined): string {
   if (!html) return "";
   return sanitizeHtml(html, OPTIONS);
 }
+
+/**
+ * Allowlist check for a standalone URL field (photoUrl, logoUrl, websiteUrl,
+ * social links) — the plain-string counterpart of the scheme allowlist applied
+ * to rich HTML above. These values end up in `href`/`src` on public pages, so a
+ * `javascript:` or `data:` URL would be an XSS vector (#223).
+ *
+ * Site-relative paths (`/uploads/...`) are accepted: that is what our own
+ * upload pipeline stores. A schemeless value ("www.example.com") is rejected
+ * rather than silently coerced — the caller decides what to tell the user.
+ */
+const SAFE_URL_SCHEMES = ["http:", "https:"];
+
+export function isSafeUrl(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/")) return !trimmed.startsWith("//"); // protocol-relative bypasses the scheme check
+  try {
+    return SAFE_URL_SCHEMES.includes(new URL(trimmed).protocol);
+  } catch {
+    return false;
+  }
+}

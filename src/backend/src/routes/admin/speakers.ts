@@ -4,7 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail } from "../../lib/edit-link-email.js";
+import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -16,6 +16,7 @@ interface SpeakerCreateBody {
   bioEn?: string;
   socialLinks?: Record<string, string>;
   contactEmail?: string;
+  locale?: string;
   isFeatured?: boolean;
   sponsorId?: number | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
@@ -93,6 +94,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         bioEn: body.bioEn || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
+        locale: normalizeLocale(body.locale),
         isFeatured: body.isFeatured ?? false,
         sponsorId: body.sponsorId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -123,6 +125,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
+        ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
@@ -189,18 +192,27 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     const email = request.body.email?.trim() || speaker.contactEmail;
     if (!email) return reply.code(400).send({ error: "No contact email provided" });
 
+    // Send first, persist second (#223): rotating the token before a failed
+    // send would break the link the speaker already has, and hand them nothing
+    // in return. On SMTP failure the previous link stays valid.
     const token = generateEditToken();
-    await prisma.speaker.update({
-      where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
-    });
-
     try {
-      await sendEditLinkEmail({ to: email, name: speaker.name, token, kind: "speaker" });
+      await sendEditLinkEmail({
+        to: email,
+        name: speaker.name,
+        token,
+        kind: "speaker",
+        locale: speaker.locale,
+      });
     } catch (err) {
       request.log.error({ err }, "Failed to send speaker edit link email");
       return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
     }
+
+    await prisma.speaker.update({
+      where: { id },
+      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+    });
     return { sent: true, email };
   });
 
