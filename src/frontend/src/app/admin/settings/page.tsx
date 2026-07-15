@@ -1163,7 +1163,7 @@ export default function SettingsPage() {
 
       {/* Tabs — overflow-x-auto so an overflowing tab bar scrolls on its own
           instead of dragging the whole page sideways on mobile (#233). */}
-      <div className="flex gap-1 mb-6 border-b border-gris/20 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 mb-6 border-b border-gris/20 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {TABS.map((tab) => (
           <button
             key={tab.key}

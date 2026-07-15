@@ -47,7 +47,7 @@ export default function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
     <div
       ref={tablistRef}
       role="tablist"
-      className="flex border-b border-gris/20 mb-6 overflow-x-auto scrollbar-none"
+      className="flex border-b border-gris/20 mb-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;

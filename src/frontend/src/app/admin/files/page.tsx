@@ -156,7 +156,7 @@ export default function FilesAdminPage() {
       </div>
 
       {/* Filter tabs — see #233: confine overflow so the bar scrolls, not the page. */}
-      <div className="flex gap-1 border-b border-gris/20 mb-6 overflow-x-auto scrollbar-none">
+      <div className="flex gap-1 border-b border-gris/20 mb-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           onClick={() => setFilter("all")}
           className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
