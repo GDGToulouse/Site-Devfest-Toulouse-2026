@@ -82,6 +82,10 @@ services:
       # Google Gemini key for the back-office FR<->EN translator. If unset,
       # POST /api/admin/translate returns 503 and the UI button is disabled.
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Webhook alerted on 5xx (#118). Takes precedence over the admin-set
+      # `alert_webhook_url` setting, which needs the database to be readable —
+      # set this one so a database outage still raises an alert.
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}

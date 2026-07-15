@@ -10,6 +10,7 @@ const TABS = [
   { key: "identity", label: "Identité" },
   { key: "contacts", label: "Contacts" },
   { key: "ecosystem", label: "Écosystème" },
+  { key: "carousel", label: "Carrousel" },
   { key: "seo", label: "SEO" },
   { key: "cache", label: "Cache" },
 ] as const;
@@ -185,6 +186,7 @@ function ContactsTab({
   const [form, setForm] = useState({
     contact_default_email: settings.contact_default_email || "",
     contact_webhook_url: settings.contact_webhook_url || "",
+    alert_webhook_url: settings.alert_webhook_url || "",
     social_linkedin: settings.social_linkedin || "",
     social_youtube: settings.social_youtube || "",
     social_x: settings.social_x || "",
@@ -193,6 +195,7 @@ function ContactsTab({
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [webhookTestResult, setWebhookTestResult] = useState<string | null>(null);
+  const [alertTestResult, setAlertTestResult] = useState<string | null>(null);
 
   function handleChange(key: string, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -265,6 +268,53 @@ function ContactsTab({
           {webhookTestResult && (
             <p className={`mt-1 text-xs ${webhookTestResult.startsWith("Envoyé") ? "text-malachite" : "text-terre-cuite"}`}>
               {webhookTestResult}
+            </p>
+          )}
+        </div>
+
+        <h2 className="text-lg font-bold text-noir mb-4">Monitoring</h2>
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-noir mb-1">
+            URL webhook d&apos;alerte (erreurs serveur)
+          </label>
+          <input
+            type="url"
+            value={form.alert_webhook_url}
+            onChange={(e) => handleChange("alert_webhook_url", e.target.value)}
+            placeholder="https://hooks.slack.com/services/..."
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            URL appelée en POST à chaque erreur serveur (5xx). Une même erreur n&apos;est notifiée
+            qu&apos;une fois toutes les 5 minutes. Laissez vide pour désactiver.
+          </p>
+          {form.alert_webhook_url && (
+            <button
+              type="button"
+              onClick={async () => {
+                setAlertTestResult(null);
+                const { adminFetch } = await import("@/lib/admin-api");
+                const { data } = await adminFetch<{ status: string; error?: string }>(
+                  "/settings/test-alert-webhook",
+                  { method: "POST", body: JSON.stringify({ url: form.alert_webhook_url }) },
+                );
+                if (data) {
+                  setAlertTestResult(
+                    data.status === "success" ? "Envoyé" : `Échec : ${data.error?.slice(0, 100)}`,
+                  );
+                } else {
+                  setAlertTestResult("Erreur");
+                }
+                setTimeout(() => setAlertTestResult(null), 8000);
+              }}
+              className="mt-2 px-3 py-1 text-xs rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+            >
+              Tester l&apos;alerte
+            </button>
+          )}
+          {alertTestResult && (
+            <p className={`mt-1 text-xs ${alertTestResult === "Envoyé" ? "text-malachite" : "text-terre-cuite"}`}>
+              {alertTestResult}
             </p>
           )}
         </div>
@@ -737,6 +787,193 @@ function EcosystemTab({
   );
 }
 
+// ─── Carousel tab (#99) ────────────────────────────────────────────
+
+interface CarouselSlide {
+  url: string;
+  alt: string;
+}
+
+function parseSlides(raw: string | undefined): CarouselSlide[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((s): s is Record<string, unknown> => typeof s === "object" && s !== null)
+      .map((s) => ({
+        url: typeof s.url === "string" ? s.url : "",
+        alt: typeof s.alt === "string" ? s.alt : "",
+      }))
+      .filter((s) => s.url);
+  } catch {
+    return [];
+  }
+}
+
+function CarouselTab({
+  settings,
+  onSave,
+}: {
+  settings: Record<string, string>;
+  onSave: (data: Record<string, string>) => Promise<void>;
+}) {
+  const [slides, setSlides] = useState<CarouselSlide[]>(() => parseSlides(settings.about_carousel));
+  const [isSaving, setIsSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+
+  function updateAlt(index: number, alt: string) {
+    setSlides((prev) => prev.map((s, i) => (i === index ? { ...s, alt } : s)));
+    setSaved(false);
+  }
+
+  function addSlide(url: string) {
+    setSlides((prev) => [...prev, { url, alt: "" }]);
+    setSaved(false);
+  }
+
+  function removeSlide(index: number) {
+    setSlides((prev) => prev.filter((_, i) => i !== index));
+    setSaved(false);
+  }
+
+  function move(index: number, delta: -1 | 1) {
+    const target = index + delta;
+    if (target < 0 || target >= slides.length) return;
+    setSlides((prev) => {
+      const next = [...prev];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+    setSaved(false);
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    const cleaned = slides
+      .map((s) => ({ url: s.url.trim(), alt: s.alt.trim() }))
+      .filter((s) => s.url);
+
+    for (const s of cleaned) {
+      if (!s.alt) {
+        setError("Chaque image doit avoir un texte alternatif (accessibilité).");
+        return;
+      }
+    }
+
+    setIsSaving(true);
+    await onSave({ about_carousel: JSON.stringify(cleaned) });
+    setSlides(cleaned);
+    setIsSaving(false);
+    setSaved(true);
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
+        <p className="text-sm text-gris mb-6">
+          Images d&apos;ambiance du bloc « Derrière le DevFest Toulouse » de la page d&apos;accueil
+          (affichées pendant la phase d&apos;annonce). Ajoutez vos photos, renseignez un texte
+          alternatif pour chacune, et réordonnez-les. Sans image, le bloc reste en texte seul.
+        </p>
+
+        {slides.length === 0 && (
+          <p className="text-sm text-gris italic mb-4">Aucune image configurée.</p>
+        )}
+
+        <ul className="space-y-3 mb-4">
+          {slides.map((slide, index) => (
+            <li
+              key={`${slide.url}-${index}`}
+              className="border border-gris/20 rounded-lg p-4 flex flex-col md:flex-row gap-3 md:items-center"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={slide.url}
+                alt={slide.alt}
+                className="h-16 w-24 shrink-0 rounded object-cover bg-blanc-casse"
+              />
+              <div className="flex-1">
+                <label className="block text-xs font-medium text-gris mb-1">Texte alternatif</label>
+                <input
+                  type="text"
+                  value={slide.alt}
+                  onChange={(e) => updateAlt(index, e.target.value)}
+                  placeholder="Le public du DevFest Toulouse 2024"
+                  className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => move(index, -1)}
+                  disabled={index === 0}
+                  title="Monter"
+                  className="px-2 py-1 text-xs rounded border border-gris/30 text-noir hover:bg-blanc-casse disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  onClick={() => move(index, 1)}
+                  disabled={index === slides.length - 1}
+                  title="Descendre"
+                  className="px-2 py-1 text-xs rounded border border-gris/30 text-noir hover:bg-blanc-casse disabled:opacity-30 disabled:cursor-not-allowed"
+                >
+                  ↓
+                </button>
+                <button
+                  type="button"
+                  onClick={() => removeSlide(index)}
+                  title="Supprimer"
+                  className="px-2 py-1 text-xs rounded border border-terre-cuite/30 text-terre-cuite hover:bg-terre-cuite/10"
+                >
+                  Supprimer
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
+
+        <button
+          type="button"
+          onClick={() => setIsPickerOpen(true)}
+          className="px-3 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+        >
+          + Ajouter une image
+        </button>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">
+          {error}
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <button
+          type="submit"
+          disabled={isSaving}
+          className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+        >
+          {isSaving ? "Enregistrement..." : "Enregistrer"}
+        </button>
+        {saved && <span className="text-sm text-malachite">Enregistré !</span>}
+      </div>
+
+      <ImagePickerDialog
+        open={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        onSelect={(url) => addSlide(url)}
+      />
+    </form>
+  );
+}
+
 // ─── SEO tab ───────────────────────────────────────────────────────
 
 function SeoTab({
@@ -945,6 +1182,7 @@ export default function SettingsPage() {
       {activeTab === "identity" && <IdentityTab settings={settings} onSave={handleSave} />}
       {activeTab === "contacts" && <ContactsTab settings={settings} onSave={handleSave} />}
       {activeTab === "ecosystem" && <EcosystemTab settings={settings} onSave={handleSave} />}
+      {activeTab === "carousel" && <CarouselTab settings={settings} onSave={handleSave} />}
       {activeTab === "seo" && <SeoTab settings={settings} onSave={handleSave} />}
       {activeTab === "cache" && <CacheTab />}
     </div>

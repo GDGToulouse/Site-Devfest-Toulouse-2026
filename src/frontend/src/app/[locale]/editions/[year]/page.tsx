@@ -3,11 +3,14 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { getEditionByYear, getEditions } from "@/lib/api";
+import { getEditionByYear, getEditions, getEditionSpeakers, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { absoluteUrl } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
+import EditionSpeakersGrid from "@/components/editions/EditionSpeakersGrid";
+import EditionTalksList from "@/components/editions/EditionTalksList";
 import { Link } from "@/i18n/navigation";
 
 interface PageProps {
@@ -54,12 +57,10 @@ function buildCompletedEventJsonLd(edition: BilanEdition) {
       name: "GDG Toulouse",
       url: "https://gdg.community.dev/gdg-toulouse/",
     },
-    superEvent: {
-      "@type": "Event",
-      name: "DevFest",
-      url: "https://developers.google.com/community/devfest",
-    },
-    ...(edition.heroImageUrl ? { image: edition.heroImageUrl } : {}),
+    // No `superEvent` — see the home page for why it produced invalid
+    // structured data (#185).
+    // Schema.org wants absolute URLs; heroImageUrl is stored as /uploads/….
+    ...(edition.heroImageUrl ? { image: absoluteUrl(edition.heroImageUrl) } : {}),
     ...(edition.aftermovieUrl ? { video: edition.aftermovieUrl } : {}),
   };
 }
@@ -95,9 +96,11 @@ export default async function BilanPage({ params }: PageProps) {
   const locale = await getLocale();
   const t = await getTranslations("bilan");
 
-  const [edition, allEditions] = await Promise.all([
+  const [edition, allEditions, speakers, talks] = await Promise.all([
     getEditionByYear(Number(year)),
     getEditions(),
+    getEditionSpeakers(Number(year)),
+    getEditionTalks(Number(year)),
   ]);
   if (!edition) notFound();
 
@@ -124,6 +127,16 @@ export default async function BilanPage({ params }: PageProps) {
       : edition.venueName || null;
 
   const eventJsonLd = buildCompletedEventJsonLd(edition);
+  const speakersJsonLd =
+    speakers.length > 0
+      ? speakers.map((s) => ({
+          "@context": "https://schema.org",
+          "@type": "Person",
+          name: s.name,
+          ...(s.company ? { worksFor: { "@type": "Organization", name: s.company } } : {}),
+          ...(s.photoUrl ? { image: s.photoUrl } : {}),
+        }))
+      : null;
 
   return (
     <div>
@@ -131,6 +144,12 @@ export default async function BilanPage({ params }: PageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
       />
+      {speakersJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(speakersJsonLd) }}
+        />
+      )}
       {/* Hero banner */}
       <div
         className="relative w-full h-[280px] lg:h-[380px] bg-cover bg-center"
@@ -255,6 +274,37 @@ export default async function BilanPage({ params }: PageProps) {
                   </Link>
                 ))}
               </div>
+
+              {/* The grid above is a preview capped at 4 articles server-side.
+                  Without this link the other ones were simply unreachable (#178). */}
+              <div className="mt-8 text-center">
+                <Link
+                  href={`/actualites?edition=${edition.year}`}
+                  className="inline-block rounded-[12px] border-2 border-bleu px-6 py-3 text-base font-bold text-bleu transition-colors hover:bg-bleu hover:text-blanc"
+                >
+                  {t("allNews")}
+                </Link>
+              </div>
+            </section>
+          )}
+
+          {/* Speakers of this edition */}
+          {speakers.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
+                {t("speakers", { count: speakers.length })}
+              </h2>
+              <EditionSpeakersGrid speakers={speakers} />
+            </section>
+          )}
+
+          {/* Sessions of this edition (with replays) */}
+          {talks.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
+                {t("sessions", { count: talks.length })}
+              </h2>
+              <EditionTalksList talks={talks} locale={locale} replayLabel={t("replay")} />
             </section>
           )}
 

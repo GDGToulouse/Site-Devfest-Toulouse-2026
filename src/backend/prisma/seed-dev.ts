@@ -304,29 +304,178 @@ async function seedDev() {
   });
   console.log("Categories created: 2");
 
-  const sponsorOvh = await prisma.sponsor.create({
-    data: {
-      slug: "ovhcloud", name: "OVHcloud", level: "PLATINUM",
-      websiteUrl: "https://www.ovhcloud.com",
-      descriptionFr: "Leader européen du cloud.", descriptionEn: "European cloud leader.",
-      logoUrl: null, publicationStatus: "PUBLISHED", editionId: edition.id,
-    },
+  // A realistic sponsor wall: 4 Platinum, 16 Gold, 8 Soutien. Every field is
+  // filled (logo, both descriptions, website, socials, contact email) so the
+  // public pages and the admin forms can be exercised for real. Logos are
+  // placeholder SVGs under public/images/sponsors/ — see the slugs below.
+  // Every company here is FICTIONAL on purpose: demo data must never suggest
+  // that a real firm sponsors the event.
+  const DEMO_SPONSORS: Array<{
+    slug: string;
+    name: string;
+    level: "PLATINUM" | "GOLD" | "SOUTIEN";
+    descriptionFr: string;
+    descriptionEn: string;
+    websiteUrl: string;
+  }> = [
+    { slug: "aeronova-systems", name: "AeroNova Systems", level: "PLATINUM",
+      descriptionFr: "Logiciel embarqué et cloud souverain pour l'aéronautique. Nos équipes conçoivent les systèmes critiques qui volent chaque jour.",
+      descriptionEn: "Embedded software and sovereign cloud for aerospace. Our teams build the critical systems that fly every day.",
+      websiteUrl: "https://example.com/aeronova-systems" },
+    { slug: "garonne-digital", name: "Garonne Digital", level: "PLATINUM",
+      descriptionFr: "Conseil et ingénierie logicielle en Occitanie. Nous accompagnons la transformation numérique des grands comptes régionaux.",
+      descriptionEn: "Consulting and software engineering in Occitanie. We drive the digital transformation of major regional accounts.",
+      websiteUrl: "https://example.com/garonne-digital" },
+    { slug: "violette-cloud", name: "Violette Cloud", level: "PLATINUM",
+      descriptionFr: "Hébergeur et intégrateur de services numériques. Réseaux, cybersécurité et plateformes de données pour les entreprises.",
+      descriptionEn: "Hosting provider and digital services integrator. Networks, cybersecurity and data platforms for businesses.",
+      websiteUrl: "https://example.com/violette-cloud" },
+    { slug: "meridien-tech", name: "Méridien Tech", level: "PLATINUM",
+      descriptionFr: "Technologies de confiance pour le spatial, la défense et le transport. R&D logicielle basée à Toulouse.",
+      descriptionEn: "Trusted technologies for space, defence and transport. Software R&D based in Toulouse.",
+      websiteUrl: "https://example.com/meridien-tech" },
+
+    { slug: "cassoulet-code", name: "Cassoulet Code", level: "GOLD",
+      descriptionFr: "ESN régionale, forte présence à Toulouse sur les projets aéronautiques et bancaires.",
+      descriptionEn: "Regional IT services firm with a strong Toulouse presence in aerospace and banking projects.",
+      websiteUrl: "https://example.com/cassoulet-code" },
+    { slug: "pyrene-labs", name: "Pyrène Labs", level: "GOLD",
+      descriptionFr: "Cloud, cybersécurité et calcul haute performance au service des acteurs régionaux.",
+      descriptionEn: "Cloud, cybersecurity and high-performance computing for regional players.",
+      websiteUrl: "https://example.com/pyrene-labs" },
+    { slug: "occitania-data", name: "Occitania Data", level: "GOLD",
+      descriptionFr: "Conseil en management et intégration de systèmes, avec une practice Data & IA locale.",
+      descriptionEn: "Management consulting and systems integration, with a local Data & AI practice.",
+      websiteUrl: "https://example.com/occitania-data" },
+    { slug: "brique-rouge-soft", name: "Brique Rouge Software", level: "GOLD",
+      descriptionFr: "Ingénierie et conseil en technologies, spécialiste des systèmes embarqués.",
+      descriptionEn: "Engineering and technology consulting, specialised in embedded systems.",
+      websiteUrl: "https://example.com/brique-rouge-soft" },
+    { slug: "canal-midi-tech", name: "Canal Midi Tech", level: "GOLD",
+      descriptionFr: "Ingénierie de la R&D externalisée pour l'industrie aéronautique et spatiale.",
+      descriptionEn: "Outsourced R&D engineering for the aerospace industry.",
+      websiteUrl: "https://example.com/canal-midi-tech" },
+    { slug: "capitole-consulting", name: "Capitole Consulting", level: "GOLD",
+      descriptionFr: "Systèmes numériques critiques, qualité et performance opérationnelle.",
+      descriptionEn: "Critical digital systems, quality and operational performance.",
+      websiteUrl: "https://example.com/capitole-consulting" },
+    { slug: "stellaris-engineering", name: "Stellaris Engineering", level: "GOLD",
+      descriptionFr: "Ingénierie, qualité et conseil en transformation, du prototype à la série.",
+      descriptionEn: "Engineering, quality and transformation consulting, from prototype to production.",
+      websiteUrl: "https://example.com/stellaris-engineering" },
+    { slug: "pixel-garonne", name: "Pixel Garonne", level: "GOLD",
+      descriptionFr: "Cabinet de conseil et agence digitale : produit, design et développement.",
+      descriptionEn: "Consulting firm and digital agency: product, design and development.",
+      websiteUrl: "https://example.com/pixel-garonne" },
+    { slug: "helios-partners", name: "Helios Partners", level: "GOLD",
+      descriptionFr: "Architecte des grandes transformations, du conseil à la mise en œuvre.",
+      descriptionEn: "Architect of large-scale transformations, from advice to delivery.",
+      websiteUrl: "https://example.com/helios-partners" },
+    { slug: "nimbus-sud", name: "Nimbus Sud", level: "GOLD",
+      descriptionFr: "Cloud, data et cybersécurité. Partenaire des principaux hyperscalers.",
+      descriptionEn: "Cloud, data and cybersecurity. Partner of the major hyperscalers.",
+      websiteUrl: "https://example.com/nimbus-sud" },
+    { slug: "forge-numerique", name: "Forge Numérique", level: "GOLD",
+      descriptionFr: "Cabinet de conseil et de développement : craft, cloud et data engineering.",
+      descriptionEn: "Consulting and development firm: software craft, cloud and data engineering.",
+      websiteUrl: "https://example.com/forge-numerique" },
+    { slug: "libreband", name: "LibreBand", level: "GOLD",
+      descriptionFr: "Conseil, réalisation et formation autour des technologies open source.",
+      descriptionEn: "Consulting, delivery and training around open source technologies.",
+      websiteUrl: "https://example.com/libreband" },
+    { slug: "kernel-panic-corp", name: "Kernel Panic Corp", level: "GOLD",
+      descriptionFr: "Architecture, agilité et culture produit — il y a toujours une meilleure façon de faire.",
+      descriptionEn: "Architecture, agility and product culture — there is always a better way.",
+      websiteUrl: "https://example.com/kernel-panic-corp" },
+    { slug: "serverless-sud", name: "Serverless Sud", level: "GOLD",
+      descriptionFr: "Experts serverless et plateformes cloud natives, du POC à la production.",
+      descriptionEn: "Serverless and cloud-native platform experts, from PoC to production.",
+      websiteUrl: "https://example.com/serverless-sud" },
+    { slug: "atelier-du-code", name: "Atelier du Code", level: "GOLD",
+      descriptionFr: "Collectif d'artisans du logiciel, attaché à la qualité et à l'humain.",
+      descriptionEn: "A collective of software craftspeople, committed to quality and to people.",
+      websiteUrl: "https://example.com/atelier-du-code" },
+    { slug: "boussole-it", name: "Boussole IT", level: "GOLD",
+      descriptionFr: "Amélioration continue appliquée aux systèmes d'information.",
+      descriptionEn: "Continuous improvement applied to information systems.",
+      websiteUrl: "https://example.com/boussole-it" },
+
+    { slug: "melee-fictive", name: "La Mêlée Fictive", level: "SOUTIEN",
+      descriptionFr: "Association qui fédère l'écosystème numérique régional depuis plus de vingt ans.",
+      descriptionEn: "The association bringing together the regional digital ecosystem for over twenty years.",
+      websiteUrl: "https://example.com/melee-fictive" },
+    { slug: "rose-tech-hub", name: "Rose Tech Hub", level: "SOUTIEN",
+      descriptionFr: "Point de rencontre des startups et des talents tech du bassin toulousain.",
+      descriptionEn: "Meeting point for the startups and tech talent of the Toulouse area.",
+      websiteUrl: "https://example.com/rose-tech-hub" },
+    { slug: "cluster-sud-ouest", name: "Cluster Sud-Ouest", level: "SOUTIEN",
+      descriptionFr: "Cluster fictif des entreprises du numérique en Occitanie.",
+      descriptionEn: "Fictional cluster of digital companies in Occitanie.",
+      websiteUrl: "https://example.com/cluster-sud-ouest" },
+    { slug: "cowork-cassoulet", name: "Cowork Cassoulet", level: "SOUTIEN",
+      descriptionFr: "Espaces de coworking au cœur de Toulouse, ouverts aux communautés tech.",
+      descriptionEn: "Coworking spaces in the heart of Toulouse, open to tech communities.",
+      websiteUrl: "https://example.com/cowork-cassoulet" },
+    { slug: "studio-pastel", name: "Studio Pastel", level: "SOUTIEN",
+      descriptionFr: "Studio de création graphique et d'illustration, partenaire visuel de l'événement.",
+      descriptionEn: "Graphic design and illustration studio, the event's visual partner.",
+      websiteUrl: "https://example.com/studio-pastel" },
+    { slug: "tiers-lieu-violette", name: "Tiers-Lieu Violette", level: "SOUTIEN",
+      descriptionFr: "Tiers-lieu dédié à l'innovation et à l'entrepreneuriat.",
+      descriptionEn: "A third place dedicated to innovation and entrepreneurship.",
+      websiteUrl: "https://example.com/tiers-lieu-violette" },
+    { slug: "cafe-et-commit", name: "Café & Commit", level: "SOUTIEN",
+      descriptionFr: "Torréfacteur local qui réveille les développeurs depuis 2016.",
+      descriptionEn: "The local coffee roaster that has been waking developers up since 2016.",
+      websiteUrl: "https://example.com/cafe-et-commit" },
+    { slug: "labo-ouvert", name: "Labo Ouvert", level: "SOUTIEN",
+      descriptionFr: "Laboratoire d'innovation ouverte, incubateur de projets communautaires.",
+      descriptionEn: "Open innovation lab, incubator of community projects.",
+      websiteUrl: "https://example.com/labo-ouvert" },
+  ];
+
+  for (const s of DEMO_SPONSORS) {
+    await prisma.sponsor.create({
+      data: {
+        slug: s.slug,
+        name: s.name,
+        level: s.level,
+        logoUrl: `/images/sponsors/${s.slug}.svg`,
+        websiteUrl: s.websiteUrl,
+        descriptionFr: s.descriptionFr,
+        descriptionEn: s.descriptionEn,
+        socialLinks: JSON.stringify({
+          linkedin: `https://www.linkedin.com/company/${s.slug}`,
+          twitter: `https://x.com/${s.slug.replace(/-/g, "")}`,
+          github: `https://github.com/${s.slug}`,
+        }),
+        contactEmail: `contact@${s.slug}.example.com`,
+        publicationStatus: "PUBLISHED",
+        editionId: edition.id,
+      },
+    });
+  }
+
+  const counts = DEMO_SPONSORS.reduce<Record<string, number>>((acc, s) => {
+    acc[s.level] = (acc[s.level] ?? 0) + 1;
+    return acc;
+  }, {});
+  console.log(
+    `Sponsors created: ${DEMO_SPONSORS.length} ` +
+      `(${counts.PLATINUM} platinum, ${counts.GOLD} gold, ${counts.SOUTIEN} soutien)`,
+  );
+
+  // The featured speaker below works for a sponsor, which exercises the
+  // speaker↔sponsor link (RG-204/RG-226) — her company must match its name.
+  const sponsorOfMarie = await prisma.sponsor.findFirstOrThrow({
+    where: { editionId: edition.id, slug: "garonne-digital" },
   });
-  await prisma.sponsor.create({
-    data: {
-      slug: "google", name: "Google", level: "GOLD",
-      websiteUrl: "https://developers.google.com",
-      descriptionFr: "Partenaire historique du DevFest.", descriptionEn: "Long-time DevFest partner.",
-      publicationStatus: "PUBLISHED", editionId: edition.id,
-    },
-  });
-  console.log("Sponsors created: 2");
 
   const speakerMarie = await prisma.speaker.create({
     data: {
-      slug: "marie-dupont", name: "Marie Dupont", company: "OVHcloud", city: "Toulouse",
+      slug: "marie-dupont", name: "Marie Dupont", company: sponsorOfMarie.name, city: "Toulouse",
       bioFr: "Ingénieure cloud passionnée de Kubernetes.", bioEn: "Cloud engineer passionate about Kubernetes.",
-      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id, sponsorId: sponsorOvh.id,
+      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id, sponsorId: sponsorOfMarie.id,
       socialLinks: JSON.stringify({ github: "https://github.com/example", linkedin: "https://linkedin.com/in/example" }),
     },
   });

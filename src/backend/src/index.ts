@@ -1,4 +1,4 @@
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import compress from "@fastify/compress";
 import helmet from "@fastify/helmet";
@@ -6,6 +6,8 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
+import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
+import { startScheduledTasks } from "./lib/scheduler.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
@@ -39,12 +41,65 @@ const app = Fastify({
   trustProxy: true,
 });
 
+// Fastify rejects `content-type: application/json` with an empty payload
+// (FST_ERR_CTP_EMPTY_JSON_BODY) — yet that is exactly what a plain fetch()
+// with a JSON content-type and no body sends, as our own admin calls do for
+// action-only endpoints (e.g. POST /speakers/rotate-featured). Treat an empty
+// JSON body as `{}` rather than a client error.
+// Fastify already registers a built-in JSON parser, so ours has to replace it.
+app.removeContentTypeParser("application/json");
+app.addContentTypeParser(
+  "application/json",
+  { parseAs: "string" },
+  (_request, body: string, done) => {
+    if (!body || body.trim() === "") return done(null, {});
+    try {
+      done(null, JSON.parse(body));
+    } catch {
+      // Malformed JSON is a client error. Without an explicit statusCode the
+      // default handler would turn it into a 500 — and, since #118, raise a
+      // bogus server-error alert.
+      const err = new Error("Invalid JSON body") as Error & { statusCode?: number };
+      err.statusCode = 400;
+      done(err, undefined);
+    }
+  },
+);
+
 // Per-request decorations attached by auth middleware. Declared without a
 // default so Fastify treats them as optional getters (the typings live in
 // src/types/fastify.d.ts as `field?: T`). Reading them before the auth
 // preHandler runs returns undefined.
 app.decorateRequest("adminUser");
 app.decorateRequest("authContext");
+
+// Server errors are logged as today, and additionally pushed to the alert
+// webhook when one is configured (#118). Only 5xx are alerted: 4xx are client
+// mistakes, not incidents. The reply itself keeps Fastify's default shape.
+app.setErrorHandler((err: FastifyError, request, reply) => {
+  const statusCode = err.statusCode ?? 500;
+
+  if (statusCode >= 500) {
+    request.log.error({ err, route: request.routeOptions.url }, "Server error");
+
+    // Fire-and-forget: alerting must never delay or break the response.
+    void sendAlert(
+      buildAlertPayload({
+        method: request.method,
+        // Route pattern, not the raw URL — keeps identifying data out of the alert.
+        route: request.routeOptions.url ?? request.url.split("?")[0],
+        statusCode,
+        error: err,
+      }),
+    ).then((result) => {
+      if (result.status === "failed") {
+        request.log.warn({ error: result.error }, "Alert webhook delivery failed");
+      }
+    });
+  }
+
+  reply.send(err);
+});
 
 const corsOrigins = [
   process.env.FRONTEND_URL || "http://localhost:3000",
@@ -78,6 +133,12 @@ await app.register(fastifyStatic, {
   root: "/app/uploads",
   prefix: "/uploads/",
   decorateReply: false,
+  // Uploaded files are content-addressed by name (`${Date.now()}-${random}.ext`,
+  // see routes/admin/files.ts): a given URL never changes content, so it can be
+  // cached hard and forever. Without this, a 3 MB hero image was re-downloaded
+  // on every visit (#197).
+  maxAge: "365d",
+  immutable: true,
 });
 
 // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
@@ -220,6 +281,7 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 
 try {
   await app.listen({ port, host });
+  startScheduledTasks(app.log);
 } catch (err) {
   app.log.error(err);
   process.exit(1);

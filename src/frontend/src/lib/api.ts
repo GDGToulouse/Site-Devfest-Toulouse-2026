@@ -18,7 +18,10 @@ import type {
   SpeakerPublic,
   SpeakerDetail,
   TalkDetail,
+  EditionSpeaker,
+  EditionTalk,
   EcosystemPartner,
+  CarouselSlide,
 } from "./types";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
@@ -66,9 +69,11 @@ export async function getArticles(
   page = 1,
   limit = 12,
   tag?: string,
+  editionId?: number,
 ): Promise<PaginatedArticles> {
   const params = new URLSearchParams({ page: String(page), limit: String(limit) });
   if (tag) params.set("tag", tag);
+  if (editionId) params.set("editionId", String(editionId));
   return (
     (await fetchAPI<PaginatedArticles>(`/api/articles?${params}`)) || {
       articles: [],
@@ -114,8 +119,11 @@ export async function getSocialLinks(): Promise<SocialLinks> {
   return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
 }
 
+// Short TTL: the OG image is read both by the layout (twitter:image) and by the
+// opengraph-image route (#183). With the default 1h TTL, changing it in the
+// admin left the old image in the social previews for up to an hour.
 export async function getSeoSettings(): Promise<Record<string, string>> {
-  return (await fetchAPI<Record<string, string>>("/api/settings/seo")) || {};
+  return (await fetchAPI<Record<string, string>>("/api/settings/seo", 60)) || {};
 }
 
 // Brand identity (logo variants + favicons). Layout uses these to wire the
@@ -126,6 +134,10 @@ export async function getIdentitySettings(): Promise<Record<string, string>> {
 
 export async function getEcosystemPartners(): Promise<EcosystemPartner[]> {
   return (await fetchAPI<EcosystemPartner[]>("/api/settings/ecosystem")) || [];
+}
+
+export async function getAboutCarousel(): Promise<CarouselSlide[]> {
+  return (await fetchAPI<CarouselSlide[]>("/api/settings/carousel")) || [];
 }
 
 export async function getSponsorPlans(): Promise<SponsorPlan[]> {
@@ -154,4 +166,14 @@ export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | nu
 
 export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {
   return fetchAPI<TalkDetail>(`/api/talks/${slug}`);
+}
+
+// Past-edition history (issue #63): speakers/talks of a given year, regardless
+// of which edition is currently featured.
+export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]> {
+  return (await fetchAPI<EditionSpeaker[]>(`/api/editions/${year}/speakers`)) || [];
+}
+
+export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
+  return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
 }

@@ -21,6 +21,7 @@ export interface Edition {
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
+  isScheduleReady: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
 }
@@ -46,6 +47,12 @@ export interface EcosystemPartner {
   isFeatured: boolean;
 }
 
+// Ambiance image for the home "Derrière le DevFest" carousel (#99).
+export interface CarouselSlide {
+  url: string;
+  alt: string;
+}
+
 export interface Article {
   id: number;
   slug: string;
@@ -67,6 +74,7 @@ export interface TicketTier {
   status: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
   externalUrl: string | null;
   sortOrder: number;
+  saleStartDate: string | null;
 }
 
 export interface KeyFigure {
@@ -131,6 +139,7 @@ export interface Sponsor {
   descriptionEn: string | null;
   socialLinks: Record<string, string>;
   contactEmail: string | null;
+  locale: string;
   editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
@@ -200,6 +209,28 @@ export interface SpeakerDetail {
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
 
+// Past-edition history items (issue #63), keyed by year (not by featured edition).
+export interface EditionSpeaker {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+}
+
+export interface EditionTalk {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  videoUrl: string | null;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string }[];
+}
+
 // Public talk detail.
 export interface TalkDetail {
   id: number;
@@ -257,6 +288,7 @@ export interface Speaker {
   bioEn: string | null;
   socialLinks: Record<string, string>;
   contactEmail: string | null;
+  locale: string;
   editLinkLocked: boolean;
   isFeatured: boolean;
   sponsorId: number | null;

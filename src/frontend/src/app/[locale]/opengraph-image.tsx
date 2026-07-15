@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 import { getTranslations } from "next-intl/server";
 
-import { getCurrentEdition } from "@/lib/api";
+import { getCurrentEdition, getSeoSettings } from "@/lib/api";
+import { absoluteUrl } from "@/lib/seo";
 
 export const alt = "DevFest Toulouse";
 export const size = { width: 1200, height: 630 };
@@ -13,10 +14,37 @@ export default async function OpengraphImage({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  const [t, edition] = await Promise.all([
+  const [t, edition, seoSettings] = await Promise.all([
     getTranslations({ locale, namespace: "site" }),
     getCurrentEdition(),
+    getSeoSettings(),
   ]);
+
+  // This file convention wins over `openGraph.images` from generateMetadata, so
+  // an admin-set og:image was being overridden by the generated visual — while
+  // twitter:image, set explicitly, kept the custom one. The two tags disagreed
+  // (#183). Honour the override here: serve the custom image's bytes when one is
+  // set, and only fall back to the generated card otherwise.
+  //
+  // The bytes are proxied rather than redirected to: the convention expects an
+  // image response, and OG scrapers do not all follow redirects reliably.
+  const customOgImage = seoSettings.seo_og_image;
+  if (customOgImage) {
+    try {
+      const upstream = await fetch(absoluteUrl(customOgImage));
+      if (upstream.ok) {
+        return new Response(upstream.body, {
+          headers: {
+            "Content-Type": upstream.headers.get("content-type") ?? "image/png",
+            "Cache-Control": "public, max-age=3600",
+          },
+        });
+      }
+    } catch {
+      // Unreachable custom image — fall through to the generated card rather
+      // than serving nothing.
+    }
+  }
 
   const year = edition?.year ?? new Date().getFullYear();
   const title = `DevFest Toulouse ${year}`;

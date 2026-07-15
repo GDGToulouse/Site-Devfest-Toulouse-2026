@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import { buildAlertPayload, sendAlert } from "../../lib/alert-webhook.js";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
 import { validateWebhookUrl } from "../../lib/webhook-url.js";
@@ -10,7 +11,7 @@ interface CfpBody {
   closeDate?: string;
 }
 
-const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_"];
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_", "about_"];
 
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/general
@@ -39,10 +40,10 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
         update: { value },
         create: { key, value },
       });
-      // Identity assets (logos/favicons) and ecosystem partners both affect
-      // the home render (layout identity + EcosystemSection). Purge the
-      // home so visitors see the change without waiting for the cache TTL.
-      if (key.startsWith("identity_") || key.startsWith("ecosystem_")) {
+      // Identity assets (logos/favicons), ecosystem partners and the about
+      // carousel all affect the home render. Purge the home so visitors see
+      // the change without waiting for the cache TTL.
+      if (key.startsWith("identity_") || key.startsWith("ecosystem_") || key.startsWith("about_")) {
         touchedHomeRender = true;
       }
     }
@@ -91,6 +92,33 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     // dedicated /proposer-un-talk page (status + dates + button).
     revalidateCfp();
     return { success: true };
+  });
+
+  // POST /api/admin/settings/test-alert-webhook — send a sample server-error
+  // alert to the given (or stored) URL, so the admin can check the channel is
+  // wired before a real incident happens (#118). urlOverride bypasses the
+  // throttle, which is what we want for an explicit test.
+  app.post<{ Body: { url?: string } }>("/settings/test-alert-webhook", async (request, reply) => {
+    let alertUrl = request.body?.url?.trim();
+    if (!alertUrl) {
+      const setting = await prisma.siteSetting.findUnique({
+        where: { key: "alert_webhook_url" },
+      });
+      alertUrl = setting?.value;
+    }
+    if (!alertUrl) return reply.status(400).send({ error: "No alert webhook URL provided" });
+
+    const result = await sendAlert(
+      buildAlertPayload({
+        method: "GET",
+        route: "/api/admin/settings/test-alert-webhook",
+        statusCode: 500,
+        error: new Error("Test alert — this is not a real incident."),
+      }),
+      { urlOverride: alertUrl },
+    );
+
+    return result;
   });
 
   // POST /api/admin/settings/test-webhook — send a test payload to a webhook URL

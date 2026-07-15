@@ -111,6 +111,64 @@ export default async function editionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/editions/:year/speakers — published speakers of any edition by year
+  // (issue #63: past editions history, not scoped to the featured edition).
+  app.get<{ Params: { year: string } }>("/editions/:year/speakers", {
+    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findUnique({ where: { year: yearNum }, select: { id: true } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    const speakers = await prisma.speaker.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      orderBy: { name: "asc" },
+      select: { slug: true, name: true, photoUrl: true, company: true },
+    });
+    return speakers;
+  });
+
+  // GET /api/editions/:year/talks — published talks of any edition by year,
+  // with speakers, category and replay video (issue #63).
+  app.get<{ Params: { year: string } }>("/editions/:year/talks", {
+    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findUnique({ where: { year: yearNum }, select: { id: true } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    const talks = await prisma.talk.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      orderBy: { titleFr: "asc" },
+      include: {
+        speakers: {
+          where: { publicationStatus: "PUBLISHED" },
+          select: { slug: true, name: true },
+          orderBy: { name: "asc" },
+        },
+        category: { select: { nameFr: true, nameEn: true, color: true } },
+      },
+    });
+
+    return talks.map((t) => ({
+      slug: t.slug,
+      titleFr: t.titleFr,
+      titleEn: t.titleEn,
+      descriptionFr: t.descriptionFr,
+      descriptionEn: t.descriptionEn,
+      format: t.format,
+      level: t.level,
+      language: t.language,
+      videoUrl: t.videoUrl,
+      category: t.category,
+      speakers: t.speakers,
+    }));
+  });
+
   // GET /api/editions/current — returns the featured edition
   app.get("/editions/current", async (_request, reply) => {
     const edition = await getFeaturedEdition();
@@ -127,6 +185,28 @@ export default async function editionRoutes(app: FastifyInstance) {
       orderBy: { year: "desc" },
       select: { year: true, aftermovieUrl: true, galleryUrl: true },
     });
+
+    // Drive the Conférences / Speakers / Sponsors nav links (Header/Footer):
+    // a link is shown only when the edition has at least one PUBLISHED record
+    // of that kind — matching what the public pages actually display.
+    // scheduledTalkCount additionally tells whether the schedule (planning) is
+    // ready: at least one published talk has been given a time slot (startsAt),
+    // which promotes the flat "Conférences" link to a "Programme" menu (#203).
+    const [publishedTalkCount, scheduledTalkCount, publishedSpeakerCount, publishedSponsorCount] =
+      await Promise.all([
+        prisma.talk.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        prisma.talk.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", startsAt: { not: null } },
+        }),
+        prisma.speaker.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        prisma.sponsor.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+      ]);
 
     return {
       id: edition.id,
@@ -148,10 +228,10 @@ export default async function editionRoutes(app: FastifyInstance) {
       sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
       sponsorPageStatus: edition.sponsorPageStatus,
       sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
-      // TODO: compute from actual data when Speaker/Session/Sponsor models exist
-      isProgramPublished: false,
-      hasSpeakers: false,
-      hasSponsors: false,
+      isProgramPublished: publishedTalkCount > 0,
+      isScheduleReady: scheduledTalkCount > 0,
+      hasSpeakers: publishedSpeakerCount > 0,
+      hasSponsors: publishedSponsorCount > 0,
     };
   });
 
@@ -213,6 +293,8 @@ export default async function editionRoutes(app: FastifyInstance) {
       status: computeTicketStatus(tier, now),
       externalUrl: tier.externalUrl,
       sortOrder: tier.sortOrder,
+      // Feeds Schema.org Offer.validFrom on the home page (#185).
+      saleStartDate: tier.saleStartDate,
     }));
   });
 }

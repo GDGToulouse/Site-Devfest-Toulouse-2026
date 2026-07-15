@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail } from "../../lib/edit-link-email.js";
+import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 
 const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
 type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
@@ -18,6 +18,7 @@ interface SponsorCreateBody {
   descriptionEn?: string;
   socialLinks?: Record<string, string>;
   contactEmail?: string;
+  locale?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
 }
 
@@ -31,6 +32,12 @@ interface SponsorListQuery {
   editionId?: string;
 }
 
+interface SponsorBulkBody {
+  ids: number[];
+  action: "setStatus";
+  value: "DRAFT" | "PUBLISHED";
+}
+
 function serialize(s: {
   socialLinks: string | null;
   [k: string]: unknown;
@@ -39,20 +46,34 @@ function serialize(s: {
 }
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
-  // GET /api/admin/sponsors?editionId=X
+  // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: SponsorListQuery }>("/sponsors", {
     schema: {
       querystring: { type: "object", properties: { editionId: { type: "string" } } },
     },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const sponsors = await prisma.sponsor.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: [{ level: "asc" }, { name: "asc" }],
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId
+        ? [{ level: "asc" }, { name: "asc" }]
+        : [{ edition: { year: "desc" } }, { level: "asc" }, { name: "asc" }],
     });
     return sponsors.map(serialize);
+  });
+
+  // GET /api/admin/sponsors/:id
+  app.get<{ Params: SponsorIdParams }>("/sponsors/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const sponsor = await prisma.sponsor.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
+    return serialize(sponsor);
   });
 
   // POST /api/admin/sponsors
@@ -85,6 +106,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         descriptionEn: body.descriptionEn || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
+        locale: normalizeLocale(body.locale),
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
       },
     });
@@ -119,12 +141,31 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
+        ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
       },
     });
 
     revalidateSponsors();
     return serialize(sponsor);
+  });
+
+  // POST /api/admin/sponsors/bulk — apply one action to several sponsors at once.
+  app.post<{ Body: SponsorBulkBody }>("/sponsors/bulk", async (request, reply) => {
+    const { ids, action, value } = request.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
+      return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+    if (action !== "setStatus" || (value !== "DRAFT" && value !== "PUBLISHED")) {
+      return reply.code(400).send({ error: "unsupported action or value" });
+    }
+
+    const { count } = await prisma.sponsor.updateMany({
+      where: { id: { in: ids } },
+      data: { publicationStatus: value },
+    });
+    revalidateSponsors();
+    return { count };
   });
 
   // DELETE /api/admin/sponsors/:id
@@ -150,18 +191,27 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const email = request.body.email?.trim() || sponsor.contactEmail;
     if (!email) return reply.code(400).send({ error: "No contact email provided" });
 
+    // Send first, persist second (#223): rotating the token before a failed
+    // send would break the link the sponsor already has, and hand them nothing
+    // in return. On SMTP failure the previous link stays valid.
     const token = generateEditToken();
-    await prisma.sponsor.update({
-      where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
-    });
-
     try {
-      await sendEditLinkEmail({ to: email, name: sponsor.name, token, kind: "sponsor" });
+      await sendEditLinkEmail({
+        to: email,
+        name: sponsor.name,
+        token,
+        kind: "sponsor",
+        locale: sponsor.locale,
+      });
     } catch (err) {
       request.log.error({ err }, "Failed to send sponsor edit link email");
       return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
     }
+
+    await prisma.sponsor.update({
+      where: { id },
+      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+    });
     return { sent: true, email };
   });
 

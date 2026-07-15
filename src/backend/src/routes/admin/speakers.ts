@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
+import { rotateFeaturedSpeakers } from "../../lib/featured-speakers.js";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail } from "../../lib/edit-link-email.js";
+import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -15,6 +16,7 @@ interface SpeakerCreateBody {
   bioEn?: string;
   socialLinks?: Record<string, string>;
   contactEmail?: string;
+  locale?: string;
   isFeatured?: boolean;
   sponsorId?: number | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
@@ -30,23 +32,41 @@ interface SpeakerListQuery {
   editionId?: string;
 }
 
+interface SpeakerBulkBody {
+  ids: number[];
+  action: "setStatus" | "setFeatured";
+  value: "DRAFT" | "PUBLISHED" | boolean;
+}
+
 function serialize(s: { socialLinks: string | null; [k: string]: unknown }) {
   return { ...s, socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {} };
 }
 
 export default async function adminSpeakerRoutes(app: FastifyInstance) {
-  // GET /api/admin/speakers?editionId=X
+  // GET /api/admin/speakers?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: SpeakerListQuery }>("/speakers", {
     schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request, reply) => {
+  }, async (request) => {
     const { editionId } = request.query;
-    if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const speakers = await prisma.speaker.findMany({
-      where: { editionId: Number(editionId) },
-      orderBy: { name: "asc" },
+      where: editionId ? { editionId: Number(editionId) } : {},
+      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      orderBy: editionId ? { name: "asc" } : [{ edition: { year: "desc" } }, { name: "asc" }],
     });
     return speakers.map(serialize);
+  });
+
+  // GET /api/admin/speakers/:id
+  app.get<{ Params: SpeakerIdParams }>("/speakers/:id", {
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
+  }, async (request, reply) => {
+    const speaker = await prisma.speaker.findUnique({
+      where: { id: Number(request.params.id) },
+      include: { edition: { select: { id: true, year: true } } },
+    });
+    if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
+    return serialize(speaker);
   });
 
   // POST /api/admin/speakers
@@ -74,6 +94,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         bioEn: body.bioEn || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
+        locale: normalizeLocale(body.locale),
         isFeatured: body.isFeatured ?? false,
         sponsorId: body.sponsorId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
@@ -104,6 +125,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
+        ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
@@ -112,6 +134,40 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
     revalidateSpeakers();
     return serialize(speaker);
+  });
+
+  // POST /api/admin/speakers/bulk — apply one action to several speakers at once.
+  // POST /api/admin/speakers/rotate-featured — run the nightly rotation now.
+  // The scheduled job fires at 1 AM Paris time (#214); this lets an admin
+  // trigger it (or test it) without waiting for the small hours.
+  app.post("/speakers/rotate-featured", async () => {
+    return rotateFeaturedSpeakers();
+  });
+
+  app.post<{ Body: SpeakerBulkBody }>("/speakers/bulk", async (request, reply) => {
+    const { ids, action, value } = request.body;
+    if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
+      return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+
+    let data: { publicationStatus: "DRAFT" | "PUBLISHED" } | { isFeatured: boolean };
+    if (action === "setStatus") {
+      if (value !== "DRAFT" && value !== "PUBLISHED") {
+        return reply.code(400).send({ error: "value must be DRAFT or PUBLISHED" });
+      }
+      data = { publicationStatus: value };
+    } else if (action === "setFeatured") {
+      if (typeof value !== "boolean") {
+        return reply.code(400).send({ error: "value must be a boolean" });
+      }
+      data = { isFeatured: value };
+    } else {
+      return reply.code(400).send({ error: "unknown action" });
+    }
+
+    const { count } = await prisma.speaker.updateMany({ where: { id: { in: ids } }, data });
+    revalidateSpeakers();
+    return { count };
   });
 
   // DELETE /api/admin/speakers/:id
@@ -136,18 +192,27 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     const email = request.body.email?.trim() || speaker.contactEmail;
     if (!email) return reply.code(400).send({ error: "No contact email provided" });
 
+    // Send first, persist second (#223): rotating the token before a failed
+    // send would break the link the speaker already has, and hand them nothing
+    // in return. On SMTP failure the previous link stays valid.
     const token = generateEditToken();
-    await prisma.speaker.update({
-      where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
-    });
-
     try {
-      await sendEditLinkEmail({ to: email, name: speaker.name, token, kind: "speaker" });
+      await sendEditLinkEmail({
+        to: email,
+        name: speaker.name,
+        token,
+        kind: "speaker",
+        locale: speaker.locale,
+      });
     } catch (err) {
       request.log.error({ err }, "Failed to send speaker edit link email");
       return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
     }
+
+    await prisma.speaker.update({
+      where: { id },
+      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+    });
     return { sent: true, email };
   });
 
