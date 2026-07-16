@@ -356,7 +356,7 @@ function ImageField({
   token: string;
   value: string;
   onChange: (v: string) => void;
-  t: (typeof T)["fr"];
+  t: (typeof T)[Locale];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);

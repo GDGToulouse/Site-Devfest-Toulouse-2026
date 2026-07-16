@@ -52,6 +52,10 @@ jobs:
       # Throwaway secret for the disposable test DB — Better Auth needs one at
       # seed time; never a real credential.
       SESSION_SECRET: ci-test-secret-not-a-real-credential
+      # The upload tests write through the image pipeline; in Docker /app/uploads
+      # is a mounted volume, but the runner has no such path. Point it at a
+      # writable workspace dir — storeImageBuffer mkdirs it recursively.
+      UPLOADS_DIR: ${{ github.workspace }}/ci-uploads
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
