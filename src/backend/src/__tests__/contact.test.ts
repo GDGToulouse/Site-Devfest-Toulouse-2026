@@ -72,22 +72,42 @@ describe("POST /api/contact/send", () => {
     await app.close();
   });
 
-  it("should silently accept honeypot submissions", async () => {
+  it("should silently drop a honeypot submission with bot-like (invalid) fields", async () => {
     const app = await buildApp();
     const res = await app.inject({
       method: "POST",
       url: "/api/contact/send",
       payload: {
         firstName: "Bot",
-        lastName: "Spam",
-        email: "bot@spam.com",
-        message: "I am a spam bot filling all fields.",
-        website: "http://spam-link.com", // honeypot filled = bot
+        lastName: "",
+        email: "not-an-email",
+        message: "short",
+        website: "http://spam-link.com", // honeypot filled + invalid fields = classic bot
       },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.success).toBe(true);
+    await app.close();
+  });
+
+  it("should surface an error when the honeypot trips on an otherwise valid payload", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: {
+        firstName: "Real",
+        lastName: "User",
+        email: "real@example.com",
+        message: "A well-formed message a real user with autofill would send.",
+        website: "http://autofilled.example", // honeypot filled but everything else valid
+      },
+    });
+    expect(res.statusCode).toBe(400);
+    const body = res.json();
+    expect(body.success).toBe(false);
+    expect(body.errors).toHaveProperty("honeypot");
     await app.close();
   });
 
