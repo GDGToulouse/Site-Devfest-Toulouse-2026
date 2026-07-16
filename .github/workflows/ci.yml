@@ -67,13 +67,15 @@ jobs:
 
       - run: pnpm typecheck
 
-      # Bring the schema up and seed the base (idempotent) data the
-      # integration tests read — same sequence as the container boot
-      # (scripts/db-boot.sh), minus the baseline branch a fresh DB never needs.
+      # Bring the schema up, then run the DEV seed. The integration tests read
+      # demo editions, tickets, articles, etc. that only seed-dev.ts creates —
+      # the base seed.ts (contact categories, settings, admin accounts) alone
+      # leaves those tables empty. seed-dev.ts calls seedBase() first, so this
+      # covers both.
       - name: Apply migrations
         run: pnpm exec prisma migrate deploy
 
-      - name: Seed base data
-        run: pnpm exec tsx prisma/seed.ts
+      - name: Seed test data
+        run: pnpm exec tsx prisma/seed-dev.ts
 
       - run: pnpm test
