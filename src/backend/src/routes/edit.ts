@@ -4,6 +4,7 @@ import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import { revalidateSpeakers, revalidateSponsors } from "../lib/revalidate.js";
+import { storeImageBuffer } from "../lib/image-store.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -11,6 +12,14 @@ import { revalidateSpeakers, revalidateSponsors } from "../lib/revalidate.js";
 const TEXT_MAX = 5_000;
 const SHORT_MAX = 200;
 const URL_MAX = 2_048;
+
+// Logo/photo upload through a token (#241). Unlike the admin uploader, this
+// endpoint is unauthenticated (the token is the only credential), so it is
+// deliberately narrower: raster images only — SVG is excluded because it can
+// carry inline scripts and /uploads/ serves files with their native
+// content-type, which would let a submitted logo run JS in a visitor's browser.
+const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
+const UPLOAD_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 const SOCIAL_KEYS = ["linkedin", "twitter", "github", "website"] as const;
 
@@ -266,5 +275,33 @@ export default async function editRoutes(app: FastifyInstance) {
     }
 
     return { saved: true };
+  });
+
+  // POST /api/edit/:token/upload — upload a logo (sponsor) or photo (speaker)
+  // straight from the recipient's device (#241). Gated exactly like the edit
+  // endpoints: an unusable link (locked/frozen/expired) cannot upload either.
+  // Returns the stored image URL; the caller then saves it via PUT.
+  app.post<{ Params: { token: string } }>("/edit/:token/upload", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    schema: { params: { type: "object", required: ["token"], properties: { token: { type: "string" } } } },
+  }, async (request, reply) => {
+    const resolved = await resolveToken(request.params.token);
+    if (!resolved) return reply.code(404).send({ error: "invalid_token" });
+    const blocked = editingBlockedReason(resolved.entity);
+    if (blocked) return reply.code(403).send({ error: blocked });
+
+    const data = await request.file({ limits: { fileSize: UPLOAD_MAX_SIZE } });
+    if (!data) return reply.code(400).send({ error: "no_file" });
+
+    if (!UPLOAD_MIMES.has(data.mimetype)) {
+      await data.toBuffer(); // drain the stream so the request doesn't hang
+      return reply.code(400).send({ error: "invalid_file_type" });
+    }
+
+    const buffer = await data.toBuffer();
+    if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
+
+    const url = await storeImageBuffer(buffer, data.mimetype);
+    return { url };
   });
 }
