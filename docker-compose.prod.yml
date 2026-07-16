@@ -54,9 +54,21 @@ services:
     # again for each image.
     volumes:
       - next_image_cache:/app/.next/cache/images
+    # Env-scoped alias so the backend's on-demand revalidation fetch
+    # (FRONTEND_URL below) reaches THIS environment's frontend. Resolving the
+    # bare `frontend` hostname over the shared `coolify` network would pick up
+    # another Coolify project's (or the beta's) frontend, which answers
+    # `revalidated: true` while prod never regenerates (#232). Symmetric to the
+    # backend alias — same reasoning, same both-networks placement: `default` is
+    # private to this stack, so the alias must also sit on `coolify` to shadow
+    # the bare name there.
     networks:
-      - default
-      - coolify
+      default:
+        aliases:
+          - devfest-${ENV_NAME:-local}-frontend
+      coolify:
+        aliases:
+          - devfest-${ENV_NAME:-local}-frontend
 
   backend:
     build:
@@ -69,7 +81,11 @@ services:
     environment:
       - NODE_ENV=production
       - BASE_URL=${BASE_URL}
-      - FRONTEND_URL=http://frontend:3000
+      # Pinned to the env-scoped frontend alias (see the frontend service). The
+      # bare `frontend` hostname resolves over the shared `coolify` network and
+      # can hit another environment's frontend, so on-demand cache revalidation
+      # silently targets the wrong container (#232).
+      - FRONTEND_URL=http://devfest-${ENV_NAME:-local}-frontend:3000
       - PORT=4000
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - SESSION_SECRET=${SESSION_SECRET}

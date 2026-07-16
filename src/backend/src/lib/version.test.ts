@@ -6,11 +6,13 @@ describe("version module", () => {
     vi.unstubAllEnvs();
   });
 
-  it("defaults to 1.0.0 / local when no env is set", async () => {
+  it("falls back to the hardcoded semver / local when no env is set", async () => {
     vi.stubEnv("APP_VERSION", "");
     vi.stubEnv("ENV_NAME", "");
     const { APP_VERSION, APP_ENVIRONMENT } = await import("./version.js");
-    expect(APP_VERSION).toBe("1.0.0");
+    // The fallback tracks the release bump in version.ts, so assert the shape
+    // (a semver) rather than a literal that goes stale every release.
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
     expect(APP_ENVIRONMENT).toBe("local");
   });
 

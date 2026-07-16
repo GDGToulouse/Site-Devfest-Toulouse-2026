@@ -7,6 +7,7 @@ import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import TagInput from "@/components/admin/TagInput";
+import Tabs from "@/components/admin/Tabs";
 
 interface ArticleForm {
   slug: string;
@@ -275,34 +276,20 @@ export default function ArticleEditorPage() {
             </button>
           </div>
 
-          <div className="flex items-center justify-between gap-4 border-b border-gris/20">
-            <div className="flex gap-1">
-              <button
-                onClick={() => setActiveLang("fr")}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
-                  activeLang === "fr"
-                    ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
-                    : "text-gris hover:text-noir"
-                }`}
-              >
-                Français
-                {form.autoTranslatedFr && (
-                  <span className="ml-2 text-[10px] bg-gris/15 text-gris px-1.5 py-0.5 rounded">auto</span>
-                )}
-              </button>
-              <button
-                onClick={() => setActiveLang("en")}
-                className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
-                  activeLang === "en"
-                    ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
-                    : "text-gris hover:text-noir"
-                }`}
-              >
-                English
-                {form.autoTranslatedEn && (
-                  <span className="ml-2 text-[10px] bg-gris/15 text-gris px-1.5 py-0.5 rounded">auto</span>
-                )}
-              </button>
+          <div className="flex items-end justify-between gap-4">
+            {/* Language tabs via the shared accessible Tabs (role, aria-controls,
+                arrow-key nav). The "auto" marker rides in the label so the
+                machine-translated language stays visible on its tab. */}
+            <div className="flex-1">
+              <Tabs
+                tabs={[
+                  { key: "fr", label: form.autoTranslatedFr ? "Français · auto" : "Français" },
+                  { key: "en", label: form.autoTranslatedEn ? "English · auto" : "English" },
+                ]}
+                activeTab={activeLang}
+                onTabChange={(key) => setActiveLang(key as "fr" | "en")}
+                panelId={(key) => `article-panel-${key}`}
+              />
             </div>
 
             {/* Translate button: source = active tab, target = the other one */}
@@ -311,7 +298,7 @@ export default function ArticleEditorPage() {
                 type="button"
                 onClick={handleTranslate}
                 disabled={isTranslating || !form.titleFr.trim() && activeLang === "fr" || !form.titleEn.trim() && activeLang === "en"}
-                className="mb-2 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-bleu/30 text-bleu hover:bg-bleu/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-bleu/30 text-bleu hover:bg-bleu/5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Traduire le contenu ${activeLang.toUpperCase()} vers ${activeLang === "fr" ? "EN" : "FR"} via Gemini`}
               >
                 {isTranslating ? (
@@ -340,7 +327,12 @@ export default function ArticleEditorPage() {
             </p>
           )}
 
-          <div className={activeLang === "fr" ? "space-y-4" : "hidden"}>
+          <div
+            id="article-panel-fr"
+            role="tabpanel"
+            aria-labelledby="tab-fr"
+            className={activeLang === "fr" ? "space-y-4" : "hidden"}
+          >
             <FormField label="Titre" name="titleFr" value={form.titleFr} onChange={(v) => updateForm("titleFr", v)} required />
             <FormField label="Extrait" name="excerptFr" value={form.excerptFr} onChange={(v) => updateForm("excerptFr", v)} multiline rows={2} />
             <RichTextEditor label="Contenu" name="contentFr" value={form.contentFr} onChange={(v) => updateForm("contentFr", v)} minHeight="320px" />
@@ -356,7 +348,12 @@ export default function ArticleEditorPage() {
               </label>
             )}
           </div>
-          <div className={activeLang === "en" ? "space-y-4" : "hidden"}>
+          <div
+            id="article-panel-en"
+            role="tabpanel"
+            aria-labelledby="tab-en"
+            className={activeLang === "en" ? "space-y-4" : "hidden"}
+          >
             <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} required />
             <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
             <RichTextEditor label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} minHeight="320px" />

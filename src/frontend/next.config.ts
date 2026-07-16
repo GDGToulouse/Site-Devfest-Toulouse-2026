@@ -45,8 +45,10 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/brochure/:token`,
       },
       {
-        source: "/api/edit/:token",
-        destination: `${backendUrl}/api/edit/:token`,
+        // :path* (not :token) so the sub-route /api/edit/:token/upload (#241)
+        // also proxies to the backend, not only the bare /api/edit/:token.
+        source: "/api/edit/:path*",
+        destination: `${backendUrl}/api/edit/:path*`,
       },
       {
         source: "/api/editions/:path*",

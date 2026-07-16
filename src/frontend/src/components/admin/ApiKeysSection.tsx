@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import {
   listMyApiKeys,
   createApiKey,
+  rotateMyApiKey,
   revokeMyApiKey,
   purgeMyApiKey,
   type ApiKey,
@@ -37,6 +38,9 @@ export default function ApiKeysSection() {
   const [newName, setNewName] = useState("");
   const [newExpiresAt, setNewExpiresAt] = useState("");
   const [created, setCreated] = useState<CreatedApiKey | null>(null);
+  // The one-shot panel is shared by creation and rotation; this only changes
+  // its wording, so a rotated key is not announced as a brand-new one.
+  const [isRotation, setIsRotation] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [copyFeedback, setCopyFeedback] = useState("");
 
@@ -63,19 +67,61 @@ export default function ApiKeysSection() {
       setError("Le nom est obligatoire");
       return;
     }
+
+    // `datetime-local` yields "2026-12-31T23:59" — no seconds, no timezone —
+    // which the API rejects, since it requires a full ISO 8601 date-time (#228).
+    // The value is local time, and toISOString() converts it to UTC.
+    let expiresAt: string | null = null;
+    if (newExpiresAt) {
+      const parsed = new Date(newExpiresAt);
+      if (Number.isNaN(parsed.getTime())) {
+        setError("La date d'expiration est invalide.");
+        return;
+      }
+      if (parsed.getTime() <= Date.now()) {
+        setError("La date d'expiration doit être dans le futur.");
+        return;
+      }
+      expiresAt = parsed.toISOString();
+    }
+
     setIsSaving(true);
-    const { data, status } = await createApiKey(newName.trim(), newExpiresAt || null);
+    const { data, status } = await createApiKey(newName.trim(), expiresAt);
     setIsSaving(false);
     if (!data) {
-      if (status === 400) setError("Requête invalide (nom, date d'expiration ou quota dépassé)");
+      if (status === 400) setError("Requête invalide (nom, date d'expiration ou quota de jetons dépassé).");
       else if (status === 401 || status === 403) setError("Session expirée, reconnectez-vous");
       else setError("Erreur serveur");
       return;
     }
     setCreated(data);
+    setIsRotation(false);
     setNewName("");
     setNewExpiresAt("");
     setIsCreating(false);
+    await load();
+  }
+
+  async function handleRotate(id: string, name: string) {
+    if (
+      !confirm(
+        `Faire tourner le jeton « ${name} » ?\n\nUne nouvelle valeur sera générée et affichée une seule fois. ` +
+          `L'ancienne cessera de fonctionner immédiatement : toute intégration qui l'utilise devra être mise à jour.`,
+      )
+    ) {
+      return;
+    }
+    setError("");
+    const { data, status } = await rotateMyApiKey(id);
+    if (!data) {
+      if (status === 400) setError("Ce jeton est révoqué ou expiré : créez-en un nouveau.");
+      else if (status === 404) setError("Jeton introuvable");
+      else if (status === 401 || status === 403) setError("Session expirée, reconnectez-vous");
+      else setError("Rotation impossible");
+      return;
+    }
+    setCreated(data);
+    setIsRotation(true);
     await load();
   }
 
@@ -177,12 +223,15 @@ export default function ApiKeysSection() {
         </form>
       )}
 
-      {/* Created key one-shot display */}
+      {/* One-shot display, shared by creation and rotation */}
       {created && (
         <div className="mb-6 p-4 border-2 border-malachite rounded-lg bg-malachite/5">
-          <h3 className="text-sm font-bold text-malachite mb-2">Nouveau jeton créé : {created.name}</h3>
+          <h3 className="text-sm font-bold text-malachite mb-2">
+            {isRotation ? "Jeton renouvelé" : "Nouveau jeton créé"} : {created.name}
+          </h3>
           <p className="text-sm text-noir mb-3">
             <strong>Copiez cette clé maintenant.</strong> Elle ne sera plus jamais affichée.
+            {isRotation && " L'ancienne valeur ne fonctionne plus."}
           </p>
           <div className="flex items-stretch gap-2 mb-3">
             <code className="flex-1 px-3 py-2 bg-blanc border border-gris/30 rounded text-xs font-mono break-all">
@@ -258,13 +307,27 @@ export default function ApiKeysSection() {
                           Supprimer définitivement
                         </button>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleRevoke(k.id)}
-                          className="text-terre-cuite hover:underline text-sm"
-                        >
-                          Révoquer
-                        </button>
+                        <div className="flex items-center justify-end gap-3">
+                          {/* An expired key cannot be rotated (the API refuses it):
+                              offer the action only where it can succeed. */}
+                          {status.label === "Active" && (
+                            <button
+                              type="button"
+                              onClick={() => handleRotate(k.id, k.name)}
+                              className="text-bleu hover:underline text-sm"
+                              title="Génère une nouvelle valeur pour ce jeton. L'ancienne cessera de fonctionner immédiatement."
+                            >
+                              Faire tourner
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleRevoke(k.id)}
+                            className="text-terre-cuite hover:underline text-sm"
+                          >
+                            Révoquer
+                          </button>
+                        </div>
                       )}
                     </td>
                   </tr>
