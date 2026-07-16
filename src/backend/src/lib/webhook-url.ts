@@ -36,16 +36,19 @@ export async function validateWebhookUrl(raw: string): Promise<URL> {
     throw new Error("internal_hostname");
   }
 
-  // Reject explicit loopback / localhost literals early.
+  // Reject explicit loopback / localhost literals early. Node keeps the
+  // brackets on IPv6 hostnames (`new URL("http://[::1]/").hostname === "[::1]"`),
+  // so strip them before comparing or `[::1]` slips through the SSRF guard.
   const lower = parsed.hostname.toLowerCase();
-  if (lower === "localhost" || lower === "127.0.0.1" || lower === "::1") {
+  const bare = lower.startsWith("[") && lower.endsWith("]") ? lower.slice(1, -1) : lower;
+  if (bare === "localhost" || bare === "127.0.0.1" || bare === "::1") {
     throw new Error("loopback_hostname");
   }
 
   // Resolve all IPv4/IPv6 addresses the hostname points to — each one must be
   // public. A malicious DNS record pointing `evil.example.com` to 10.0.0.1 is
-  // caught here.
-  const addrs = await dns.lookup(parsed.hostname, { all: true }).catch(() => []);
+  // caught here. `dns.lookup` wants the bracket-less form for IPv6 literals.
+  const addrs = await dns.lookup(bare, { all: true }).catch(() => []);
   for (const { address, family } of addrs) {
     if (isPrivateAddress(address, family)) {
       throw new Error("private_ip");
