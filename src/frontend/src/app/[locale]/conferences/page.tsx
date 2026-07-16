@@ -3,8 +3,9 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getEditionTalks } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
-import ConferencesList from "@/components/conferences/ConferencesList";
-import type { TalkFormat } from "@/lib/types";
+import ConferencesBrowser from "@/components/conferences/ConferencesBrowser";
+import { localizedField } from "@/lib/i18n-helpers";
+import type { TalkFormat, TalkLevel } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -20,8 +21,13 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE"];
+const TALK_LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 
-export default async function ConferencesPage() {
+export default async function ConferencesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const locale = await getLocale();
   const t = await getTranslations("conferences");
   const edition = await getCurrentEdition();
@@ -36,6 +42,47 @@ export default async function ConferencesPage() {
   const formatLabels = Object.fromEntries(
     TALK_FORMATS.map((format) => [format, t(`format.${format}`)]),
   );
+  const levelLabels = Object.fromEntries(
+    TALK_LEVELS.map((level) => [level, t(`level.${level}`)]),
+  );
+
+  // Distinct category names and languages present in this edition — only these
+  // become filter chips, so we never offer a filter that matches nothing.
+  const categoryLabels = [
+    ...new Set(
+      talks
+        .map((talk) => (talk.category ? localizedField(talk.category, "name", locale) : ""))
+        .filter(Boolean),
+    ),
+  ];
+  const categories = categoryLabels.map((label) => ({ slug: label, label }));
+  const languages = [...new Set(talks.map((talk) => talk.language).filter(Boolean))];
+
+  // Read the initial filter state from the URL so a shared/bookmarked filtered
+  // link renders correctly on the server (indexable) before hydration.
+  const sp = await searchParams;
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+  const initial = {
+    q: first(sp.q),
+    format: first(sp.format),
+    level: first(sp.level),
+    language: first(sp.language),
+    category: first(sp.category),
+  };
+
+  const labels = {
+    search: t("filters.search"),
+    format: t("filters.format"),
+    level: t("filters.level"),
+    language: t("filters.language"),
+    category: t("filters.category"),
+    reset: t("filters.reset"),
+    noResults: t("filters.noResults"),
+    sessions: t("filters.sessions"),
+    formatLabels,
+    levelLabels,
+    languageLabels: { fr: t("filters.langFr"), en: t("filters.langEn") },
+  };
 
   return (
     <div className="px-6 py-8 lg:py-12">
@@ -48,7 +95,14 @@ export default async function ConferencesPage() {
 
         {talks.length > 0 ? (
           <div className="mt-8">
-            <ConferencesList talks={talks} locale={locale} formatLabels={formatLabels} />
+            <ConferencesBrowser
+              talks={talks}
+              locale={locale}
+              categories={categories}
+              languages={languages}
+              labels={labels}
+              initial={initial}
+            />
           </div>
         ) : (
           <div className="mt-8 p-8 rounded-3xl bg-blanc shadow-card">
