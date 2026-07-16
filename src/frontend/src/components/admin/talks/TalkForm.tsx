@@ -1,6 +1,7 @@
 "use client";
 
 import type { TalkFormat, TalkLevel, Category, Speaker } from "@/lib/types";
+import BilingualTabs from "@/components/admin/BilingualTabs";
 
 const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
@@ -61,27 +62,30 @@ export default function TalkForm({ value, onChange, categories, speakers }: Talk
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Titre (FR) *</span>
-          <input value={value.titleFr} onChange={(e) => onChange({ ...value, titleFr: e.target.value })} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Titre (EN) *</span>
-          <input value={value.titleEn} onChange={(e) => onChange({ ...value, titleEn: e.target.value })} className={inputClass} />
-        </label>
-      </div>
+      <BilingualTabs
+        label="Titre"
+        required
+        isEmpty={(lang) => !(lang === "fr" ? value.titleFr : value.titleEn).trim()}
+        renderPanel={(lang) =>
+          lang === "fr" ? (
+            <input value={value.titleFr} onChange={(e) => onChange({ ...value, titleFr: e.target.value })} className={inputClass} />
+          ) : (
+            <input value={value.titleEn} onChange={(e) => onChange({ ...value, titleEn: e.target.value })} className={inputClass} />
+          )
+        }
+      />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Description (FR)</span>
-          <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={3} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Description (EN)</span>
-          <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={3} className={inputClass} />
-        </label>
-      </div>
+      <BilingualTabs
+        label="Description"
+        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).trim()}
+        renderPanel={(lang) =>
+          lang === "fr" ? (
+            <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={4} className={inputClass} />
+          ) : (
+            <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={4} className={inputClass} />
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <label className="block">

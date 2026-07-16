@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { Sponsor } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import BilingualTabs from "@/components/admin/BilingualTabs";
 
 export interface SpeakerFormValue {
   name: string;
@@ -106,16 +107,17 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Bio (FR)</span>
-          <textarea value={value.bioFr} onChange={(e) => onChange({ ...value, bioFr: e.target.value })} rows={3} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Bio (EN)</span>
-          <textarea value={value.bioEn} onChange={(e) => onChange({ ...value, bioEn: e.target.value })} rows={3} className={inputClass} />
-        </label>
-      </div>
+      <BilingualTabs
+        label="Bio"
+        isEmpty={(lang) => !(lang === "fr" ? value.bioFr : value.bioEn).trim()}
+        renderPanel={(lang) =>
+          lang === "fr" ? (
+            <textarea value={value.bioFr} onChange={(e) => onChange({ ...value, bioFr: e.target.value })} rows={4} className={inputClass} />
+          ) : (
+            <textarea value={value.bioEn} onChange={(e) => onChange({ ...value, bioEn: e.target.value })} rows={4} className={inputClass} />
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="block">
