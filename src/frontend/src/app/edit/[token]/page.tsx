@@ -2,6 +2,8 @@
 
 import { use, useEffect, useRef, useState } from "react";
 
+import BilingualTabs from "@/components/admin/BilingualTabs";
+
 type Locale = "fr" | "en";
 
 interface EditData {
@@ -27,13 +29,13 @@ const T = {
     saving: "Enregistrement…",
     saved: "Enregistré ! Les modifications seront visibles sous peu.",
     socialLinks: "Liens sociaux",
-    bioFr: "Biographie (FR)",
-    bioEn: "Biographie (EN)",
+    langFr: "Français",
+    langEn: "English",
+    bio: "Biographie",
+    description: "Description",
     company: "Entreprise",
     city: "Ville",
     photo: "Photo",
-    descriptionFr: "Description (FR)",
-    descriptionEn: "Description (EN)",
     websiteUrl: "Site web",
     logo: "Logo",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Autre site" },
@@ -65,13 +67,13 @@ const T = {
     saving: "Saving…",
     saved: "Saved! Your changes will appear shortly.",
     socialLinks: "Social links",
-    bioFr: "Biography (FR)",
-    bioEn: "Biography (EN)",
+    langFr: "Français",
+    langEn: "English",
+    bio: "Biography",
+    description: "Description",
     company: "Company",
     city: "City",
     photo: "Photo",
-    descriptionFr: "Description (FR)",
-    descriptionEn: "Description (EN)",
     websiteUrl: "Website",
     logo: "Logo",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Other website" },
@@ -226,20 +228,30 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
         <p className="mt-4 max-w-prose text-sm text-gris">{t.intro}</p>
 
         <div className="mt-8 space-y-8">
-          {/* Descriptions / biography — two columns on desktop, stacked on mobile. */}
-          <div className="grid gap-5 md:grid-cols-2">
-            {isSpeaker ? (
-              <>
-                <Field label={t.bioFr} value={form.bioFr} onChange={(v) => setForm({ ...form, bioFr: v })} textarea />
-                <Field label={t.bioEn} value={form.bioEn} onChange={(v) => setForm({ ...form, bioEn: v })} textarea />
-              </>
-            ) : (
-              <>
-                <Field label={t.descriptionFr} value={form.descriptionFr} onChange={(v) => setForm({ ...form, descriptionFr: v })} textarea />
-                <Field label={t.descriptionEn} value={form.descriptionEn} onChange={(v) => setForm({ ...form, descriptionEn: v })} textarea />
-              </>
-            )}
-          </div>
+          {/* Description / biography — language tabs (#222). Captions come from
+              the recipient's locale dict, not next-intl (page is outside [locale]). */}
+          <BilingualTabs
+            label={isSpeaker ? t.bio : t.description}
+            labels={{ fr: t.langFr, en: t.langEn }}
+            isEmpty={(lang) =>
+              isSpeaker
+                ? !(lang === "fr" ? form.bioFr : form.bioEn)?.trim()
+                : !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.trim()
+            }
+            renderPanel={(lang) => {
+              const field = isSpeaker
+                ? lang === "fr" ? "bioFr" : "bioEn"
+                : lang === "fr" ? "descriptionFr" : "descriptionEn";
+              return (
+                <textarea
+                  value={form[field] ?? ""}
+                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                  rows={5}
+                  className={inputClass}
+                />
+              );
+            }}
+          />
 
           {/* Identity fields */}
           <div className="grid gap-5 md:grid-cols-2">

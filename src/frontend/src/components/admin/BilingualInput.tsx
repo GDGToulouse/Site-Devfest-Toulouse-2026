@@ -1,5 +1,7 @@
 "use client";
 
+import BilingualTabs from "./BilingualTabs";
+
 interface BilingualInputProps {
   label: string;
   nameFr: string;
@@ -13,6 +15,9 @@ interface BilingualInputProps {
   rows?: number;
 }
 
+// A bilingual text field. Same public API as before, now rendered as language
+// tabs (#222) instead of two side-by-side columns, so each language uses the
+// full width and a missing translation shows a dot on its tab.
 export default function BilingualInput({
   label,
   nameFr,
@@ -28,60 +33,24 @@ export default function BilingualInput({
   const inputClass =
     "w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 focus:border-malachite";
 
+  const fields = {
+    fr: { name: nameFr, value: valueFr, onChange: onChangeFr },
+    en: { name: nameEn, value: valueEn, onChange: onChangeEn },
+  };
+
   return (
-    <div>
-      <p className="text-sm font-medium text-noir mb-2">
-        {label}
-        {required && <span className="text-terre-cuite ml-1">*</span>}
-      </p>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label htmlFor={nameFr} className="block text-xs text-gris mb-1">
-            Francais
-          </label>
-          {multiline ? (
-            <textarea
-              id={nameFr}
-              name={nameFr}
-              value={valueFr}
-              onChange={(e) => onChangeFr(e.target.value)}
-              rows={rows}
-              className={inputClass}
-            />
-          ) : (
-            <input
-              id={nameFr}
-              name={nameFr}
-              value={valueFr}
-              onChange={(e) => onChangeFr(e.target.value)}
-              className={inputClass}
-            />
-          )}
-        </div>
-        <div>
-          <label htmlFor={nameEn} className="block text-xs text-gris mb-1">
-            English
-          </label>
-          {multiline ? (
-            <textarea
-              id={nameEn}
-              name={nameEn}
-              value={valueEn}
-              onChange={(e) => onChangeEn(e.target.value)}
-              rows={rows}
-              className={inputClass}
-            />
-          ) : (
-            <input
-              id={nameEn}
-              name={nameEn}
-              value={valueEn}
-              onChange={(e) => onChangeEn(e.target.value)}
-              className={inputClass}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+    <BilingualTabs
+      label={label}
+      required={required}
+      isEmpty={(lang) => !fields[lang].value.trim()}
+      renderPanel={(lang) => {
+        const f = fields[lang];
+        return multiline ? (
+          <textarea id={f.name} name={f.name} value={f.value} onChange={(e) => f.onChange(e.target.value)} rows={rows} className={inputClass} />
+        ) : (
+          <input id={f.name} name={f.name} value={f.value} onChange={(e) => f.onChange(e.target.value)} className={inputClass} />
+        );
+      }}
+    />
   );
 }

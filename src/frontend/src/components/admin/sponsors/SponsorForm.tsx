@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { SponsorLevel } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import BilingualTabs from "@/components/admin/BilingualTabs";
 
 const LEVELS: { value: SponsorLevel; label: string }[] = [
   { value: "PLATINUM", label: "Platinum" },
@@ -98,16 +99,17 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         <input type="url" value={value.websiteUrl} onChange={(e) => onChange({ ...value, websiteUrl: e.target.value })} className={inputClass} />
       </label>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Description (FR)</span>
-          <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={3} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Description (EN)</span>
-          <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={3} className={inputClass} />
-        </label>
-      </div>
+      <BilingualTabs
+        label="Description"
+        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).trim()}
+        renderPanel={(lang) =>
+          lang === "fr" ? (
+            <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={4} className={inputClass} />
+          ) : (
+            <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={4} className={inputClass} />
+          )
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <label className="block">
