@@ -194,7 +194,7 @@ export default function PagesAdminPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl shadow-card bg-blanc">
+        <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-blanc-casse/60 border-b border-gris/20">
