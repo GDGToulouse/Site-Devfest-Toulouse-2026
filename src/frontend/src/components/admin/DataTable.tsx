@@ -48,7 +48,13 @@ export default function DataTable<T extends { id: number }>({
   };
 
   return (
-    <div className="overflow-x-auto rounded-xl shadow-card bg-blanc">
+    // overflow-y-hidden is deliberate: with only `overflow-x-auto`, CSS computes
+    // overflow-y as `auto` too (a visible/auto pair resolves to auto), so on
+    // mobile this wrapper captured the vertical touch-scroll and the list could
+    // not be scrolled past the first screenful (#244). Pinning overflow-y to
+    // hidden keeps horizontal column scrolling while letting the vertical
+    // gesture bubble up to the admin shell's scrollable <main>.
+    <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-blanc-casse/60 border-b border-gris/20">
