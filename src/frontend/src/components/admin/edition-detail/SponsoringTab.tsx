@@ -553,27 +553,36 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
               </button>
             </div>
             {form.advantages.map((adv, i) => (
-              <div key={i} className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  placeholder="FR"
-                  value={adv.fr}
-                  onChange={(e) => updateAdvantage(i, "fr", e.target.value)}
-                  className="flex-1 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-                />
-                <input
-                  type="text"
-                  placeholder="EN"
-                  value={adv.en}
-                  onChange={(e) => updateAdvantage(i, "en", e.target.value)}
-                  className="flex-1 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-                />
+              // Stack FR/EN on mobile so neither column runs off-screen (#243);
+              // side-by-side from sm up. The delete button sits at the end of
+              // the row on desktop, and full-width under the fields on mobile.
+              <div key={i} className="flex flex-col gap-2 mb-3 sm:flex-row sm:items-start">
+                <label className="flex-1 block">
+                  <span className="mb-1 block text-xs text-gris sm:hidden">FR</span>
+                  <input
+                    type="text"
+                    placeholder="FR"
+                    value={adv.fr}
+                    onChange={(e) => updateAdvantage(i, "fr", e.target.value)}
+                    className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  />
+                </label>
+                <label className="flex-1 block">
+                  <span className="mb-1 block text-xs text-gris sm:hidden">EN</span>
+                  <input
+                    type="text"
+                    placeholder="EN"
+                    value={adv.en}
+                    onChange={(e) => updateAdvantage(i, "en", e.target.value)}
+                    className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => removeAdvantage(i)}
-                  className="text-terre-cuite hover:underline text-sm px-2"
+                  className="text-terre-cuite hover:underline text-sm px-2 py-2 text-left sm:pt-2"
                 >
-                  &times;
+                  Supprimer
                 </button>
               </div>
             ))}
