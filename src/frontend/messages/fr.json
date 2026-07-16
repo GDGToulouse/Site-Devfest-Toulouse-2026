@@ -271,6 +271,18 @@
       "DEBUTANT": "Débutant",
       "INTERMEDIAIRE": "Intermédiaire",
       "CONFIRME": "Confirmé"
+    },
+    "filters": {
+      "search": "Rechercher un talk ou un speaker…",
+      "format": "Format",
+      "level": "Niveau",
+      "language": "Langue",
+      "category": "Catégorie",
+      "langFr": "Français",
+      "langEn": "Anglais",
+      "reset": "Réinitialiser",
+      "sessions": "session(s)",
+      "noResults": "Aucune session ne correspond à votre recherche."
     }
   },
   "speakers": {

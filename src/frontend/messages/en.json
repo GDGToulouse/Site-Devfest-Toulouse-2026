@@ -271,6 +271,18 @@
       "DEBUTANT": "Beginner",
       "INTERMEDIAIRE": "Intermediate",
       "CONFIRME": "Advanced"
+    },
+    "filters": {
+      "search": "Search a talk or speaker…",
+      "format": "Format",
+      "level": "Level",
+      "language": "Language",
+      "category": "Category",
+      "langFr": "French",
+      "langEn": "English",
+      "reset": "Reset",
+      "sessions": "session(s)",
+      "noResults": "No session matches your search."
     }
   },
   "speakers": {
