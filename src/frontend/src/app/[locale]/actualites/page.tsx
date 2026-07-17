@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getArticles, getEditions } from "@/lib/api";
+import { getArticles, getEditions, getTags } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ArticleCard from "@/components/ArticleCard";
+import ArticlesFilters from "@/components/articles/ArticlesFilters";
 import Pagination from "@/components/Pagination";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -22,26 +23,36 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function ArticlesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string; edition?: string }>;
+  searchParams: Promise<{ page?: string; edition?: string; tag?: string }>;
 }) {
   const locale = await getLocale();
   const t = await getTranslations("articles");
-  const { page: pageParam, edition: editionParam } = await searchParams;
+  const { page: pageParam, edition: editionParam, tag: tagParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
+
+  // Editions + tags feed the filter UI (#179); loaded unconditionally so the
+  // controls are always available, not only when a filter is already active.
+  const [editions, tags] = await Promise.all([getEditions(), getTags()]);
 
   // ?edition=2025 filters the list down to that edition's articles (#178). The
   // year is what the URL carries — it is readable and stable — so it has to be
   // resolved to the edition id the API expects. An unknown year yields no
   // filter rather than an empty page.
   const editionYear = Number(editionParam) || null;
-  const editions = editionYear ? await getEditions() : [];
   const edition = editionYear ? editions.find((e) => e.year === editionYear) ?? null : null;
+  // Only keep a tag that actually exists, so a stale/invalid slug degrades to
+  // "no tag filter" instead of an empty page.
+  const activeTag = tagParam && tags.some((tg) => tg.slug === tagParam) ? tagParam : null;
 
   // 12 = 3 full rows of the 4-column grid (see grid-cols-4 below); 9 left a
   // trailing row of one item with three empty slots (#165).
-  const { articles, totalPages } = await getArticles(page, 12, undefined, edition?.id);
+  const { articles, totalPages } = await getArticles(page, 12, activeTag ?? undefined, edition?.id);
 
   const heading = edition ? `${t("title")} — DevFest Toulouse ${edition.year}` : t("title");
+
+  const filterQuery: Record<string, string> = {};
+  if (edition) filterQuery.edition = String(edition.year);
+  if (activeTag) filterQuery.tag = activeTag;
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -57,6 +68,19 @@ export default async function ArticlesPage({
           {heading}
         </h1>
 
+        <ArticlesFilters
+          editions={editions.map((e) => ({ year: e.year, label: `DevFest Toulouse ${e.year}` }))}
+          tags={tags}
+          activeEdition={edition?.year ?? null}
+          activeTag={activeTag}
+          labels={{
+            edition: t("filters.edition"),
+            allEditions: t("filters.allEditions"),
+            tags: t("filters.tags"),
+            reset: t("filters.reset"),
+          }}
+        />
+
         {articles.length === 0 ? (
           <p className="mt-8 text-gris text-lg">{t("noArticles")}</p>
         ) : (
@@ -71,9 +95,9 @@ export default async function ArticlesPage({
               currentPage={page}
               totalPages={totalPages}
               basePath="/actualites"
-              // Carry the edition filter across pages, otherwise page 2 would
+              // Carry the active filters across pages, otherwise page 2 would
               // silently drop back to every article.
-              queryParams={edition ? { edition: String(edition.year) } : {}}
+              queryParams={filterQuery}
             />
           </>
         )}

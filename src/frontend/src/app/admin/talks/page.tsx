@@ -17,6 +17,7 @@ const FORMAT_LABELS: Record<TalkFormat, string> = {
   CONFERENCE: "Conférence",
   QUICKIE: "Quickie",
   KEYNOTE: "Keynote",
+  WORKSHOP: "Workshop",
 };
 
 export default function TalksDataPage() {

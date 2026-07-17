@@ -20,7 +20,7 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE"];
+const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
 const TALK_LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 
 export default async function ConferencesPage({
@@ -72,10 +72,12 @@ export default async function ConferencesPage({
 
   const labels = {
     search: t("filters.search"),
+    filters: t("filters.filters"),
     format: t("filters.format"),
     level: t("filters.level"),
     language: t("filters.language"),
     category: t("filters.category"),
+    moreFilters: t("filters.moreFilters"),
     reset: t("filters.reset"),
     noResults: t("filters.noResults"),
     sessions: t("filters.sessions"),
