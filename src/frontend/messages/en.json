@@ -102,7 +102,13 @@
     "by": "by",
     "backToList": "Back to news",
     "taggedWith": "Articles tagged",
-    "autoTranslated": "Automatic translation not yet reviewed by the team."
+    "autoTranslated": "Automatic translation not yet reviewed by the team.",
+    "filters": {
+      "edition": "Edition",
+      "allEditions": "All editions",
+      "tags": "Tags",
+      "reset": "Reset"
+    }
   },
   "pagination": {
     "label": "Pagination",
