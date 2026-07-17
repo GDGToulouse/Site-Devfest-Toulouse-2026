@@ -7,6 +7,7 @@ const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
   { value: "QUICKIE", label: "Quickie (15 min)" },
   { value: "KEYNOTE", label: "Keynote" },
+  { value: "WORKSHOP", label: "Workshop" },
 ];
 const LEVELS: { value: TalkLevel; label: string }[] = [
   { value: "DEBUTANT", label: "Débutant" },

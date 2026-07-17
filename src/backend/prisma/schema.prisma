@@ -59,6 +59,7 @@ enum TalkFormat {
   CONFERENCE // 40 min
   QUICKIE    // 15 min
   KEYNOTE
+  WORKSHOP   // hands-on session / atelier
 }
 
 // Talk difficulty levels (RG-212). Absence means "Tous niveaux".

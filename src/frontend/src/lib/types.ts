@@ -206,7 +206,7 @@ export interface SpeakerDetail {
   talks: SpeakerTalkRef[];
 }
 
-export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE";
+export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
 
 // Past-edition history items (issue #63), keyed by year (not by featured edition).

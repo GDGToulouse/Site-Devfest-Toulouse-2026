@@ -9,6 +9,7 @@ import {
   resolveSpeakerPhoto,
   FORMAT_KEYWORDS,
   LEVEL_KEYWORDS,
+  LANGUAGE_KEYWORDS,
   type ImportReport,
 } from "./sessionize-import.js";
 import { fetchAndStoreImage } from "./image-store.js";
@@ -75,6 +76,26 @@ describe("matchEnum (format/level)", () => {
     expect(matchEnum("Intermédiaire", LEVEL_KEYWORDS)).toBe("INTERMEDIAIRE");
     expect(matchEnum("Advanced", LEVEL_KEYWORDS)).toBe("CONFIRME");
   });
+
+  it("maps the French 'Avancé' level (#247)", () => {
+    expect(matchEnum("Avancé", LEVEL_KEYWORDS)).toBe("CONFIRME");
+    expect(matchEnum("Avance", LEVEL_KEYWORDS)).toBe("CONFIRME");
+  });
+
+  it("maps the Workshop format (#247)", () => {
+    expect(matchEnum("Workshop", FORMAT_KEYWORDS)).toBe("WORKSHOP");
+    expect(matchEnum("Atelier", FORMAT_KEYWORDS)).toBe("WORKSHOP");
+    // Workshop must win over the generic "conf|talk|session" catch-all.
+    expect(matchEnum("Workshop session", FORMAT_KEYWORDS)).toBe("WORKSHOP");
+  });
+
+  it("maps language names to an ISO code (#247)", () => {
+    expect(matchEnum("Français", LANGUAGE_KEYWORDS)).toBe("fr");
+    expect(matchEnum("French", LANGUAGE_KEYWORDS)).toBe("fr");
+    expect(matchEnum("English", LANGUAGE_KEYWORDS)).toBe("en");
+    expect(matchEnum("Anglais", LANGUAGE_KEYWORDS)).toBe("en");
+    expect(matchEnum("Klingon", LANGUAGE_KEYWORDS)).toBeNull();
+  });
 });
 
 describe("categoryRole", () => {
@@ -82,6 +103,11 @@ describe("categoryRole", () => {
     expect(categoryRole({ id: 1, title: "Session format", items: [] })).toBe("format");
     expect(categoryRole({ id: 2, title: "Niveau", items: [] })).toBe("level");
     expect(categoryRole({ id: 3, title: "Track", items: [] })).toBe("track");
+  });
+
+  it("classifies a language category and no longer treats it as a track (#247)", () => {
+    expect(categoryRole({ id: 4, title: "Language", items: [] })).toBe("language");
+    expect(categoryRole({ id: 5, title: "Langue", items: [] })).toBe("language");
   });
 });
 
