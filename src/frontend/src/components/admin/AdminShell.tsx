@@ -95,7 +95,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-blanc-casse w-screen h-screen overflow-hidden">
+    <div className="fixed inset-0 z-50 flex bg-blanc-casse w-screen h-screen h-dvh overflow-hidden">
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
@@ -137,7 +137,10 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </span>
         </div>
 
-        <div className="p-4 lg:p-8">
+        {/* pb-24 on mobile keeps the last element (often a Save button) clear
+            of the browser's bottom chrome; h-dvh above already excludes it, but
+            the extra padding is a belt-and-braces safeguard (#257). */}
+        <div className="p-4 pb-24 lg:p-8 lg:pb-8">
           {isAdminPathAllowed(pathname, user.role) ? children : <ForbiddenSection />}
         </div>
       </main>
