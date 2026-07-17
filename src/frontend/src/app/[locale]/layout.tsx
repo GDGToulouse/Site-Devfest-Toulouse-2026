@@ -2,7 +2,7 @@ import { config } from "@fortawesome/fontawesome-svg-core";
 import "@fortawesome/fontawesome-svg-core/styles.css";
 config.autoAddCss = false;
 
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
@@ -83,6 +83,12 @@ export async function generateMetadata({
     }),
   };
 }
+
+// Malachite (#109E6E) — the brand's green identity colour (design-system.md).
+// Colours the mobile browser toolbar and matches the web app manifest.
+export const viewport: Viewport = {
+  themeColor: "#109E6E",
+};
 
 export default async function LocaleLayout({
   children,
