@@ -21,6 +21,7 @@ interface Labels {
   level: string;
   language: string;
   category: string;
+  moreFilters: string;
   reset: string;
   noResults: string;
   sessions: string; // plural noun, composed as "{n} {sessions}"
@@ -60,6 +61,9 @@ export default function ConferencesBrowser({
   const router = useRouter();
   const pathname = usePathname();
   const [filters, setFilters] = useState<Filters>(initial);
+  // Level + language live behind a "more filters" disclosure to keep the bar
+  // compact (#246). Open it on mount if one of them was already active via URL.
+  const [showMore, setShowMore] = useState(Boolean(initial.level || initial.language));
 
   // Toggle a chip (empty value clears it) and reflect the whole filter state in
   // the URL. replace (not push) so the back button doesn't step through every
@@ -83,6 +87,11 @@ export default function ConferencesBrowser({
 
   const hasActiveFilter =
     Boolean(filters.q || filters.format || filters.level || filters.language || filters.category);
+
+  // Only families actually rendered inside the disclosure count toward its badge.
+  const hasLanguageFilter = languages.length > 1;
+  const collapsedActiveCount =
+    (filters.level ? 1 : 0) + (hasLanguageFilter && filters.language ? 1 : 0);
 
   const filtered = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
@@ -117,6 +126,7 @@ export default function ConferencesBrowser({
           className="w-full rounded-lg border border-gris/30 px-4 py-2.5 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
         />
 
+        {/* Always visible: the most discriminating families (format + track). */}
         <ChipRow label={labels.format}>
           {FORMATS.map((f) => (
             <Chip key={f} active={filters.format === f} onClick={() => toggle("format", f)}>
@@ -124,24 +134,6 @@ export default function ConferencesBrowser({
             </Chip>
           ))}
         </ChipRow>
-
-        <ChipRow label={labels.level}>
-          {LEVELS.map((l) => (
-            <Chip key={l} active={filters.level === l} onClick={() => toggle("level", l)}>
-              {labels.levelLabels[l]}
-            </Chip>
-          ))}
-        </ChipRow>
-
-        {languages.length > 1 && (
-          <ChipRow label={labels.language}>
-            {languages.map((lang) => (
-              <Chip key={lang} active={filters.language === lang} onClick={() => toggle("language", lang)}>
-                {labels.languageLabels[lang] ?? lang.toUpperCase()}
-              </Chip>
-            ))}
-          </ChipRow>
-        )}
 
         {categories.length > 0 && (
           <ChipRow label={labels.category}>
@@ -156,6 +148,56 @@ export default function ConferencesBrowser({
             ))}
           </ChipRow>
         )}
+
+        {/* Secondary families (level + language) folded to keep the bar compact. */}
+        <div>
+          <button
+            type="button"
+            onClick={() => setShowMore((v) => !v)}
+            aria-expanded={showMore}
+            aria-controls="conferences-more-filters"
+            className="flex items-center gap-1.5 text-sm font-medium text-bleu hover:underline"
+          >
+            <span
+              aria-hidden
+              className={`transition-transform ${showMore ? "rotate-90" : ""}`}
+            >
+              ›
+            </span>
+            {labels.moreFilters}
+            {collapsedActiveCount > 0 && (
+              <span className="ml-1 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-malachite px-1.5 text-xs font-semibold text-blanc">
+                {collapsedActiveCount}
+              </span>
+            )}
+          </button>
+
+          {showMore && (
+            <div id="conferences-more-filters" className="mt-4 space-y-4">
+              <ChipRow label={labels.level}>
+                {LEVELS.map((l) => (
+                  <Chip key={l} active={filters.level === l} onClick={() => toggle("level", l)}>
+                    {labels.levelLabels[l]}
+                  </Chip>
+                ))}
+              </ChipRow>
+
+              {hasLanguageFilter && (
+                <ChipRow label={labels.language}>
+                  {languages.map((lang) => (
+                    <Chip
+                      key={lang}
+                      active={filters.language === lang}
+                      onClick={() => toggle("language", lang)}
+                    >
+                      {labels.languageLabels[lang] ?? lang.toUpperCase()}
+                    </Chip>
+                  ))}
+                </ChipRow>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="flex items-center justify-between pt-1">
           <p className="text-sm text-gris" aria-live="polite">
