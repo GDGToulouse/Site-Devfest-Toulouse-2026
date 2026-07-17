@@ -17,6 +17,7 @@ export interface CategoryOption {
 
 interface Labels {
   search: string;
+  filters: string;
   format: string;
   level: string;
   language: string;
@@ -64,6 +65,12 @@ export default function ConferencesBrowser({
   // Level + language live behind a "more filters" disclosure to keep the bar
   // compact (#246). Open it on mount if one of them was already active via URL.
   const [showMore, setShowMore] = useState(Boolean(initial.level || initial.language));
+  // On mobile the whole filter panel is collapsed behind a "Filters" button to
+  // keep the session list above the fold (#256); desktop always shows it. Open
+  // on mount when a filter is already active via URL so a shared link is clear.
+  const [showPanel, setShowPanel] = useState(
+    Boolean(initial.q || initial.format || initial.level || initial.language || initial.category),
+  );
 
   // Toggle a chip (empty value clears it) and reflect the whole filter state in
   // the URL. replace (not push) so the back button doesn't step through every
@@ -93,6 +100,15 @@ export default function ConferencesBrowser({
   const collapsedActiveCount =
     (filters.level ? 1 : 0) + (hasLanguageFilter && filters.language ? 1 : 0);
 
+  // Total active filters — the badge on the mobile "Filters" button so the user
+  // knows a filter is applied even while the panel is collapsed.
+  const activeFilterCount =
+    (filters.q ? 1 : 0) +
+    (filters.format ? 1 : 0) +
+    (filters.level ? 1 : 0) +
+    (hasLanguageFilter && filters.language ? 1 : 0) +
+    (filters.category ? 1 : 0);
+
   const filtered = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
     return talks.filter((talk) => {
@@ -116,7 +132,31 @@ export default function ConferencesBrowser({
 
   return (
     <div>
-      <div className="space-y-4 rounded-2xl bg-blanc p-5 shadow-card">
+      {/* Mobile-only trigger: the whole panel is collapsed by default (#256). */}
+      <button
+        type="button"
+        onClick={() => setShowPanel((v) => !v)}
+        aria-expanded={showPanel}
+        aria-controls="conferences-filter-panel"
+        className="mb-4 flex w-full items-center justify-between rounded-2xl bg-blanc px-5 py-3 text-sm font-semibold text-noir shadow-card sm:hidden"
+      >
+        <span className="flex items-center gap-2">
+          {labels.filters}
+          {activeFilterCount > 0 && (
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-malachite px-1.5 text-xs font-semibold text-blanc">
+              {activeFilterCount}
+            </span>
+          )}
+        </span>
+        <span aria-hidden className={`transition-transform ${showPanel ? "rotate-180" : ""}`}>
+          ⌄
+        </span>
+      </button>
+
+      <div
+        id="conferences-filter-panel"
+        className={`${showPanel ? "block" : "hidden"} space-y-4 rounded-2xl bg-blanc p-5 shadow-card sm:block`}
+      >
         <input
           type="search"
           value={filters.q}

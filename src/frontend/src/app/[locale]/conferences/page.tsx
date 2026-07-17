@@ -72,6 +72,7 @@ export default async function ConferencesPage({
 
   const labels = {
     search: t("filters.search"),
+    filters: t("filters.filters"),
     format: t("filters.format"),
     level: t("filters.level"),
     language: t("filters.language"),

@@ -281,6 +281,7 @@
     },
     "filters": {
       "search": "Search a talk or speaker…",
+      "filters": "Filters",
       "format": "Format",
       "level": "Level",
       "language": "Language",
