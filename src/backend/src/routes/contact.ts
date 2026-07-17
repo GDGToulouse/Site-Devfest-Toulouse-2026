@@ -167,7 +167,9 @@ export default async function contactRoutes(app: FastifyInstance) {
         <p>${message.trim().replace(/\n/g, "<br>")}</p>
       `;
 
-      await sendEmail({ to: recipients, subject, text, html });
+      // Reply-To = the visitor, so the organizers can answer the message
+      // directly without copy-pasting the address out of the body.
+      await sendEmail({ to: recipients, subject, text, html, replyTo: email.trim() });
     } catch (err) {
       app.log.error("Failed to send contact email: %s", String(err));
     }
@@ -205,11 +207,17 @@ export default async function contactRoutes(app: FastifyInstance) {
           const renderedTextBody = interpolate(tplBody, vars).replace(/<[^>]+>/g, "");
           const renderedHtmlBody = interpolateHtml(tplBody, vars).replace(/\n/g, "<br>");
 
+          // Keep the organizers (the category recipients) in CC of the
+          // brochure confirmation so they see exactly what the requester got,
+          // with the tracked brochure link. Brochure requests only.
+          const cc = requiresCompanyInfo && recipients.length > 0 ? recipients : undefined;
+
           await sendEmail({
             to: [email.trim()],
             subject: renderedSubject,
             text: renderedTextBody,
             html: renderedHtmlBody,
+            cc,
           });
         } catch (err) {
           app.log.error("Failed to send confirmation email: %s", String(err));
