@@ -278,6 +278,7 @@
       "level": "Niveau",
       "language": "Langue",
       "category": "Catégorie",
+      "moreFilters": "Plus de filtres",
       "langFr": "Français",
       "langEn": "Anglais",
       "reset": "Réinitialiser",

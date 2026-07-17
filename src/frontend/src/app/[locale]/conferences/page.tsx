@@ -76,6 +76,7 @@ export default async function ConferencesPage({
     level: t("filters.level"),
     language: t("filters.language"),
     category: t("filters.category"),
+    moreFilters: t("filters.moreFilters"),
     reset: t("filters.reset"),
     noResults: t("filters.noResults"),
     sessions: t("filters.sessions"),
