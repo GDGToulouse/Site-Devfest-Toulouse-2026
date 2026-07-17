@@ -228,7 +228,7 @@ export interface EditionTalk {
   language: string;
   videoUrl: string | null;
   category: { nameFr: string; nameEn: string; color: string } | null;
-  speakers: { slug: string; name: string }[];
+  speakers: { slug: string; name: string; photoUrl: string | null }[];
 }
 
 // Public talk detail.
