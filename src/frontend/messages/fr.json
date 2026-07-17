@@ -102,7 +102,13 @@
     "by": "par",
     "backToList": "Retour aux actualités",
     "taggedWith": "Articles tagués",
-    "autoTranslated": "Traduction automatique non relue par l'équipe."
+    "autoTranslated": "Traduction automatique non relue par l'équipe.",
+    "filters": {
+      "edition": "Édition",
+      "allEditions": "Toutes les éditions",
+      "tags": "Tags",
+      "reset": "Réinitialiser"
+    }
   },
   "pagination": {
     "label": "Pagination",
