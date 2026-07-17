@@ -6,11 +6,20 @@ import BilingualTabs from "@/components/admin/BilingualTabs";
 
 type Locale = "fr" | "en";
 
+interface EditTalk {
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  format: "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
+}
+
 interface EditData {
   kind: "speaker" | "sponsor";
   locale?: Locale;
   name: string;
   fields: Record<string, unknown>;
+  // Speaker only, read-only (#229).
+  talks?: EditTalk[];
 }
 
 type SocialLinks = Record<string, string>;
@@ -38,6 +47,9 @@ const T = {
     photo: "Photo",
     websiteUrl: "Site web",
     logo: "Logo",
+    mySessions: "Mes sessions",
+    mySessionsHint: "Vos sessions retenues. Pour toute correction, contactez l'organisation.",
+    format: { CONFERENCE: "Conférence", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Autre site" },
     upload: "Choisir une image…",
     uploading: "Envoi…",
@@ -76,6 +88,9 @@ const T = {
     photo: "Photo",
     websiteUrl: "Website",
     logo: "Logo",
+    mySessions: "My sessions",
+    mySessionsHint: "Your accepted sessions. For any correction, please contact the organisers.",
+    format: { CONFERENCE: "Conference", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Other website" },
     upload: "Choose an image…",
     uploading: "Uploading…",
@@ -288,6 +303,30 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
               ))}
             </div>
           </div>
+
+          {/* Read-only list of the speaker's accepted sessions (#229, RG-247):
+              informational only, not editable from this page. */}
+          {isSpeaker && data!.talks && data!.talks.length > 0 && (
+            <div>
+              <p className="mb-1 text-sm font-semibold text-noir">{t.mySessions}</p>
+              <p className="mb-3 text-sm text-gris">{t.mySessionsHint}</p>
+              <ul className="space-y-2">
+                {data!.talks.map((talk) => (
+                  <li
+                    key={talk.slug}
+                    className="flex flex-wrap items-center gap-3 rounded-lg border border-gris/15 bg-blanc-casse px-4 py-3"
+                  >
+                    <span className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
+                      {t.format[talk.format]}
+                    </span>
+                    <span className="font-medium text-noir">
+                      {(data!.locale ?? "fr") === "en" ? talk.titleEn : talk.titleFr}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
 
           <div className="flex flex-wrap items-center gap-4 border-t border-gris/15 pt-6">
             <button

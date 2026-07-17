@@ -113,7 +113,16 @@ function cleanSocial(social: Record<string, string> | undefined): string | null 
 async function resolveToken(token: string) {
   const speaker = await prisma.speaker.findUnique({
     where: { editToken: token },
-    include: { edition: { select: { startDate: true } } },
+    include: {
+      edition: { select: { startDate: true } },
+      // Read-only list shown on the edit page (#229). Sessions themselves are
+      // not editable here (RG-247); only published ones are surfaced.
+      talks: {
+        where: { publicationStatus: "PUBLISHED" },
+        select: { slug: true, titleFr: true, titleEn: true, format: true },
+        orderBy: { titleFr: "asc" },
+      },
+    },
   });
   if (speaker) return { kind: "speaker" as const, entity: speaker };
 
@@ -196,6 +205,8 @@ export default async function editRoutes(app: FastifyInstance) {
           photoUrl: entity.photoUrl,
           socialLinks: parseSocial(entity.socialLinks),
         },
+        // Read-only (RG-247): shown so the speaker can confirm their sessions.
+        talks: entity.talks,
       };
     }
     return {
