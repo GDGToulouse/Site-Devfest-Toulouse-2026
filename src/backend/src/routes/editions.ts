@@ -147,7 +147,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       include: {
         speakers: {
           where: { publicationStatus: "PUBLISHED" },
-          select: { slug: true, name: true },
+          select: { slug: true, name: true, photoUrl: true },
           orderBy: { name: "asc" },
         },
         category: { select: { nameFr: true, nameEn: true, color: true } },
