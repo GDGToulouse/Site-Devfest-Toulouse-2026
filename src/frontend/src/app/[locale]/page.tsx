@@ -4,7 +4,6 @@ import { getLocale, getTranslations } from "next-intl/server";
 import {
   getCfpSettings,
   getCurrentEdition,
-  getEditions,
   getLatestArticles,
   getCurrentTicketTiers,
   getKeyFigures,
@@ -36,7 +35,6 @@ function buildEventJsonLd(
     heroImageUrl: string | null;
   },
   tiers: { nameFr: string; price: number; status: string; externalUrl: string | null; saleStartDate: string | null }[],
-  previousStartDates: string[] = [],
   // Recommended-but-missing fields flagged by Search Console (#185).
   extras: {
     description: string;
@@ -111,11 +109,10 @@ function buildEventJsonLd(
     // produced two critical errors in Search Console — for a property Google
     // does not even use for rich results (#185). `organizer` already ties the
     // event to GDG Toulouse.
-    // Past edition start dates signal the event's recurrence to search engines.
-    ...(previousStartDates.length > 0 && {
-      previousStartDate:
-        previousStartDates.length === 1 ? previousStartDates[0] : previousStartDates,
-    }),
+    // No `previousStartDate`: Google reads it as "this occurrence was moved
+    // from that date" and then requires eventStatus=EventRescheduled, which
+    // invalidated the rich result. A yearly DevFest is not a rescheduled
+    // event, so we simply omit it (#239).
     ...(offers.length > 0 && { offers }),
   };
 }
@@ -127,23 +124,17 @@ export default async function HomePage() {
     getSeoSettings(),
   ]);
 
-  const [edition, tiers, figures, cfp, editions, sponsors, speakers, partners] = await Promise.all([
+  const [edition, tiers, figures, cfp, sponsors, speakers, partners] = await Promise.all([
     getCurrentEdition(),
     getCurrentTicketTiers(),
     getKeyFigures(),
     getCfpSettings(),
-    getEditions(),
     getSponsors(),
     getFeaturedSpeakers(),
     getEcosystemPartners(),
   ]);
 
   const articles = await getLatestArticles(4, edition?.id);
-
-  // Past editions' start dates (YYYY-MM-DD) for Schema.org previousStartDate.
-  const previousStartDates = editions
-    .filter((e) => e.year < (edition?.year ?? Infinity) && e.startDate)
-    .map((e) => e.startDate!.split("T")[0]);
 
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
@@ -252,7 +243,7 @@ export default async function HomePage() {
           type="application/ld+json"
           dangerouslySetInnerHTML={{
             __html: JSON.stringify(
-              buildEventJsonLd(edition, tiers, previousStartDates, {
+              buildEventJsonLd(edition, tiers, {
                 description: tSite("description"),
                 ogImage: seoSettings.seo_og_image || null,
                 speakerNames: speakers.map((s) => s.name),
