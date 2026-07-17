@@ -35,10 +35,10 @@ function buildCompletedEventJsonLd(edition: BilanEdition) {
     name: `DevFest Toulouse ${edition.year}`,
     startDate: edition.startDate?.split("T")[0] ?? undefined,
     endDate: edition.endDate?.split("T")[0] ?? undefined,
-    eventStatus:
-      edition.status === "SEE_YOU_NEXT_YEAR"
-        ? "https://schema.org/EventCompleted"
-        : "https://schema.org/EventScheduled",
+    // Schema.org has no "completed" status — a past event simply keeps
+    // EventScheduled; its past date is what marks it as over. EventCompleted
+    // is not in Google's accepted enum and invalidates the rich result (#240).
+    eventStatus: "https://schema.org/EventScheduled",
     eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
     location: edition.venueName
       ? {
