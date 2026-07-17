@@ -265,7 +265,8 @@
     "format": {
       "CONFERENCE": "Conférence",
       "QUICKIE": "Quickie",
-      "KEYNOTE": "Keynote"
+      "KEYNOTE": "Keynote",
+      "WORKSHOP": "Workshop"
     },
     "level": {
       "DEBUTANT": "Débutant",

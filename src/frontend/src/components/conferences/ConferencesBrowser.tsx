@@ -7,7 +7,7 @@ import type { EditionTalk, TalkFormat, TalkLevel } from "@/lib/types";
 import { localizedField } from "@/lib/i18n-helpers";
 import ConferencesList from "./ConferencesList";
 
-const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE"];
+const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
 const LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 
 export interface CategoryOption {

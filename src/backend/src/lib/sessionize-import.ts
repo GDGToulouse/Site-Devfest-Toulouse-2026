@@ -92,8 +92,9 @@ export function buildSocialLinks(links: SzLink[] | undefined): { social: Record<
   return { social, count };
 }
 
-export const FORMAT_KEYWORDS: Array<[RegExp, "CONFERENCE" | "QUICKIE" | "KEYNOTE"]> = [
+export const FORMAT_KEYWORDS: Array<[RegExp, "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP"]> = [
   [/keynote/i, "KEYNOTE"],
+  [/workshop|atelier|hands ?on|codelab|lab\b/i, "WORKSHOP"],
   [/quick|tool ?in ?action|lightning|éclair|eclair/i, "QUICKIE"],
   [/conf|talk|session/i, "CONFERENCE"],
 ];
@@ -101,7 +102,14 @@ export const FORMAT_KEYWORDS: Array<[RegExp, "CONFERENCE" | "QUICKIE" | "KEYNOTE
 export const LEVEL_KEYWORDS: Array<[RegExp, "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME"]> = [
   [/beginner|débutant|debutant|introductory|novice/i, "DEBUTANT"],
   [/intermediate|intermédiaire|intermediaire/i, "INTERMEDIAIRE"],
-  [/advanced|expert|confirmé|confirme/i, "CONFIRME"],
+  [/advanced|avancé|avance|expert|confirmé|confirme/i, "CONFIRME"],
+];
+
+// Sessionize spells languages out ("Français" / "English"); we only store the
+// ISO-639-1 code on the talk.
+export const LANGUAGE_KEYWORDS: Array<[RegExp, "fr" | "en"]> = [
+  [/français|francais|french|\bfr\b/i, "fr"],
+  [/anglais|english|\ben\b/i, "en"],
 ];
 
 export function matchEnum<T>(name: string, table: Array<[RegExp, T]>): T | null {
@@ -112,9 +120,12 @@ export function matchEnum<T>(name: string, table: Array<[RegExp, T]>): T | null 
 }
 
 // Resolve a category definition's role from its Sessionize `type`/`title`.
-export function categoryRole(c: SzCategory): "format" | "level" | "track" {
+// "language" must be checked before "level" so "Langue" isn't misread, and
+// anything unrecognized falls back to a thematic track.
+export function categoryRole(c: SzCategory): "format" | "level" | "language" | "track" {
   const label = `${c.type ?? ""} ${c.title ?? ""}`.toLowerCase();
   if (/format|type|session ?type/.test(label)) return "format";
+  if (/langue|language|langage/.test(label)) return "language";
   if (/level|niveau|expérience|experience/.test(label)) return "level";
   return "track";
 }
@@ -163,21 +174,39 @@ export async function importSessionize(
     warnings: [],
   };
 
-  // 1. Index Sessionize category items by id, classified by role.
+  // 1. Index Sessionize category items by id, classified by role. An item that
+  // sits under a format/level/language category but matches no keyword is a
+  // silent data loss otherwise — report it so the mapping gap is visible.
   const trackByItemId = new Map<number, string>();
-  const formatByItemId = new Map<number, "CONFERENCE" | "QUICKIE" | "KEYNOTE">();
+  const formatByItemId = new Map<number, "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP">();
   const levelByItemId = new Map<number, "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME">();
+  const languageByItemId = new Map<number, "fr" | "en">();
 
   for (const cat of data.categories ?? []) {
     const role = categoryRole(cat);
     for (const item of cat.items ?? []) {
-      if (role === "track") trackByItemId.set(item.id, item.name);
-      else if (role === "format") {
-        const f = matchEnum(item.name, FORMAT_KEYWORDS);
-        if (f) formatByItemId.set(item.id, f);
-      } else {
-        const lvl = matchEnum(item.name, LEVEL_KEYWORDS);
-        if (lvl) levelByItemId.set(item.id, lvl);
+      switch (role) {
+        case "track":
+          trackByItemId.set(item.id, item.name);
+          break;
+        case "format": {
+          const f = matchEnum(item.name, FORMAT_KEYWORDS);
+          if (f) formatByItemId.set(item.id, f);
+          else report.warnings.push(`Format Sessionize non reconnu : « ${item.name} » — talks concernés en CONFERENCE par défaut.`);
+          break;
+        }
+        case "level": {
+          const lvl = matchEnum(item.name, LEVEL_KEYWORDS);
+          if (lvl) levelByItemId.set(item.id, lvl);
+          else report.warnings.push(`Niveau Sessionize non reconnu : « ${item.name} » — talks concernés sans niveau.`);
+          break;
+        }
+        case "language": {
+          const lang = matchEnum(item.name, LANGUAGE_KEYWORDS);
+          if (lang) languageByItemId.set(item.id, lang);
+          else report.warnings.push(`Langue Sessionize non reconnue : « ${item.name} » — talks concernés en fr par défaut.`);
+          break;
+        }
       }
     }
   }
@@ -283,6 +312,7 @@ export async function importSessionize(
     const items = sz.categoryItems ?? [];
     const format = items.map((id) => formatByItemId.get(id)).find(Boolean) ?? "CONFERENCE";
     const level = items.map((id) => levelByItemId.get(id)).find(Boolean) ?? null;
+    const language = items.map((id) => languageByItemId.get(id)).find(Boolean) ?? "fr";
     const trackName = items.map((id) => trackByItemId.get(id)).find(Boolean);
     const categoryId = trackName ? categoryIdByName.get(trackName) ?? null : null;
 
@@ -303,6 +333,7 @@ export async function importSessionize(
           descriptionEn: description,
           format,
           level,
+          language,
           categoryId,
           speakers: { set: speakerDbIds.map((id) => ({ id })) },
         },
@@ -321,7 +352,7 @@ export async function importSessionize(
           descriptionEn: description,
           format,
           level,
-          language: "fr",
+          language,
           categoryId,
           publicationStatus: "DRAFT",
           speakers: { connect: speakerDbIds.map((id) => ({ id })) },
