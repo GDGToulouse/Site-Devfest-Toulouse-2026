@@ -27,12 +27,21 @@ interface SendEmailOptions {
   subject: string;
   text: string;
   html: string;
+  // Optional Reply-To so replying to a notification reaches the person who
+  // triggered it (e.g. the visitor who filled the contact form) instead of
+  // the site's From address.
+  replyTo?: string;
+  // Optional CC recipients (e.g. the organizers, kept in copy of the brochure
+  // confirmation sent to the requester).
+  cc?: string[];
 }
 
-export async function sendEmail({ to, subject, text, html }: SendEmailOptions) {
+export async function sendEmail({ to, subject, text, html, replyTo, cc }: SendEmailOptions) {
   await transporter.sendMail({
     from: FROM,
     to: to.join(", "),
+    ...(cc?.length ? { cc: cc.join(", ") } : {}),
+    ...(replyTo ? { replyTo } : {}),
     subject,
     text,
     html,
