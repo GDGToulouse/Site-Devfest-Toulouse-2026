@@ -3,6 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 import SponsorPrivateSection, { type SponsorPrivate } from "./SponsorPrivateSection";
 import SponsorJobOffers, { type JobOffersData } from "./SponsorJobOffers";
 
@@ -354,18 +355,32 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             isEmpty={(lang) =>
               isSpeaker
                 ? !(lang === "fr" ? form.bioFr : form.bioEn)?.trim()
-                : !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.trim()
+                : // Sponsor description is HTML — strip tags before the empty check.
+                  !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.replace(/<[^>]*>/g, "").trim()
             }
             renderPanel={(lang) => {
               const field = isSpeaker
                 ? lang === "fr" ? "bioFr" : "bioEn"
                 : lang === "fr" ? "descriptionFr" : "descriptionEn";
+              // Sponsor description is rich text (#270); speaker bio stays plain.
+              if (isSpeaker) {
+                return (
+                  <textarea
+                    value={form[field] ?? ""}
+                    onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                    rows={5}
+                    className={inputClass}
+                  />
+                );
+              }
               return (
-                <textarea
+                <RichTextEditor
+                  label=""
+                  name={`sponsor-${field}`}
                   value={form[field] ?? ""}
-                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                  rows={5}
-                  className={inputClass}
+                  onChange={(html) => setForm({ ...form, [field]: html })}
+                  showImageButton={false}
+                  minHeight="180px"
                 />
               );
             }}

@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getSponsorBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
@@ -19,7 +20,8 @@ export async function generateMetadata({
 
   if (!sponsor) return { title: "Sponsor not found" };
 
-  const description = localizedField(sponsor, "description", locale) || sponsor.name;
+  // Meta / OG want plain text; the stored description may be rich HTML (#270).
+  const description = htmlToText(localizedField(sponsor, "description", locale)) || sponsor.name;
 
   return {
     title: sponsor.name,
@@ -84,10 +86,18 @@ export default async function SponsorDetailPage({
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">{sponsor.name}</h1>
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
-          {/* Left: description */}
+          {/* Left: description. Rich-text HTML for new content (#270); older
+              plain-text descriptions keep their line breaks via pre-line. */}
           <div>
             {description ? (
-              <p className="text-lg leading-relaxed text-noir whitespace-pre-line">{description}</p>
+              looksLikeHtml(description) ? (
+                <div
+                  className="article-content text-lg leading-relaxed text-noir"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
+              ) : (
+                <p className="text-lg leading-relaxed text-noir whitespace-pre-line">{description}</p>
+              )
             ) : null}
           </div>
 

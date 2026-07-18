@@ -541,8 +541,9 @@ export default async function editRoutes(app: FastifyInstance) {
       await prisma.sponsor.update({
         where: { id: entity.id },
         data: {
-          ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr || null }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn || null }),
+          // Rich-text HTML (#270): sanitized on write, like article content.
+          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
+          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
           ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
           ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
           ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),

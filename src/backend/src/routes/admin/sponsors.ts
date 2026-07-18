@@ -4,6 +4,7 @@ import { revalidateJobOffers, revalidateSponsors } from "../../lib/revalidate.js
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { sanitizeRichHtml } from "../../lib/sanitize.js";
 
 const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
 type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
@@ -127,8 +128,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         level: body.level,
         logoUrl: body.logoUrl || null,
         websiteUrl: body.websiteUrl || null,
-        descriptionFr: body.descriptionFr || null,
-        descriptionEn: body.descriptionEn || null,
+        // Rich-text HTML (#270): sanitized on write, like article content.
+        descriptionFr: sanitizeRichHtml(body.descriptionFr) || null,
+        descriptionEn: sanitizeRichHtml(body.descriptionEn) || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
@@ -169,8 +171,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         ...(body.level !== undefined && { level: body.level }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
         ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
-        ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr || null }),
-        ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn || null }),
+        // Rich-text HTML (#270): sanitized on write, like article content.
+        ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
+        ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
         ...(body.socialLinks !== undefined && {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
