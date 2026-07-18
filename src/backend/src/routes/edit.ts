@@ -11,6 +11,7 @@ import {
 import { storeImageBuffer } from "../lib/image-store.js";
 import { sendEmail } from "../lib/email.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
+import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -50,6 +51,24 @@ const speakerBodySchema = {
   },
 };
 
+// Booth staff whose social handles the organizers relay on the day (#249).
+// Private: never rendered publicly. A bounded list of bounded strings.
+const STAND_CONTACTS_MAX = 20;
+const standContactsSchema = {
+  type: "array",
+  maxItems: STAND_CONTACTS_MAX,
+  items: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      name: { type: "string", maxLength: SHORT_MAX },
+      linkedin: { type: "string", maxLength: URL_MAX },
+      twitter: { type: "string", maxLength: URL_MAX },
+      bluesky: { type: "string", maxLength: URL_MAX },
+    },
+  },
+};
+
 const sponsorBodySchema = {
   type: "object",
   additionalProperties: false,
@@ -59,6 +78,13 @@ const sponsorBodySchema = {
     websiteUrl: { type: "string", maxLength: URL_MAX },
     logoUrl: { type: "string", maxLength: URL_MAX },
     socialLinks: socialLinksSchema,
+    // Private fields (#249) — organizers only, never exposed on public pages.
+    standContacts: standContactsSchema,
+    comKitReceived: { type: "boolean" },
+    comKitLogoWebUrl: { type: "string", maxLength: URL_MAX },
+    comKitLogoPrintUrl: { type: "string", maxLength: URL_MAX },
+    comKitCharterUrl: { type: "string", maxLength: URL_MAX },
+    comKitNotes: { type: "string", maxLength: TEXT_MAX },
   },
 };
 
@@ -145,7 +171,15 @@ function findForbiddenKey(body: Record<string, unknown>): string | null {
 // An empty string clears the field; anything else must be a safe URL. Returns
 // the offending field name, or null when every URL is acceptable.
 function findUnsafeUrl(body: Record<string, unknown>): string | null {
-  for (const field of ["photoUrl", "logoUrl", "websiteUrl"]) {
+  for (const field of [
+    "photoUrl",
+    "logoUrl",
+    "websiteUrl",
+    // Private com-kit links (#249) — same http(s) allowlist as public URLs.
+    "comKitLogoWebUrl",
+    "comKitLogoPrintUrl",
+    "comKitCharterUrl",
+  ]) {
     const value = body[field];
     if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
   }
@@ -153,6 +187,19 @@ function findUnsafeUrl(body: Record<string, unknown>): string | null {
   if (social && typeof social === "object") {
     for (const [key, value] of Object.entries(social as Record<string, unknown>)) {
       if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return `socialLinks.${key}`;
+    }
+  }
+  // Booth contacts carry their own social URLs (#249).
+  const stand = body.standContacts;
+  if (Array.isArray(stand)) {
+    for (const [i, contact] of stand.entries()) {
+      if (!contact || typeof contact !== "object") continue;
+      for (const key of ["linkedin", "twitter", "bluesky"]) {
+        const value = (contact as Record<string, unknown>)[key];
+        if (typeof value === "string" && value.trim() && !isSafeUrl(value)) {
+          return `standContacts[${i}].${key}`;
+        }
+      }
     }
   }
   return null;
@@ -163,6 +210,40 @@ function cleanSocial(social: Record<string, string> | undefined): string | null 
   if (!social) return null;
   const kept = Object.entries(social).filter(([, v]) => typeof v === "string" && v.trim());
   return kept.length ? JSON.stringify(Object.fromEntries(kept)) : null;
+}
+
+interface StandContact {
+  name?: string;
+  linkedin?: string;
+  twitter?: string;
+  bluesky?: string;
+}
+
+// Trim entries and drop those with no content at all, so an empty row the
+// sponsor left behind isn't persisted (#249). Returns null when nothing remains.
+function cleanStandContacts(contacts: StandContact[] | undefined): string | null {
+  if (!contacts) return null;
+  const kept = contacts
+    .map((c) => {
+      const entry: StandContact = {};
+      for (const key of ["name", "linkedin", "twitter", "bluesky"] as const) {
+        const v = c[key];
+        if (typeof v === "string" && v.trim()) entry[key] = v.trim();
+      }
+      return entry;
+    })
+    .filter((c) => Object.keys(c).length > 0);
+  return kept.length ? JSON.stringify(kept) : null;
+}
+
+function parseStandContacts(raw: string | null): StandContact[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return Array.isArray(parsed) ? (parsed as StandContact[]) : [];
+  } catch {
+    return [];
+  }
 }
 
 // Resolve a modification token to either a speaker or a sponsor. Returns null
@@ -241,6 +322,13 @@ interface SponsorEditBody {
   websiteUrl?: string;
   logoUrl?: string;
   socialLinks?: Record<string, string>;
+  // Private fields (#249).
+  standContacts?: StandContact[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string;
+  comKitLogoPrintUrl?: string;
+  comKitCharterUrl?: string;
+  comKitNotes?: string;
 }
 
 // Notify the organizers that a speaker changed a session. Sent to the
@@ -329,6 +417,18 @@ export default async function editRoutes(app: FastifyInstance) {
         logoUrl: entity.logoUrl,
         socialLinks: parseSocial(entity.socialLinks),
       },
+      // Private fields (#249) — served to the token holder so they can edit
+      // them, kept in a separate block so the UI can render them apart. The
+      // public sponsor route never returns these.
+      private: {
+        level: entity.level,
+        standContacts: parseStandContacts(entity.standContacts),
+        comKitReceived: entity.comKitReceived,
+        comKitLogoWebUrl: entity.comKitLogoWebUrl,
+        comKitLogoPrintUrl: entity.comKitLogoPrintUrl,
+        comKitCharterUrl: entity.comKitCharterUrl,
+        comKitNotes: entity.comKitNotes,
+      },
     };
   });
 
@@ -389,9 +489,24 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
           ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
           ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
+          // Private fields (#249).
+          ...(body.standContacts !== undefined && { standContacts: cleanStandContacts(body.standContacts) }),
+          ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
+          ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
+          ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
+          ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
+          ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
         },
       });
-      revalidateSponsors();
+      // Only public-facing changes need cache revalidation; a private-only
+      // save (com kit, stand contacts) changes nothing on the public pages.
+      const touchesPublic =
+        body.descriptionFr !== undefined ||
+        body.descriptionEn !== undefined ||
+        body.websiteUrl !== undefined ||
+        body.logoUrl !== undefined ||
+        body.socialLinks !== undefined;
+      if (touchesPublic) revalidateSponsors();
     }
 
     return { saved: true };
@@ -473,6 +588,68 @@ export default async function editRoutes(app: FastifyInstance) {
       }
 
       return { saved: true };
+    },
+  );
+
+  // POST /api/edit/:token/com-kit-email — a sponsor asks the organizers to
+  // collect com-kit complements that don't fit as links (#249). We don't accept
+  // attachments here (the token is unauthenticated); instead we email the
+  // sponsoring team with Reply-To set to the sponsor, so they can reply and the
+  // sponsor answers with the files attached.
+  app.post<{ Params: { token: string }; Body: { message?: string } }>(
+    "/edit/:token/com-kit-email",
+    {
+      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
+      schema: {
+        params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
+        body: {
+          type: "object",
+          additionalProperties: false,
+          properties: { message: { type: "string", maxLength: TEXT_MAX } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const resolved = await resolveToken(request.params.token);
+      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
+
+      const { entity } = resolved;
+      const blocked = editingBlockedReason(entity);
+      if (blocked) return reply.code(403).send({ error: blocked });
+
+      const recipients = await getSponsorContactRecipients();
+      const message = request.body?.message?.trim();
+
+      const subject = `Compléments kit de com — ${entity.name}`;
+      const text = [
+        `${entity.name} souhaite transmettre des compléments pour son kit de communication.`,
+        message ? `\nMessage :\n${message}` : "",
+        entity.contactEmail
+          ? `\nRépondez à cet email pour demander les pièces jointes (Reply-To : ${entity.contactEmail}).`
+          : "\nRépondez à cet email pour demander les pièces jointes.",
+      ].join("\n");
+      const html = `
+        <h3>Compléments kit de com — ${escapeHtml(entity.name)}</h3>
+        <p><strong>${escapeHtml(entity.name)}</strong> souhaite transmettre des compléments
+        pour son kit de communication.</p>
+        ${message ? `<p><strong>Message :</strong><br>${escapeHtml(message).replace(/\n/g, "<br>")}</p>` : ""}
+        <p>Répondez à cet email pour demander les pièces jointes.</p>
+      `;
+
+      try {
+        await sendEmail({
+          to: recipients,
+          subject,
+          text,
+          html,
+          ...(entity.contactEmail ? { replyTo: entity.contactEmail } : {}),
+        });
+      } catch (err) {
+        request.log.error("Failed to send com-kit email: %s", String(err));
+        return reply.code(502).send({ error: "email_failed" });
+      }
+
+      return { sent: true };
     },
   );
 

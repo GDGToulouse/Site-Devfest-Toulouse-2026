@@ -8,6 +8,13 @@ import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js
 const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
 type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
 
+interface StandContact {
+  name?: string;
+  linkedin?: string;
+  twitter?: string;
+  bluesky?: string;
+}
+
 interface SponsorCreateBody {
   editionId: number;
   name: string;
@@ -20,6 +27,13 @@ interface SponsorCreateBody {
   contactEmail?: string;
   locale?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
+  // Private fields (#249) — organizers only.
+  standContacts?: StandContact[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string;
+  comKitLogoPrintUrl?: string;
+  comKitCharterUrl?: string;
+  comKitNotes?: string;
 }
 
 type SponsorUpdateBody = Partial<Omit<SponsorCreateBody, "editionId">>;
@@ -40,9 +54,14 @@ interface SponsorBulkBody {
 
 function serialize(s: {
   socialLinks: string | null;
+  standContacts?: string | null;
   [k: string]: unknown;
 }) {
-  return { ...s, socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {} };
+  return {
+    ...s,
+    socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
+    standContacts: s.standContacts ? JSON.parse(s.standContacts) : [],
+  };
 }
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
@@ -108,6 +127,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        // Private fields (#249).
+        standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
+        comKitReceived: body.comKitReceived ?? false,
+        comKitLogoWebUrl: body.comKitLogoWebUrl || null,
+        comKitLogoPrintUrl: body.comKitLogoPrintUrl || null,
+        comKitCharterUrl: body.comKitCharterUrl || null,
+        comKitNotes: body.comKitNotes || null,
       },
     });
 
@@ -143,6 +169,15 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+        // Private fields (#249).
+        ...(body.standContacts !== undefined && {
+          standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
+        }),
+        ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
+        ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
+        ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
+        ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
+        ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
       },
     });
 

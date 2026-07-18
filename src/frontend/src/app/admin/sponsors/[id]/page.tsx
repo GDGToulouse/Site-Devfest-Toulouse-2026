@@ -57,6 +57,11 @@ export default function SponsorEditorPage() {
           bluesky: data.socialLinks?.bluesky || "",
           locale: data.locale === "en" ? "en" : "fr",
           publicationStatus: data.publicationStatus,
+          comKitReceived: data.comKitReceived ?? false,
+          comKitLogoWebUrl: data.comKitLogoWebUrl || "",
+          comKitLogoPrintUrl: data.comKitLogoPrintUrl || "",
+          comKitCharterUrl: data.comKitCharterUrl || "",
+          comKitNotes: data.comKitNotes || "",
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -86,6 +91,11 @@ export default function SponsorEditorPage() {
       socialLinks,
       locale: form.locale,
       publicationStatus: form.publicationStatus,
+      comKitReceived: form.comKitReceived,
+      comKitLogoWebUrl: form.comKitLogoWebUrl || undefined,
+      comKitLogoPrintUrl: form.comKitLogoPrintUrl || undefined,
+      comKitCharterUrl: form.comKitCharterUrl || undefined,
+      comKitNotes: form.comKitNotes || undefined,
     };
 
     if (isNew) {
