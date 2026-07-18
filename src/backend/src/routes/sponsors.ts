@@ -62,7 +62,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
           orderBy: { name: "asc" },
         },
         jobOffers: {
-          select: { id: true, title: true, description: true, url: true },
+          select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
           orderBy: { createdAt: "asc" },
         },
       },
@@ -108,7 +108,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         logoUrl: true,
         level: true,
         jobOffers: {
-          select: { id: true, title: true, description: true, url: true },
+          select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
           orderBy: { createdAt: "asc" },
         },
       },

@@ -2,10 +2,14 @@
 
 import { useState } from "react";
 
+import BilingualTabs from "@/components/admin/BilingualTabs";
+import RichTextEditor from "@/components/admin/RichTextEditor";
+
 export interface JobOffer {
   id: number;
   title: string;
-  description: string;
+  descriptionFr: string;
+  descriptionEn: string;
   url: string;
 }
 
@@ -17,6 +21,8 @@ export interface JobOffersData {
 interface Labels {
   save: string;
   saving: string;
+  langFr: string;
+  langEn: string;
   jobOffers: string;
   jobOffersHint: string;
   jobOfferTitle: string;
@@ -27,14 +33,6 @@ interface Labels {
   jobOfferQuotaReached: string;
   jobOfferSaved: string;
   jobOfferRejected: string;
-}
-
-// A draft has no server id yet; it becomes a real offer on first save.
-interface Draft {
-  key: string;
-  title: string;
-  description: string;
-  url: string;
 }
 
 const inputClass =
@@ -53,7 +51,7 @@ export default function SponsorJobOffers({
   t: Labels;
 }) {
   const [offers, setOffers] = useState<JobOffer[]>(initial.items);
-  const [drafts, setDrafts] = useState<Draft[]>([]);
+  const [drafts, setDrafts] = useState<string[]>([]);
 
   const total = offers.length + drafts.length;
   const atCap = total >= initial.quota;
@@ -62,16 +60,16 @@ export default function SponsorJobOffers({
   // but this is client code — still, a simple counter keeps keys stable).
   const [draftSeq, setDraftSeq] = useState(0);
   function addDraft() {
-    setDrafts((prev) => [...prev, { key: `draft-${draftSeq}`, title: "", description: "", url: "" }]);
+    setDrafts((prev) => [...prev, `draft-${draftSeq}`]);
     setDraftSeq((n) => n + 1);
   }
 
   function removeDraft(key: string) {
-    setDrafts((prev) => prev.filter((d) => d.key !== key));
+    setDrafts((prev) => prev.filter((k) => k !== key));
   }
 
   function onDraftCreated(key: string, created: JobOffer) {
-    setDrafts((prev) => prev.filter((d) => d.key !== key));
+    setDrafts((prev) => prev.filter((k) => k !== key));
     setOffers((prev) => [...prev, created]);
   }
 
@@ -101,11 +99,11 @@ export default function SponsorJobOffers({
             onRemoved={onRemoved}
           />
         ))}
-        {drafts.map((draft) => (
+        {drafts.map((key) => (
           <OfferRow
-            key={draft.key}
+            key={key}
             token={token}
-            draftKey={draft.key}
+            draftKey={key}
             t={t}
             onCreated={onDraftCreated}
             onRemoveDraft={removeDraft}
@@ -148,7 +146,8 @@ function OfferRow({
   onRemoveDraft?: (key: string) => void;
 }) {
   const [title, setTitle] = useState(offer?.title ?? "");
-  const [description, setDescription] = useState(offer?.description ?? "");
+  const [descriptionFr, setDescriptionFr] = useState(offer?.descriptionFr ?? "");
+  const [descriptionEn, setDescriptionEn] = useState(offer?.descriptionEn ?? "");
   const [url, setUrl] = useState(offer?.url ?? "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -164,7 +163,7 @@ function OfferRow({
       {
         method: isDraft ? "POST" : "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, description, url }),
+        body: JSON.stringify({ title, descriptionFr, descriptionEn, url }),
       },
     );
     setSaving(false);
@@ -174,7 +173,7 @@ function OfferRow({
         onCreated?.(draftKey!, created);
       } else {
         setSaved(true);
-        onSaved?.({ id: offer!.id, title, description, url });
+        onSaved?.({ id: offer!.id, title, descriptionFr, descriptionEn, url });
       }
       return;
     }
@@ -202,10 +201,34 @@ function OfferRow({
           <span className="mb-1 block text-sm font-medium text-noir">{t.jobOfferTitle}</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
         </label>
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-noir">{t.jobOfferDescription}</span>
-          <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} className={inputClass} />
-        </label>
+        {/* Bilingual rich-text description (#273). No image button — an offer is
+            plain formatted text, not an article. */}
+        <BilingualTabs
+          label={t.jobOfferDescription}
+          labels={{ fr: t.langFr, en: t.langEn }}
+          isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn)?.replace(/<[^>]*>/g, "").trim()}
+          renderPanel={(lang) =>
+            lang === "fr" ? (
+              <RichTextEditor
+                label=""
+                name={`offer-desc-fr-${offer?.id ?? draftKey}`}
+                value={descriptionFr}
+                onChange={setDescriptionFr}
+                showImageButton={false}
+                minHeight="160px"
+              />
+            ) : (
+              <RichTextEditor
+                label=""
+                name={`offer-desc-en-${offer?.id ?? draftKey}`}
+                value={descriptionEn}
+                onChange={setDescriptionEn}
+                showImageButton={false}
+                minHeight="160px"
+              />
+            )
+          }
+        />
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-noir">{t.jobOfferUrl}</span>
           <input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://" className={inputClass} />

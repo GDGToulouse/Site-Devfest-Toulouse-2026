@@ -25,6 +25,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function JobOffersPage() {
   const t = await getTranslations("jobOffers");
+  const locale = await getLocale();
   const sponsors = await getJobOffers();
 
   return (
@@ -54,13 +55,19 @@ export default async function JobOffersPage() {
                   </h2>
                 </div>
                 <div className="space-y-4">
-                  {sponsor.jobOffers.map((offer) => (
+                  {sponsor.jobOffers.map((offer) => {
+                    // Locale description with fallback to the other language (#273).
+                    const description =
+                      (locale === "en" ? offer.descriptionEn : offer.descriptionFr) ||
+                      offer.descriptionFr ||
+                      offer.descriptionEn;
+                    return (
                     <article key={offer.id} className="rounded-2xl border border-gris/15 bg-blanc p-5 shadow-sm">
                       <h3 className="text-lg font-bold text-noir">{offer.title}</h3>
-                      {offer.description && (
+                      {description && (
                         <div
                           className="article-content mt-2 text-sm text-gris"
-                          dangerouslySetInnerHTML={{ __html: offer.description }}
+                          dangerouslySetInnerHTML={{ __html: description }}
                         />
                       )}
                       <a
@@ -72,7 +79,8 @@ export default async function JobOffersPage() {
                         {t("cta")} →
                       </a>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               </section>
             ))}

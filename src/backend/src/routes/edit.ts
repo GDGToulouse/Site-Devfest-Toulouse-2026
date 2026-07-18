@@ -477,7 +477,13 @@ export default async function editRoutes(app: FastifyInstance) {
       // Job offers (#251): the sponsor's offers plus its level quota, so the
       // UI can disable "add" at the cap.
       jobOffers: {
-        items: entity.jobOffers.map((o) => ({ id: o.id, title: o.title, description: o.description, url: o.url })),
+        items: entity.jobOffers.map((o) => ({
+          id: o.id,
+          title: o.title,
+          descriptionFr: o.descriptionFr,
+          descriptionEn: o.descriptionEn,
+          url: o.url,
+        })),
         quota: offerQuotaForLevel(entity.level),
       },
     };
@@ -658,13 +664,14 @@ export default async function editRoutes(app: FastifyInstance) {
     required: ["title", "url"],
     properties: {
       title: { type: "string", maxLength: SHORT_MAX },
-      description: { type: "string", maxLength: TEXT_MAX },
+      descriptionFr: { type: "string", maxLength: TEXT_MAX },
+      descriptionEn: { type: "string", maxLength: TEXT_MAX },
       url: { type: "string", maxLength: URL_MAX },
     },
   };
 
   // POST /api/edit/:token/job-offers — create an offer, enforcing the quota.
-  app.post<{ Params: { token: string }; Body: { title: string; description?: string; url: string } }>(
+  app.post<{ Params: { token: string }; Body: { title: string; descriptionFr?: string; descriptionEn?: string; url: string } }>(
     "/edit/:token/job-offers",
     {
       config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
@@ -695,18 +702,25 @@ export default async function editRoutes(app: FastifyInstance) {
         data: {
           sponsorId: entity.id,
           title: title.trim(),
-          description: sanitizeRichHtml(request.body.description),
+          descriptionFr: sanitizeRichHtml(request.body.descriptionFr),
+          descriptionEn: sanitizeRichHtml(request.body.descriptionEn),
           url: url.trim(),
         },
       });
       revalidateSponsors();
       revalidateJobOffers();
-      return reply.code(201).send({ id: offer.id, title: offer.title, description: offer.description, url: offer.url });
+      return reply.code(201).send({
+        id: offer.id,
+        title: offer.title,
+        descriptionFr: offer.descriptionFr,
+        descriptionEn: offer.descriptionEn,
+        url: offer.url,
+      });
     },
   );
 
   // PUT /api/edit/:token/job-offers/:offerId — edit one of the sponsor's offers.
-  app.put<{ Params: { token: string; offerId: string }; Body: { title?: string; description?: string; url?: string } }>(
+  app.put<{ Params: { token: string; offerId: string }; Body: { title?: string; descriptionFr?: string; descriptionEn?: string; url?: string } }>(
     "/edit/:token/job-offers/:offerId",
     {
       config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
@@ -739,7 +753,8 @@ export default async function editRoutes(app: FastifyInstance) {
         where: { id: offer.id },
         data: {
           ...(body.title !== undefined && { title: body.title.trim() }),
-          ...(body.description !== undefined && { description: sanitizeRichHtml(body.description) }),
+          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) }),
+          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) }),
           ...(body.url !== undefined && { url: body.url.trim() }),
         },
       });
