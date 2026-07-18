@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
+import { areOffersVisible } from "../lib/job-offers.js";
 
 // Decreasing importance order (RG-221), used to sort levels for display.
 const LEVEL_ORDER: Record<string, number> = {
@@ -60,10 +61,17 @@ export default async function sponsorRoutes(app: FastifyInstance) {
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },
+        jobOffers: {
+          select: { id: true, title: true, description: true, url: true },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
     if (!sponsor) return reply.status(404).send({ error: "Sponsor not found" });
+
+    // Offers disappear one month after the event (#251).
+    const jobOffers = areOffersVisible(edition) ? sponsor.jobOffers : [];
 
     return {
       id: sponsor.id,
@@ -76,6 +84,37 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       descriptionEn: sponsor.descriptionEn,
       socialLinks: parseSocial(sponsor.socialLinks),
       speakers: sponsor.speakers,
+      jobOffers,
     };
+  });
+
+  // GET /api/job-offers — all partner job offers for the featured edition,
+  // grouped by sponsor, for the recap page (#251). Hidden once the offers'
+  // visibility window has passed.
+  app.get("/job-offers", async (_request, reply) => {
+    const edition = await getFeaturedEdition();
+    if (!edition) return reply.status(404).send({ error: "No edition found" });
+    if (!areOffersVisible(edition)) return [];
+
+    const sponsors = await prisma.sponsor.findMany({
+      where: {
+        editionId: edition.id,
+        publicationStatus: "PUBLISHED",
+        jobOffers: { some: {} },
+      },
+      select: {
+        slug: true,
+        name: true,
+        logoUrl: true,
+        level: true,
+        jobOffers: {
+          select: { id: true, title: true, description: true, url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
+      orderBy: { name: "asc" },
+    });
+
+    return sponsors;
   });
 }

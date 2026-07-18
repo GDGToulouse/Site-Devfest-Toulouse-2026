@@ -156,6 +156,34 @@ export default async function SponsorDetailPage({
             </div>
           </section>
         )}
+
+        {/* Job offers to relay (#251). Description is server-sanitized HTML. */}
+        {sponsor.jobOffers.length > 0 && (
+          <section className="mt-14">
+            <h2 className="mb-6 text-2xl font-bold text-noir">{t("jobOffersTitle")}</h2>
+            <div className="space-y-4">
+              {sponsor.jobOffers.map((offer) => (
+                <article key={offer.id} className="rounded-2xl border border-gris/15 bg-blanc p-5 shadow-sm">
+                  <h3 className="text-lg font-bold text-noir">{offer.title}</h3>
+                  {offer.description && (
+                    <div
+                      className="article-content mt-2 text-sm text-gris"
+                      dangerouslySetInnerHTML={{ __html: offer.description }}
+                    />
+                  )}
+                  <a
+                    href={offer.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block font-bold text-bleu hover:underline"
+                  >
+                    {t("jobOfferCta")} →
+                  </a>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </div>
   );

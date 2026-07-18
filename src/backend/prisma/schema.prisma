@@ -581,6 +581,9 @@ model Sponsor {
   // modification link (#250). Replaces the single editToken on Sponsor.
   contacts         SponsorContact[]
 
+  // Job offers the sponsor wants relayed (#251). Count capped by level.
+  jobOffers        SponsorJobOffer[]
+
   @@unique([editionId, slug])
   @@index([editionId])
 }
@@ -601,6 +604,26 @@ model SponsorContact {
   editToken        String?   @unique
   editLinkLocked   Boolean   @default(false)
   editTokenSentAt  DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sponsorId        Int
+  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  @@index([sponsorId])
+}
+
+// A job offer a sponsor wants relayed during the DevFest (#251). Shown on the
+// sponsor's public page and on a dedicated "partner job offers" page. The
+// number of offers per sponsor is capped by its level (4 Platinum / 2 Gold /
+// 1 otherwise); the description is rich text (same editor as articles).
+model SponsorJobOffer {
+  id               Int       @id @default(autoincrement())
+  title            String
+  // Rich-text HTML, sanitized on write (same pipeline as article content).
+  description      String
+  url              String
 
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

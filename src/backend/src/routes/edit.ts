@@ -5,6 +5,7 @@ import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import {
   revalidateConferences,
+  revalidateJobOffers,
   revalidateSpeakers,
   revalidateSponsors,
 } from "../lib/revalidate.js";
@@ -12,6 +13,8 @@ import { storeImageBuffer } from "../lib/image-store.js";
 import { sendEmail } from "../lib/email.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
+import { offerQuotaForLevel } from "../lib/job-offers.js";
+import { sanitizeRichHtml } from "../lib/sanitize.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -288,7 +291,15 @@ async function resolveToken(token: string) {
   // notification Reply-To.
   const contact = await prisma.sponsorContact.findUnique({
     where: { editToken: token },
-    include: { sponsor: { include: { edition: { select: { startDate: true } } } } },
+    include: {
+      sponsor: {
+        include: {
+          edition: { select: { startDate: true, endDate: true } },
+          // Job offers the sponsor can manage from the link (#251).
+          jobOffers: { orderBy: { createdAt: "asc" } },
+        },
+      },
+    },
   });
   if (contact) {
     const entity = {
@@ -456,6 +467,12 @@ export default async function editRoutes(app: FastifyInstance) {
         // fields only when level === PLATINUM.
         platinumPromoIdea: entity.platinumPromoIdea,
         platinumCoBuildIdea: entity.platinumCoBuildIdea,
+      },
+      // Job offers (#251): the sponsor's offers plus its level quota, so the
+      // UI can disable "add" at the cap.
+      jobOffers: {
+        items: entity.jobOffers.map((o) => ({ id: o.id, title: o.title, description: o.description, url: o.url })),
+        quota: offerQuotaForLevel(entity.level),
       },
     };
   });
@@ -686,6 +703,136 @@ export default async function editRoutes(app: FastifyInstance) {
       }
 
       return { sent: true };
+    },
+  );
+
+  // --- Job offers (#251): a sponsor manages the offers we relay for them,
+  // from the same link, capped by its level. Direct publication + revalidation.
+  const jobOfferBodySchema = {
+    type: "object",
+    additionalProperties: false,
+    required: ["title", "url"],
+    properties: {
+      title: { type: "string", maxLength: SHORT_MAX },
+      description: { type: "string", maxLength: TEXT_MAX },
+      url: { type: "string", maxLength: URL_MAX },
+    },
+  };
+
+  // POST /api/edit/:token/job-offers — create an offer, enforcing the quota.
+  app.post<{ Params: { token: string }; Body: { title: string; description?: string; url: string } }>(
+    "/edit/:token/job-offers",
+    {
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+      schema: {
+        params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
+        body: jobOfferBodySchema,
+      },
+    },
+    async (request, reply) => {
+      const resolved = await resolveToken(request.params.token);
+      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
+      const { entity } = resolved;
+      const blocked = editingBlockedReason(entity);
+      if (blocked) return reply.code(403).send({ error: blocked });
+
+      const { title, url } = request.body;
+      if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
+      if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+
+      // Quota is per level (#251). Count what's already there; a lowered level
+      // keeps existing offers but blocks new ones beyond the new cap.
+      const quota = offerQuotaForLevel(entity.level);
+      if (entity.jobOffers.length >= quota) {
+        return reply.code(409).send({ error: "quota_reached", quota });
+      }
+
+      const offer = await prisma.sponsorJobOffer.create({
+        data: {
+          sponsorId: entity.id,
+          title: title.trim(),
+          description: sanitizeRichHtml(request.body.description),
+          url: url.trim(),
+        },
+      });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return reply.code(201).send({ id: offer.id, title: offer.title, description: offer.description, url: offer.url });
+    },
+  );
+
+  // PUT /api/edit/:token/job-offers/:offerId — edit one of the sponsor's offers.
+  app.put<{ Params: { token: string; offerId: string }; Body: { title?: string; description?: string; url?: string } }>(
+    "/edit/:token/job-offers/:offerId",
+    {
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+      schema: {
+        params: {
+          type: "object",
+          required: ["token", "offerId"],
+          properties: { token: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+        body: { type: "object", additionalProperties: false, properties: jobOfferBodySchema.properties },
+      },
+    },
+    async (request, reply) => {
+      const resolved = await resolveToken(request.params.token);
+      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
+      const { entity } = resolved;
+      const blocked = editingBlockedReason(entity);
+      if (blocked) return reply.code(403).send({ error: blocked });
+
+      // Ownership: only offers already attached to this sponsor.
+      const offerId = Number(request.params.offerId);
+      const offer = entity.jobOffers.find((o) => o.id === offerId);
+      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
+
+      const body = request.body;
+      if (body.title !== undefined && !body.title.trim()) return reply.code(400).send({ error: "empty_title" });
+      if (body.url !== undefined && !isSafeUrl(body.url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+
+      await prisma.sponsorJobOffer.update({
+        where: { id: offer.id },
+        data: {
+          ...(body.title !== undefined && { title: body.title.trim() }),
+          ...(body.description !== undefined && { description: sanitizeRichHtml(body.description) }),
+          ...(body.url !== undefined && { url: body.url.trim() }),
+        },
+      });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return { saved: true };
+    },
+  );
+
+  // DELETE /api/edit/:token/job-offers/:offerId — remove an offer.
+  app.delete<{ Params: { token: string; offerId: string } }>(
+    "/edit/:token/job-offers/:offerId",
+    {
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+      schema: {
+        params: {
+          type: "object",
+          required: ["token", "offerId"],
+          properties: { token: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const resolved = await resolveToken(request.params.token);
+      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
+      const { entity } = resolved;
+      const blocked = editingBlockedReason(entity);
+      if (blocked) return reply.code(403).send({ error: blocked });
+
+      const offerId = Number(request.params.offerId);
+      const offer = entity.jobOffers.find((o) => o.id === offerId);
+      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
+
+      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return reply.code(204).send();
     },
   );
 

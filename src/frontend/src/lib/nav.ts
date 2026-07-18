@@ -17,7 +17,16 @@ const CONFERENCES_ENTRY: NavEntry = {
 };
 
 const SPEAKERS_ENTRY: NavEntry = { key: "speakers", labelKey: "speakers", href: "/speakers" };
-const SPONSORS_ENTRY: NavEntry = { key: "sponsors", labelKey: "sponsors", href: "/sponsors" };
+const SPONSORS_ENTRY: NavEntry = {
+  key: "sponsors",
+  labelKey: "sponsors",
+  href: "/sponsors",
+  // Partner job offers live under Sponsors (#251).
+  children: [
+    { key: "sponsors-all", labelKey: "sponsors", href: "/sponsors" },
+    { key: "job-offers", labelKey: "jobOffers", href: "/offres-emploi-partenaires" },
+  ],
+};
 const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites" };
 
 // Build the ordered public nav entries for the given edition. Conference-,
