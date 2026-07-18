@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Bluesky is part of the shared socialLinks allowlist (#253). A sponsor (and a
 // speaker) can save it via their edit link; an unknown social key stays rejected.
@@ -15,12 +16,10 @@ describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
     if (!edition) throw new Error("seed missing an edition");
     editionId = edition.id;
 
-    const sponsor = await prisma.sponsor.create({
-      data: {
-        name: "Bluesky Test Sponsor", slug: "bluesky-test-sponsor", editionId, level: "GOLD",
-        editToken: TOKEN, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
-      },
-    });
+    const sponsor = await createSponsorWithToken({
+      name: "Bluesky Test Sponsor", slug: "bluesky-test-sponsor", editionId, level: "GOLD",
+      publicationStatus: "PUBLISHED",
+    }, TOKEN);
     sponsorId = sponsor.id;
   });
 

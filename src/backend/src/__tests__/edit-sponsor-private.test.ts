@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Sponsor private fields (#249): editable via the magic link, visible in the
 // admin, but NEVER exposed on any public route.
@@ -25,13 +26,10 @@ describe("Sponsor private section (#249)", () => {
     editionId = edition.id;
     slug = `private-test-sponsor-${Date.now()}`;
 
-    const sponsor = await prisma.sponsor.create({
-      data: {
-        name: "Private Test Sponsor", slug, editionId, level: "GOLD",
-        editToken: TOKEN, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
-        contactEmail: "sponsor@example.org",
-      },
-    });
+    const sponsor = await createSponsorWithToken({
+      name: "Private Test Sponsor", slug, editionId, level: "GOLD",
+      publicationStatus: "PUBLISHED", contactEmail: "sponsor@example.org",
+    }, TOKEN, { email: "sponsor@example.org" });
     sponsorId = sponsor.id;
   });
 

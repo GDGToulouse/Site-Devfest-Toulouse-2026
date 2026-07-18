@@ -280,11 +280,28 @@ async function resolveToken(token: string) {
   });
   if (speaker) return { kind: "speaker" as const, entity: speaker };
 
-  const sponsor = await prisma.sponsor.findUnique({
+  // Sponsors resolve through their contacts (#250): the token lives on a
+  // SponsorContact, and the lock/send-date are per-contact. We flatten the
+  // contact's token fields onto the sponsor so the rest of the route (which
+  // reads entity.level, entity.standContacts, entity.id, entity.editLinkLocked,
+  // …) keeps working unchanged, and expose contactId/contactEmail for the
+  // notification Reply-To.
+  const contact = await prisma.sponsorContact.findUnique({
     where: { editToken: token },
-    include: { edition: { select: { startDate: true } } },
+    include: { sponsor: { include: { edition: { select: { startDate: true } } } } },
   });
-  if (sponsor) return { kind: "sponsor" as const, entity: sponsor };
+  if (contact) {
+    const entity = {
+      ...contact.sponsor,
+      editLinkLocked: contact.editLinkLocked,
+      editTokenSentAt: contact.editTokenSentAt,
+      contactId: contact.id,
+      // The link recipient's own address wins over the sponsor's default for
+      // the com-kit Reply-To.
+      contactEmail: contact.email || contact.sponsor.contactEmail,
+    };
+    return { kind: "sponsor" as const, entity };
+  }
 
   return null;
 }

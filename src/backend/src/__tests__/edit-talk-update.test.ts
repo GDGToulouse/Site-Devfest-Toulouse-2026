@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // PUT /api/edit/:token/talks/:talkId — a speaker edits the descriptive content
 // of one of their published sessions (#260).
@@ -174,12 +175,10 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
 
   it("rejects a sponsor token (404 — no session to edit)", async () => {
     const sponsorToken = "test-talk-update-sponsor-token-8899aabbccddeeff";
-    const sponsor = await prisma.sponsor.create({
-      data: {
-        name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId, level: "GOLD",
-        editToken: sponsorToken, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
-      },
-    });
+    const sponsor = await createSponsorWithToken({
+      name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId, level: "GOLD",
+      publicationStatus: "PUBLISHED",
+    }, sponsorToken);
     const app = await buildEditApp();
     const res = await app.inject({
       method: "PUT",

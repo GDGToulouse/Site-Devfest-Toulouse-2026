@@ -568,11 +568,6 @@ model Sponsor {
   locale           String            @default("fr")
   publicationStatus PublicationStatus @default(DRAFT)
 
-  // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
-  editToken        String?           @unique
-  editLinkLocked   Boolean           @default(false)
-  editTokenSentAt  DateTime?
-
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -582,8 +577,38 @@ model Sponsor {
   // Speakers working for this sponsor's company (RG-226).
   speakers         Speaker[]
 
+  // People allowed to edit this sponsor's page, each with their own
+  // modification link (#250). Replaces the single editToken on Sponsor.
+  contacts         SponsorContact[]
+
   @@unique([editionId, slug])
   @@index([editionId])
+}
+
+// A person who can edit a sponsor's page via their own modification link
+// (#250). Replaces the single editToken that used to live on Sponsor: a
+// sponsor can now have several contacts, each with an independent token, send
+// date (30-day expiry) and lock. All contacts edit the same sponsor page with
+// equal rights.
+model SponsorContact {
+  id               Int       @id @default(autoincrement())
+  email            String
+  name             String?
+  role             String?
+
+  // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
+  // now per-contact. Locale for the link email is inherited from the sponsor.
+  editToken        String?   @unique
+  editLinkLocked   Boolean   @default(false)
+  editTokenSentAt  DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sponsorId        Int
+  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  @@index([sponsorId])
 }
 
 // --- Categories / Tracks (RG-213, US-246) ---
