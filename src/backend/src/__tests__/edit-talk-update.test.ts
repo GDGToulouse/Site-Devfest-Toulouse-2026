@@ -176,7 +176,7 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
     const sponsorToken = "test-talk-update-sponsor-token-8899aabbccddeeff";
     const sponsor = await prisma.sponsor.create({
       data: {
-        name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId,
+        name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId, level: "GOLD",
         editToken: sponsorToken, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
       },
     });
