@@ -9,10 +9,17 @@ interface CfpData {
   sessionizeUrl: string | null;
   openDate: string | null;
   closeDate: string | null;
+  notificationEmail: string | null;
 }
 
 export default function CfpTab() {
-  const [cfp, setCfp] = useState<CfpData>({ isOpen: false, sessionizeUrl: null, openDate: null, closeDate: null });
+  const [cfp, setCfp] = useState<CfpData>({
+    isOpen: false,
+    sessionizeUrl: null,
+    openDate: null,
+    closeDate: null,
+    notificationEmail: null,
+  });
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [saved, setSaved] = useState(false);
@@ -65,6 +72,16 @@ export default function CfpTab() {
         <FormField label="Date d'ouverture" name="openDate" type="date" value={cfp.openDate || ""} onChange={(v) => setCfp({ ...cfp, openDate: v || null })} />
         <FormField label="Date de fermeture" name="closeDate" type="date" value={cfp.closeDate || ""} onChange={(v) => setCfp({ ...cfp, closeDate: v || null })} />
       </div>
+
+      <FormField
+        label="Email de notification CFP"
+        name="notificationEmail"
+        type="email"
+        value={cfp.notificationEmail || ""}
+        onChange={(v) => setCfp({ ...cfp, notificationEmail: v || null })}
+        placeholder="cfp@devfesttoulouse.fr"
+        helpText="Adresse prévenue quand un·e speaker modifie sa conférence depuis son lien."
+      />
 
       <div className="flex items-center gap-4">
         <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">

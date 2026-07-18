@@ -6,11 +6,20 @@ import BilingualTabs from "@/components/admin/BilingualTabs";
 
 type Locale = "fr" | "en";
 
+type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
+type TalkLevel = "" | "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
+type TalkLanguage = "fr" | "en";
+
 interface EditTalk {
+  id: number;
   slug: string;
   titleFr: string;
   titleEn: string;
-  format: "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
+  descriptionFr: string;
+  descriptionEn: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: TalkLanguage;
 }
 
 interface EditData {
@@ -48,8 +57,19 @@ const T = {
     websiteUrl: "Site web",
     logo: "Logo",
     mySessions: "Mes sessions",
-    mySessionsHint: "Vos sessions retenues. Pour toute correction, contactez l'organisation.",
+    mySessionsHint:
+      "Modifiez le contenu de vos conférences retenues. Les changements sont publiés aussitôt sur le programme.",
+    talkTitle: "Titre",
+    talkDescription: "Résumé",
+    talkFormat: "Format",
+    talkLevel: "Niveau",
+    talkLanguage: "Langue de présentation",
+    levelAll: "Tous niveaux",
     format: { CONFERENCE: "Conférence", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
+    level: { DEBUTANT: "Débutant", INTERMEDIAIRE: "Intermédiaire", CONFIRME: "Confirmé" },
+    language: { fr: "Français", en: "Anglais" },
+    talkSaved: "Conférence enregistrée !",
+    talkRejected: "Le titre est obligatoire et le résumé doit rester sous 5 000 caractères.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Autre site" },
     upload: "Choisir une image…",
     uploading: "Envoi…",
@@ -89,8 +109,19 @@ const T = {
     websiteUrl: "Website",
     logo: "Logo",
     mySessions: "My sessions",
-    mySessionsHint: "Your accepted sessions. For any correction, please contact the organisers.",
+    mySessionsHint:
+      "Edit the content of your accepted talks. Changes are published to the programme right away.",
+    talkTitle: "Title",
+    talkDescription: "Abstract",
+    talkFormat: "Format",
+    talkLevel: "Level",
+    talkLanguage: "Talk language",
+    levelAll: "All levels",
     format: { CONFERENCE: "Conference", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
+    level: { DEBUTANT: "Beginner", INTERMEDIAIRE: "Intermediate", CONFIRME: "Advanced" },
+    language: { fr: "French", en: "English" },
+    talkSaved: "Talk saved!",
+    talkRejected: "A title is required and the abstract must stay under 5,000 characters.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Other website" },
     upload: "Choose an image…",
     uploading: "Uploading…",
@@ -304,27 +335,18 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             </div>
           </div>
 
-          {/* Read-only list of the speaker's accepted sessions (#229, RG-247):
-              informational only, not editable from this page. */}
+          {/* Editable list of the speaker's accepted sessions (#260). Each talk
+              is its own form with its own save button — the API updates one talk
+              at a time and publishes it immediately. */}
           {isSpeaker && data!.talks && data!.talks.length > 0 && (
-            <div>
+            <div className="border-t border-gris/15 pt-6">
               <p className="mb-1 text-sm font-semibold text-noir">{t.mySessions}</p>
-              <p className="mb-3 text-sm text-gris">{t.mySessionsHint}</p>
-              <ul className="space-y-2">
+              <p className="mb-4 text-sm text-gris">{t.mySessionsHint}</p>
+              <div className="space-y-6">
                 {data!.talks.map((talk) => (
-                  <li
-                    key={talk.slug}
-                    className="flex flex-wrap items-center gap-3 rounded-lg border border-gris/15 bg-blanc-casse px-4 py-3"
-                  >
-                    <span className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
-                      {t.format[talk.format]}
-                    </span>
-                    <span className="font-medium text-noir">
-                      {(data!.locale ?? "fr") === "en" ? talk.titleEn : talk.titleFr}
-                    </span>
-                  </li>
+                  <TalkEditor key={talk.id} talk={talk} token={token} t={t} />
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
@@ -475,6 +497,140 @@ function ImageField({
             <p role="alert" className="text-sm font-medium text-terre-cuite">
               {t.uploadError}
             </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const TALK_FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
+const TALK_LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
+const TALK_LANGUAGES = ["fr", "en"] as const;
+
+// One editable session (#260). Self-contained: holds its own draft state and
+// saves itself, since the API updates one talk at a time and publishes it
+// immediately. Titles/abstract are bilingual; format/level/language are selects.
+function TalkEditor({
+  talk,
+  token,
+  t,
+}: {
+  talk: EditTalk;
+  token: string;
+  t: (typeof T)[Locale];
+}) {
+  const [titleFr, setTitleFr] = useState(talk.titleFr);
+  const [titleEn, setTitleEn] = useState(talk.titleEn);
+  const [descriptionFr, setDescriptionFr] = useState(talk.descriptionFr);
+  const [descriptionEn, setDescriptionEn] = useState(talk.descriptionEn);
+  const [format, setFormat] = useState<TalkFormat>(talk.format);
+  const [level, setLevel] = useState<TalkLevel>(talk.level ?? "");
+  const [language, setLanguage] = useState<TalkLanguage>(talk.language);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    const res = await fetch(`/api/edit/${token}/talks/${talk.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ titleFr, titleEn, descriptionFr, descriptionEn, format, level, language }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setSaved(true);
+      return;
+    }
+    setError(t.talkRejected);
+  }
+
+  return (
+    <div className="rounded-lg border border-gris/15 bg-blanc-casse p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
+          {t.format[format]}
+        </span>
+      </div>
+
+      <div className="space-y-5">
+        <BilingualTabs
+          label={t.talkTitle}
+          labels={{ fr: t.langFr, en: t.langEn }}
+          isEmpty={(lang) => !(lang === "fr" ? titleFr : titleEn)?.trim()}
+          renderPanel={(lang) => (
+            <input
+              value={lang === "fr" ? titleFr : titleEn}
+              onChange={(e) => (lang === "fr" ? setTitleFr : setTitleEn)(e.target.value)}
+              className={inputClass}
+            />
+          )}
+        />
+
+        <BilingualTabs
+          label={t.talkDescription}
+          labels={{ fr: t.langFr, en: t.langEn }}
+          isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn)?.trim()}
+          renderPanel={(lang) => (
+            <textarea
+              value={lang === "fr" ? descriptionFr : descriptionEn}
+              onChange={(e) => (lang === "fr" ? setDescriptionFr : setDescriptionEn)(e.target.value)}
+              rows={5}
+              className={inputClass}
+            />
+          )}
+        />
+
+        <div className="grid gap-5 md:grid-cols-3">
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">{t.talkFormat}</span>
+            <select value={format} onChange={(e) => setFormat(e.target.value as TalkFormat)} className={inputClass}>
+              {TALK_FORMATS.map((f) => (
+                <option key={f} value={f}>
+                  {t.format[f]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">{t.talkLevel}</span>
+            <select value={level} onChange={(e) => setLevel(e.target.value as TalkLevel)} className={inputClass}>
+              <option value="">{t.levelAll}</option>
+              {TALK_LEVELS.map((l) => (
+                <option key={l} value={l}>
+                  {t.level[l]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">{t.talkLanguage}</span>
+            <select value={language} onChange={(e) => setLanguage(e.target.value as TalkLanguage)} className={inputClass}>
+              {TALK_LANGUAGES.map((l) => (
+                <option key={l} value={l}>
+                  {t.language[l]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="rounded-[12px] bg-malachite px-5 py-2.5 text-sm font-bold text-blanc hover:bg-malachite/90 disabled:opacity-50"
+          >
+            {saving ? t.saving : t.save}
+          </button>
+          {saved && <span className="text-sm font-medium text-malachite">{t.talkSaved}</span>}
+          {error && (
+            <span role="alert" className="text-sm font-medium text-terre-cuite">
+              {error}
+            </span>
           )}
         </div>
       </div>

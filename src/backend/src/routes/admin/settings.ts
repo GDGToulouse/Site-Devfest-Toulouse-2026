@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { buildAlertPayload, sendAlert } from "../../lib/alert-webhook.js";
 import { prisma } from "../../lib/prisma.js";
+import { DEFAULT_CFP_NOTIFICATION_EMAIL } from "../../lib/cfp-settings.js";
 import { revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
 import { validateWebhookUrl } from "../../lib/webhook-url.js";
 
@@ -9,6 +10,7 @@ interface CfpBody {
   sessionizeUrl?: string;
   openDate?: string;
   closeDate?: string;
+  notificationEmail?: string;
 }
 
 const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_", "about_"];
@@ -66,6 +68,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
       sessionizeUrl: map.get("cfp_sessionize_url") || null,
       openDate: map.get("cfp_open_date") || null,
       closeDate: map.get("cfp_close_date") || null,
+      notificationEmail: map.get("cfp_notification_email") || DEFAULT_CFP_NOTIFICATION_EMAIL,
     };
   });
 
@@ -78,6 +81,7 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
       { key: "cfp_sessionize_url", value: body.sessionizeUrl || "" },
       { key: "cfp_open_date", value: body.openDate || "" },
       { key: "cfp_close_date", value: body.closeDate || "" },
+      { key: "cfp_notification_email", value: body.notificationEmail?.trim() || "" },
     ];
 
     for (const entry of entries) {
