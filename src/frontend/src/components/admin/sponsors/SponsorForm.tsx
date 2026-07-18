@@ -32,6 +32,8 @@ export interface SponsorFormValue {
   comKitLogoPrintUrl: string;
   comKitCharterUrl: string;
   comKitNotes: string;
+  platinumPromoIdea: string;
+  platinumCoBuildIdea: string;
 }
 
 export const emptySponsorForm: SponsorFormValue = {
@@ -51,6 +53,8 @@ export const emptySponsorForm: SponsorFormValue = {
   comKitLogoPrintUrl: "",
   comKitCharterUrl: "",
   comKitNotes: "",
+  platinumPromoIdea: "",
+  platinumCoBuildIdea: "",
 };
 
 const inputClass =
@@ -196,6 +200,21 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
           <span className="block text-sm font-medium text-noir mb-1">Notes / autres supports</span>
           <textarea value={value.comKitNotes} onChange={(e) => onChange({ ...value, comKitNotes: e.target.value })} rows={3} className={inputClass} />
         </label>
+
+        {/* Platinum-only ideas (#252) — shown only when level is Platinum. */}
+        {value.level === "PLATINUM" && (
+          <div className="mt-4 rounded-lg border border-jaune/40 bg-jaune/5 p-4">
+            <p className="text-sm font-semibold text-noir mb-3">💎 Réservé aux partenaires Platinum</p>
+            <label className="block">
+              <span className="block text-sm font-medium text-noir mb-1">Contenu promotionnel à mettre en avant</span>
+              <textarea value={value.platinumPromoIdea} onChange={(e) => onChange({ ...value, platinumPromoIdea: e.target.value })} rows={3} className={inputClass} />
+            </label>
+            <label className="block mt-4">
+              <span className="block text-sm font-medium text-noir mb-1">Idées de contenu à co-construire</span>
+              <textarea value={value.platinumCoBuildIdea} onChange={(e) => onChange({ ...value, platinumCoBuildIdea: e.target.value })} rows={3} className={inputClass} />
+            </label>
+          </div>
+        )}
       </fieldset>
 
       <ImagePickerDialog
