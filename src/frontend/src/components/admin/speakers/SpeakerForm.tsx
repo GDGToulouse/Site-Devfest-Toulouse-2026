@@ -15,6 +15,7 @@ export interface SpeakerFormValue {
   bioEn: string;
   linkedin: string;
   twitter: string;
+  bluesky: string;
   github: string;
   website: string;
   locale: "fr" | "en";
@@ -32,6 +33,7 @@ export const emptySpeakerForm: SpeakerFormValue = {
   bioEn: "",
   linkedin: "",
   twitter: "",
+  bluesky: "",
   github: "",
   website: "",
   locale: "fr",
@@ -131,6 +133,10 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">X / Twitter</span>
           <input type="url" value={value.twitter} onChange={(e) => onChange({ ...value, twitter: e.target.value })} className={inputClass} />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-noir mb-1">Bluesky</span>
+          <input type="url" value={value.bluesky} onChange={(e) => onChange({ ...value, bluesky: e.target.value })} className={inputClass} />
         </label>
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">Site web</span>

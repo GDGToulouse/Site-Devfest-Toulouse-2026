@@ -23,6 +23,7 @@ export interface SponsorFormValue {
   descriptionEn: string;
   linkedin: string;
   twitter: string;
+  bluesky: string;
   locale: "fr" | "en";
   publicationStatus: "DRAFT" | "PUBLISHED";
 }
@@ -36,6 +37,7 @@ export const emptySponsorForm: SponsorFormValue = {
   descriptionEn: "",
   linkedin: "",
   twitter: "",
+  bluesky: "",
   locale: "fr",
   publicationStatus: "DRAFT",
 };
@@ -119,6 +121,10 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">X / Twitter</span>
           <input type="url" value={value.twitter} onChange={(e) => onChange({ ...value, twitter: e.target.value })} className={inputClass} />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-noir mb-1">Bluesky</span>
+          <input type="url" value={value.bluesky} onChange={(e) => onChange({ ...value, bluesky: e.target.value })} className={inputClass} />
         </label>
       </div>
 
