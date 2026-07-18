@@ -39,15 +39,21 @@ describe("Sponsor job offers (#251)", () => {
     await app.close();
   });
 
-  it("creates an offer and sanitizes its description", async () => {
+  it("creates an offer and sanitizes both descriptions", async () => {
     const app = await buildEditApp();
     const res = await app.inject({
       method: "POST",
       url: `/api/edit/${GOLD_TOKEN}/job-offers`,
-      payload: { title: "Dev", description: "<p>Ok</p><script>alert(1)</script>", url: "https://jobs.example.org/1" },
+      payload: {
+        title: "Dev",
+        descriptionFr: "<p>Ok</p><script>alert(1)</script>",
+        descriptionEn: "<p>Fine</p><script>alert(2)</script>",
+        url: "https://jobs.example.org/1",
+      },
     });
     expect(res.statusCode).toBe(201);
-    expect(res.json().description).toBe("<p>Ok</p>");
+    expect(res.json().descriptionFr).toBe("<p>Ok</p>");
+    expect(res.json().descriptionEn).toBe("<p>Fine</p>");
     await app.close();
   });
 
@@ -89,7 +95,7 @@ describe("Sponsor job offers (#251)", () => {
       data: { name: "Other", slug: `offers-other-${Date.now()}`, editionId, level: "GOLD" },
     });
     const foreignOffer = await prisma.sponsorJobOffer.create({
-      data: { sponsorId: other.id, title: "Foreign", description: "", url: "https://x.org" },
+      data: { sponsorId: other.id, title: "Foreign", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
     });
     const app = await buildEditApp();
     const res = await app.inject({
@@ -109,6 +115,11 @@ describe("Sponsor job offers (#251)", () => {
     expect(detail.statusCode).toBe(200);
     expect(Array.isArray(detail.json().jobOffers)).toBe(true);
     expect(detail.json().jobOffers.length).toBeGreaterThanOrEqual(1);
+    // Both localized descriptions are exposed; the old single field is gone (#273).
+    const offer = detail.json().jobOffers[0];
+    expect(offer).toHaveProperty("descriptionFr");
+    expect(offer).toHaveProperty("descriptionEn");
+    expect(offer).not.toHaveProperty("description");
 
     const list = await app.inject({ method: "GET", url: `/api/job-offers` });
     expect(list.statusCode).toBe(200);

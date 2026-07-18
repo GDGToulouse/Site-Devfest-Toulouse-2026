@@ -170,11 +170,13 @@ export interface SponsorSpeakerRef {
   company: string | null;
 }
 
-// A job offer a sponsor wants relayed (#251).
+// A job offer a sponsor wants relayed (#251). The description is bilingual
+// rich-text HTML (#273) — the page picks the field for the current locale.
 export interface JobOfferPublic {
   id: number;
   title: string;
-  description: string;
+  descriptionFr: string;
+  descriptionEn: string;
   url: string;
 }
 

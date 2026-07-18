@@ -162,13 +162,20 @@ export default async function SponsorDetailPage({
           <section className="mt-14">
             <h2 className="mb-6 text-2xl font-bold text-noir">{t("jobOffersTitle")}</h2>
             <div className="space-y-4">
-              {sponsor.jobOffers.map((offer) => (
+              {sponsor.jobOffers.map((offer) => {
+                // Show the description in the page locale, falling back to the
+                // other language when the translation is missing (#273).
+                const description =
+                  (locale === "en" ? offer.descriptionEn : offer.descriptionFr) ||
+                  offer.descriptionFr ||
+                  offer.descriptionEn;
+                return (
                 <article key={offer.id} className="rounded-2xl border border-gris/15 bg-blanc p-5 shadow-sm">
                   <h3 className="text-lg font-bold text-noir">{offer.title}</h3>
-                  {offer.description && (
+                  {description && (
                     <div
                       className="article-content mt-2 text-sm text-gris"
-                      dangerouslySetInnerHTML={{ __html: offer.description }}
+                      dangerouslySetInnerHTML={{ __html: description }}
                     />
                   )}
                   <a
@@ -180,7 +187,8 @@ export default async function SponsorDetailPage({
                     {t("jobOfferCta")} →
                   </a>
                 </article>
-              ))}
+                );
+              })}
             </div>
           </section>
         )}

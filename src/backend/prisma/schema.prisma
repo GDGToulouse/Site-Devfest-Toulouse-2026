@@ -621,8 +621,9 @@ model SponsorContact {
 model SponsorJobOffer {
   id               Int       @id @default(autoincrement())
   title            String
-  // Rich-text HTML, sanitized on write (same pipeline as article content).
-  description      String
+  // Bilingual rich-text HTML, sanitized on write (same pipeline as articles).
+  descriptionFr    String    @default("")
+  descriptionEn    String    @default("")
   url              String
 
   createdAt        DateTime  @default(now())
