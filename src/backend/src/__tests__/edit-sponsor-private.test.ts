@@ -1,10 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
-
-// The com-kit email endpoint sends mail; stub SMTP. Must be hoisted above imports.
-const { sendMailMock } = vi.hoisted(() => ({ sendMailMock: vi.fn().mockResolvedValue({}) }));
-vi.mock("nodemailer", () => ({
-  default: { createTransport: () => ({ sendMail: sendMailMock }) },
-}));
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 
 import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
@@ -36,8 +30,6 @@ describe("Sponsor private section (#249)", () => {
   afterAll(async () => {
     await prisma.sponsor.deleteMany({ where: { id: sponsorId } });
   });
-
-  beforeEach(() => sendMailMock.mockClear());
 
   it("accepts and persists private fields via the magic link", async () => {
     const app = await buildEditApp();
@@ -74,6 +66,16 @@ describe("Sponsor private section (#249)", () => {
     await app.close();
   });
 
+  it("exposes the sponsoring contact address so the UI can build a mailto (#271)", async () => {
+    const app = await buildEditApp();
+    const res = await app.inject({ method: "GET", url: `/api/edit/${TOKEN}` });
+    expect(res.statusCode).toBe(200);
+    // A non-empty address the client turns into a mailto: link for complements.
+    expect(typeof res.json().private.sponsorContactEmail).toBe("string");
+    expect(res.json().private.sponsorContactEmail.length).toBeGreaterThan(0);
+    await app.close();
+  });
+
   it("rejects an unsafe URL in a stand contact", async () => {
     const app = await buildEditApp();
     const res = await app.inject({
@@ -97,21 +99,6 @@ describe("Sponsor private section (#249)", () => {
     expect(body).not.toHaveProperty("comKitNotes");
     expect(body).not.toHaveProperty("private");
     expect(body).not.toHaveProperty("contactEmail");
-    await app.close();
-  });
-
-  it("sends a com-kit complement email to the sponsoring team", async () => {
-    const app = await buildEditApp();
-    const res = await app.inject({
-      method: "POST",
-      url: `/api/edit/${TOKEN}/com-kit-email`,
-      payload: { message: "J'ai un PDF de charte à envoyer." },
-    });
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ sent: true });
-    expect(sendMailMock).toHaveBeenCalledTimes(1);
-    // Reply-To points back to the sponsor so the orga can ask for the files.
-    expect(sendMailMock.mock.calls[0][0].replyTo).toBe("sponsor@example.org");
     await app.close();
   });
 });
