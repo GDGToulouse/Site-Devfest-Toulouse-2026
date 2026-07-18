@@ -54,6 +54,7 @@ export default function SponsorEditorPage() {
           descriptionEn: data.descriptionEn || "",
           linkedin: data.socialLinks?.linkedin || "",
           twitter: data.socialLinks?.twitter || "",
+          bluesky: data.socialLinks?.bluesky || "",
           locale: data.locale === "en" ? "en" : "fr",
           publicationStatus: data.publicationStatus,
         });
@@ -72,6 +73,7 @@ export default function SponsorEditorPage() {
     const socialLinks: Record<string, string> = {};
     if (form.linkedin.trim()) socialLinks.linkedin = form.linkedin.trim();
     if (form.twitter.trim()) socialLinks.twitter = form.twitter.trim();
+    if (form.bluesky.trim()) socialLinks.bluesky = form.bluesky.trim();
 
     const payload = {
       editionId,

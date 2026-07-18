@@ -70,7 +70,7 @@ const T = {
     language: { fr: "Français", en: "Anglais" },
     talkSaved: "Conférence enregistrée !",
     talkRejected: "Le titre est obligatoire et le résumé doit rester sous 5 000 caractères.",
-    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Autre site" },
+    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Autre site" },
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
@@ -122,7 +122,7 @@ const T = {
     language: { fr: "French", en: "English" },
     talkSaved: "Talk saved!",
     talkRejected: "A title is required and the abstract must stay under 5,000 characters.",
-    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Other website" },
+    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Other website" },
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
@@ -324,7 +324,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           <div>
             <p className="mb-3 text-sm font-semibold text-noir">{t.socialLinks}</p>
             <div className="grid gap-5 md:grid-cols-2">
-              {(["linkedin", "twitter", "github", "website"] as const).map((key) => (
+              {(["linkedin", "twitter", "bluesky", "github", "website"] as const).map((key) => (
                 <Field
                   key={key}
                   label={t.social[key as SocialKey]}

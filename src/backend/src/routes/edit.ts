@@ -27,7 +27,7 @@ const URL_MAX = 2_048;
 const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
 const UPLOAD_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
-const SOCIAL_KEYS = ["linkedin", "twitter", "github", "website"] as const;
+const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
 
 const socialLinksSchema = {
   type: "object",
