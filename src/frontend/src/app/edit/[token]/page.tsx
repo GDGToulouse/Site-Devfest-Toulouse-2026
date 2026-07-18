@@ -90,12 +90,12 @@ const T = {
     comKitLogoPrint: "Logo (version Print)",
     comKitCharter: "Charte graphique",
     comKitNotes: "Notes / autres supports",
-    comKitEmailIntro: "Des fichiers à transmettre qui ne tiennent pas en lien ?",
-    comKitEmailButton: "Envoyer les compléments par email",
-    comKitEmailMessage: "Message (optionnel)",
-    comKitEmailSending: "Envoi…",
-    comKitEmailSent: "Demande envoyée ! L'organisation vous recontactera pour les pièces jointes.",
-    comKitEmailError: "Envoi impossible. Réessayez plus tard.",
+    comKitEmailIntro:
+      "Des fichiers ou informations complémentaires à transmettre qui ne tiennent pas dans un lien ? Envoyez-les par email à l'organisation.",
+    comKitEmailButton: "Envoyer par email",
+    comKitEmailSubject: "Compléments kit de communication — {name}",
+    comKitEmailBody:
+      "Bonjour,\n\nVeuillez trouver ci-joint des informations complémentaires pour {name}.\n\n[joindre les fichiers]\n",
     platinumSection: "Réservé aux partenaires Platinum",
     platinumPromoIdea: "Contenu promotionnel à mettre en avant",
     platinumPromoIdeaHint: "Vidéo, produit, campagne… que nous pourrions relayer.",
@@ -175,12 +175,12 @@ const T = {
     comKitLogoPrint: "Logo (print version)",
     comKitCharter: "Brand guidelines",
     comKitNotes: "Notes / other assets",
-    comKitEmailIntro: "Files to send that don't fit as a link?",
-    comKitEmailButton: "Send complements by email",
-    comKitEmailMessage: "Message (optional)",
-    comKitEmailSending: "Sending…",
-    comKitEmailSent: "Request sent! The organisers will get back to you for the attachments.",
-    comKitEmailError: "Sending failed. Please try again later.",
+    comKitEmailIntro:
+      "Extra files or information to share that don't fit in a link? Email them to the organisers.",
+    comKitEmailButton: "Send by email",
+    comKitEmailSubject: "Communication kit complements — {name}",
+    comKitEmailBody:
+      "Hello,\n\nPlease find attached some additional information for {name}.\n\n[attach the files]\n",
     platinumSection: "Platinum partners only",
     platinumPromoIdea: "Promotional content to highlight",
     platinumPromoIdeaHint: "Video, product, campaign… we could relay.",
@@ -437,7 +437,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
               Rendered after the public save so the public/private boundary is
               visually explicit. */}
           {!isSpeaker && data!.private && (
-            <SponsorPrivateSection token={token} initial={data!.private} t={t} />
+            <SponsorPrivateSection token={token} sponsorName={data!.name} initial={data!.private} t={t} />
           )}
 
           {/* Job offers (#251) — sponsor only, published directly. */}

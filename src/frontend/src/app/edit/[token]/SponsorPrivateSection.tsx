@@ -22,6 +22,8 @@ export interface SponsorPrivate {
   // Platinum-only ideas (#252).
   platinumPromoIdea: string | null;
   platinumCoBuildIdea: string | null;
+  // Where to email complements that don't fit as links (#271).
+  sponsorContactEmail: string;
 }
 
 // Only the string labels this section needs. The parent passes its whole dict
@@ -47,10 +49,8 @@ interface Labels {
   comKitNotes: string;
   comKitEmailIntro: string;
   comKitEmailButton: string;
-  comKitEmailMessage: string;
-  comKitEmailSending: string;
-  comKitEmailSent: string;
-  comKitEmailError: string;
+  comKitEmailSubject: string;
+  comKitEmailBody: string;
   platinumSection: string;
   platinumPromoIdea: string;
   platinumPromoIdeaHint: string;
@@ -65,10 +65,12 @@ const inputClass =
 // own save (PUT sends only the private fields; the profile save is separate).
 export default function SponsorPrivateSection({
   token,
+  sponsorName,
   initial,
   t,
 }: {
   token: string;
+  sponsorName: string;
   initial: SponsorPrivate;
   t: Labels;
 }) {
@@ -222,62 +224,30 @@ export default function SponsorPrivateSection({
         )}
       </div>
 
-      {/* Send com-kit complements by email */}
-      <ComKitEmail token={token} t={t} />
+      {/* Complements go by email — a mailto: to the sponsoring team (#271). */}
+      <ComKitEmailLink email={initial.sponsorContactEmail} sponsorName={sponsorName} t={t} />
     </section>
   );
 }
 
-// Lets the sponsor ask the organizers to collect files that don't fit as links
-// (#249). Posts to a dedicated endpoint that emails the sponsoring team with
-// Reply-To set to the sponsor.
-function ComKitEmail({ token, t }: { token: string; t: Labels }) {
-  const [message, setMessage] = useState("");
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [error, setError] = useState(false);
-
-  async function send() {
-    setSending(true);
-    setSent(false);
-    setError(false);
-    const res = await fetch(`/api/edit/${token}/com-kit-email`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message }),
-    });
-    setSending(false);
-    if (res.ok) {
-      setSent(true);
-      setMessage("");
-      return;
-    }
-    setError(true);
-  }
+// Complements that don't fit as links are sent by email, not through the site
+// (#271): a mailto: link opens the sponsor's own mail client, pre-filled with
+// the sponsoring address, a subject and a body naming the company. No server
+// send — the sponsor attaches the files and hits send themselves.
+function ComKitEmailLink({ email, sponsorName, t }: { email: string; sponsorName: string; t: Labels }) {
+  const subject = t.comKitEmailSubject.replace("{name}", sponsorName);
+  const body = t.comKitEmailBody.replace(/\{name\}/g, sponsorName);
+  const href = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 
   return (
     <div className="mt-6 rounded-lg bg-blanc p-4">
-      <p className="mb-2 text-sm text-noir">{t.comKitEmailIntro}</p>
-      <label className="mb-3 block">
-        <span className="mb-1 block text-xs text-gris">{t.comKitEmailMessage}</span>
-        <textarea value={message} onChange={(e) => setMessage(e.target.value)} rows={2} className={inputClass} />
-      </label>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={send}
-          disabled={sending}
-          className="rounded-lg border border-gris/30 bg-blanc px-4 py-2 text-sm font-medium text-noir hover:bg-blanc-casse disabled:opacity-50"
-        >
-          {sending ? t.comKitEmailSending : t.comKitEmailButton}
-        </button>
-        {sent && <span className="text-sm font-medium text-malachite">{t.comKitEmailSent}</span>}
-        {error && (
-          <span role="alert" className="text-sm font-medium text-terre-cuite">
-            {t.comKitEmailError}
-          </span>
-        )}
-      </div>
+      <p className="mb-3 text-sm text-noir">{t.comKitEmailIntro}</p>
+      <a
+        href={href}
+        className="inline-block rounded-lg border border-gris/30 bg-blanc px-4 py-2 text-sm font-medium text-noir hover:bg-blanc-casse"
+      >
+        ✉ {t.comKitEmailButton}
+      </a>
     </div>
   );
 }

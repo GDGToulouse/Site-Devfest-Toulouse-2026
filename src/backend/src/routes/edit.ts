@@ -441,6 +441,9 @@ export default async function editRoutes(app: FastifyInstance) {
         talks: entity.talks,
       };
     }
+    // Where the sponsor should email complements that don't fit as links (#271):
+    // the sponsoring contact address, so the client can build a mailto: link.
+    const sponsorContactEmail = (await getSponsorContactRecipients())[0];
     return {
       kind,
       locale,
@@ -467,6 +470,9 @@ export default async function editRoutes(app: FastifyInstance) {
         // fields only when level === PLATINUM.
         platinumPromoIdea: entity.platinumPromoIdea,
         platinumCoBuildIdea: entity.platinumCoBuildIdea,
+        // Address the sponsor should email complements to (#271). The UI builds
+        // a mailto: link from it — no server-side send for this case anymore.
+        sponsorContactEmail,
       },
       // Job offers (#251): the sponsor's offers plus its level quota, so the
       // UI can disable "add" at the cap.
@@ -641,68 +647,6 @@ export default async function editRoutes(app: FastifyInstance) {
       }
 
       return { saved: true };
-    },
-  );
-
-  // POST /api/edit/:token/com-kit-email — a sponsor asks the organizers to
-  // collect com-kit complements that don't fit as links (#249). We don't accept
-  // attachments here (the token is unauthenticated); instead we email the
-  // sponsoring team with Reply-To set to the sponsor, so they can reply and the
-  // sponsor answers with the files attached.
-  app.post<{ Params: { token: string }; Body: { message?: string } }>(
-    "/edit/:token/com-kit-email",
-    {
-      config: { rateLimit: { max: 5, timeWindow: "1 minute" } },
-      schema: {
-        params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
-        body: {
-          type: "object",
-          additionalProperties: false,
-          properties: { message: { type: "string", maxLength: TEXT_MAX } },
-        },
-      },
-    },
-    async (request, reply) => {
-      const resolved = await resolveToken(request.params.token);
-      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
-
-      const { entity } = resolved;
-      const blocked = editingBlockedReason(entity);
-      if (blocked) return reply.code(403).send({ error: blocked });
-
-      const recipients = await getSponsorContactRecipients();
-      const message = request.body?.message?.trim();
-
-      const subject = `Compléments kit de com — ${entity.name}`;
-      const text = [
-        `${entity.name} souhaite transmettre des compléments pour son kit de communication.`,
-        message ? `\nMessage :\n${message}` : "",
-        entity.contactEmail
-          ? `\nRépondez à cet email pour demander les pièces jointes (Reply-To : ${entity.contactEmail}).`
-          : "\nRépondez à cet email pour demander les pièces jointes.",
-      ].join("\n");
-      const html = `
-        <h3>Compléments kit de com — ${escapeHtml(entity.name)}</h3>
-        <p><strong>${escapeHtml(entity.name)}</strong> souhaite transmettre des compléments
-        pour son kit de communication.</p>
-        ${message ? `<p><strong>Message :</strong><br>${escapeHtml(message).replace(/\n/g, "<br>")}</p>` : ""}
-        <p>Répondez à cet email pour demander les pièces jointes.</p>
-      `;
-
-      try {
-        await sendEmail({
-          to: recipients,
-          subject,
-          text,
-          html,
-          ...(entity.contactEmail ? { replyTo: entity.contactEmail } : {}),
-        });
-      } catch (err) {
-        request.log.error("Failed to send com-kit email: %s", String(err));
-        return reply.code(502).send({ error: "email_failed" });
-      }
-
-      return { sent: true };
     },
   );
 
