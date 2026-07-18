@@ -3,8 +3,14 @@ import { prisma } from "../lib/prisma.js";
 import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
-import { revalidateSpeakers, revalidateSponsors } from "../lib/revalidate.js";
+import {
+  revalidateConferences,
+  revalidateSpeakers,
+  revalidateSponsors,
+} from "../lib/revalidate.js";
 import { storeImageBuffer } from "../lib/image-store.js";
+import { sendEmail } from "../lib/email.js";
+import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -66,6 +72,57 @@ const editBodySchema = {
 
 const ALLOWED_FIELDS = Object.keys(editBodySchema.properties);
 
+// Talk fields a speaker may edit from the link (#260): descriptive content
+// only. Programming (room, slot, publication status), slug and the speaker
+// list stay with the organizers. Titles are single-line, descriptions long.
+const TITLE_MAX = 300;
+const TALK_FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
+const TALK_LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
+const TALK_LANGUAGES = ["fr", "en"] as const;
+
+const talkBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    titleFr: { type: "string", maxLength: TITLE_MAX },
+    titleEn: { type: "string", maxLength: TITLE_MAX },
+    descriptionFr: { type: "string", maxLength: TEXT_MAX },
+    descriptionEn: { type: "string", maxLength: TEXT_MAX },
+    format: { type: "string", enum: [...TALK_FORMATS] },
+    // level may be cleared ("" -> "Tous niveaux"), so an empty string is valid.
+    level: { type: "string", enum: ["", ...TALK_LEVELS] },
+    language: { type: "string", enum: [...TALK_LANGUAGES] },
+  },
+};
+
+const TALK_ALLOWED_FIELDS = Object.keys(talkBodySchema.properties);
+
+interface TalkEditBody {
+  titleFr?: string;
+  titleEn?: string;
+  descriptionFr?: string;
+  descriptionEn?: string;
+  format?: (typeof TALK_FORMATS)[number];
+  level?: "" | (typeof TALK_LEVELS)[number];
+  language?: (typeof TALK_LANGUAGES)[number];
+}
+
+// A title is the only field that cannot be blank: it's rendered as the session
+// heading and used to derive the slug. Descriptions and level may be cleared.
+function findBlankTitle(body: TalkEditBody): string | null {
+  for (const field of ["titleFr", "titleEn"] as const) {
+    if (body[field] !== undefined && !body[field]!.trim()) return field;
+  }
+  return null;
+}
+
+function findForbiddenTalkKey(body: Record<string, unknown>): string | null {
+  for (const key of Object.keys(body)) {
+    if (!TALK_ALLOWED_FIELDS.includes(key)) return key;
+  }
+  return null;
+}
+
 // Fastify's Ajv runs with `removeAdditional: true`, so `additionalProperties:
 // false` silently STRIPS an unknown key instead of rejecting it: a PUT carrying
 // `name` or `publicationStatus` answered 200 while quietly ignoring them.
@@ -115,11 +172,22 @@ async function resolveToken(token: string) {
     where: { editToken: token },
     include: {
       edition: { select: { startDate: true } },
-      // Read-only list shown on the edit page (#229). Sessions themselves are
-      // not editable here (RG-247); only published ones are surfaced.
+      // Sessions the speaker can edit from the link (#260). Only published ones
+      // are surfaced; the descriptive content is editable, the programming
+      // (room/slot/status) and the speaker list are not.
       talks: {
         where: { publicationStatus: "PUBLISHED" },
-        select: { slug: true, titleFr: true, titleEn: true, format: true },
+        select: {
+          id: true,
+          slug: true,
+          titleFr: true,
+          titleEn: true,
+          descriptionFr: true,
+          descriptionEn: true,
+          format: true,
+          level: true,
+          language: true,
+        },
         orderBy: { titleFr: "asc" },
       },
     },
@@ -175,6 +243,44 @@ interface SponsorEditBody {
   socialLinks?: Record<string, string>;
 }
 
+// Notify the organizers that a speaker changed a session. Sent to the
+// configurable CFP address (#260); the link points to the admin talk page so
+// they can review the change in one click.
+async function notifyTalkEdited(
+  speakerName: string,
+  talk: { id: number; titleFr: string },
+): Promise<void> {
+  const to = await getCfpNotificationEmail();
+  const baseUrl = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
+  const adminUrl = `${baseUrl}/admin/talks/${talk.id}`;
+
+  const subject = `Conférence modifiée par un·e speaker — ${talk.titleFr}`;
+  const text = [
+    `${speakerName} a mis à jour sa conférence « ${talk.titleFr} ».`,
+    "",
+    `Les modifications sont déjà en ligne (publication directe).`,
+    `Fiche admin : ${adminUrl}`,
+  ].join("\n");
+  const html = `
+    <h3>Conférence modifiée par un·e speaker</h3>
+    <p><strong>${escapeHtml(speakerName)}</strong> a mis à jour sa conférence
+    « ${escapeHtml(talk.titleFr)} ».</p>
+    <p>Les modifications sont déjà en ligne (publication directe).</p>
+    <p><a href="${adminUrl}">Voir la fiche dans l'admin</a></p>
+  `;
+
+  await sendEmail({ to: [to], subject, text, html });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default async function editRoutes(app: FastifyInstance) {
   // GET /api/edit/:token — load the editable fields of the entity behind the token.
   app.get<{ Params: { token: string } }>("/edit/:token", {
@@ -205,7 +311,10 @@ export default async function editRoutes(app: FastifyInstance) {
           photoUrl: entity.photoUrl,
           socialLinks: parseSocial(entity.socialLinks),
         },
-        // Read-only (RG-247): shown so the speaker can confirm their sessions.
+        // Editable sessions (#260). The numeric id is required so the client
+        // can target PUT /edit/:token/talks/:id; ownership is re-checked
+        // server-side on every write, so exposing it opens no door the token
+        // didn't already open.
         talks: entity.talks,
       };
     }
@@ -287,6 +396,85 @@ export default async function editRoutes(app: FastifyInstance) {
 
     return { saved: true };
   });
+
+  // PUT /api/edit/:token/talks/:talkId — a speaker edits the descriptive
+  // content of one of their sessions (#260). Programming, status and the
+  // speaker list are NOT editable here. Changes publish immediately (direct
+  // publication) and notify the CFP address.
+  app.put<{ Params: { token: string; talkId: string }; Body: TalkEditBody }>(
+    "/edit/:token/talks/:talkId",
+    {
+      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
+      schema: {
+        params: {
+          type: "object",
+          required: ["token", "talkId"],
+          properties: { token: { type: "string" }, talkId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+        body: talkBodySchema,
+      },
+      // Runs before Ajv strips unknown keys, so a client sending `room` or
+      // `publicationStatus` is refused, not silently ignored (#223 pattern).
+      preValidation: async (request, reply) => {
+        const body = request.body;
+        if (!body || typeof body !== "object") return;
+        const forbidden = findForbiddenTalkKey(body as Record<string, unknown>);
+        if (forbidden) {
+          return reply.code(400).send({ error: "forbidden_field", field: forbidden });
+        }
+      },
+    },
+    async (request, reply) => {
+      const resolved = await resolveToken(request.params.token);
+      if (!resolved) return reply.code(404).send({ error: "invalid_token" });
+
+      // Only a speaker token carries talks; a sponsor token has no session to edit.
+      if (resolved.kind !== "speaker") return reply.code(404).send({ error: "invalid_token" });
+
+      const { entity } = resolved;
+      const blocked = editingBlockedReason(entity);
+      if (blocked) return reply.code(403).send({ error: blocked });
+
+      // Ownership: the token may only edit a talk it actually presents. The
+      // talks list already comes filtered to this speaker's published sessions,
+      // so a talkId absent from it is either someone else's or not editable.
+      const talkId = Number(request.params.talkId);
+      const talk = entity.talks.find((t) => t.id === talkId);
+      if (!talk) return reply.code(404).send({ error: "talk_not_found" });
+
+      const body = request.body;
+      const blankTitle = findBlankTitle(body);
+      if (blankTitle) return reply.code(400).send({ error: "empty_title", field: blankTitle });
+
+      // A field absent from the body is left untouched; level accepts "" to
+      // clear it back to "Tous niveaux".
+      await prisma.talk.update({
+        where: { id: talk.id },
+        data: {
+          ...(body.titleFr !== undefined && { titleFr: body.titleFr.trim() }),
+          ...(body.titleEn !== undefined && { titleEn: body.titleEn.trim() }),
+          ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr }),
+          ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn }),
+          ...(body.format !== undefined && { format: body.format }),
+          ...(body.level !== undefined && { level: body.level || null }),
+          ...(body.language !== undefined && { language: body.language }),
+        },
+      });
+
+      // Direct publication: the change is public right away.
+      revalidateConferences();
+
+      // Notify the organizers (best-effort: a mail failure must not fail the
+      // save the speaker just made).
+      try {
+        await notifyTalkEdited(entity.name, { id: talk.id, titleFr: body.titleFr?.trim() || talk.titleFr });
+      } catch (err) {
+        request.log.error("Failed to send talk-edit notification: %s", String(err));
+      }
+
+      return { saved: true };
+    },
+  );
 
   // POST /api/edit/:token/upload — upload a logo (sponsor) or photo (speaker)
   // straight from the recipient's device (#241). Gated exactly like the edit
