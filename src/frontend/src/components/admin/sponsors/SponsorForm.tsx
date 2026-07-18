@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { SponsorLevel } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 const LEVELS: { value: SponsorLevel; label: string }[] = [
   { value: "PLATINUM", label: "Platinum" },
@@ -118,12 +119,27 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
 
       <BilingualTabs
         label="Description"
-        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).trim()}
+        // Rich text (#270) — strip tags before the empty check so <p></p> counts as empty.
+        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).replace(/<[^>]*>/g, "").trim()}
         renderPanel={(lang) =>
           lang === "fr" ? (
-            <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={4} className={inputClass} />
+            <RichTextEditor
+              label=""
+              name="sponsor-descriptionFr"
+              value={value.descriptionFr}
+              onChange={(html) => onChange({ ...value, descriptionFr: html })}
+              showImageButton={false}
+              minHeight="180px"
+            />
           ) : (
-            <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={4} className={inputClass} />
+            <RichTextEditor
+              label=""
+              name="sponsor-descriptionEn"
+              value={value.descriptionEn}
+              onChange={(html) => onChange({ ...value, descriptionEn: html })}
+              showImageButton={false}
+              minHeight="180px"
+            />
           )
         }
       />
