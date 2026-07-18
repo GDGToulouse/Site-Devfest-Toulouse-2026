@@ -547,6 +547,18 @@ model Sponsor {
   socialLinks      String?
   // Contact email used to send the modification link (RG-243). Optional.
   contactEmail     String?
+
+  // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
+  // Social handles of the people staffing the booth, for day-of relaying.
+  // JSON array of { name, linkedin, twitter, bluesky }.
+  standContacts    String?
+  // Communication kit: whether the sponsor confirmed receiving it, plus the
+  // assets they can drop as links (web/print logo, brand charter) and free notes.
+  comKitReceived   Boolean           @default(false)
+  comKitLogoWebUrl   String?
+  comKitLogoPrintUrl String?
+  comKitCharterUrl   String?
+  comKitNotes      String?
   // Language we write to this sponsor in — "fr" | "en" (#224). Same rule as
   // Speaker.locale: set in the admin, defaults to French.
   locale           String            @default("fr")

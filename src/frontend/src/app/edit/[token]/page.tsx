@@ -3,6 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import SponsorPrivateSection, { type SponsorPrivate } from "./SponsorPrivateSection";
 
 type Locale = "fr" | "en";
 
@@ -29,6 +30,8 @@ interface EditData {
   fields: Record<string, unknown>;
   // Speaker only, read-only (#229).
   talks?: EditTalk[];
+  // Sponsor only, private section (#249).
+  private?: SponsorPrivate;
 }
 
 type SocialLinks = Record<string, string>;
@@ -71,6 +74,25 @@ const T = {
     talkSaved: "Conférence enregistrée !",
     talkRejected: "Le titre est obligatoire et le résumé doit rester sous 5 000 caractères.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Autre site" },
+    privateSection: "Informations privées",
+    privateHint: "Réservé à l'organisation — ces informations ne sont jamais affichées publiquement.",
+    standContacts: "Personnes présentes sur le stand",
+    standContactsHint: "Leurs réseaux sociaux, pour un relais le jour J.",
+    standName: "Nom",
+    addStandContact: "Ajouter une personne",
+    removeContact: "Retirer",
+    comKit: "Kit de communication",
+    comKitReceived: "Kit de com reçu",
+    comKitLogoWeb: "Logo (version Web)",
+    comKitLogoPrint: "Logo (version Print)",
+    comKitCharter: "Charte graphique",
+    comKitNotes: "Notes / autres supports",
+    comKitEmailIntro: "Des fichiers à transmettre qui ne tiennent pas en lien ?",
+    comKitEmailButton: "Envoyer les compléments par email",
+    comKitEmailMessage: "Message (optionnel)",
+    comKitEmailSending: "Envoi…",
+    comKitEmailSent: "Demande envoyée ! L'organisation vous recontactera pour les pièces jointes.",
+    comKitEmailError: "Envoi impossible. Réessayez plus tard.",
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
@@ -123,6 +145,25 @@ const T = {
     talkSaved: "Talk saved!",
     talkRejected: "A title is required and the abstract must stay under 5,000 characters.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Other website" },
+    privateSection: "Private information",
+    privateHint: "Organizers only — this information is never shown publicly.",
+    standContacts: "People staffing the booth",
+    standContactsHint: "Their social handles, for relaying on the day.",
+    standName: "Name",
+    addStandContact: "Add a person",
+    removeContact: "Remove",
+    comKit: "Communication kit",
+    comKitReceived: "Com kit received",
+    comKitLogoWeb: "Logo (web version)",
+    comKitLogoPrint: "Logo (print version)",
+    comKitCharter: "Brand guidelines",
+    comKitNotes: "Notes / other assets",
+    comKitEmailIntro: "Files to send that don't fit as a link?",
+    comKitEmailButton: "Send complements by email",
+    comKitEmailMessage: "Message (optional)",
+    comKitEmailSending: "Sending…",
+    comKitEmailSent: "Request sent! The organisers will get back to you for the attachments.",
+    comKitEmailError: "Sending failed. Please try again later.",
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
@@ -360,6 +401,13 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             </button>
             {saved && <span className="font-medium text-malachite">{t.saved}</span>}
           </div>
+
+          {/* Sponsor private section (#249) — organizers only, own save button.
+              Rendered after the public save so the public/private boundary is
+              visually explicit. */}
+          {!isSpeaker && data!.private && (
+            <SponsorPrivateSection token={token} initial={data!.private} t={t} />
+          )}
           {saveError && (
             <p role="alert" className="font-medium text-terre-cuite">
               {saveError}

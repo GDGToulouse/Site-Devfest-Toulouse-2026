@@ -26,6 +26,12 @@ export interface SponsorFormValue {
   bluesky: string;
   locale: "fr" | "en";
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // Private fields (#249) — organizers only, never public.
+  comKitReceived: boolean;
+  comKitLogoWebUrl: string;
+  comKitLogoPrintUrl: string;
+  comKitCharterUrl: string;
+  comKitNotes: string;
 }
 
 export const emptySponsorForm: SponsorFormValue = {
@@ -40,6 +46,11 @@ export const emptySponsorForm: SponsorFormValue = {
   bluesky: "",
   locale: "fr",
   publicationStatus: "DRAFT",
+  comKitReceived: false,
+  comKitLogoWebUrl: "",
+  comKitLogoPrintUrl: "",
+  comKitCharterUrl: "",
+  comKitNotes: "",
 };
 
 const inputClass =
@@ -152,6 +163,40 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         />
         <span className="text-sm text-noir">Publié (visible sur le site)</span>
       </label>
+
+      {/* Private fields (#249) — organizers only, never shown publicly. The
+          booth contacts are edited by the sponsor via their magic link; here we
+          expose the com-kit tracking, which the orga fills in. */}
+      <fieldset className="rounded-lg border-2 border-dashed border-gris/25 bg-blanc-casse/50 p-4">
+        <legend className="px-2 text-sm font-semibold text-noir">🔒 Informations privées (kit de com)</legend>
+        <label className="flex items-center gap-2 cursor-pointer mb-4">
+          <input
+            type="checkbox"
+            checked={value.comKitReceived}
+            onChange={(e) => onChange({ ...value, comKitReceived: e.target.checked })}
+            className="rounded border-gris/30 text-malachite focus:ring-malachite"
+          />
+          <span className="text-sm text-noir">Kit de com reçu</span>
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Logo (version Web)</span>
+            <input type="url" value={value.comKitLogoWebUrl} onChange={(e) => onChange({ ...value, comKitLogoWebUrl: e.target.value })} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Logo (version Print)</span>
+            <input type="url" value={value.comKitLogoPrintUrl} onChange={(e) => onChange({ ...value, comKitLogoPrintUrl: e.target.value })} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Charte graphique</span>
+            <input type="url" value={value.comKitCharterUrl} onChange={(e) => onChange({ ...value, comKitCharterUrl: e.target.value })} className={inputClass} />
+          </label>
+        </div>
+        <label className="block mt-4">
+          <span className="block text-sm font-medium text-noir mb-1">Notes / autres supports</span>
+          <textarea value={value.comKitNotes} onChange={(e) => onChange({ ...value, comKitNotes: e.target.value })} rows={3} className={inputClass} />
+        </label>
+      </fieldset>
 
       <ImagePickerDialog
         open={isImagePickerOpen}

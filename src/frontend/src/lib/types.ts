@@ -143,6 +143,13 @@ export interface Sponsor {
   editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
+  // Private fields (#249) — organizers only, never on public pages.
+  standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string | null;
+  comKitLogoPrintUrl?: string | null;
+  comKitCharterUrl?: string | null;
+  comKitNotes?: string | null;
 }
 
 // Public list item (lighter than the admin Sponsor).
