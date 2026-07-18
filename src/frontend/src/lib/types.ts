@@ -170,6 +170,14 @@ export interface SponsorSpeakerRef {
   company: string | null;
 }
 
+// A job offer a sponsor wants relayed (#251).
+export interface JobOfferPublic {
+  id: number;
+  title: string;
+  description: string;
+  url: string;
+}
+
 export interface SponsorDetail {
   id: number;
   slug: string;
@@ -181,6 +189,16 @@ export interface SponsorDetail {
   descriptionEn: string | null;
   socialLinks: Record<string, string>;
   speakers: SponsorSpeakerRef[];
+  jobOffers: JobOfferPublic[];
+}
+
+// A sponsor with its job offers, for the recap page (#251).
+export interface SponsorWithOffers {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  jobOffers: JobOfferPublic[];
 }
 
 // Public speaker list item.

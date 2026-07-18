@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateJobOffers, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
@@ -91,7 +91,11 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const sponsor = await prisma.sponsor.findUnique({
       where: { id: Number(request.params.id) },
-      include: { edition: { select: { id: true, year: true } } },
+      include: {
+        edition: { select: { id: true, year: true } },
+        // Job offers for admin consultation/moderation (#251).
+        jobOffers: { orderBy: { createdAt: "asc" } },
+      },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
     return serialize(sponsor);
@@ -344,6 +348,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Contact not found" });
       }
       await prisma.sponsorContact.delete({ where: { id: contact.id } });
+      return reply.code(204).send();
+    },
+  );
+
+  // DELETE /api/admin/sponsors/:id/job-offers/:offerId — moderate an offer (#251).
+  app.delete<{ Params: SponsorIdParams & { offerId: string } }>(
+    "/sponsors/:id/job-offers/:offerId",
+    { schema: { params: { type: "object", required: ["id", "offerId"], properties: { id: { type: "string" }, offerId: { type: "string" } } } } },
+    async (request, reply) => {
+      const offer = await prisma.sponsorJobOffer.findUnique({ where: { id: Number(request.params.offerId) } });
+      if (!offer || offer.sponsorId !== Number(request.params.id)) {
+        return reply.code(404).send({ error: "Offer not found" });
+      }
+      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
+      revalidateSponsors();
+      revalidateJobOffers();
       return reply.code(204).send();
     },
   );

@@ -4,6 +4,7 @@ import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import SponsorPrivateSection, { type SponsorPrivate } from "./SponsorPrivateSection";
+import SponsorJobOffers, { type JobOffersData } from "./SponsorJobOffers";
 
 type Locale = "fr" | "en";
 
@@ -32,6 +33,8 @@ interface EditData {
   talks?: EditTalk[];
   // Sponsor only, private section (#249).
   private?: SponsorPrivate;
+  // Sponsor only, job offers (#251).
+  jobOffers?: JobOffersData;
 }
 
 type SocialLinks = Record<string, string>;
@@ -97,6 +100,16 @@ const T = {
     platinumPromoIdea: "Contenu promotionnel à mettre en avant",
     platinumPromoIdeaHint: "Vidéo, produit, campagne… que nous pourrions relayer.",
     platinumCoBuildIdea: "Idées de contenu à co-construire",
+    jobOffers: "Offres d'emploi à relayer",
+    jobOffersHint: "Publiées sur votre fiche et la page « Offres d'emploi des partenaires ».",
+    jobOfferTitle: "Intitulé du poste",
+    jobOfferDescription: "Description",
+    jobOfferUrl: "Lien vers l'offre complète",
+    addJobOffer: "Ajouter une offre",
+    removeJobOffer: "Supprimer",
+    jobOfferQuotaReached: "Vous avez atteint le nombre maximum d'offres pour votre niveau de partenariat.",
+    jobOfferSaved: "Offre enregistrée !",
+    jobOfferRejected: "Une valeur est invalide : le titre est obligatoire et le lien doit commencer par http:// ou https://.",
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
@@ -172,6 +185,16 @@ const T = {
     platinumPromoIdea: "Promotional content to highlight",
     platinumPromoIdeaHint: "Video, product, campaign… we could relay.",
     platinumCoBuildIdea: "Ideas for content to co-build",
+    jobOffers: "Job offers to relay",
+    jobOffersHint: "Published on your page and the “Partner job offers” page.",
+    jobOfferTitle: "Job title",
+    jobOfferDescription: "Description",
+    jobOfferUrl: "Link to the full offer",
+    addJobOffer: "Add an offer",
+    removeJobOffer: "Delete",
+    jobOfferQuotaReached: "You have reached the maximum number of offers for your sponsorship level.",
+    jobOfferSaved: "Offer saved!",
+    jobOfferRejected: "A value is invalid: the title is required and the link must start with http:// or https://.",
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
@@ -415,6 +438,13 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
               visually explicit. */}
           {!isSpeaker && data!.private && (
             <SponsorPrivateSection token={token} initial={data!.private} t={t} />
+          )}
+
+          {/* Job offers (#251) — sponsor only, published directly. */}
+          {!isSpeaker && data!.jobOffers && (
+            <div className="border-t border-gris/15 pt-6">
+              <SponsorJobOffers token={token} initial={data!.jobOffers} t={t} />
+            </div>
           )}
           {saveError && (
             <p role="alert" className="font-medium text-terre-cuite">

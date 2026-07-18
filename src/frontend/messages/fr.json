@@ -14,6 +14,7 @@
     "program": "Programme",
     "speakers": "Speakers",
     "sponsors": "Sponsors",
+    "jobOffers": "Offres d'emploi",
     "blog": "Actus"
   },
   "cta": {
@@ -316,6 +317,8 @@
     "empty": "Les sponsors seront annoncés prochainement.",
     "visitWebsite": "Visiter le site",
     "speakersOf": "Speakers de {name}",
+    "jobOffersTitle": "Offres d'emploi",
+    "jobOfferCta": "Voir l'offre",
     "level": {
       "PLATINUM": "Platinum",
       "GOLD": "Gold",
@@ -323,5 +326,15 @@
       "SOUTIEN": "Soutien",
       "COMMUNAUTE": "Communauté"
     }
+  },
+  "jobOffers": {
+    "title": "Offres d'emploi des partenaires",
+    "description": "Les offres d'emploi proposées par les partenaires du DevFest Toulouse.",
+    "heading": "Offres d'emploi des partenaires",
+    "intro": "Nos partenaires recrutent. Découvrez leurs offres et postulez directement.",
+    "empty": "Aucune offre d'emploi pour le moment. Revenez bientôt !",
+    "home": "Accueil",
+    "cta": "Voir l'offre",
+    "offersAt": "Offres chez {name}"
   }
 }
