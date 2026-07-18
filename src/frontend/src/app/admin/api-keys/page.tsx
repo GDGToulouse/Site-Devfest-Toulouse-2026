@@ -86,7 +86,7 @@ export default function AdminApiKeysPage() {
           Aucune clé correspondant aux critères.
         </div>
       ) : (
-        <div className="bg-blanc rounded-xl shadow-card overflow-x-auto">
+        <div className="bg-blanc rounded-xl shadow-card overflow-x-auto overflow-y-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left border-b border-gris/20">

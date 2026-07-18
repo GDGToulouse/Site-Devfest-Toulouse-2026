@@ -58,16 +58,19 @@ export default function KeyFiguresTab({ editionId }: KeyFiguresTabProps) {
       {figures.length === 0 ? (
         <p className="text-gris text-sm mb-4">Aucun chiffre clé pour cette édition.</p>
       ) : (
-        <div className="space-y-3 mb-4">
+        <div className="space-y-4 mb-4">
           {figures.map((fig, i) => (
-            <div key={i} className="grid grid-cols-[1fr_1fr_1fr_1fr_auto] gap-3 items-end">
-              <FormField label={i === 0 ? "Icône" : ""} name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
-              <FormField label={i === 0 ? "Valeur" : ""} name={`value-${i}`} value={fig.value} onChange={(v) => updateFigure(i, "value", v)} placeholder="3000" />
-              <FormField label={i === 0 ? "Label FR" : ""} name={`labelFr-${i}`} value={fig.labelFr} onChange={(v) => updateFigure(i, "labelFr", v)} placeholder="Participants" />
-              <FormField label={i === 0 ? "Label EN" : ""} name={`labelEn-${i}`} value={fig.labelEn} onChange={(v) => updateFigure(i, "labelEn", v)} placeholder="Attendees" />
+            // 2 columns on mobile (icon+value, then labels), the original
+            // 4-cols + delete from sm up (#243). Each field keeps its own label
+            // so it stays clear once wrapped, instead of a single header row.
+            <div key={i} className="grid grid-cols-2 gap-3 items-end border-b border-gris/10 pb-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:border-0 sm:pb-0">
+              <FormField label="Icône" name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
+              <FormField label="Valeur" name={`value-${i}`} value={fig.value} onChange={(v) => updateFigure(i, "value", v)} placeholder="3000" />
+              <FormField label="Label FR" name={`labelFr-${i}`} value={fig.labelFr} onChange={(v) => updateFigure(i, "labelFr", v)} placeholder="Participants" />
+              <FormField label="Label EN" name={`labelEn-${i}`} value={fig.labelEn} onChange={(v) => updateFigure(i, "labelEn", v)} placeholder="Attendees" />
               <button
                 onClick={() => removeFigure(i)}
-                className="text-terre-cuite hover:underline text-sm pb-2"
+                className="col-span-2 text-terre-cuite hover:underline text-sm text-left pb-2 sm:col-span-1"
               >
                 Supprimer
               </button>

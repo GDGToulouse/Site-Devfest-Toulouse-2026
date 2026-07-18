@@ -5,15 +5,22 @@ import { useRef, useCallback, type KeyboardEvent } from "react";
 interface Tab {
   key: string;
   label: string;
+  // Optional dot marker on the tab (e.g. a bilingual panel whose fields are
+  // still empty). Purely visual; the accessible name carries the meaning.
+  badge?: boolean;
 }
 
 interface TabsProps {
   tabs: Tab[];
   activeTab: string;
   onTabChange: (key: string) => void;
+  // When the tabs control panels rendered with matching ids, pass a builder so
+  // each tab advertises `aria-controls` and the panels can point back via
+  // `aria-labelledby` (WCAG 2.1 AA). Omit for plain section tabs.
+  panelId?: (key: string) => string;
 }
 
-export default function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
+export default function Tabs({ tabs, activeTab, onTabChange, panelId }: TabsProps) {
   const tablistRef = useRef<HTMLDivElement>(null);
 
   const handleKeyDown = useCallback(
@@ -47,7 +54,7 @@ export default function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
     <div
       ref={tablistRef}
       role="tablist"
-      className="flex border-b border-gris/20 mb-6 overflow-x-auto scrollbar-none"
+      className="flex border-b border-gris/20 mb-6 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
     >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
@@ -57,6 +64,7 @@ export default function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
             id={`tab-${tab.key}`}
             role="tab"
             aria-selected={isActive}
+            aria-controls={panelId ? panelId(tab.key) : undefined}
             tabIndex={isActive ? 0 : -1}
             onClick={() => onTabChange(tab.key)}
             onKeyDown={handleKeyDown}
@@ -67,6 +75,9 @@ export default function Tabs({ tabs, activeTab, onTabChange }: TabsProps) {
             }`}
           >
             {tab.label}
+            {tab.badge && (
+              <span className="ml-2 inline-block h-2 w-2 rounded-full bg-orange align-middle" aria-hidden="true" />
+            )}
           </button>
         );
       })}

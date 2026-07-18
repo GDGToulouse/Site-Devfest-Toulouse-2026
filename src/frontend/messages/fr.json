@@ -102,7 +102,13 @@
     "by": "par",
     "backToList": "Retour aux actualités",
     "taggedWith": "Articles tagués",
-    "autoTranslated": "Traduction automatique non relue par l'équipe."
+    "autoTranslated": "Traduction automatique non relue par l'équipe.",
+    "filters": {
+      "edition": "Édition",
+      "allEditions": "Toutes les éditions",
+      "tags": "Tags",
+      "reset": "Réinitialiser"
+    }
   },
   "pagination": {
     "label": "Pagination",
@@ -265,12 +271,27 @@
     "format": {
       "CONFERENCE": "Conférence",
       "QUICKIE": "Quickie",
-      "KEYNOTE": "Keynote"
+      "KEYNOTE": "Keynote",
+      "WORKSHOP": "Workshop"
     },
     "level": {
       "DEBUTANT": "Débutant",
       "INTERMEDIAIRE": "Intermédiaire",
       "CONFIRME": "Confirmé"
+    },
+    "filters": {
+      "search": "Rechercher un talk ou un speaker…",
+      "filters": "Filtres",
+      "format": "Format",
+      "level": "Niveau",
+      "language": "Langue",
+      "category": "Catégorie",
+      "moreFilters": "Plus de filtres",
+      "langFr": "Français",
+      "langEn": "Anglais",
+      "reset": "Réinitialiser",
+      "sessions": "session(s)",
+      "noResults": "Aucune session ne correspond à votre recherche."
     }
   },
   "speakers": {

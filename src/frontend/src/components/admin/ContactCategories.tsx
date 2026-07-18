@@ -148,12 +148,7 @@ export default function ContactCategories() {
             <p className="text-xs text-gris mb-3">Variables disponibles : <code className="bg-blanc-casse px-1 rounded">{"{firstName}"}</code> <code className="bg-blanc-casse px-1 rounded">{"{lastName}"}</code> <code className="bg-blanc-casse px-1 rounded">{"{brochureUrl}"}</code></p>
             <BilingualInput label="Objet" nameFr="confirmationSubjectFr" nameEn="confirmationSubjectEn" valueFr={form.confirmationSubjectFr} valueEn={form.confirmationSubjectEn} onChangeFr={(v) => setForm({ ...form, confirmationSubjectFr: v })} onChangeEn={(v) => setForm({ ...form, confirmationSubjectEn: v })} />
             <div className="mt-3">
-              <label className="block text-sm font-medium text-noir mb-1">Contenu FR</label>
-              <textarea rows={5} value={form.confirmationBodyFr} onChange={(e) => setForm({ ...form, confirmationBodyFr: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gris/30 text-noir text-sm focus:outline-none focus:ring-2 focus:ring-malachite/50" placeholder="Bonjour {firstName} {lastName},..." />
-            </div>
-            <div className="mt-3">
-              <label className="block text-sm font-medium text-noir mb-1">Contenu EN</label>
-              <textarea rows={5} value={form.confirmationBodyEn} onChange={(e) => setForm({ ...form, confirmationBodyEn: e.target.value })} className="w-full px-3 py-2 rounded-lg border border-gris/30 text-noir text-sm focus:outline-none focus:ring-2 focus:ring-malachite/50" placeholder="Hello {firstName} {lastName},..." />
+              <BilingualInput label="Contenu" nameFr="confirmationBodyFr" nameEn="confirmationBodyEn" valueFr={form.confirmationBodyFr} valueEn={form.confirmationBodyEn} onChangeFr={(v) => setForm({ ...form, confirmationBodyFr: v })} onChangeEn={(v) => setForm({ ...form, confirmationBodyEn: v })} multiline rows={5} />
             </div>
           </div>
 
@@ -164,7 +159,7 @@ export default function ContactCategories() {
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl shadow-card bg-blanc">
+      <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-blanc-casse/60 border-b border-gris/20">

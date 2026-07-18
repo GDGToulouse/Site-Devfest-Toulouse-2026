@@ -1,5 +1,7 @@
 "use client";
 
+import BilingualTabs from "@/components/admin/BilingualTabs";
+
 const COLOR_PRESETS = ["#109E6E", "#EC6839", "#509EE3", "#F8AB06", "#EE7CAD", "#9A6CB8"];
 
 export interface CategoryFormValue {
@@ -27,16 +29,18 @@ interface CategoryFormProps {
 export default function CategoryForm({ value, onChange }: CategoryFormProps) {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Nom (FR) *</span>
-          <input value={value.nameFr} onChange={(e) => onChange({ ...value, nameFr: e.target.value })} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Nom (EN) *</span>
-          <input value={value.nameEn} onChange={(e) => onChange({ ...value, nameEn: e.target.value })} className={inputClass} />
-        </label>
-      </div>
+      <BilingualTabs
+        label="Nom"
+        required
+        isEmpty={(lang) => !(lang === "fr" ? value.nameFr : value.nameEn).trim()}
+        renderPanel={(lang) =>
+          lang === "fr" ? (
+            <input value={value.nameFr} onChange={(e) => onChange({ ...value, nameFr: e.target.value })} className={inputClass} />
+          ) : (
+            <input value={value.nameEn} onChange={(e) => onChange({ ...value, nameEn: e.target.value })} className={inputClass} />
+          )
+        }
+      />
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Couleur</span>

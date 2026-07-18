@@ -219,6 +219,19 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: "nameFr, nameEn, editionId are required" });
     }
 
+    // When no sortOrder is supplied, append the tier after the edition's last
+    // one. Defaulting to 0 collides with the (editionId, sortOrder) unique
+    // constraint as soon as the edition already has a tier at 0.
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined || sortOrder === null) {
+      const last = await prisma.ticketTier.findFirst({
+        where: { editionId: body.editionId },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      });
+      sortOrder = last ? last.sortOrder + 1 : 0;
+    }
+
     const tier = await prisma.ticketTier.create({
       data: {
         nameFr: body.nameFr.trim(),
@@ -228,7 +241,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         saleStartDate: toDateOrNull(body.saleStartDate),
         saleEndDate: toDateOrNull(body.saleEndDate),
         externalUrl: body.externalUrl?.trim() || null,
-        sortOrder: body.sortOrder ?? 0,
+        sortOrder,
         editionId: body.editionId,
       },
     });

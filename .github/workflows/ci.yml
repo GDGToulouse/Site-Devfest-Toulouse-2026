@@ -26,11 +26,36 @@ jobs:
       - run: pnpm build
 
   backend:
-    name: Backend — Typecheck
+    name: Backend — Typecheck & Tests
     runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: src/backend
+    # The integration tests boot a real Fastify app that talks to Postgres
+    # through the pg driver adapter, so the job needs a live database.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devfest
+          POSTGRES_PASSWORD: devfest
+          POSTGRES_DB: devfest_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devfest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://devfest:devfest@localhost:5432/devfest_test
+      # Throwaway secret for the disposable test DB — Better Auth needs one at
+      # seed time; never a real credential.
+      SESSION_SECRET: ci-test-secret-not-a-real-credential
+      # The upload tests write through the image pipeline; in Docker /app/uploads
+      # is a mounted volume, but the runner has no such path. Point it at a
+      # writable workspace dir — storeImageBuffer mkdirs it recursively.
+      UPLOADS_DIR: ${{ github.workspace }}/ci-uploads
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -43,7 +68,18 @@ jobs:
 
       - name: Generate Prisma client
         run: pnpm exec prisma generate
-        env:
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
 
       - run: pnpm typecheck
+
+      # Bring the schema up, then run the DEV seed. The integration tests read
+      # demo editions, tickets, articles, etc. that only seed-dev.ts creates —
+      # the base seed.ts (contact categories, settings, admin accounts) alone
+      # leaves those tables empty. seed-dev.ts calls seedBase() first, so this
+      # covers both.
+      - name: Apply migrations
+        run: pnpm exec prisma migrate deploy
+
+      - name: Seed test data
+        run: pnpm exec tsx prisma/seed-dev.ts
+
+      - run: pnpm test

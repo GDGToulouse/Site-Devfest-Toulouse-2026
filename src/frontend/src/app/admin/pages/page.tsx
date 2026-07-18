@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import BilingualInput from "@/components/admin/BilingualInput";
+import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 
 interface PageSummary {
@@ -174,19 +175,17 @@ export default function PagesAdminPage() {
 
           <BilingualInput label="Titre" nameFr="titleFr" nameEn="titleEn" valueFr={editing.titleFr} valueEn={editing.titleEn} onChangeFr={(v) => setEditing({ ...editing, titleFr: v })} onChangeEn={(v) => setEditing({ ...editing, titleEn: v })} required />
 
-          <div>
-            <p className="text-sm font-medium text-noir mb-2">Contenu</p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <p className="text-xs text-gris mb-1">Français</p>
+          <BilingualTabs
+            label="Contenu"
+            isEmpty={(lang) => !(lang === "fr" ? editing.contentFr : editing.contentEn).replace(/<[^>]*>/g, "").trim()}
+            renderPanel={(lang) =>
+              lang === "fr" ? (
                 <RichTextEditor label="" name="contentFr" value={editing.contentFr} onChange={(v) => setEditing({ ...editing, contentFr: v })} minHeight="400px" />
-              </div>
-              <div>
-                <p className="text-xs text-gris mb-1">English</p>
+              ) : (
                 <RichTextEditor label="" name="contentEn" value={editing.contentEn} onChange={(v) => setEditing({ ...editing, contentEn: v })} minHeight="400px" />
-              </div>
-            </div>
-          </div>
+              )
+            }
+          />
 
           <div className="flex justify-end">
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
@@ -195,7 +194,7 @@ export default function PagesAdminPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl shadow-card bg-blanc">
+        <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-blanc-casse/60 border-b border-gris/20">

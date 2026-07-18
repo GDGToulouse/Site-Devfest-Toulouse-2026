@@ -12,52 +12,57 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
-## [1.2.0] - 2026-07-14
+## [1.3.0] - 2026-07-18
 
-Première grande vague de contenu et de sécurité : le Lot 2 complet (speakers,
-sessions, sponsors), le durcissement du lien de modification avant son ouverture
-aux intervenants, et une série de correctifs de performance et de SEO.
+Grande promotion du Lot 2/3 en production : back-office complet (speakers,
+sessions, sponsors, catégories), programme public riche, import Sessionize, et
+une série d'améliorations UX/SEO/mobile.
 
 ### Ajouté
 
-- **Lot 2 — Speakers, Sessions & Sponsors** : CRUD complet, vues transverses
-  « Données », page édition en synthèse avec raccourcis vers les fiches, sélection
-  multiple et actions groupées (#121, #122, #201).
-- **Langue de contact** des speakers et sponsors : emails du lien de modification
-  et page `/edit/[token]` rendus dans la langue du destinataire (FR/EN), pilotée
-  par un champ dans l'admin (#224).
-- **Monitoring** : Core Web Vitals réels envoyés à Plausible + alertes des erreurs
-  5xx par webhook (#118).
-- **Rotation nocturne des speakers à la une** : tirage aléatoire chaque nuit (#214).
-- **Pages « éditions précédentes »** hébergeant l'historique des conférences (#63).
-- **Import Sessionize** des avatars de speakers, rapatriés dans `/uploads/` (#205).
-- Nav « Conférences » et liste publique des sessions de l'édition (#203, #207).
+- **Programme public** : liste des conférences de l'édition en cours, avec
+  recherche et filtres (format, niveau, catégorie, langue) dont l'état est
+  partagé dans l'URL (#107, #207).
+- **Filtres compacts** : niveau et langue repliés derrière « Plus de filtres »
+  sur desktop (#246) ; sur mobile, toute la zone de filtres est repliée derrière
+  un bouton « Filtres » avec badge du nombre de filtres actifs (#256).
+- **Avatars des speakers** en bulles sur les cartes de conférences (#248).
+- **Filtres des actualités** par édition et par tag (#179).
+- **Fiche speaker** : le speaker consulte ses sessions retenues (lecture seule)
+  depuis son lien de modification (#229).
+- **Saisie bilingue FR/EN par onglets de langue** dans l'admin et sur la page de
+  modification (#222).
+- **Web app manifest + `theme-color`** (PWA de base : ajout à l'écran d'accueil,
+  barre d'outils mobile aux couleurs de la marque) (#234).
+- **Jetons d'API** : rotation d'un jeton en place (#227) et création avec date
+  d'expiration (#228).
+- **Import Sessionize** : rapatriement local des photos de speakers, et
+  reconnaissance des formats/niveaux/langues (#205, #247).
 
 ### Corrigé
 
-- **Sécurité — durcissement du lien de modification** (#223) : `PUT /api/edit/:token`
-  était le seul endpoint non authentifié écrivant en base et rendu sur les pages
-  publiques, sans aucune validation. Une URL `javascript:` y passait jusqu'à un
-  `href` public. Ajout d'un schéma de corps, d'une allowlist des protocoles d'URL,
-  d'une whitelist des liens sociaux, d'un rate limit dédié, d'une expiration des
-  tokens à 30 jours et d'un envoi transactionnel de l'email.
-- **Performance — LCP à 20,6 s** sur la home : l'image du hero (3,4 Mo servis bruts)
-  passe par `next/image`, soit **44 Ko en AVIF sur mobile, 76× plus léger** (#197).
-- **SEO — Schema.org Event** : retrait du `superEvent` invalide (2 erreurs critiques
-  en Search Console) et ajout des champs recommandés (#185).
-- **SEO — image OG** : l'image générée écrasait l'`og:image` personnalisée de
-  l'admin ; elle est désormais respectée (#183).
-- **Billetterie** : le statut des billets Billetweb n'était pas correctement mis à
-  jour et n'était pas modifiable dans l'admin (#161).
-- Navigation vers tous les articles d'une édition archivée (#178).
-- Purge du cache admin : le backend renvoyait un contrat incohérent, l'UI affichait
-  « Erreur » à tort (#181).
-- Césure du mot « dev » qui revenait à la ligne (#133).
+- **Import Sessionize** : la langue était mal mappée (fausses catégories
+  « Français »/« English »), le niveau « Avancé » et le format « Workshop »
+  n'étaient pas reconnus ; ajout de la valeur `WORKSHOP` et d'avertissements
+  d'import (#247).
+- **Contact** : ajout d'un `Reply-To` vers l'adresse du visiteur sur la
+  notification, et mise en copie de l'organisation sur la confirmation de
+  demande de plaquette (#230).
+- **SEO** : `eventStatus` invalide corrigé sur la home (`previousStartDate`
+  retiré, #239) et sur les pages bilan (`EventCompleted` → `EventScheduled`,
+  #240).
+- **Revalidation du cache** inopérante en production, faute de `FRONTEND_URL`
+  scopé par environnement (#232).
+- **Admin mobile** : bouton « Enregistrer » masqué sous la barre du navigateur
+  (#257) ; listes « Données » impossibles à scroller au-delà de ~10 lignes
+  (#244) ; scroll des onglets qui décalait la page (#233) ; colonnes FR/EN des
+  avantages de plan sponsor qui débordaient (#243).
+- **Fiche speaker/sponsor** : page de modification illisible sur PC + upload de
+  logo manquant (#241).
 
 ### Modifié
 
-- Refonte de la sidebar admin (groupes + édition en cours) (#120).
-- Densification de l'espacement vertical des sections de la home (#135).
+- **CI** : exécution des tests backend activée (Postgres + seed) (#236).
 
 ## [1.1.3] - 2026-07-10
 
