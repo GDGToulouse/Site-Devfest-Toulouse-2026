@@ -62,6 +62,8 @@ export default function SponsorEditorPage() {
           comKitLogoPrintUrl: data.comKitLogoPrintUrl || "",
           comKitCharterUrl: data.comKitCharterUrl || "",
           comKitNotes: data.comKitNotes || "",
+          platinumPromoIdea: data.platinumPromoIdea || "",
+          platinumCoBuildIdea: data.platinumCoBuildIdea || "",
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -96,6 +98,8 @@ export default function SponsorEditorPage() {
       comKitLogoPrintUrl: form.comKitLogoPrintUrl || undefined,
       comKitCharterUrl: form.comKitCharterUrl || undefined,
       comKitNotes: form.comKitNotes || undefined,
+      platinumPromoIdea: form.platinumPromoIdea || undefined,
+      platinumCoBuildIdea: form.platinumCoBuildIdea || undefined,
     };
 
     if (isNew) {

@@ -150,6 +150,8 @@ export interface Sponsor {
   comKitLogoPrintUrl?: string | null;
   comKitCharterUrl?: string | null;
   comKitNotes?: string | null;
+  platinumPromoIdea?: string | null;
+  platinumCoBuildIdea?: string | null;
 }
 
 // Public list item (lighter than the admin Sponsor).

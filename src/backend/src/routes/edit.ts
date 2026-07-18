@@ -85,6 +85,11 @@ const sponsorBodySchema = {
     comKitLogoPrintUrl: { type: "string", maxLength: URL_MAX },
     comKitCharterUrl: { type: "string", maxLength: URL_MAX },
     comKitNotes: { type: "string", maxLength: TEXT_MAX },
+    // Platinum-only (#252). The allowlist accepts them for any sponsor; the
+    // PUT ignores them unless the sponsor is Platinum, and the UI only shows
+    // them to Platinum sponsors.
+    platinumPromoIdea: { type: "string", maxLength: TEXT_MAX },
+    platinumCoBuildIdea: { type: "string", maxLength: TEXT_MAX },
   },
 };
 
@@ -329,6 +334,8 @@ interface SponsorEditBody {
   comKitLogoPrintUrl?: string;
   comKitCharterUrl?: string;
   comKitNotes?: string;
+  platinumPromoIdea?: string;
+  platinumCoBuildIdea?: string;
 }
 
 // Notify the organizers that a speaker changed a session. Sent to the
@@ -428,6 +435,10 @@ export default async function editRoutes(app: FastifyInstance) {
         comKitLogoPrintUrl: entity.comKitLogoPrintUrl,
         comKitCharterUrl: entity.comKitCharterUrl,
         comKitNotes: entity.comKitNotes,
+        // Platinum-only ideas (#252). Sent for every sponsor; the UI shows the
+        // fields only when level === PLATINUM.
+        platinumPromoIdea: entity.platinumPromoIdea,
+        platinumCoBuildIdea: entity.platinumCoBuildIdea,
       },
     };
   });
@@ -496,6 +507,14 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
           ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
           ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
+          // Platinum-only ideas (#252): silently ignored for non-Platinum
+          // sponsors, so the field can't be set by tampering with the payload.
+          ...(entity.level === "PLATINUM" && body.platinumPromoIdea !== undefined && {
+            platinumPromoIdea: body.platinumPromoIdea || null,
+          }),
+          ...(entity.level === "PLATINUM" && body.platinumCoBuildIdea !== undefined && {
+            platinumCoBuildIdea: body.platinumCoBuildIdea || null,
+          }),
         },
       });
       // Only public-facing changes need cache revalidation; a private-only

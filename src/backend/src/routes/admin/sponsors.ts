@@ -34,6 +34,8 @@ interface SponsorCreateBody {
   comKitLogoPrintUrl?: string;
   comKitCharterUrl?: string;
   comKitNotes?: string;
+  platinumPromoIdea?: string;
+  platinumCoBuildIdea?: string;
 }
 
 type SponsorUpdateBody = Partial<Omit<SponsorCreateBody, "editionId">>;
@@ -134,6 +136,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         comKitLogoPrintUrl: body.comKitLogoPrintUrl || null,
         comKitCharterUrl: body.comKitCharterUrl || null,
         comKitNotes: body.comKitNotes || null,
+        platinumPromoIdea: body.platinumPromoIdea || null,
+        platinumCoBuildIdea: body.platinumCoBuildIdea || null,
       },
     });
 
@@ -178,6 +182,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
         ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
         ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
+        ...(body.platinumPromoIdea !== undefined && { platinumPromoIdea: body.platinumPromoIdea || null }),
+        ...(body.platinumCoBuildIdea !== undefined && { platinumCoBuildIdea: body.platinumCoBuildIdea || null }),
       },
     });
 

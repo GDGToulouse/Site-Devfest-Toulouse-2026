@@ -19,6 +19,9 @@ export interface SponsorPrivate {
   comKitLogoPrintUrl: string | null;
   comKitCharterUrl: string | null;
   comKitNotes: string | null;
+  // Platinum-only ideas (#252).
+  platinumPromoIdea: string | null;
+  platinumCoBuildIdea: string | null;
 }
 
 // Only the string labels this section needs. The parent passes its whole dict
@@ -48,6 +51,10 @@ interface Labels {
   comKitEmailSending: string;
   comKitEmailSent: string;
   comKitEmailError: string;
+  platinumSection: string;
+  platinumPromoIdea: string;
+  platinumPromoIdeaHint: string;
+  platinumCoBuildIdea: string;
 }
 
 const inputClass =
@@ -73,6 +80,9 @@ export default function SponsorPrivateSection({
   const [comKitLogoPrintUrl, setComKitLogoPrintUrl] = useState(initial.comKitLogoPrintUrl ?? "");
   const [comKitCharterUrl, setComKitCharterUrl] = useState(initial.comKitCharterUrl ?? "");
   const [comKitNotes, setComKitNotes] = useState(initial.comKitNotes ?? "");
+  const [platinumPromoIdea, setPlatinumPromoIdea] = useState(initial.platinumPromoIdea ?? "");
+  const [platinumCoBuildIdea, setPlatinumCoBuildIdea] = useState(initial.platinumCoBuildIdea ?? "");
+  const isPlatinum = initial.level === "PLATINUM";
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -101,6 +111,8 @@ export default function SponsorPrivateSection({
         comKitLogoPrintUrl,
         comKitCharterUrl,
         comKitNotes,
+        // Only sent for Platinum; the backend ignores them otherwise anyway.
+        ...(isPlatinum && { platinumPromoIdea, platinumCoBuildIdea }),
       }),
     });
     setSaving(false);
@@ -176,6 +188,23 @@ export default function SponsorPrivateSection({
           <textarea value={comKitNotes} onChange={(e) => setComKitNotes(e.target.value)} rows={3} className={inputClass} />
         </label>
       </div>
+
+      {/* Platinum-only promotional content (#252). Shown only to Platinum
+          sponsors; the backend also refuses to write these for other levels. */}
+      {isPlatinum && (
+        <div className="mb-6 rounded-lg border border-jaune/40 bg-jaune/5 p-4">
+          <p className="mb-3 text-sm font-semibold text-noir">💎 {t.platinumSection}</p>
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">{t.platinumPromoIdea}</span>
+            <span className="mb-1 block text-xs text-gris">{t.platinumPromoIdeaHint}</span>
+            <textarea value={platinumPromoIdea} onChange={(e) => setPlatinumPromoIdea(e.target.value)} rows={3} className={inputClass} />
+          </label>
+          <label className="mt-4 block">
+            <span className="mb-1 block text-sm font-medium text-noir">{t.platinumCoBuildIdea}</span>
+            <textarea value={platinumCoBuildIdea} onChange={(e) => setPlatinumCoBuildIdea(e.target.value)} rows={3} className={inputClass} />
+          </label>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-4 border-t border-gris/15 pt-5">
         <button
