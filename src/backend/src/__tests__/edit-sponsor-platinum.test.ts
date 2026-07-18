@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Platinum-only promo ideas (#252): writable via the magic link only when the
 // sponsor is Platinum. For any other level the fields are silently ignored, so
@@ -18,20 +19,16 @@ describe("Sponsor Platinum promo content (#252)", () => {
     if (!edition) throw new Error("seed missing an edition");
     editionId = edition.id;
 
-    const platinum = await prisma.sponsor.create({
-      data: {
-        name: "Platinum Test", slug: `platinum-test-${Date.now()}`, editionId, level: "PLATINUM",
-        editToken: PLATINUM_TOKEN, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
-      },
-    });
+    const platinum = await createSponsorWithToken({
+      name: "Platinum Test", slug: `platinum-test-${Date.now()}`, editionId, level: "PLATINUM",
+      publicationStatus: "PUBLISHED",
+    }, PLATINUM_TOKEN);
     platinumId = platinum.id;
 
-    const gold = await prisma.sponsor.create({
-      data: {
-        name: "Gold Test", slug: `gold-test-${Date.now()}`, editionId, level: "GOLD",
-        editToken: GOLD_TOKEN, editTokenSentAt: new Date(), publicationStatus: "PUBLISHED",
-      },
-    });
+    const gold = await createSponsorWithToken({
+      name: "Gold Test", slug: `gold-test-${Date.now()}`, editionId, level: "GOLD",
+      publicationStatus: "PUBLISHED",
+    }, GOLD_TOKEN);
     goldId = gold.id;
   });
 

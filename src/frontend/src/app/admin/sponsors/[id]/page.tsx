@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor } from "@/lib/types";
-import EditLinkActions from "@/components/admin/EditLinkActions";
+import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
 import SponsorForm, { emptySponsorForm, type SponsorFormValue } from "@/components/admin/sponsors/SponsorForm";
 
 interface SponsorData extends Sponsor {
@@ -152,14 +152,7 @@ export default function SponsorEditorPage() {
 
         <SponsorForm value={form} onChange={setForm} />
 
-        {!isNew && current && (
-          <EditLinkActions
-            resource="sponsors"
-            entityId={current.id}
-            initialEmail={current.contactEmail ?? ""}
-            initialLocked={current.editLinkLocked}
-          />
-        )}
+        {!isNew && current && <SponsorContacts sponsorId={current.id} />}
 
         {error && <p className="text-sm text-terre-cuite">{error}</p>}
 

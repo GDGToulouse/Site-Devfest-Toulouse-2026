@@ -35,6 +35,12 @@ export async function adminFetch<T>(
       return { data: null, status: res.status };
     }
 
+    // 204 No Content (e.g. a DELETE) has an empty body: res.json() would throw
+    // and wrongly surface as a network error. Return the success status as-is.
+    if (res.status === 204) {
+      return { data: null, status: 204 };
+    }
+
     const data = await res.json();
     return { data, status: res.status };
   } catch {

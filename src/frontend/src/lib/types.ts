@@ -140,7 +140,6 @@ export interface Sponsor {
   socialLinks: Record<string, string>;
   contactEmail: string | null;
   locale: string;
-  editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
   // Private fields (#249) — organizers only, never on public pages.
