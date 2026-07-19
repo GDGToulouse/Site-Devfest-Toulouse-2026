@@ -80,8 +80,9 @@ describe("Admin Articles API", () => {
         slug,
         titleFr: "Daté FR",
         titleEn: "Dated EN",
-        contentFr: "",
-        contentEn: "",
+        // Publishing requires both languages filled in (#263).
+        contentFr: "<p>Contenu</p>",
+        contentEn: "<p>Content</p>",
         publicationStatus: "PUBLISHED",
         publishedAt: originalDate,
       },
@@ -108,8 +109,9 @@ describe("Admin Articles API", () => {
         slug,
         titleFr: "Now FR",
         titleEn: "Now EN",
-        contentFr: "",
-        contentEn: "",
+        // Publishing requires both languages filled in (#263).
+        contentFr: "<p>Contenu</p>",
+        contentEn: "<p>Content</p>",
         publicationStatus: "PUBLISHED",
       },
     });
@@ -183,6 +185,82 @@ describe("Admin Articles API", () => {
     expect(res.json().fields).toEqual(["slug", "titleFr"]);
     expect(res.json().error).toContain("slug");
     expect(res.json().error).toContain("titleFr");
+    await app.close();
+  });
+
+  // #263: saving a draft stays permissive, publishing is the strict gate.
+  it("refuses to publish an incomplete article, then accepts it once complete", async () => {
+    const app = await buildAdminApp();
+    const slug = `publish-gate-${Date.now()}`;
+
+    // A FR-only draft saves fine.
+    const draft = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: { slug, titleFr: "Titre FR", contentFr: "<p>Contenu</p>" },
+    });
+    expect(draft.statusCode).toBe(201);
+    const { id } = draft.json();
+
+    // Flipping it to PUBLISHED without the English side is refused — and the
+    // status must be judged on the merged article, not on this partial body.
+    const rejected = await app.inject({
+      method: "PUT",
+      url: `/api/admin/articles/${id}`,
+      payload: { publicationStatus: "PUBLISHED" },
+    });
+    expect(rejected.statusCode).toBe(400);
+    expect(rejected.json().fields).toEqual(["titleEn", "contentEn"]);
+
+    // It is still a draft.
+    const untouched = await app.inject({ method: "GET", url: `/api/admin/articles/${id}` });
+    expect(untouched.json().publicationStatus).toBe("DRAFT");
+
+    // Completing the English side unlocks publication.
+    const published = await app.inject({
+      method: "PUT",
+      url: `/api/admin/articles/${id}`,
+      payload: { titleEn: "Title EN", contentEn: "<p>Content</p>", publicationStatus: "PUBLISHED" },
+    });
+    expect(published.statusCode).toBe(200);
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
+    await app.close();
+  });
+
+  it("refuses to create an article directly as PUBLISHED when incomplete", async () => {
+    const app = await buildAdminApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: { slug: `direct-publish-${Date.now()}`, titleFr: "FR", publicationStatus: "PUBLISHED" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("Publication impossible");
+    expect(res.json().fields).toEqual(["titleEn", "contentFr", "contentEn"]);
+    await app.close();
+  });
+
+  it("keeps saving an existing draft permissive", async () => {
+    const app = await buildAdminApp();
+    const slug = `draft-permissive-${Date.now()}`;
+
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: { slug, titleFr: "Titre" },
+    });
+    const { id } = created.json();
+
+    // No English, no content — still saves as a draft.
+    const saved = await app.inject({
+      method: "PUT",
+      url: `/api/admin/articles/${id}`,
+      payload: { titleFr: "Titre modifié" },
+    });
+    expect(saved.statusCode).toBe(200);
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
     await app.close();
   });
 
