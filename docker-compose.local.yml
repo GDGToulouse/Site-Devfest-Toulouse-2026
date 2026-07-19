@@ -40,6 +40,9 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # Normally injected at build time from the deployed commit (#290). Set it
+      # locally to exercise the badge; empty means "not a deployed build".
+      - APP_COMMIT=${APP_COMMIT:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
       - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}

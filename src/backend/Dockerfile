@@ -20,6 +20,11 @@ RUN pnpm build
 ARG SEED_SCRIPT=prisma/seed.ts
 ENV SEED_SCRIPT=${SEED_SCRIPT}
 
+# Commit this image was built from, surfaced by /api/health so a deploy can be
+# told apart from the previous one (the version only moves on releases).
+ARG APP_COMMIT=
+ENV APP_COMMIT=${APP_COMMIT}
+
 RUN chmod +x scripts/db-boot.sh
 
 # Use the boot script: baseline the init migration if upgrading from
