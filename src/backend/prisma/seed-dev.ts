@@ -501,6 +501,9 @@ async function seedDev() {
       descriptionFr: "Retour d'expérience sur l'exploitation de Kubernetes à grande échelle.",
       descriptionEn: "Lessons learned running Kubernetes at scale.",
       format: "CONFERENCE", level: "CONFIRME", language: "fr",
+      // Speaker editing opened on this one only (#289), so both states are
+      // testable from a single dev speaker link.
+      isSpeakerEditable: true,
       publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catCloud.id,
       speakers: { connect: [{ id: speakerMarie.id }] },
     },

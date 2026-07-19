@@ -26,6 +26,7 @@ export interface TalkFormValue {
   categoryId: string;
   speakerIds: number[];
   publicationStatus: "DRAFT" | "PUBLISHED";
+  isSpeakerEditable: boolean;
 }
 
 export const emptyTalkForm: TalkFormValue = {
@@ -39,6 +40,7 @@ export const emptyTalkForm: TalkFormValue = {
   categoryId: "",
   speakerIds: [],
   publicationStatus: "DRAFT",
+  isSpeakerEditable: false,
 };
 
 const inputClass =
@@ -148,6 +150,25 @@ export default function TalkForm({ value, onChange, categories, speakers }: Talk
         />
         <span className="text-sm text-noir">Publié (visible sur le site)</span>
       </label>
+
+      {/* #289 — read-only by default; the flag has an effect the admin cannot
+          see from here (it unlocks a form on the speaker's magic link page),
+          hence the hint. */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value.isSpeakerEditable}
+            onChange={(e) => onChange({ ...value, isSpeakerEditable: e.target.checked })}
+            className="rounded border-gris/30 text-malachite focus:ring-malachite"
+          />
+          <span className="text-sm text-noir">Édition autorisée par le speaker</span>
+        </label>
+        <span className="block text-xs text-gris mt-1">
+          Le speaker pourra modifier le titre et la description depuis son lien de
+          modification. Le format, le niveau et la langue restent réservés aux organisateurs.
+        </span>
+      </div>
     </div>
   );
 }

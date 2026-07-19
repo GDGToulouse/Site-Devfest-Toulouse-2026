@@ -107,13 +107,12 @@ const editBodySchema = {
 
 const ALLOWED_FIELDS = Object.keys(editBodySchema.properties);
 
-// Talk fields a speaker may edit from the link (#260): descriptive content
-// only. Programming (room, slot, publication status), slug and the speaker
-// list stay with the organizers. Titles are single-line, descriptions long.
+// Talk fields a speaker may edit from the link (#260, narrowed by #289): the
+// wording only. Format, level and language drive the schedule (slot length,
+// agenda display) so they moved back to the organizers, alongside programming
+// (room, slot, publication status), slug and the speaker list. Editing is also
+// opt-in per talk — see Talk.isSpeakerEditable.
 const TITLE_MAX = 300;
-const TALK_FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
-const TALK_LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
-const TALK_LANGUAGES = ["fr", "en"] as const;
 
 const talkBodySchema = {
   type: "object",
@@ -123,10 +122,6 @@ const talkBodySchema = {
     titleEn: { type: "string", maxLength: TITLE_MAX },
     descriptionFr: { type: "string", maxLength: TEXT_MAX },
     descriptionEn: { type: "string", maxLength: TEXT_MAX },
-    format: { type: "string", enum: [...TALK_FORMATS] },
-    // level may be cleared ("" -> "Tous niveaux"), so an empty string is valid.
-    level: { type: "string", enum: ["", ...TALK_LEVELS] },
-    language: { type: "string", enum: [...TALK_LANGUAGES] },
   },
 };
 
@@ -137,9 +132,6 @@ interface TalkEditBody {
   titleEn?: string;
   descriptionFr?: string;
   descriptionEn?: string;
-  format?: (typeof TALK_FORMATS)[number];
-  level?: "" | (typeof TALK_LEVELS)[number];
-  language?: (typeof TALK_LANGUAGES)[number];
 }
 
 // A title is the only field that cannot be blank: it's rendered as the session
@@ -262,9 +254,10 @@ async function resolveToken(token: string) {
     where: { editToken: token },
     include: {
       edition: { select: { startDate: true } },
-      // Sessions the speaker can edit from the link (#260). Only published ones
-      // are surfaced; the descriptive content is editable, the programming
-      // (room/slot/status) and the speaker list are not.
+      // Sessions the speaker sees from the link (#260). Only published ones are
+      // surfaced. Format, level and language are read-only (#289) but still
+      // selected: the speaker needs to see how their session is programmed.
+      // isSpeakerEditable tells the UI whether to render a form or a plain view.
       talks: {
         where: { publicationStatus: "PUBLISHED" },
         select: {
@@ -277,6 +270,7 @@ async function resolveToken(token: string) {
           format: true,
           level: true,
           language: true,
+          isSpeakerEditable: true,
         },
         orderBy: { titleFr: "asc" },
       },
@@ -569,9 +563,10 @@ export default async function editRoutes(app: FastifyInstance) {
     return { saved: true };
   });
 
-  // PUT /api/edit/:token/talks/:talkId — a speaker edits the descriptive
-  // content of one of their sessions (#260). Programming, status and the
-  // speaker list are NOT editable here. Changes publish immediately (direct
+  // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
+  // their sessions (#260), and only if the organizers opened that talk to
+  // editing (#289). Format/level/language, programming, status and the speaker
+  // list are NOT editable here. Changes publish immediately (direct
   // publication) and notify the CFP address.
   app.put<{ Params: { token: string; talkId: string }; Body: TalkEditBody }>(
     "/edit/:token/talks/:talkId",
@@ -614,12 +609,16 @@ export default async function editRoutes(app: FastifyInstance) {
       const talk = entity.talks.find((t) => t.id === talkId);
       if (!talk) return reply.code(404).send({ error: "talk_not_found" });
 
+      // Editing is opt-in per talk (#289): the organizers open it one session at
+      // a time. 403 rather than 404 — the talk exists and belongs to the caller,
+      // it is simply closed to edits, and the UI says so.
+      if (!talk.isSpeakerEditable) return reply.code(403).send({ error: "talk_not_editable" });
+
       const body = request.body;
       const blankTitle = findBlankTitle(body);
       if (blankTitle) return reply.code(400).send({ error: "empty_title", field: blankTitle });
 
-      // A field absent from the body is left untouched; level accepts "" to
-      // clear it back to "Tous niveaux".
+      // A field absent from the body is left untouched.
       await prisma.talk.update({
         where: { id: talk.id },
         data: {
@@ -627,9 +626,6 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.titleEn !== undefined && { titleEn: body.titleEn.trim() }),
           ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr }),
           ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn }),
-          ...(body.format !== undefined && { format: body.format }),
-          ...(body.level !== undefined && { level: body.level || null }),
-          ...(body.language !== undefined && { language: body.language }),
         },
       });
 

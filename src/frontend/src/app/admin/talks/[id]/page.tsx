@@ -55,6 +55,7 @@ export default function TalkEditorPage() {
           categoryId: data.categoryId ? String(data.categoryId) : "",
           speakerIds: data.speakerIds,
           publicationStatus: data.publicationStatus,
+          isSpeakerEditable: data.isSpeakerEditable,
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -92,6 +93,7 @@ export default function TalkEditorPage() {
       categoryId: form.categoryId ? Number(form.categoryId) : null,
       speakerIds: form.speakerIds,
       publicationStatus: form.publicationStatus,
+      isSpeakerEditable: form.isSpeakerEditable,
     };
 
     if (isNew) {

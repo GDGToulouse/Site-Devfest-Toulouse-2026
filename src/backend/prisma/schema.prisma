@@ -508,6 +508,11 @@ model Talk {
   videoUrl         String?
   publicationStatus PublicationStatus @default(DRAFT)
 
+  // Whether the speaker may edit this talk's title and description from their
+  // magic link (#289). Read-only by default: the organizers open editing talk
+  // by talk. Format, level and language stay with the organizers regardless.
+  isSpeakerEditable Boolean           @default(false)
+
   // Room and time slot are assigned in Lot 3 (Programme) — optional here (RG-216).
   room             String?
   startsAt         DateTime?
