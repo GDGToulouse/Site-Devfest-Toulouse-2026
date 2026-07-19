@@ -2,7 +2,8 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
 import { prisma } from "./prisma.js";
-import { sendEmail } from "./email.js";
+import { sendEmail, escapeHtml } from "./email.js";
+import { emailButton, emailHeading } from "./email-template.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
@@ -61,10 +62,10 @@ export const auth = betterAuth({
         subject: "DevFest Toulouse — Réinitialisation de mot de passe",
         text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${resetUrl}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.`,
         html: `
-          <h3>Réinitialisation de mot de passe</h3>
-          <p>Bonjour ${user.name || ""},</p>
-          <p>Cliquez sur le lien ci-dessous pour réinitialiser votre mot de passe :</p>
-          <p><a href="${resetUrl}">Réinitialiser mon mot de passe</a></p>
+          ${emailHeading("Réinitialisation de mot de passe")}
+          <p>Bonjour ${escapeHtml(user.name || "")},</p>
+          <p>Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe :</p>
+          ${emailButton(resetUrl, "Réinitialiser mon mot de passe")}
           <p>Ce lien expire dans 1 heure.</p>
           <p><em>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</em></p>
         `,

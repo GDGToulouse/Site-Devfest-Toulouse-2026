@@ -212,7 +212,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     }
 
     try {
-      const { sendEmail } = await import("../../lib/email.js");
+      const { sendEmail, escapeHtml } = await import("../../lib/email.js");
+      const { emailHeading } = await import("../../lib/email-template.js");
       await sendEmail({
         to: emails,
         subject: `[Fwd] Message de contact — ${msg.firstName} ${msg.lastName}`,
@@ -226,17 +227,19 @@ export default async function adminContactRoutes(app: FastifyInstance) {
           "",
           msg.message,
         ].filter(Boolean).join("\n"),
+        // The message and its fields come from the public contact form: escape
+        // them before forwarding as HTML.
         html: `
-        <h3>Message de contact transféré</h3>
-        <p><strong>De:</strong> ${msg.firstName} ${msg.lastName}</p>
-        <p><strong>Email:</strong> <a href="mailto:${msg.email}">${msg.email}</a></p>
-        ${msg.phone ? `<p><strong>Tel:</strong> ${msg.phone}</p>` : ""}
-        ${msg.company ? `<p><strong>Entreprise:</strong> ${msg.company}</p>` : ""}
-        ${msg.jobTitle ? `<p><strong>Poste:</strong> ${msg.jobTitle}</p>` : ""}
-        ${msg.categoryLabel ? `<p><strong>Categorie:</strong> ${msg.categoryLabel}</p>` : ""}
+        ${emailHeading("Message de contact transféré")}
+        <p><strong>De:</strong> ${escapeHtml(`${msg.firstName} ${msg.lastName}`)}</p>
+        <p><strong>Email:</strong> <a href="mailto:${encodeURIComponent(msg.email)}">${escapeHtml(msg.email)}</a></p>
+        ${msg.phone ? `<p><strong>Tel:</strong> ${escapeHtml(msg.phone)}</p>` : ""}
+        ${msg.company ? `<p><strong>Entreprise:</strong> ${escapeHtml(msg.company)}</p>` : ""}
+        ${msg.jobTitle ? `<p><strong>Poste:</strong> ${escapeHtml(msg.jobTitle)}</p>` : ""}
+        ${msg.categoryLabel ? `<p><strong>Categorie:</strong> ${escapeHtml(msg.categoryLabel)}</p>` : ""}
         <p><strong>Date:</strong> ${new Date(msg.createdAt).toLocaleString("fr-FR")}</p>
-        <hr>
-        <p>${msg.message.replace(/\n/g, "<br>")}</p>
+        <hr style="border:0;border-top:1px solid #E8E0DC;margin:20px 0;">
+        <p>${escapeHtml(msg.message).replace(/\n/g, "<br>")}</p>
         `,
       });
       return { success: true, forwardedTo: emails };
