@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { buildApp } from "./test-app.js";
+import { prisma } from "../lib/prisma.js";
 
 describe("GET /api/editions/current", () => {
   it("should return the current edition", async () => {
@@ -12,6 +13,36 @@ describe("GET /api/editions/current", () => {
     expect(body).toHaveProperty("status", "ANNOUNCEMENT");
     expect(body).toHaveProperty("aftermovieUrl");
     await app.close();
+  });
+
+  // hasJobOffers drives the "Offres d'emploi" nav sub-entry: it must only be
+  // true while a published sponsor actually has an offer.
+  it("flags hasJobOffers only when a published sponsor has an offer", async () => {
+    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
+    if (!edition) throw new Error("seed missing an edition");
+
+    // Baseline: the seed ships no job offer.
+    const app = await buildApp();
+    const before = await app.inject({ method: "GET", url: "/api/editions/current" });
+    expect(before.json().hasJobOffers).toBe(false);
+    await app.close();
+
+    const sponsor = await prisma.sponsor.create({
+      data: {
+        name: "Nav Offers", slug: `nav-offers-${Date.now()}`, editionId: edition.id,
+        level: "GOLD", publicationStatus: "PUBLISHED",
+      },
+    });
+    await prisma.sponsorJobOffer.create({
+      data: { sponsorId: sponsor.id, title: "Dev", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
+    });
+
+    const app2 = await buildApp();
+    const after = await app2.inject({ method: "GET", url: "/api/editions/current" });
+    expect(after.json().hasJobOffers).toBe(true);
+    await app2.close();
+
+    await prisma.sponsor.deleteMany({ where: { id: sponsor.id } });
   });
 });
 

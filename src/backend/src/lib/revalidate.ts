@@ -74,6 +74,11 @@ export function revalidateSponsors(): Promise<void> {
   ]);
 }
 
+// The partner job-offers recap page (#251).
+export function revalidateJobOffers(): Promise<void> {
+  return revalidatePaths([...bilingualPaths("/offres-emploi-partenaires")]);
+}
+
 export function revalidateSpeakers(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),

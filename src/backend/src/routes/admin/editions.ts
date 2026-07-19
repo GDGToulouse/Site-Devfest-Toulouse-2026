@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
+import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 
 interface EditionBody {
   year: number;
@@ -274,6 +275,17 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
     const figures = request.body;
+
+    // Reject unknown icon keys before touching anything (#164): the site
+    // renders nothing for them, silently. Validating up front also means a bad
+    // payload never wipes the existing figures via the deleteMany below.
+    const invalid = figures.map((fig) => fig.icon).filter((icon) => !isValidStatIcon(icon));
+    if (invalid.length) {
+      return reply.status(400).send({
+        error: `Icône inconnue : ${[...new Set(invalid)].join(", ")}`,
+        allowed: STAT_ICON_KEYS,
+      });
+    }
 
     await prisma.keyFigure.deleteMany({ where: { editionId: id } });
     await prisma.keyFigure.createMany({

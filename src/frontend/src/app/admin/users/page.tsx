@@ -45,14 +45,14 @@ export default function UsersAdminPage() {
     }
     setIsSaving(true);
     setError(null);
-    const { status, data } = await adminFetch<{ error?: string }>("/users", {
+    const { status, error: apiError } = await adminFetch("/users", {
       method: "POST",
       body: JSON.stringify(form),
     });
     if (status === 409) {
       setError("Un utilisateur avec cet email existe déjà");
     } else if (status !== 201) {
-      setError(data?.error || "Erreur lors de la création");
+      setError(apiError || "Erreur lors de la création");
     } else {
       setShowForm(false);
       setForm({ email: "", name: "", role: "EDITOR" });
@@ -62,9 +62,9 @@ export default function UsersAdminPage() {
   }
 
   async function handleToggleBan(userId: string) {
-    const { status, data } = await adminFetch<{ error?: string }>(`/users/${userId}/ban`, { method: "PUT" });
+    const { status, error: apiError } = await adminFetch(`/users/${userId}/ban`, { method: "PUT" });
     if (status === 400) {
-      setError(data?.error || "Impossible de bloquer cet utilisateur");
+      setError(apiError || "Impossible de bloquer cet utilisateur");
     }
     loadUsers();
   }
@@ -80,9 +80,9 @@ export default function UsersAdminPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    const { status, data } = await adminFetch<{ error?: string }>(`/users/${deleteTarget.id}`, { method: "DELETE" });
+    const { status, error: apiError } = await adminFetch(`/users/${deleteTarget.id}`, { method: "DELETE" });
     if (status === 400) {
-      setError(data?.error || "Impossible de supprimer cet utilisateur");
+      setError(apiError || "Impossible de supprimer cet utilisateur");
     }
     setDeleteTarget(null);
     loadUsers();

@@ -547,15 +547,26 @@ model Sponsor {
   socialLinks      String?
   // Contact email used to send the modification link (RG-243). Optional.
   contactEmail     String?
+
+  // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
+  // Social handles of the people staffing the booth, for day-of relaying.
+  // JSON array of { name, linkedin, twitter, bluesky }.
+  standContacts    String?
+  // Communication kit: whether the sponsor confirmed receiving it, plus the
+  // assets they can drop as links (web/print logo, brand charter) and free notes.
+  comKitReceived   Boolean           @default(false)
+  comKitLogoWebUrl   String?
+  comKitLogoPrintUrl String?
+  comKitCharterUrl   String?
+  comKitNotes      String?
+  // Platinum-only promotional content ideas (#252) — private, shown in the
+  // edit form only when level == PLATINUM.
+  platinumPromoIdea   String?
+  platinumCoBuildIdea String?
   // Language we write to this sponsor in — "fr" | "en" (#224). Same rule as
   // Speaker.locale: set in the admin, defaults to French.
   locale           String            @default("fr")
   publicationStatus PublicationStatus @default(DRAFT)
-
-  // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
-  editToken        String?           @unique
-  editLinkLocked   Boolean           @default(false)
-  editTokenSentAt  DateTime?
 
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
@@ -566,8 +577,62 @@ model Sponsor {
   // Speakers working for this sponsor's company (RG-226).
   speakers         Speaker[]
 
+  // People allowed to edit this sponsor's page, each with their own
+  // modification link (#250). Replaces the single editToken on Sponsor.
+  contacts         SponsorContact[]
+
+  // Job offers the sponsor wants relayed (#251). Count capped by level.
+  jobOffers        SponsorJobOffer[]
+
   @@unique([editionId, slug])
   @@index([editionId])
+}
+
+// A person who can edit a sponsor's page via their own modification link
+// (#250). Replaces the single editToken that used to live on Sponsor: a
+// sponsor can now have several contacts, each with an independent token, send
+// date (30-day expiry) and lock. All contacts edit the same sponsor page with
+// equal rights.
+model SponsorContact {
+  id               Int       @id @default(autoincrement())
+  email            String
+  name             String?
+  role             String?
+
+  // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
+  // now per-contact. Locale for the link email is inherited from the sponsor.
+  editToken        String?   @unique
+  editLinkLocked   Boolean   @default(false)
+  editTokenSentAt  DateTime?
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sponsorId        Int
+  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  @@index([sponsorId])
+}
+
+// A job offer a sponsor wants relayed during the DevFest (#251). Shown on the
+// sponsor's public page and on a dedicated "partner job offers" page. The
+// number of offers per sponsor is capped by its level (4 Platinum / 2 Gold /
+// 1 otherwise); the description is rich text (same editor as articles).
+model SponsorJobOffer {
+  id               Int       @id @default(autoincrement())
+  title            String
+  // Bilingual rich-text HTML, sanitized on write (same pipeline as articles).
+  descriptionFr    String    @default("")
+  descriptionEn    String    @default("")
+  url              String
+
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sponsorId        Int
+  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+
+  @@index([sponsorId])
 }
 
 // --- Categories / Tracks (RG-213, US-246) ---

@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { SponsorLevel } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import RichTextEditor from "@/components/admin/RichTextEditor";
 
 const LEVELS: { value: SponsorLevel; label: string }[] = [
   { value: "PLATINUM", label: "Platinum" },
@@ -23,8 +24,17 @@ export interface SponsorFormValue {
   descriptionEn: string;
   linkedin: string;
   twitter: string;
+  bluesky: string;
   locale: "fr" | "en";
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // Private fields (#249) — organizers only, never public.
+  comKitReceived: boolean;
+  comKitLogoWebUrl: string;
+  comKitLogoPrintUrl: string;
+  comKitCharterUrl: string;
+  comKitNotes: string;
+  platinumPromoIdea: string;
+  platinumCoBuildIdea: string;
 }
 
 export const emptySponsorForm: SponsorFormValue = {
@@ -36,8 +46,16 @@ export const emptySponsorForm: SponsorFormValue = {
   descriptionEn: "",
   linkedin: "",
   twitter: "",
+  bluesky: "",
   locale: "fr",
   publicationStatus: "DRAFT",
+  comKitReceived: false,
+  comKitLogoWebUrl: "",
+  comKitLogoPrintUrl: "",
+  comKitCharterUrl: "",
+  comKitNotes: "",
+  platinumPromoIdea: "",
+  platinumCoBuildIdea: "",
 };
 
 const inputClass =
@@ -101,12 +119,27 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
 
       <BilingualTabs
         label="Description"
-        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).trim()}
+        // Rich text (#270) — strip tags before the empty check so <p></p> counts as empty.
+        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).replace(/<[^>]*>/g, "").trim()}
         renderPanel={(lang) =>
           lang === "fr" ? (
-            <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={4} className={inputClass} />
+            <RichTextEditor
+              label=""
+              name="sponsor-descriptionFr"
+              value={value.descriptionFr}
+              onChange={(html) => onChange({ ...value, descriptionFr: html })}
+              showImageButton={false}
+              minHeight="180px"
+            />
           ) : (
-            <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={4} className={inputClass} />
+            <RichTextEditor
+              label=""
+              name="sponsor-descriptionEn"
+              value={value.descriptionEn}
+              onChange={(html) => onChange({ ...value, descriptionEn: html })}
+              showImageButton={false}
+              minHeight="180px"
+            />
           )
         }
       />
@@ -119,6 +152,10 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">X / Twitter</span>
           <input type="url" value={value.twitter} onChange={(e) => onChange({ ...value, twitter: e.target.value })} className={inputClass} />
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-noir mb-1">Bluesky</span>
+          <input type="url" value={value.bluesky} onChange={(e) => onChange({ ...value, bluesky: e.target.value })} className={inputClass} />
         </label>
       </div>
 
@@ -146,6 +183,55 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         />
         <span className="text-sm text-noir">Publié (visible sur le site)</span>
       </label>
+
+      {/* Private fields (#249) — organizers only, never shown publicly. The
+          booth contacts are edited by the sponsor via their magic link; here we
+          expose the com-kit tracking, which the orga fills in. */}
+      <fieldset className="rounded-lg border-2 border-dashed border-gris/25 bg-blanc-casse/50 p-4">
+        <legend className="px-2 text-sm font-semibold text-noir">🔒 Informations privées (kit de com)</legend>
+        <label className="flex items-center gap-2 cursor-pointer mb-4">
+          <input
+            type="checkbox"
+            checked={value.comKitReceived}
+            onChange={(e) => onChange({ ...value, comKitReceived: e.target.checked })}
+            className="rounded border-gris/30 text-malachite focus:ring-malachite"
+          />
+          <span className="text-sm text-noir">Kit de com reçu</span>
+        </label>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Logo (version Web)</span>
+            <input type="url" value={value.comKitLogoWebUrl} onChange={(e) => onChange({ ...value, comKitLogoWebUrl: e.target.value })} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Logo (version Print)</span>
+            <input type="url" value={value.comKitLogoPrintUrl} onChange={(e) => onChange({ ...value, comKitLogoPrintUrl: e.target.value })} className={inputClass} />
+          </label>
+          <label className="block">
+            <span className="block text-sm font-medium text-noir mb-1">Charte graphique</span>
+            <input type="url" value={value.comKitCharterUrl} onChange={(e) => onChange({ ...value, comKitCharterUrl: e.target.value })} className={inputClass} />
+          </label>
+        </div>
+        <label className="block mt-4">
+          <span className="block text-sm font-medium text-noir mb-1">Notes / autres supports</span>
+          <textarea value={value.comKitNotes} onChange={(e) => onChange({ ...value, comKitNotes: e.target.value })} rows={3} className={inputClass} />
+        </label>
+
+        {/* Platinum-only ideas (#252) — shown only when level is Platinum. */}
+        {value.level === "PLATINUM" && (
+          <div className="mt-4 rounded-lg border border-jaune/40 bg-jaune/5 p-4">
+            <p className="text-sm font-semibold text-noir mb-3">💎 Réservé aux partenaires Platinum</p>
+            <label className="block">
+              <span className="block text-sm font-medium text-noir mb-1">Contenu promotionnel à mettre en avant</span>
+              <textarea value={value.platinumPromoIdea} onChange={(e) => onChange({ ...value, platinumPromoIdea: e.target.value })} rows={3} className={inputClass} />
+            </label>
+            <label className="block mt-4">
+              <span className="block text-sm font-medium text-noir mb-1">Idées de contenu à co-construire</span>
+              <textarea value={value.platinumCoBuildIdea} onChange={(e) => onChange({ ...value, platinumCoBuildIdea: e.target.value })} rows={3} className={inputClass} />
+            </label>
+          </div>
+        )}
+      </fieldset>
 
       <ImagePickerDialog
         open={isImagePickerOpen}

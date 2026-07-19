@@ -1,12 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateJobOffers, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { sanitizeRichHtml } from "../../lib/sanitize.js";
 
 const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
 type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
+
+interface StandContact {
+  name?: string;
+  linkedin?: string;
+  twitter?: string;
+  bluesky?: string;
+}
 
 interface SponsorCreateBody {
   editionId: number;
@@ -20,6 +28,15 @@ interface SponsorCreateBody {
   contactEmail?: string;
   locale?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
+  // Private fields (#249) — organizers only.
+  standContacts?: StandContact[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string;
+  comKitLogoPrintUrl?: string;
+  comKitCharterUrl?: string;
+  comKitNotes?: string;
+  platinumPromoIdea?: string;
+  platinumCoBuildIdea?: string;
 }
 
 type SponsorUpdateBody = Partial<Omit<SponsorCreateBody, "editionId">>;
@@ -40,9 +57,14 @@ interface SponsorBulkBody {
 
 function serialize(s: {
   socialLinks: string | null;
+  standContacts?: string | null;
   [k: string]: unknown;
 }) {
-  return { ...s, socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {} };
+  return {
+    ...s,
+    socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
+    standContacts: s.standContacts ? JSON.parse(s.standContacts) : [],
+  };
 }
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
@@ -70,7 +92,11 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const sponsor = await prisma.sponsor.findUnique({
       where: { id: Number(request.params.id) },
-      include: { edition: { select: { id: true, year: true } } },
+      include: {
+        edition: { select: { id: true, year: true } },
+        // Job offers for admin consultation/moderation (#251).
+        jobOffers: { orderBy: { createdAt: "asc" } },
+      },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
     return serialize(sponsor);
@@ -102,12 +128,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         level: body.level,
         logoUrl: body.logoUrl || null,
         websiteUrl: body.websiteUrl || null,
-        descriptionFr: body.descriptionFr || null,
-        descriptionEn: body.descriptionEn || null,
+        // Rich-text HTML (#270): sanitized on write, like article content.
+        descriptionFr: sanitizeRichHtml(body.descriptionFr) || null,
+        descriptionEn: sanitizeRichHtml(body.descriptionEn) || null,
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        // Private fields (#249).
+        standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
+        comKitReceived: body.comKitReceived ?? false,
+        comKitLogoWebUrl: body.comKitLogoWebUrl || null,
+        comKitLogoPrintUrl: body.comKitLogoPrintUrl || null,
+        comKitCharterUrl: body.comKitCharterUrl || null,
+        comKitNotes: body.comKitNotes || null,
+        platinumPromoIdea: body.platinumPromoIdea || null,
+        platinumCoBuildIdea: body.platinumCoBuildIdea || null,
       },
     });
 
@@ -135,14 +171,26 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         ...(body.level !== undefined && { level: body.level }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
         ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
-        ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr || null }),
-        ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn || null }),
+        // Rich-text HTML (#270): sanitized on write, like article content.
+        ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
+        ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
         ...(body.socialLinks !== undefined && {
           socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+        // Private fields (#249).
+        ...(body.standContacts !== undefined && {
+          standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
+        }),
+        ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
+        ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
+        ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
+        ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
+        ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
+        ...(body.platinumPromoIdea !== undefined && { platinumPromoIdea: body.platinumPromoIdea || null }),
+        ...(body.platinumCoBuildIdea !== undefined && { platinumCoBuildIdea: body.platinumCoBuildIdea || null }),
       },
     });
 
@@ -180,57 +228,146 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     return reply.code(204).send();
   });
 
-  // POST /api/admin/sponsors/:id/edit-link — (re)generate token + email it.
-  app.post<{ Params: SponsorIdParams; Body: { email?: string } }>("/sponsors/:id/edit-link", {
+  // A sponsor can have several contacts, each with its own modification link
+  // (#250). The token itself is never returned to the admin — only whether a
+  // link is active, when it was sent, and if it's locked.
+  const serializeContact = (c: {
+    id: number;
+    email: string;
+    name: string | null;
+    role: string | null;
+    editToken: string | null;
+    editLinkLocked: boolean;
+    editTokenSentAt: Date | null;
+  }) => ({
+    id: c.id,
+    email: c.email,
+    name: c.name,
+    role: c.role,
+    hasLink: !!c.editToken,
+    editLinkLocked: c.editLinkLocked,
+    editTokenSentAt: c.editTokenSentAt,
+  });
+
+  // GET /api/admin/sponsors/:id/contacts — list a sponsor's contacts.
+  app.get<{ Params: SponsorIdParams }>("/sponsors/:id/contacts", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
-  }, async (request, reply) => {
-    const id = Number(request.params.id);
-    const sponsor = await prisma.sponsor.findUnique({ where: { id } });
-    if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
+  }, async (request) => {
+    const contacts = await prisma.sponsorContact.findMany({
+      where: { sponsorId: Number(request.params.id) },
+      orderBy: { createdAt: "asc" },
+    });
+    return contacts.map(serializeContact);
+  });
 
-    const email = request.body.email?.trim() || sponsor.contactEmail;
-    if (!email) return reply.code(400).send({ error: "No contact email provided" });
+  // POST /api/admin/sponsors/:id/contacts — add a contact and send its link.
+  app.post<{ Params: SponsorIdParams; Body: { email?: string; name?: string; role?: string } }>(
+    "/sponsors/:id/contacts",
+    { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
+    async (request, reply) => {
+      const sponsorId = Number(request.params.id);
+      const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
+      if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
 
-    // Send first, persist second (#223): rotating the token before a failed
-    // send would break the link the sponsor already has, and hand them nothing
-    // in return. On SMTP failure the previous link stays valid.
-    const token = generateEditToken();
-    try {
-      await sendEditLinkEmail({
-        to: email,
-        name: sponsor.name,
-        token,
-        kind: "sponsor",
-        locale: sponsor.locale,
+      const email = request.body.email?.trim();
+      if (!email) return reply.code(400).send({ error: "No contact email provided" });
+
+      // Send first, persist second (#223): if the mail fails we create nothing.
+      const token = generateEditToken();
+      try {
+        await sendEditLinkEmail({ to: email, name: sponsor.name, token, kind: "sponsor", locale: sponsor.locale });
+      } catch (err) {
+        request.log.error({ err }, "Failed to send sponsor edit link email");
+        return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
+      }
+
+      const contact = await prisma.sponsorContact.create({
+        data: {
+          sponsorId,
+          email,
+          name: request.body.name?.trim() || null,
+          role: request.body.role?.trim() || null,
+          editToken: token,
+          editTokenSentAt: new Date(),
+        },
       });
-    } catch (err) {
-      request.log.error({ err }, "Failed to send sponsor edit link email");
-      return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
-    }
+      return reply.code(201).send(serializeContact(contact));
+    },
+  );
 
-    await prisma.sponsor.update({
-      where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
-    });
-    return { sent: true, email };
-  });
+  // POST /api/admin/sponsors/:id/contacts/:contactId/resend — rotate + resend.
+  app.post<{ Params: SponsorIdParams & { contactId: string } }>(
+    "/sponsors/:id/contacts/:contactId/resend",
+    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
+    async (request, reply) => {
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+        include: { sponsor: true },
+      });
+      if (!contact || contact.sponsorId !== Number(request.params.id)) {
+        return reply.code(404).send({ error: "Contact not found" });
+      }
 
-  // DELETE /api/admin/sponsors/:id/edit-link — revoke the link.
-  app.delete<{ Params: SponsorIdParams }>("/sponsors/:id/edit-link", {
-    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
-  }, async (request) => {
-    await prisma.sponsor.update({ where: { id: Number(request.params.id) }, data: { editToken: null } });
-    return { revoked: true };
-  });
+      const token = generateEditToken();
+      try {
+        await sendEditLinkEmail({ to: contact.email, name: contact.sponsor.name, token, kind: "sponsor", locale: contact.sponsor.locale });
+      } catch (err) {
+        request.log.error({ err }, "Failed to resend sponsor edit link email");
+        return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
+      }
 
-  // PUT /api/admin/sponsors/:id/edit-link/lock — lock/unlock without deleting.
-  app.put<{ Params: SponsorIdParams; Body: { locked: boolean } }>("/sponsors/:id/edit-link/lock", {
-    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
-  }, async (request) => {
-    const s = await prisma.sponsor.update({
-      where: { id: Number(request.params.id) },
-      data: { editLinkLocked: !!request.body.locked },
-    });
-    return { locked: s.editLinkLocked };
-  });
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date() },
+      });
+      return serializeContact(updated);
+    },
+  );
+
+  // PUT /api/admin/sponsors/:id/contacts/:contactId/lock — lock/unlock a link.
+  app.put<{ Params: SponsorIdParams & { contactId: string }; Body: { locked: boolean } }>(
+    "/sponsors/:id/contacts/:contactId/lock",
+    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
+    async (request, reply) => {
+      const contact = await prisma.sponsorContact.findUnique({ where: { id: Number(request.params.contactId) } });
+      if (!contact || contact.sponsorId !== Number(request.params.id)) {
+        return reply.code(404).send({ error: "Contact not found" });
+      }
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: { editLinkLocked: !!request.body.locked },
+      });
+      return serializeContact(updated);
+    },
+  );
+
+  // DELETE /api/admin/sponsors/:id/contacts/:contactId — remove a contact.
+  app.delete<{ Params: SponsorIdParams & { contactId: string } }>(
+    "/sponsors/:id/contacts/:contactId",
+    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
+    async (request, reply) => {
+      const contact = await prisma.sponsorContact.findUnique({ where: { id: Number(request.params.contactId) } });
+      if (!contact || contact.sponsorId !== Number(request.params.id)) {
+        return reply.code(404).send({ error: "Contact not found" });
+      }
+      await prisma.sponsorContact.delete({ where: { id: contact.id } });
+      return reply.code(204).send();
+    },
+  );
+
+  // DELETE /api/admin/sponsors/:id/job-offers/:offerId — moderate an offer (#251).
+  app.delete<{ Params: SponsorIdParams & { offerId: string } }>(
+    "/sponsors/:id/job-offers/:offerId",
+    { schema: { params: { type: "object", required: ["id", "offerId"], properties: { id: { type: "string" }, offerId: { type: "string" } } } } },
+    async (request, reply) => {
+      const offer = await prisma.sponsorJobOffer.findUnique({ where: { id: Number(request.params.offerId) } });
+      if (!offer || offer.sponsorId !== Number(request.params.id)) {
+        return reply.code(404).send({ error: "Offer not found" });
+      }
+      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return reply.code(204).send();
+    },
+  );
 }

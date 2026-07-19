@@ -11,7 +11,7 @@ interface AdminUser {
 export async function adminFetch<T>(
   path: string,
   options: RequestInit = {},
-): Promise<{ data: T | null; status: number }> {
+): Promise<{ data: T | null; status: number; error?: string }> {
   try {
     const headers: Record<string, string> = {};
     if (options.body && !(options.body instanceof FormData)) {
@@ -31,8 +31,19 @@ export async function adminFetch<T>(
       return { data: null, status: 403 };
     }
 
+    // Surface the backend's own message (#262) — a generic "save failed" left
+    // editors guessing which field was rejected. `data` stays null on error, so
+    // callers that only check it keep working.
     if (!res.ok) {
-      return { data: null, status: res.status };
+      const body = await res.json().catch(() => null);
+      const error = body?.error || body?.message;
+      return { data: null, status: res.status, ...(error ? { error } : {}) };
+    }
+
+    // 204 No Content (e.g. a DELETE) has an empty body: res.json() would throw
+    // and wrongly surface as a network error. Return the success status as-is.
+    if (res.status === 204) {
+      return { data: null, status: 204 };
     }
 
     const data = await res.json();

@@ -1,4 +1,5 @@
-import { sendEmail } from "./email.js";
+import { sendEmail, escapeHtml } from "./email.js";
+import { emailButton, emailHeading } from "./email-template.js";
 import { EDIT_TOKEN_TTL_DAYS } from "./edit-token.js";
 
 const baseUrl = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
@@ -24,10 +25,10 @@ function frenchTemplate(name: string, what: string, url: string): Template {
     subject: "DevFest Toulouse — Lien de modification de votre fiche",
     text: `Bonjour ${name},\n\nVoici votre lien personnel pour modifier ${what} sur le site du DevFest Toulouse :\n${url}\n\nCe lien est personnel, ne le partagez pas. Il est valable ${EDIT_TOKEN_TTL_DAYS} jours, et les modifications sont clôturées 48h avant l'événement.\n\nL'équipe DevFest Toulouse`,
     html: `
-      <h3>Lien de modification de votre fiche</h3>
-      <p>Bonjour ${name},</p>
+      ${emailHeading("Lien de modification de votre fiche")}
+      <p>Bonjour ${escapeHtml(name)},</p>
       <p>Voici votre lien personnel pour modifier ${what} sur le site du DevFest Toulouse :</p>
-      <p><a href="${url}">Modifier ma fiche</a></p>
+      ${emailButton(url, "Modifier ma fiche")}
       <p>Ce lien est personnel, ne le partagez pas. Il est valable ${EDIT_TOKEN_TTL_DAYS} jours, et les modifications sont clôturées 48h avant l'événement.</p>
       <p><em>L'équipe DevFest Toulouse</em></p>
     `,
@@ -39,10 +40,10 @@ function englishTemplate(name: string, what: string, url: string): Template {
     subject: "DevFest Toulouse — Link to edit your profile",
     text: `Hello ${name},\n\nHere is your personal link to update ${what} on the DevFest Toulouse website:\n${url}\n\nThis link is personal, please do not share it. It is valid for ${EDIT_TOKEN_TTL_DAYS} days, and editing closes 48 hours before the event.\n\nThe DevFest Toulouse team`,
     html: `
-      <h3>Link to edit your profile</h3>
-      <p>Hello ${name},</p>
+      ${emailHeading("Link to edit your profile")}
+      <p>Hello ${escapeHtml(name)},</p>
       <p>Here is your personal link to update ${what} on the DevFest Toulouse website:</p>
-      <p><a href="${url}">Edit my profile</a></p>
+      ${emailButton(url, "Edit my profile")}
       <p>This link is personal, please do not share it. It is valid for ${EDIT_TOKEN_TTL_DAYS} days, and editing closes 48 hours before the event.</p>
       <p><em>The DevFest Toulouse team</em></p>
     `,
@@ -76,5 +77,11 @@ export async function sendEditLinkEmail(opts: {
     ? englishTemplate(opts.name, what, url)
     : frenchTemplate(opts.name, what, url);
 
-  await sendEmail({ to: [opts.to], subject: tpl.subject, text: tpl.text, html: tpl.html });
+  await sendEmail({
+    to: [opts.to],
+    subject: tpl.subject,
+    text: tpl.text,
+    html: tpl.html,
+    locale: lang,
+  });
 }

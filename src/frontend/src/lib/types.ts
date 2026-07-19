@@ -24,6 +24,9 @@ export interface Edition {
   isScheduleReady: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
+  // At least one partner job offer is published and still within its
+  // post-event visibility window.
+  hasJobOffers: boolean;
 }
 
 export interface EditionSummary {
@@ -140,9 +143,17 @@ export interface Sponsor {
   socialLinks: Record<string, string>;
   contactEmail: string | null;
   locale: string;
-  editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
+  // Private fields (#249) — organizers only, never on public pages.
+  standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string | null;
+  comKitLogoPrintUrl?: string | null;
+  comKitCharterUrl?: string | null;
+  comKitNotes?: string | null;
+  platinumPromoIdea?: string | null;
+  platinumCoBuildIdea?: string | null;
 }
 
 // Public list item (lighter than the admin Sponsor).
@@ -162,6 +173,16 @@ export interface SponsorSpeakerRef {
   company: string | null;
 }
 
+// A job offer a sponsor wants relayed (#251). The description is bilingual
+// rich-text HTML (#273) — the page picks the field for the current locale.
+export interface JobOfferPublic {
+  id: number;
+  title: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  url: string;
+}
+
 export interface SponsorDetail {
   id: number;
   slug: string;
@@ -173,6 +194,16 @@ export interface SponsorDetail {
   descriptionEn: string | null;
   socialLinks: Record<string, string>;
   speakers: SponsorSpeakerRef[];
+  jobOffers: JobOfferPublic[];
+}
+
+// A sponsor with its job offers, for the recap page (#251).
+export interface SponsorWithOffers {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  jobOffers: JobOfferPublic[];
 }
 
 // Public speaker list item.
