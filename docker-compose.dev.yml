@@ -36,6 +36,8 @@ services:
       dockerfile: src/backend/Dockerfile
       args:
         - SEED_SCRIPT=prisma/seed-dev.ts
+        # Coolify sets SOURCE_COMMIT to the deployed commit; empty elsewhere.
+        - APP_COMMIT=${SOURCE_COMMIT:-}
     volumes:
       - uploads:/app/uploads
     environment:

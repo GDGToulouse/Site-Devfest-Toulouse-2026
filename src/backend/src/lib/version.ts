@@ -12,3 +12,10 @@ export const APP_VERSION = process.env.APP_VERSION || "1.4.0-beta";
 // for Docker network aliasing; here we surface it so the admin knows which
 // deployment is running. Defaults to "local" for dev.
 export const APP_ENVIRONMENT = process.env.ENV_NAME || "local";
+
+// Short SHA of the commit this image was built from, baked in at build time.
+// The version alone can't tell two beta deploys apart: it stays put across the
+// dozens of commits that land between two releases, so "is my merge live?" was
+// unanswerable. Empty when built outside CI/Coolify (local dev), and callers
+// treat it as optional rather than failing.
+export const APP_COMMIT = (process.env.APP_COMMIT || "").slice(0, 7);

@@ -207,6 +207,11 @@ problème, il sert au rollback (voir section dédiée).
 Lancer **Deploy** dans Coolify. Le build compile frontend + backend puis le
 backend joue les migrations Prisma et le seed idempotent au démarrage.
 
+> **Prérequis pour la traçabilité du build** (#290) : le compose passe
+> `APP_COMMIT=${SOURCE_COMMIT:-}` en argument de build au backend. `SOURCE_COMMIT`
+> est fourni par Coolify ; s'il est vide, `/api/health` ne renvoie simplement pas
+> de `commit` et l'on perd ce marqueur — sans casser le déploiement.
+
 ---
 
 ## 6. Vérifications obligatoires
@@ -235,8 +240,26 @@ la sidebar admin doit afficher le **nouveau** numéro. Sinon, `APP_VERSION` n'a 
 
 ```bash
 curl -s https://site.devfesttoulouse.fr/api/health
-# → {"status":"ok","version":"1.2.3","environment":"prod", ...}
+# → {"status":"ok","version":"1.2.3","environment":"prod","commit":"7d90b17", ...}
 ```
+
+**Vérifier le commit déployé** (cf. #290) : `commit` porte le SHA court du build,
+injecté par Coolify (`SOURCE_COMMIT`) au moment du build. C'est le seul marqueur
+fiable **entre deux releases** — sur la ligne `dev`, la version ne bouge pas d'un
+merge à l'autre, donc elle ne dit pas si le déploiement a réellement pris.
+
+```bash
+# Le commit déployé en beta correspond-il bien à la tête de `dev` ?
+curl -s https://beta.site.devfesttoulouse.fr/api/health | grep -o '"commit":"[^"]*"'
+git rev-parse --short origin/dev
+```
+
+Les deux doivent coïncider. Sinon, le déploiement n'a pas eu lieu (ou a échoué et
+l'ancien conteneur tourne toujours). Le badge de la sidebar admin affiche ce même
+SHA, cliquable vers le commit GitHub.
+
+> `commit` est **absent** de la réponse hors CI/Coolify (build local) : c'est
+> normal, il ne signale pas une anomalie.
 
 ### Smoke tests — parcours critiques
 

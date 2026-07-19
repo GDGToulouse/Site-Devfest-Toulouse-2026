@@ -24,4 +24,16 @@ describe("version module", () => {
     expect(APP_VERSION).toBe("2.3.4");
     expect(APP_ENVIRONMENT).toBe("beta");
   });
+
+  it("shortens the build commit to 7 characters", async () => {
+    vi.stubEnv("APP_COMMIT", "7d90b17e4c1a9f2b3d5e6a8c0f1234567890abcd");
+    const { APP_COMMIT } = await import("./version.js");
+    expect(APP_COMMIT).toBe("7d90b17");
+  });
+
+  it("leaves the commit empty when the build did not provide one", async () => {
+    vi.stubEnv("APP_COMMIT", "");
+    const { APP_COMMIT } = await import("./version.js");
+    expect(APP_COMMIT).toBe("");
+  });
 });

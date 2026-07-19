@@ -11,7 +11,7 @@ import { startScheduledTasks } from "./lib/scheduler.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
-import { APP_VERSION, APP_ENVIRONMENT } from "./lib/version.js";
+import { APP_VERSION, APP_ENVIRONMENT, APP_COMMIT } from "./lib/version.js";
 import editionRoutes from "./routes/editions.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
@@ -170,6 +170,9 @@ app.get("/api/health", {
           timestamp: { type: "string", format: "date-time" },
           version: { type: "string" },
           environment: { type: "string" },
+          // Short SHA of the deployed build. Absent outside CI/Coolify, hence
+          // not in `required` — the serializer would drop it silently anyway.
+          commit: { type: "string" },
         },
         required: ["status", "timestamp", "version", "environment"],
       },
@@ -181,6 +184,7 @@ app.get("/api/health", {
     timestamp: new Date().toISOString(),
     version: APP_VERSION,
     environment: APP_ENVIRONMENT,
+    ...(APP_COMMIT && { commit: APP_COMMIT }),
   };
 });
 
