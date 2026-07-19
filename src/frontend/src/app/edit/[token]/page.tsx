@@ -23,6 +23,8 @@ interface EditTalk {
   format: TalkFormat;
   level: TalkLevel | null;
   language: TalkLanguage;
+  // Organizers open editing talk by talk (#289); false means read-only.
+  isSpeakerEditable: boolean;
 }
 
 interface EditData {
@@ -30,7 +32,7 @@ interface EditData {
   locale?: Locale;
   name: string;
   fields: Record<string, unknown>;
-  // Speaker only, read-only (#229).
+  // Speaker only (#229, editable per talk since #289).
   talks?: EditTalk[];
   // Sponsor only, private section (#249).
   private?: SponsorPrivate;
@@ -65,7 +67,9 @@ const T = {
     logo: "Logo",
     mySessions: "Mes sessions",
     mySessionsHint:
-      "Modifiez le contenu de vos conférences retenues. Les changements sont publiés aussitôt sur le programme.",
+      "Vos conférences retenues. Lorsque la modification est ouverte, les changements sont publiés aussitôt sur le programme.",
+    talkReadOnly:
+      "Cette conférence n'est pas modifiable. Contactez l'organisation pour toute correction.",
     talkTitle: "Titre",
     talkDescription: "Résumé",
     talkFormat: "Format",
@@ -150,7 +154,9 @@ const T = {
     logo: "Logo",
     mySessions: "My sessions",
     mySessionsHint:
-      "Edit the content of your accepted talks. Changes are published to the programme right away.",
+      "Your accepted talks. When editing is open, changes are published to the programme right away.",
+    talkReadOnly:
+      "This talk cannot be edited. Please contact the organizers for any correction.",
     talkTitle: "Title",
     talkDescription: "Abstract",
     talkFormat: "Format",
@@ -605,13 +611,40 @@ function ImageField({
   );
 }
 
-const TALK_FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
-const TALK_LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
-const TALK_LANGUAGES = ["fr", "en"] as const;
+// A pair of read-only bilingual values, shown when editing is closed (#289) —
+// the speaker still needs to see what was submitted for each language.
+function ReadOnlyBilingual({
+  label,
+  fr,
+  en,
+  t,
+}: {
+  label: string;
+  fr: string;
+  en: string;
+  t: (typeof T)[Locale];
+}) {
+  return (
+    <div>
+      <span className="mb-1 block text-sm font-medium text-noir">{label}</span>
+      <div className="space-y-2">
+        {([["fr", fr], ["en", en]] as const).map(([lang, text]) => (
+          <p key={lang} className="whitespace-pre-line text-sm text-noir">
+            <span className="mr-2 text-xs font-bold uppercase text-gris">
+              {lang === "fr" ? t.langFr : t.langEn}
+            </span>
+            {text || "—"}
+          </p>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-// One editable session (#260). Self-contained: holds its own draft state and
-// saves itself, since the API updates one talk at a time and publishes it
-// immediately. Titles/abstract are bilingual; format/level/language are selects.
+// One session (#260). Read-only unless the organizers opened this talk to
+// editing (#289) — format, level and language are never editable here, they
+// drive the schedule. Self-contained: holds its own draft state and saves
+// itself, since the API updates one talk at a time and publishes it immediately.
 function TalkEditor({
   talk,
   token,
@@ -625,9 +658,6 @@ function TalkEditor({
   const [titleEn, setTitleEn] = useState(talk.titleEn);
   const [descriptionFr, setDescriptionFr] = useState(talk.descriptionFr);
   const [descriptionEn, setDescriptionEn] = useState(talk.descriptionEn);
-  const [format, setFormat] = useState<TalkFormat>(talk.format);
-  const [level, setLevel] = useState<TalkLevel>(talk.level ?? "");
-  const [language, setLanguage] = useState<TalkLanguage>(talk.language);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -639,7 +669,7 @@ function TalkEditor({
     const res = await fetch(`/api/edit/${token}/talks/${talk.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titleFr, titleEn, descriptionFr, descriptionEn, format, level, language }),
+      body: JSON.stringify({ titleFr, titleEn, descriptionFr, descriptionEn }),
     });
     setSaving(false);
     if (res.ok) {
@@ -649,91 +679,81 @@ function TalkEditor({
     setError(t.talkRejected);
   }
 
+  // Programming metadata: shown as badges, never editable from the link (#289).
+  const badges = [
+    t.format[talk.format],
+    talk.level ? t.level[talk.level] : t.levelAll,
+    t.language[talk.language],
+  ];
+
   return (
     <div className="rounded-lg border border-gris/15 bg-blanc-casse p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
-          {t.format[format]}
-        </span>
+        {badges.map((badge) => (
+          <span key={badge} className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
+            {badge}
+          </span>
+        ))}
       </div>
 
       <div className="space-y-5">
-        <BilingualTabs
-          label={t.talkTitle}
-          labels={{ fr: t.langFr, en: t.langEn }}
-          isEmpty={(lang) => !(lang === "fr" ? titleFr : titleEn)?.trim()}
-          renderPanel={(lang) => (
-            <input
-              value={lang === "fr" ? titleFr : titleEn}
-              onChange={(e) => (lang === "fr" ? setTitleFr : setTitleEn)(e.target.value)}
-              className={inputClass}
+        {!talk.isSpeakerEditable ? (
+          <>
+            <ReadOnlyBilingual label={t.talkTitle} fr={talk.titleFr} en={talk.titleEn} t={t} />
+            <ReadOnlyBilingual
+              label={t.talkDescription}
+              fr={talk.descriptionFr}
+              en={talk.descriptionEn}
+              t={t}
             />
-          )}
-        />
-
-        <BilingualTabs
-          label={t.talkDescription}
-          labels={{ fr: t.langFr, en: t.langEn }}
-          isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn)?.trim()}
-          renderPanel={(lang) => (
-            <textarea
-              value={lang === "fr" ? descriptionFr : descriptionEn}
-              onChange={(e) => (lang === "fr" ? setDescriptionFr : setDescriptionEn)(e.target.value)}
-              rows={5}
-              className={inputClass}
+            <p className="text-sm text-gris">{t.talkReadOnly}</p>
+          </>
+        ) : (
+          <>
+            <BilingualTabs
+              label={t.talkTitle}
+              labels={{ fr: t.langFr, en: t.langEn }}
+              isEmpty={(lang) => !(lang === "fr" ? titleFr : titleEn)?.trim()}
+              renderPanel={(lang) => (
+                <input
+                  value={lang === "fr" ? titleFr : titleEn}
+                  onChange={(e) => (lang === "fr" ? setTitleFr : setTitleEn)(e.target.value)}
+                  className={inputClass}
+                />
+              )}
             />
-          )}
-        />
 
-        <div className="grid gap-5 md:grid-cols-3">
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-noir">{t.talkFormat}</span>
-            <select value={format} onChange={(e) => setFormat(e.target.value as TalkFormat)} className={inputClass}>
-              {TALK_FORMATS.map((f) => (
-                <option key={f} value={f}>
-                  {t.format[f]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-noir">{t.talkLevel}</span>
-            <select value={level} onChange={(e) => setLevel(e.target.value as TalkLevel)} className={inputClass}>
-              <option value="">{t.levelAll}</option>
-              {TALK_LEVELS.map((l) => (
-                <option key={l} value={l}>
-                  {t.level[l]}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-medium text-noir">{t.talkLanguage}</span>
-            <select value={language} onChange={(e) => setLanguage(e.target.value as TalkLanguage)} className={inputClass}>
-              {TALK_LANGUAGES.map((l) => (
-                <option key={l} value={l}>
-                  {t.language[l]}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
+            <BilingualTabs
+              label={t.talkDescription}
+              labels={{ fr: t.langFr, en: t.langEn }}
+              isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn)?.trim()}
+              renderPanel={(lang) => (
+                <textarea
+                  value={lang === "fr" ? descriptionFr : descriptionEn}
+                  onChange={(e) => (lang === "fr" ? setDescriptionFr : setDescriptionEn)(e.target.value)}
+                  rows={5}
+                  className={inputClass}
+                />
+              )}
+            />
 
-        <div className="flex flex-wrap items-center gap-4">
-          <button
-            onClick={save}
-            disabled={saving}
-            className="rounded-[12px] bg-malachite px-5 py-2.5 text-sm font-bold text-blanc hover:bg-malachite/90 disabled:opacity-50"
-          >
-            {saving ? t.saving : t.save}
-          </button>
-          {saved && <span className="text-sm font-medium text-malachite">{t.talkSaved}</span>}
-          {error && (
-            <span role="alert" className="text-sm font-medium text-terre-cuite">
-              {error}
-            </span>
-          )}
-        </div>
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={save}
+                disabled={saving}
+                className="rounded-[12px] bg-malachite px-5 py-2.5 text-sm font-bold text-blanc hover:bg-malachite/90 disabled:opacity-50"
+              >
+                {saving ? t.saving : t.save}
+              </button>
+              {saved && <span className="text-sm font-medium text-malachite">{t.talkSaved}</span>}
+              {error && (
+                <span role="alert" className="text-sm font-medium text-terre-cuite">
+                  {error}
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

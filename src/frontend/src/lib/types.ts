@@ -294,6 +294,8 @@ export interface Talk {
   speakerIds: number[];
   speakers: { id: number; name: string }[];
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // Whether the speaker may edit the wording from their magic link (#289).
+  isSpeakerEditable: boolean;
   editionId: number;
 }
 

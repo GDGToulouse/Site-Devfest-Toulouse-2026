@@ -11,8 +11,9 @@ describe("version module", () => {
     vi.stubEnv("ENV_NAME", "");
     const { APP_VERSION, APP_ENVIRONMENT } = await import("./version.js");
     // The fallback tracks the release bump in version.ts, so assert the shape
-    // (a semver) rather than a literal that goes stale every release.
-    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+$/);
+    // (a semver) rather than a literal that goes stale every release. The dev
+    // line carries a `-beta` pre-release suffix, dropped when promoting to main.
+    expect(APP_VERSION).toMatch(/^\d+\.\d+\.\d+(-beta)?$/);
     expect(APP_ENVIRONMENT).toBe("local");
   });
 

@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateConferences } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 
-const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE"] as const;
+const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
 type TalkFormat = (typeof FORMATS)[number];
 const LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
 type TalkLevel = (typeof LEVELS)[number];
@@ -21,6 +21,7 @@ interface TalkCreateBody {
   speakerIds?: number[];
   room?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
+  isSpeakerEditable?: boolean;
 }
 
 type TalkUpdateBody = Partial<Omit<TalkCreateBody, "editionId">>;
@@ -120,6 +121,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         room: body.room || null,
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        isSpeakerEditable: body.isSpeakerEditable === true,
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
@@ -158,6 +160,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.room !== undefined && { room: body.room || null }),
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+        ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),
