@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { sendEmail, interpolate, interpolateHtml } from "../lib/email.js";
+import { sendEmail, interpolate, interpolateHtml, escapeHtml } from "../lib/email.js";
+import { emailHeading } from "../lib/email-template.js";
 import { makeToken } from "../lib/brochure-token.js";
 import { sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
@@ -155,16 +156,18 @@ export default async function contactRoutes(app: FastifyInstance) {
         .filter(Boolean)
         .join("\n");
 
+      // Everything below comes from a public form: escape it all before it
+      // reaches an inbox as HTML.
       const html = `
-        <h3>Nouveau message de contact</h3>
-        <p><strong>De:</strong> ${firstName.trim()} ${lastName.trim()}</p>
-        <p><strong>Email:</strong> <a href="mailto:${email.trim()}">${email.trim()}</a></p>
-        ${phone ? `<p><strong>Téléphone:</strong> ${phone.trim()}</p>` : ""}
-        ${company?.trim() ? `<p><strong>Entreprise:</strong> ${company.trim()}</p>` : ""}
-        ${jobTitle?.trim() ? `<p><strong>Poste:</strong> ${jobTitle.trim()}</p>` : ""}
-        ${categoryLabel ? `<p><strong>Catégorie:</strong> ${categoryLabel}</p>` : ""}
-        <hr>
-        <p>${message.trim().replace(/\n/g, "<br>")}</p>
+        ${emailHeading("Nouveau message de contact")}
+        <p><strong>De:</strong> ${escapeHtml(`${firstName.trim()} ${lastName.trim()}`)}</p>
+        <p><strong>Email:</strong> <a href="mailto:${encodeURIComponent(email.trim())}">${escapeHtml(email.trim())}</a></p>
+        ${phone ? `<p><strong>Téléphone:</strong> ${escapeHtml(phone.trim())}</p>` : ""}
+        ${company?.trim() ? `<p><strong>Entreprise:</strong> ${escapeHtml(company.trim())}</p>` : ""}
+        ${jobTitle?.trim() ? `<p><strong>Poste:</strong> ${escapeHtml(jobTitle.trim())}</p>` : ""}
+        ${categoryLabel ? `<p><strong>Catégorie:</strong> ${escapeHtml(categoryLabel)}</p>` : ""}
+        <hr style="border:0;border-top:1px solid #E8E0DC;margin:20px 0;">
+        <p>${escapeHtml(message.trim()).replace(/\n/g, "<br>")}</p>
       `;
 
       // Reply-To = the visitor, so the organizers can answer the message
@@ -212,12 +215,15 @@ export default async function contactRoutes(app: FastifyInstance) {
           // with the tracked brochure link. Brochure requests only.
           const cc = requiresCompanyInfo && recipients.length > 0 ? recipients : undefined;
 
+          // The body stays exactly as authored in the admin; the layout only
+          // wraps it, in the requester's language.
           await sendEmail({
             to: [email.trim()],
             subject: renderedSubject,
             text: renderedTextBody,
             html: renderedHtmlBody,
             cc,
+            locale: lang,
           });
         } catch (err) {
           app.log.error("Failed to send confirmation email: %s", String(err));

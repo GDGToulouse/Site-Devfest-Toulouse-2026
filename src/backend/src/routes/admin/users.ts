@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { sendEmail } from "../../lib/email.js";
+import { sendEmail, escapeHtml } from "../../lib/email.js";
+import { emailButton, emailHeading } from "../../lib/email-template.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -75,17 +76,18 @@ export default async function adminUserRoutes(app: FastifyInstance) {
     // Send invitation email with password reset link
     try {
       const resetUrl = `${BASE_URL}/admin`;
+      const roleLabel = role === "ADMIN" ? "Administrateur" : "Éditeur";
       await sendEmail({
         to: [email],
-        subject: "Invitation DevFest Toulouse — Acces admin",
-        text: `Bonjour ${name},\n\nVous avez ete invite a acceder au back-office du DevFest Toulouse.\n\nVotre role : ${role}\n\nConnectez-vous sur : ${resetUrl}\nUtilisez "Mot de passe oublie" pour definir votre mot de passe.\n\nA bientot !`,
+        subject: "Invitation DevFest Toulouse — Accès admin",
+        text: `Bonjour ${name},\n\nVous avez été invité·e à accéder au back-office du DevFest Toulouse.\n\nVotre rôle : ${roleLabel}\n\nConnectez-vous sur : ${resetUrl}\nUtilisez « Mot de passe oublié » pour définir votre mot de passe.\n\nÀ bientôt !`,
         html: `
-        <h3>Invitation DevFest Toulouse</h3>
-        <p>Bonjour ${name},</p>
-        <p>Vous avez ete invite a acceder au back-office du DevFest Toulouse.</p>
-        <p><strong>Role :</strong> ${role === "ADMIN" ? "Administrateur" : "Editeur"}</p>
-        <p>Connectez-vous sur : <a href="${resetUrl}">${resetUrl}</a></p>
-        <p>Utilisez <strong>"Mot de passe oublie"</strong> pour definir votre mot de passe.</p>
+        ${emailHeading("Invitation DevFest Toulouse")}
+        <p>Bonjour ${escapeHtml(name)},</p>
+        <p>Vous avez été invité·e à accéder au back-office du DevFest Toulouse.</p>
+        <p><strong>Rôle :</strong> ${roleLabel}</p>
+        ${emailButton(resetUrl, "Accéder au back-office")}
+        <p>Utilisez <strong>« Mot de passe oublié »</strong> pour définir votre mot de passe.</p>
         `,
       });
     } catch {

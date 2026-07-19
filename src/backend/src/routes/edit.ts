@@ -10,7 +10,8 @@ import {
   revalidateSponsors,
 } from "../lib/revalidate.js";
 import { storeImageBuffer } from "../lib/image-store.js";
-import { sendEmail } from "../lib/email.js";
+import { sendEmail, escapeHtml } from "../lib/email.js";
+import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
 import { offerQuotaForLevel } from "../lib/job-offers.js";
@@ -307,8 +308,7 @@ async function resolveToken(token: string) {
       editLinkLocked: contact.editLinkLocked,
       editTokenSentAt: contact.editTokenSentAt,
       contactId: contact.id,
-      // The link recipient's own address wins over the sponsor's default for
-      // the com-kit Reply-To.
+      // The link recipient's own address wins over the sponsor's default.
       contactEmail: contact.email || contact.sponsor.contactEmail,
     };
     return { kind: "sponsor" as const, entity };
@@ -385,23 +385,14 @@ async function notifyTalkEdited(
     `Fiche admin : ${adminUrl}`,
   ].join("\n");
   const html = `
-    <h3>Conférence modifiée par un·e speaker</h3>
+    ${emailHeading("Conférence modifiée par un·e speaker")}
     <p><strong>${escapeHtml(speakerName)}</strong> a mis à jour sa conférence
     « ${escapeHtml(talk.titleFr)} ».</p>
     <p>Les modifications sont déjà en ligne (publication directe).</p>
-    <p><a href="${adminUrl}">Voir la fiche dans l'admin</a></p>
+    ${emailButton(adminUrl, "Voir la fiche dans l'admin")}
   `;
 
   await sendEmail({ to: [to], subject, text, html });
-}
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
 
 export default async function editRoutes(app: FastifyInstance) {
