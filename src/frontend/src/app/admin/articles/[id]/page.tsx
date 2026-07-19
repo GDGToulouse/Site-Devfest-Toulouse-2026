@@ -152,7 +152,7 @@ export default function ArticleEditorPage() {
     setIsTranslating(true);
     setTranslateError(null);
 
-    const { status, data } = await adminFetch<{ error?: string; message?: string }>(
+    const { status, error: translateApiError } = await adminFetch<{ error?: string; message?: string }>(
       `/articles/${articleId}/translate-fields`,
       { method: "POST", body: JSON.stringify({ from }) },
     );
@@ -172,7 +172,7 @@ export default function ArticleEditorPage() {
       return;
     }
     if (status >= 400) {
-      setTranslateError(data?.message || "La traduction a échoué.");
+      setTranslateError(translateApiError || "La traduction a échoué.");
       return;
     }
 
@@ -204,7 +204,7 @@ export default function ArticleEditorPage() {
       autoTranslatedEn: form.autoTranslatedEn,
     };
 
-    const { data, status } = isNew
+    const { data, status, error: apiError } = isNew
       ? await adminFetch<{ id: number }>("/articles", {
           method: "POST",
           body: JSON.stringify(payload),
@@ -222,7 +222,8 @@ export default function ArticleEditorPage() {
     }
 
     if (!data) {
-      setError("Erreur lors de la sauvegarde");
+      // Prefer the backend's message: it names the offending field (#262).
+      setError(apiError || "Erreur lors de la sauvegarde");
       return;
     }
 
@@ -354,7 +355,9 @@ export default function ArticleEditorPage() {
             aria-labelledby="tab-en"
             className={activeLang === "en" ? "space-y-4" : "hidden"}
           >
-            <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} required />
+            {/* Not required (#262): an article can be created FR-only and
+                translated afterwards, by hand or via the AI translation. */}
+            <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} />
             <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
             <RichTextEditor label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} minHeight="320px" />
             {form.autoTranslatedEn && (
