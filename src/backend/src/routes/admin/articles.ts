@@ -22,7 +22,8 @@ function parsePublishedAt(value: string | undefined): Date | null {
 interface ArticleBody {
   slug: string;
   titleFr: string;
-  titleEn: string;
+  // Optional at creation (#262) — filled in later by hand or by AI translation.
+  titleEn?: string;
   contentFr: string;
   contentEn: string;
   excerptFr?: string;
@@ -125,8 +126,18 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
   app.post<{ Body: ArticleBody }>("/articles", async (request, reply) => {
     const body = request.body;
 
-    if (!body.slug?.trim() || !body.titleFr?.trim() || !body.titleEn?.trim()) {
-      return reply.status(400).send({ error: "slug, titleFr, titleEn are required" });
+    // titleEn is optional at creation (#262): the AI translation only runs on an
+    // already-saved article, so requiring it up front made a FR-only draft
+    // impossible to create. The sitemap already gates /en on a non-empty titleEn.
+    const missing = [
+      !body.slug?.trim() && "slug",
+      !body.titleFr?.trim() && "titleFr",
+    ].filter(Boolean) as string[];
+    if (missing.length) {
+      return reply.status(400).send({
+        error: `Champs obligatoires manquants : ${missing.join(", ")}`,
+        fields: missing,
+      });
     }
 
     const existing = await prisma.article.findUnique({ where: { slug: body.slug.trim() } });
@@ -141,7 +152,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       data: {
         slug: body.slug.trim(),
         titleFr: body.titleFr.trim(),
-        titleEn: body.titleEn.trim(),
+        titleEn: body.titleEn?.trim() || "",
         contentFr: sanitizeRichHtml(body.contentFr),
         contentEn: sanitizeRichHtml(body.contentEn),
         excerptFr: body.excerptFr?.trim() || null,

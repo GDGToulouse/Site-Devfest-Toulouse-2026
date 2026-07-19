@@ -148,6 +148,44 @@ describe("Admin Articles API", () => {
     await app.close();
   });
 
+  // #262: titleEn is optional at creation — the AI translation only runs on an
+  // already-saved article, so requiring it made a FR-only draft impossible.
+  it("POST /api/admin/articles creates an article without titleEn", async () => {
+    const app = await buildAdminApp();
+    const slug = `fr-only-${Date.now()}`;
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: { slug, titleFr: "Titre FR", contentFr: "<p>Contenu</p>" },
+    });
+    expect(res.statusCode).toBe(201);
+
+    const { id } = res.json();
+    const created = await app.inject({ method: "GET", url: `/api/admin/articles/${id}` });
+    expect(created.json().titleFr).toBe("Titre FR");
+    expect(created.json().titleEn).toBe("");
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
+    await app.close();
+  });
+
+  it("POST /api/admin/articles names the missing required fields", async () => {
+    const app = await buildAdminApp();
+
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: { titleFr: "", contentFr: "" },
+    });
+    expect(res.statusCode).toBe(400);
+    // The message must be actionable, not a generic failure (#262).
+    expect(res.json().fields).toEqual(["slug", "titleFr"]);
+    expect(res.json().error).toContain("slug");
+    expect(res.json().error).toContain("titleFr");
+    await app.close();
+  });
+
   it("GET /api/admin/tags should return tags", async () => {
     const app = await buildAdminApp();
     const res = await app.inject({ method: "GET", url: "/api/admin/tags" });

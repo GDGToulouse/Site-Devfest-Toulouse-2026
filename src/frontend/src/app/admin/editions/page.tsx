@@ -68,9 +68,9 @@ export default function EditionsPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    const { status, data } = await adminFetch<{ error?: string }>(`/editions/${deleteTarget.id}`, { method: "DELETE" });
+    const { status, error: apiError } = await adminFetch(`/editions/${deleteTarget.id}`, { method: "DELETE" });
     if (status === 409) {
-      setError(data?.error || "Impossible de supprimer cette édition");
+      setError(apiError || "Impossible de supprimer cette édition");
     }
     setDeleteTarget(null);
     loadEditions();
