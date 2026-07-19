@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateArticle } from "../../lib/revalidate.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
+import { missingArticleFields } from "../../lib/article-validation.js";
 import {
   isConfigured as translationConfigured,
   QuotaExhaustedError,
@@ -126,16 +127,17 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
   app.post<{ Body: ArticleBody }>("/articles", async (request, reply) => {
     const body = request.body;
 
-    // titleEn is optional at creation (#262): the AI translation only runs on an
+    // Drafts stay permissive, publishing is strict (#263). titleEn in particular
+    // is optional until publication: the AI translation only runs on an
     // already-saved article, so requiring it up front made a FR-only draft
-    // impossible to create. The sitemap already gates /en on a non-empty titleEn.
-    const missing = [
-      !body.slug?.trim() && "slug",
-      !body.titleFr?.trim() && "titleFr",
-    ].filter(Boolean) as string[];
+    // impossible to create (#262).
+    const targetStatus = body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT";
+    const missing = missingArticleFields(body, targetStatus);
     if (missing.length) {
       return reply.status(400).send({
-        error: `Champs obligatoires manquants : ${missing.join(", ")}`,
+        error: targetStatus === "PUBLISHED"
+          ? `Publication impossible, champs manquants : ${missing.join(", ")}`
+          : `Champs obligatoires manquants : ${missing.join(", ")}`,
         fields: missing,
       });
     }
@@ -191,6 +193,31 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
 
     const newContentFr = body.contentFr !== undefined ? sanitizeRichHtml(body.contentFr) : existing.contentFr;
     const newContentEn = body.contentEn !== undefined ? sanitizeRichHtml(body.contentEn) : existing.contentEn;
+
+    // Validate what the article will look like once merged, not just the body:
+    // a partial update flipping the status to PUBLISHED must still be complete
+    // (#263). Publishing is the gate, saving a draft never fails on completeness.
+    const targetStatus = body.publicationStatus === "PUBLISHED"
+      ? "PUBLISHED"
+      : body.publicationStatus === "DRAFT"
+        ? "DRAFT"
+        : existing.publicationStatus;
+    const merged = {
+      slug: body.slug?.trim() || existing.slug,
+      titleFr: body.titleFr?.trim() || existing.titleFr,
+      titleEn: body.titleEn?.trim() || existing.titleEn,
+      contentFr: newContentFr,
+      contentEn: newContentEn,
+    };
+    const missing = missingArticleFields(merged, targetStatus);
+    if (missing.length) {
+      return reply.status(400).send({
+        error: targetStatus === "PUBLISHED"
+          ? `Publication impossible, champs manquants : ${missing.join(", ")}`
+          : `Champs obligatoires manquants : ${missing.join(", ")}`,
+        fields: missing,
+      });
+    }
 
     // If the editor sent an explicit flag, honour it. Otherwise auto-clear
     // the auto-translated flag whenever the corresponding content actually
