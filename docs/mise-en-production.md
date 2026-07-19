@@ -105,6 +105,27 @@ Mettre à jour, dans la même PR :
 > Le tag git (`v1.2.3`) et la release GitHub, eux, se posent **après** le
 > déploiement vérifié (étape 6) — pas maintenant.
 
+### La ligne `dev` porte la version à venir, suffixée `-beta`
+
+Sans ça, la bêta et la prod afficheraient le **même** numéro tout en contenant
+un code différent — et rien ne le signalerait dans l'admin.
+
+Convention :
+
+| Branche | Version | Exemple |
+|---------|---------|---------|
+| `main` (prod) | version publiée | `1.3.0` |
+| `dev` / `dev-{initiale}` (bêta) | **version à venir** + `-beta` | `1.4.0-beta` |
+
+- Le suffixe dit « numéro pressenti, pas encore figé » : il reste ajustable tant
+  que la promotion n'a pas eu lieu (si le périmètre change, `1.4.0-beta` peut
+  devenir `2.0.0-beta`). C'est un pre-release SemVer valide : `1.4.0-beta` < `1.4.0`.
+- **La PR de promotion `dev → main` retire simplement le suffixe** (`1.4.0-beta`
+  → `1.4.0`) dans les 3 fichiers ci-dessus — c'est ça, le « bump » de l'étape 1.
+- **Juste après le tag**, repasser la ligne `dev` sur la version suivante en
+  `-beta` (`1.4.1-beta` ou `1.5.0-beta`), sinon la bêta réaffiche le numéro de
+  la prod. Voir l'étape 7.
+
 ---
 
 ## 2. Promouvoir le code sur `main`
@@ -269,6 +290,26 @@ Reporter la release dans [`CHANGELOG.md`](../CHANGELOG.md) (format
 hors GitHub, versionné avec le code. En pratique, l'ajouter dans la **PR de
 promotion** (étape 1) : une section `## [1.2.3] - AAAA-MM-JJ` listant les
 changements (Ajouté / Corrigé / Modifié). La release GitHub peut réutiliser ce texte.
+
+### Redescendre la version sur la ligne `dev` (à ne pas oublier)
+
+Le bump de l'étape 1 n'existe que sur `main`. Sans cette étape, `dev` et
+`dev-{initiale}` restent sur l'ancien numéro : la bêta finit par annoncer une
+version **plus ancienne que la prod**, ce qui rend le badge de l'admin trompeur.
+
+Après le tag, ouvrir une PR `main → dev` (puis `dev → dev-{initiale}`) qui :
+
+1. reporte `CHANGELOG.md` (la section de la release qui vient d'être publiée) ;
+2. repositionne les 3 fichiers de version sur la **prochaine** version en
+   pre-release — `1.4.0` publiée → `1.4.1-beta` (ou `1.5.0-beta` selon ce qui
+   s'annonce).
+
+```bash
+# Contrôle : les 3 lignes doivent concorder
+git show origin/main:src/backend/src/lib/version.ts | grep APP_VERSION  # 1.4.0
+git show origin/dev:src/backend/src/lib/version.ts  | grep APP_VERSION  # 1.4.1-beta
+curl -s https://beta.site.devfesttoulouse.fr/api/health                 # 1.4.1-beta
+```
 
 > ℹ️ La skill **`deploy-to-prod`** (`.claude/skills/deploy-to-prod`) automatise
 > le choix du bump, le rappel de tous ces garde-fous et la génération de ces
