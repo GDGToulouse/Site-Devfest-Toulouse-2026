@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
+import { areOffersVisible } from "../lib/job-offers.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -192,8 +193,13 @@ export default async function editionRoutes(app: FastifyInstance) {
     // scheduledTalkCount additionally tells whether the schedule (planning) is
     // ready: at least one published talk has been given a time slot (startsAt),
     // which promotes the flat "Conférences" link to a "Programme" menu (#203).
-    const [publishedTalkCount, scheduledTalkCount, publishedSpeakerCount, publishedSponsorCount] =
-      await Promise.all([
+    const [
+      publishedTalkCount,
+      scheduledTalkCount,
+      publishedSpeakerCount,
+      publishedSponsorCount,
+      jobOfferCount,
+    ] = await Promise.all([
         prisma.talk.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
         }),
@@ -205,6 +211,10 @@ export default async function editionRoutes(app: FastifyInstance) {
         }),
         prisma.sponsor.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+        }),
+        // Offers of published sponsors only — same set the recap page lists.
+        prisma.sponsorJobOffer.count({
+          where: { sponsor: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
         }),
       ]);
 
@@ -232,6 +242,9 @@ export default async function editionRoutes(app: FastifyInstance) {
       isScheduleReady: scheduledTalkCount > 0,
       hasSpeakers: publishedSpeakerCount > 0,
       hasSponsors: publishedSponsorCount > 0,
+      // Drives the "Offres d'emploi" sub-entry: shown only while at least one
+      // offer is published AND the post-event visibility window is still open.
+      hasJobOffers: jobOfferCount > 0 && areOffersVisible(edition),
     };
   });
 
