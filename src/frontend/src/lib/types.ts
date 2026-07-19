@@ -24,6 +24,9 @@ export interface Edition {
   isScheduleReady: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
+  // At least one partner job offer is published and still within its
+  // post-event visibility window.
+  hasJobOffers: boolean;
 }
 
 export interface EditionSummary {
