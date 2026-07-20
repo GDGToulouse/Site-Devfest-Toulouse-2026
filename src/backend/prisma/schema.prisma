@@ -29,12 +29,11 @@ enum PublicationStatus {
 
 // Drives what /devenir-sponsor displays for the featured edition.
 enum SponsorPageStatus {
-  PRE_ANNOUNCEMENT  // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
-  TEMPORARY         // Plans visible (if any) but contact still goes through the temporary external form
-  OPEN              // Full mode: plans + brochure download + integrated contact form
-  SOLD_OUT          // All slots taken: short message + link to /contact
+  PRE_ANNOUNCEMENT // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
+  TEMPORARY // Plans visible (if any) but contact still goes through the temporary external form
+  OPEN // Full mode: plans + brochure download + integrated contact form
+  SOLD_OUT // All slots taken: short message + link to /contact
 }
-
 
 enum UserRole {
   ADMIN
@@ -57,9 +56,9 @@ enum SponsorLevel {
 // Talk formats (RG-211).
 enum TalkFormat {
   CONFERENCE // 40 min
-  QUICKIE    // 15 min
+  QUICKIE // 15 min
   KEYNOTE
-  WORKSHOP   // hands-on session / atelier
+  WORKSHOP // hands-on session / atelier
 }
 
 // Talk difficulty levels (RG-212). Absence means "Tous niveaux".
@@ -72,42 +71,46 @@ enum TalkLevel {
 // --- Edition ---
 
 model Edition {
-  id                  Int             @id @default(autoincrement())
-  year                Int             @unique
-  startDate           DateTime?
-  endDate             DateTime?
-  status              EditionStatus   @default(PREPARATION)
-  venueName           String?
-  venueAddress        String?
-  heroImageUrl        String?
-  sponsorFormUrl      String?
-  aftermovieUrl       String?
-  galleryUrl          String?
-  archivedSiteUrl     String?
+  id                      Int               @id @default(autoincrement())
+  year                    Int               @unique
+  startDate               DateTime?
+  endDate                 DateTime?
+  status                  EditionStatus     @default(PREPARATION)
+  venueName               String?
+  venueAddress            String?
+  heroImageUrl            String?
+  sponsorFormUrl          String?
+  aftermovieUrl           String?
+  galleryUrl              String?
+  archivedSiteUrl         String?
   // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
-  sponsorBrochureUrl       String?
+  sponsorBrochureUrl      String?
   // Optional hero image specific to the /devenir-sponsor page. When null,
   // the page falls back to heroImageUrl.
-  sponsorHeroImageUrl      String?
+  sponsorHeroImageUrl     String?
   // Controls the /devenir-sponsor page rendering (see SponsorPageStatus)
-  sponsorPageStatus        SponsorPageStatus @default(PRE_ANNOUNCEMENT)
+  sponsorPageStatus       SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
-  sponsorTemporaryFormUrl  String?
+  sponsorTemporaryFormUrl String?
   // Which SponsorLevel values are offered when creating a sponsor for this
   // edition (US-245, RG-230). JSON array of SponsorLevel names; null/empty
   // means all levels are allowed.
-  openSponsorLevels        String?
-  createdAt           DateTime        @default(now())
-  updatedAt           DateTime        @updatedAt
+  openSponsorLevels       String?
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt               DateTime?
 
-  ticketTiers         TicketTier[]
-  articles            Article[]
-  keyFigures          KeyFigure[]
-  sponsorPlans        SponsorPlan[]
-  speakers            Speaker[]
-  talks               Talk[]
-  sponsors            Sponsor[]
-  categories          Category[]
+  ticketTiers  TicketTier[]
+  articles     Article[]
+  keyFigures   KeyFigure[]
+  sponsorPlans SponsorPlan[]
+  speakers     Speaker[]
+  talks        Talk[]
+  sponsors     Sponsor[]
+  categories   Category[]
+
+  @@index([deletedAt])
 }
 
 // --- Key Figures ---
@@ -126,61 +129,73 @@ model KeyFigure {
 // --- Blog / Articles ---
 
 model Article {
-  id               Int               @id @default(autoincrement())
-  slug             String            @unique
-  titleFr          String
-  titleEn          String
-  contentFr        String
-  contentEn        String
-  excerptFr        String?
-  excerptEn        String?
-  imageUrl         String?
-  author           String?
+  id                Int               @id @default(autoincrement())
+  slug              String            @unique
+  titleFr           String
+  titleEn           String
+  contentFr         String
+  contentEn         String
+  excerptFr         String?
+  excerptEn         String?
+  imageUrl          String?
+  author            String?
   publicationStatus PublicationStatus @default(DRAFT)
-  publishedAt      DateTime?
+  publishedAt       DateTime?
   // AI-translation tracking (see docs/traduction-ia.md). The flag stays true
   // until an editor actively reviews/edits the field and unchecks it from
   // the back-office. translatedAt* records the last fill timestamp.
-  autoTranslatedFr Boolean           @default(false)
-  autoTranslatedEn Boolean           @default(false)
-  translatedAtFr   DateTime?
-  translatedAtEn   DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  autoTranslatedFr  Boolean           @default(false)
+  autoTranslatedEn  Boolean           @default(false)
+  translatedAtFr    DateTime?
+  translatedAtEn    DateTime?
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt         DateTime?
 
-  tags             Tag[]
-  editions         Edition[]
+  tags     Tag[]
+  editions Edition[]
+
+  @@index([deletedAt])
 }
 
 model Tag {
-  id               Int       @id @default(autoincrement())
-  name             String    @unique
-  slug             String    @unique
-  articles         Article[]
+  id        Int       @id @default(autoincrement())
+  name      String    @unique
+  slug      String    @unique
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
+  articles  Article[]
+
+  @@index([deletedAt])
 }
 
 // --- Sponsor Plans ---
 
 model SponsorPlan {
-  id               Int       @id @default(autoincrement())
-  nameFr           String
-  nameEn           String
-  subtitleFr       String?
-  subtitleEn       String?
-  descriptionFr    String?
-  descriptionEn    String?
-  price            String?
-  standSize        String?
-  advantages       String?   // JSON array of { fr: string, en: string }
-  color            String    @default("#109E6E")
-  isFeatured       Boolean   @default(false)
-  isVisible        Boolean   @default(true)
-  sortOrder        Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id            Int       @id @default(autoincrement())
+  nameFr        String
+  nameEn        String
+  subtitleFr    String?
+  subtitleEn    String?
+  descriptionFr String?
+  descriptionEn String?
+  price         String?
+  standSize     String?
+  advantages    String? // JSON array of { fr: string, en: string }
+  color         String    @default("#109E6E")
+  isFeatured    Boolean   @default(false)
+  isVisible     Boolean   @default(true)
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt     DateTime?
 
-  editionId        Int
-  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  @@index([deletedAt])
 }
 
 // --- Ticketing ---
@@ -192,82 +207,91 @@ enum TicketStatus {
 }
 
 model TicketTier {
-  id               Int              @id @default(autoincrement())
-  nameFr           String
-  nameEn           String
-  price            Decimal          @db.Decimal(8, 2)
-  isVisible        Boolean          @default(true)
-  saleStartDate    DateTime?
-  saleEndDate      DateTime?
-  externalUrl      String?
-  sortOrder        Int              @default(0)
+  id            Int           @id @default(autoincrement())
+  nameFr        String
+  nameEn        String
+  price         Decimal       @db.Decimal(8, 2)
+  isVisible     Boolean       @default(true)
+  saleStartDate DateTime?
+  saleEndDate   DateTime?
+  externalUrl   String?
+  sortOrder     Int           @default(0)
   // Admin override: when set, it wins over both the BilletWeb sync and the
   // date-based computation. Null means "Auto" (fall back to isSoldOut/dates).
-  manualStatus     TicketStatus?
+  manualStatus  TicketStatus?
   // Sold-out flag synced from BilletWeb (/event/:id/avail). Null means the
   // tier was never synced from BilletWeb (created manually or legacy import).
-  isSoldOut        Boolean?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  isSoldOut     Boolean?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt     DateTime?
 
-  editionId        Int
-  edition          Edition          @relation(fields: [editionId], references: [id])
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id])
 
   @@unique([editionId, sortOrder])
+  @@index([deletedAt])
 }
 
 // --- Contact ---
 
 model ContactCategory {
-  id                     Int       @id @default(autoincrement())
-  nameFr                 String
-  nameEn                 String
-  emailRecipients        String
-  sortOrder              Int       @default(0)
-  isActive               Boolean   @default(true)
+  id                    Int       @id @default(autoincrement())
+  nameFr                String
+  nameEn                String
+  emailRecipients       String
+  sortOrder             Int       @default(0)
+  isActive              Boolean   @default(true)
   // Stable identifier used in code to target a specific category (e.g. "sponsoring")
-  slug                   String?   @unique
+  slug                  String?   @unique
   // System categories cannot be deleted from the admin UI
-  isSystem               Boolean   @default(false)
+  isSystem              Boolean   @default(false)
   // When false, the category is hidden from the public /contact <select> but
   // still usable via forceCategoryId on dedicated pages (e.g. the sponsor
   // brochure form on /devenir-sponsor). Lets us separate generic sponsoring
   // questions from explicit brochure requests so the email templates and the
   // tracking can diverge.
-  isPublic               Boolean   @default(true)
+  isPublic              Boolean   @default(true)
   // Per-category confirmation email sent to the person who submitted the form.
   // Templates support {firstName}, {lastName}, {brochureUrl} interpolation.
-  confirmationSubjectFr  String?
-  confirmationSubjectEn  String?
-  confirmationBodyFr     String?
-  confirmationBodyEn     String?
-  createdAt              DateTime  @default(now())
-  updatedAt              DateTime  @updatedAt
+  confirmationSubjectFr String?
+  confirmationSubjectEn String?
+  confirmationBodyFr    String?
+  confirmationBodyEn    String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt             DateTime?
 
-  messages               ContactMessage[]
+  messages ContactMessage[]
+
+  @@index([deletedAt])
 }
 
 model ContactMessage {
-  id               Int              @id @default(autoincrement())
-  firstName        String
-  lastName         String
-  email            String
-  phone            String?
+  id            Int       @id @default(autoincrement())
+  firstName     String
+  lastName      String
+  email         String
+  phone         String?
   // Company and job title — required on the public form, stored as "" on
   // legacy rows predating the column. Empty strings are never surfaced as
   // valid in the admin UI / webhook; they stand in for "unknown from a
   // pre-migration row" without breaking NOT NULL assumptions.
-  company          String           @default("")
-  jobTitle         String           @default("")
-  categoryLabel    String?
-  message          String
-  locale           String?
-  isRead           Boolean          @default(false)
-  createdAt        DateTime         @default(now())
+  company       String    @default("")
+  jobTitle      String    @default("")
+  categoryLabel String?
+  message       String
+  locale        String?
+  isRead        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt     DateTime?
 
   // Tracks how many times the per-message brochure link has been opened.
   // Populated by the public /api/brochure/:token redirector.
-  brochureDownloadCount Int        @default(0)
+  brochureDownloadCount Int       @default(0)
   brochureDownloadedAt  DateTime?
 
   // Outcome of the last contact_webhook_url POST attempt for this message.
@@ -277,46 +301,51 @@ model ContactMessage {
   // - failed: HTTP error / network error / non-2xx response.
   // - success: 2xx received from the webhook target.
   // webhookError stores the last error string (truncated) when status=failed.
-  webhookStatus    String           @default("not_attempted")
+  webhookStatus      String    @default("not_attempted")
   webhookAttemptedAt DateTime?
-  webhookError     String?
+  webhookError       String?
 
-  categoryId       Int?
-  category         ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId Int?
+  category   ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([deletedAt])
 }
 
 // --- Content Pages (CoC, Legal) ---
 
 model ContentPage {
-  id               Int       @id @default(autoincrement())
-  slug             String    @unique
-  titleFr          String
-  titleEn          String
-  contentFr        String
-  contentEn        String
-  updatedAt        DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  titleFr   String
+  titleEn   String
+  contentFr String
+  contentEn String
+  updatedAt DateTime @updatedAt
 }
 
 // --- Auth (Better Auth compatible) ---
 
 model User {
-  id               String    @id @default(cuid())
-  email            String    @unique
-  name             String?
-  emailVerified    Boolean   @default(false)
-  image            String?
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
   // Default to EDITOR so a leaked/forgotten user insertion path never
   // elevates to ADMIN. Admins are explicitly promoted via the seed
   // (from ADMIN_EMAILS) or by another admin through the back-office.
-  role             UserRole  @default(EDITOR)
-  banned           Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  role          UserRole  @default(EDITOR)
+  banned        Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt     DateTime?
 
-  sessions         Session[]
-  accounts         Account[]
-  apiKeys          ApiKey[]
+  sessions Session[]
+  accounts Account[]
+  apiKeys  ApiKey[]
 
+  @@index([deletedAt])
   @@map("user")
 }
 
@@ -325,17 +354,17 @@ model User {
 // The raw key is shown once at creation, then only its argon2 hash is stored.
 
 model ApiKey {
-  id          String    @id @default(cuid())
-  userId      String
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name        String
-  prefix      String    @unique
-  hashedKey   String
-  lastUsedAt  DateTime?
-  expiresAt   DateTime?
-  revokedAt   DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  prefix     String    @unique
+  hashedKey  String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
 
   @@index([userId])
   @@index([prefix])
@@ -343,15 +372,15 @@ model ApiKey {
 }
 
 model Session {
-  id               String    @id @default(cuid())
-  expiresAt        DateTime
-  token            String    @unique
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-  ipAddress        String?
-  userAgent        String?
-  userId           String
-  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@map("session")
@@ -378,12 +407,12 @@ model Account {
 }
 
 model Verification {
-  id               String    @id @default(cuid())
-  identifier       String
-  value            String
-  expiresAt        DateTime
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id         String   @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([identifier])
   @@map("verification")
@@ -392,10 +421,10 @@ model Verification {
 // --- Site Settings ---
 
 model SiteSetting {
-  id               Int       @id @default(autoincrement())
-  key              String    @unique
-  value            String
-  updatedAt        DateTime  @updatedAt
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
 }
 
 // --- Translation Log ---
@@ -405,20 +434,20 @@ model SiteSetting {
 //   "success" | "failed" | "validation_error" | "quota_exhausted" | "upstream_error"
 // errorCode is a short machine-readable tag (e.g. "tag_mismatch", "rate_limit").
 model TranslationLog {
-  id             Int       @id @default(autoincrement())
-  userId         String?
-  sourceLang     String
-  targetLang     String
-  format         String
-  model          String
-  inputChars     Int       @default(0)
-  outputChars    Int       @default(0)
-  inputTokens    Int       @default(0)
-  outputTokens   Int       @default(0)
-  durationMs     Int       @default(0)
-  status         String
-  errorCode      String?
-  createdAt      DateTime  @default(now())
+  id           Int      @id @default(autoincrement())
+  userId       String?
+  sourceLang   String
+  targetLang   String
+  format       String
+  model        String
+  inputChars   Int      @default(0)
+  outputChars  Int      @default(0)
+  inputTokens  Int      @default(0)
+  outputTokens Int      @default(0)
+  durationMs   Int      @default(0)
+  status       String
+  errorCode    String?
+  createdAt    DateTime @default(now())
 
   @@index([createdAt])
   @@index([userId])
@@ -430,10 +459,10 @@ model TranslationLog {
 // a separate table so we don't need to alter the filesystem layout.
 // Only created on demand — files without metadata simply have no row.
 model FileMetadata {
-  filename       String    @id
-  alt            String?   // Default alt text for accessibility
-  updatedAt      DateTime  @updatedAt
-  createdAt      DateTime  @default(now())
+  filename  String   @id
+  alt       String? // Default alt text for accessibility
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
 }
 
 // ============================================
@@ -443,157 +472,166 @@ model FileMetadata {
 // --- Speakers (RG-200 to RG-208) ---
 
 model Speaker {
-  id               Int               @id @default(autoincrement())
+  id                Int               @id @default(autoincrement())
   // Slug derived from the full name, unique per edition (RG-206).
-  slug             String
-  name             String
-  photoUrl         String?
-  company          String?
-  city             String?
-  bioFr            String?
-  bioEn            String?
+  slug              String
+  name              String
+  photoUrl          String?
+  company           String?
+  city              String?
+  bioFr             String?
+  bioEn             String?
   // JSON object of social links, e.g. {"twitter":"...","github":"...","linkedin":"...","bluesky":"...","website":"..."}
-  socialLinks      String?
+  socialLinks       String?
   // Contact email used to send the modification link (RG-243). Optional.
-  contactEmail     String?
+  contactEmail      String?
   // Language we write to this speaker in — "fr" | "en" (#224). Set in the
   // admin, defaults to French so existing rows keep today's behaviour. This is
   // NOT Talk.language: a French speaker may well present in English.
-  locale           String            @default("fr")
+  locale            String            @default("fr")
   // Shown in the homepage "featured speakers" section (RG-202).
-  isFeatured       Boolean           @default(false)
+  isFeatured        Boolean           @default(false)
   publicationStatus PublicationStatus @default(DRAFT)
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
   // Stored now to avoid a second migration. editToken is a crypto-random
   // secret; editLinkLocked freezes editing without deleting the token.
-  editToken        String?           @unique
-  editLinkLocked   Boolean           @default(false)
-  editTokenSentAt  DateTime?
+  editToken       String?   @unique
+  editLinkLocked  Boolean   @default(false)
+  editTokenSentAt DateTime?
 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
 
-  editionId        Int
-  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
   // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
-  sponsorId        Int?
-  sponsor          Sponsor?          @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+  sponsorId Int?
+  sponsor   Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
 
-  talks            Talk[]
+  talks Talk[]
 
   @@unique([editionId, slug])
   @@index([editionId])
   @@index([sponsorId])
+  @@index([deletedAt])
 }
 
 // --- Talks / Sessions (RG-210 to RG-217) ---
 // Named Talk to avoid colliding with the Better Auth `Session` model.
 
 model Talk {
-  id               Int               @id @default(autoincrement())
+  id                Int               @id @default(autoincrement())
   // Slug derived from the title (RG-214). Unique per edition.
-  slug             String
+  slug              String
   // Single-language on purpose (#293): a talk is given in one language, carried
   // by `language` below. Translating a talk's own title/abstract adds data-entry
   // work with no reader benefit — every imported talk already had titleEn ==
   // titleFr. The rest of the site stays bilingual; Talk is the documented
   // exception (see docs/modele-donnees-metier.md).
-  title            String
-  description      String
-  format           TalkFormat
-  level            TalkLevel?
+  title             String
+  description       String
+  format            TalkFormat
+  level             TalkLevel?
   // Spoken language of the talk, e.g. "fr" | "en".
-  language         String
+  language          String
   // Optional replay / recording URL (e.g. YouTube). Used for past editions
   // (issue #63) and future ones once recordings are available.
-  videoUrl         String?
+  videoUrl          String?
   publicationStatus PublicationStatus @default(DRAFT)
 
   // Whether the speaker may edit this talk's title and description from their
   // magic link (#289). Read-only by default: the organizers open editing talk
   // by talk. Format, level and language stay with the organizers regardless.
-  isSpeakerEditable Boolean           @default(false)
+  isSpeakerEditable Boolean @default(false)
 
   // Room and time slot are assigned in Lot 3 (Programme) — optional here (RG-216).
-  room             String?
-  startsAt         DateTime?
-  endsAt           DateTime?
+  room     String?
+  startsAt DateTime?
+  endsAt   DateTime?
 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
 
-  editionId        Int
-  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
   // A talk belongs to one category/track (RG-213). Optional so a talk can be
   // created before its track exists; SetNull keeps the talk if the track is removed.
-  categoryId       Int?
-  category         Category?         @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categoryId Int?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
-  speakers         Speaker[]
+  speakers Speaker[]
 
   @@unique([editionId, slug])
   @@index([editionId])
   @@index([categoryId])
+  @@index([deletedAt])
 }
 
 // --- Sponsors (RG-220 to RG-231) ---
 
 model Sponsor {
-  id               Int               @id @default(autoincrement())
+  id            Int          @id @default(autoincrement())
   // Slug derived from the name (RG-227). Unique per edition.
-  slug             String
-  name             String
-  logoUrl          String?
-  level            SponsorLevel
-  websiteUrl       String?
-  descriptionFr    String?
-  descriptionEn    String?
+  slug          String
+  name          String
+  logoUrl       String?
+  level         SponsorLevel
+  websiteUrl    String?
+  descriptionFr String?
+  descriptionEn String?
   // JSON object of social links (same shape as Speaker.socialLinks).
-  socialLinks      String?
+  socialLinks   String?
   // Contact email used to send the modification link (RG-243). Optional.
-  contactEmail     String?
+  contactEmail  String?
 
   // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
   // Social handles of the people staffing the booth, for day-of relaying.
   // JSON array of { name, linkedin, twitter, bluesky }.
-  standContacts    String?
+  standContacts       String?
   // Communication kit: whether the sponsor confirmed receiving it, plus the
   // assets they can drop as links (web/print logo, brand charter) and free notes.
-  comKitReceived   Boolean           @default(false)
-  comKitLogoWebUrl   String?
-  comKitLogoPrintUrl String?
-  comKitCharterUrl   String?
-  comKitNotes      String?
+  comKitReceived      Boolean           @default(false)
+  comKitLogoWebUrl    String?
+  comKitLogoPrintUrl  String?
+  comKitCharterUrl    String?
+  comKitNotes         String?
   // Platinum-only promotional content ideas (#252) — private, shown in the
   // edit form only when level == PLATINUM.
   platinumPromoIdea   String?
   platinumCoBuildIdea String?
   // Language we write to this sponsor in — "fr" | "en" (#224). Same rule as
   // Speaker.locale: set in the admin, defaults to French.
-  locale           String            @default("fr")
-  publicationStatus PublicationStatus @default(DRAFT)
+  locale              String            @default("fr")
+  publicationStatus   PublicationStatus @default(DRAFT)
 
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
 
-  editionId        Int
-  edition          Edition           @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
   // Speakers working for this sponsor's company (RG-226).
-  speakers         Speaker[]
+  speakers Speaker[]
 
   // People allowed to edit this sponsor's page, each with their own
   // modification link (#250). Replaces the single editToken on Sponsor.
-  contacts         SponsorContact[]
+  contacts SponsorContact[]
 
   // Job offers the sponsor wants relayed (#251). Count capped by level.
-  jobOffers        SponsorJobOffer[]
+  jobOffers SponsorJobOffer[]
 
   @@unique([editionId, slug])
   @@index([editionId])
+  @@index([deletedAt])
 }
 
 // A person who can edit a sponsor's page via their own modification link
@@ -602,22 +640,22 @@ model Sponsor {
 // date (30-day expiry) and lock. All contacts edit the same sponsor page with
 // equal rights.
 model SponsorContact {
-  id               Int       @id @default(autoincrement())
-  email            String
-  name             String?
-  role             String?
+  id    Int     @id @default(autoincrement())
+  email String
+  name  String?
+  role  String?
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
   // now per-contact. Locale for the link email is inherited from the sponsor.
-  editToken        String?   @unique
-  editLinkLocked   Boolean   @default(false)
-  editTokenSentAt  DateTime?
+  editToken       String?   @unique
+  editLinkLocked  Boolean   @default(false)
+  editTokenSentAt DateTime?
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  sponsorId        Int
-  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  sponsorId Int
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
 
   @@index([sponsorId])
 }
@@ -627,18 +665,18 @@ model SponsorContact {
 // number of offers per sponsor is capped by its level (4 Platinum / 2 Gold /
 // 1 otherwise); the description is rich text (same editor as articles).
 model SponsorJobOffer {
-  id               Int       @id @default(autoincrement())
-  title            String
+  id            Int    @id @default(autoincrement())
+  title         String
   // Bilingual rich-text HTML, sanitized on write (same pipeline as articles).
-  descriptionFr    String    @default("")
-  descriptionEn    String    @default("")
-  url              String
+  descriptionFr String @default("")
+  descriptionEn String @default("")
+  url           String
 
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  sponsorId        Int
-  sponsor          Sponsor   @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  sponsorId Int
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
 
   @@index([sponsorId])
 }
@@ -646,19 +684,22 @@ model SponsorJobOffer {
 // --- Categories / Tracks (RG-213, US-246) ---
 
 model Category {
-  id               Int       @id @default(autoincrement())
-  nameFr           String
-  nameEn           String
+  id        Int       @id @default(autoincrement())
+  nameFr    String
+  nameEn    String
   // Track colour used to tint the talk cards (hex string).
-  color            String    @default("#109E6E")
-  sortOrder        Int       @default(0)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  color     String    @default("#109E6E")
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
 
-  editionId        Int
-  edition          Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
-  talks            Talk[]
+  talks Talk[]
 
   @@index([editionId])
+  @@index([deletedAt])
 }

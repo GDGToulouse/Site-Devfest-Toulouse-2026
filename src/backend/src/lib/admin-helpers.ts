@@ -66,3 +66,56 @@ export function pickPartial<T extends Record<string, unknown>>(
   }
   return out;
 }
+
+/**
+ * Soft delete (#146, sub-step 1/5 of #145).
+ *
+ * Nothing below changes DELETE behaviour yet — the handlers still hard-delete
+ * until #147 switches them over. This is the shared vocabulary they will use.
+ */
+
+/** Prisma `where` fragment selecting live rows. Spread it into any query. */
+export const notDeleted = { deletedAt: null } as const;
+
+/** Prisma `where` fragment selecting rows sitting in the trash. */
+export const onlyDeleted = { deletedAt: { not: null } } as const;
+
+// Slugs and names are unique per edition (`@@unique([editionId, slug])`), and a
+// trashed row keeps occupying its slot: recreating "Jane Doe" while the old one
+// sits in the trash would hit the constraint. So the slug is parked under a
+// reserved prefix on the way in, and reclaimed on the way out.
+//
+// Partial unique indexes (`WHERE deleted_at IS NULL`) would be the tidier fix,
+// but Prisma cannot declare them in the schema — it would take raw SQL in the
+// migration, leaving the schema stating a constraint the database no longer
+// enforces. A visible prefix beats an invisible divergence.
+const TRASH_PREFIX = "__trash_";
+
+/** Park a unique value so the live namespace frees up. Idempotent. */
+export function parkUniqueValue(value: string, id: number): string {
+  if (isParkedValue(value)) return value;
+  return `${TRASH_PREFIX}${id}__${value}`;
+}
+
+/**
+ * Restore a parked value. Returns the original — callers must still check it
+ * is free, since anything could have taken the slot while the row was away.
+ */
+export function unparkUniqueValue(value: string): string {
+  const match = value.match(/^__trash_\d+__(.*)$/s);
+  return match ? match[1] : value;
+}
+
+export function isParkedValue(value: string): boolean {
+  return value.startsWith(TRASH_PREFIX);
+}
+
+/** Payload marking a row as trashed. */
+export function softDeleteData(now: Date = new Date()) {
+  return { deletedAt: now };
+}
+
+/** Payload bringing a row back out of the trash. */
+export function restoreData() {
+  return { deletedAt: null };
+}

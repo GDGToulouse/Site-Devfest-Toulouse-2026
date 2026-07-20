@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { pickPartial } from "./admin-helpers.js";
+
+import {
+  pickPartial,
+  notDeleted,
+  onlyDeleted,
+  parkUniqueValue,
+  unparkUniqueValue,
+  isParkedValue,
+  softDeleteData,
+  restoreData,
+} from "./admin-helpers.js";
 
 describe("pickPartial", () => {
   const existing = { name: "old", count: 5, description: "old desc" };
@@ -29,5 +39,58 @@ describe("pickPartial", () => {
     const out = pickPartial(existing, { name: "x", hacked: true }, ["name"] as const);
     expect(out).toEqual({ name: "x" });
     expect("hacked" in out).toBe(false);
+  });
+});
+
+describe("soft-delete helpers (#146)", () => {
+  it("selects live rows with deletedAt null", () => {
+    expect(notDeleted).toEqual({ deletedAt: null });
+  });
+
+  it("selects trashed rows with deletedAt not null", () => {
+    expect(onlyDeleted).toEqual({ deletedAt: { not: null } });
+  });
+
+  it("parks a slug out of the live namespace", () => {
+    expect(parkUniqueValue("jane-doe", 42)).toBe("__trash_42__jane-doe");
+  });
+
+  it("keeps parked values untouched so a second trash pass cannot nest prefixes", () => {
+    const once = parkUniqueValue("jane-doe", 42);
+    expect(parkUniqueValue(once, 42)).toBe(once);
+  });
+
+  it("gives the original slug back on restore", () => {
+    expect(unparkUniqueValue("__trash_42__jane-doe")).toBe("jane-doe");
+  });
+
+  it("leaves a never-parked value alone on restore", () => {
+    expect(unparkUniqueValue("jane-doe")).toBe("jane-doe");
+  });
+
+  it("survives a round trip on slugs that look like the prefix", () => {
+    // A real slug could plausibly start with "__trash_" — the id segment is
+    // what makes the marker unambiguous.
+    const value = "__trash_notes";
+    expect(unparkUniqueValue(parkUniqueValue(value, 7))).toBe(value);
+  });
+
+  it("round-trips values holding accents and separators", () => {
+    const value = "conférence-été-2026";
+    expect(unparkUniqueValue(parkUniqueValue(value, 1))).toBe(value);
+  });
+
+  it("recognises a parked value", () => {
+    expect(isParkedValue("__trash_1__x")).toBe(true);
+    expect(isParkedValue("x")).toBe(false);
+  });
+
+  it("stamps the deletion date", () => {
+    const now = new Date("2026-07-20T12:00:00Z");
+    expect(softDeleteData(now)).toEqual({ deletedAt: now });
+  });
+
+  it("clears the deletion date on restore", () => {
+    expect(restoreData()).toEqual({ deletedAt: null });
   });
 });
