@@ -1,6 +1,7 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { requireAdminRole } from "../../lib/admin-guard.js";
+import { getAuthContext } from "../../lib/auth-context.js";
 import { onlyDeleted, notDeleted, restoreData, unparkUniqueValue } from "../../lib/admin-helpers.js";
 import { TRASH_ENTITIES, findTrashEntity, delegateFor } from "../../lib/trash-registry.js";
 import { purgeFiles } from "../../lib/trash-files.js";
@@ -38,11 +39,45 @@ function coerceId(entityModel: string, raw: string): number | string | null {
   return Number.isInteger(n) && n > 0 ? n : null;
 }
 
+/**
+ * The trash must not become a side door around the per-entity role rules.
+ *
+ * These routes are registered in the ADMIN+EDITOR group, so without this check
+ * an editor could list — and restore — entities that are ADMIN-only everywhere
+ * else: users, editions, ticket tiers, sponsor plans. Restoring a deleted admin
+ * account is a privilege-escalation path, and `users` is labelled by email, so
+ * merely listing it leaks admin addresses.
+ *
+ * `adminOnly` already sat in the registry describing exactly this; it was
+ * declared and never read. Enforced here.
+ */
+async function denyIfAdminOnly(
+  entity: { adminOnly: boolean },
+  request: FastifyRequest,
+  reply: FastifyReply,
+): Promise<boolean> {
+  if (!entity.adminOnly) return false;
+
+  const ctx = await getAuthContext(request);
+  if (!ctx || ctx.user.role !== "ADMIN") {
+    reply.code(403).send({ error: "Forbidden — admin only" });
+    return true;
+  }
+  return false;
+}
+
 export default async function adminTrashRoutes(app: FastifyInstance) {
   // GET /api/admin/trash — how many rows sit in the trash, per entity.
-  app.get("/trash", async () => {
+  app.get("/trash", async (request) => {
+    // Editors get the summary too, minus the entities they cannot open — a
+    // count they can never act on is noise at best, and a hint about deleted
+    // admin accounts at worst.
+    const ctx = await getAuthContext(request);
+    const isAdmin = ctx?.user.role === "ADMIN";
+    const visible = TRASH_ENTITIES.filter((entity) => isAdmin || !entity.adminOnly);
+
     const counts = await Promise.all(
-      TRASH_ENTITIES.map(async (entity) => ({
+      visible.map(async (entity) => ({
         entity: entity.key,
         count: await delegateFor(entity).count({ where: onlyDeleted }),
       })),
@@ -56,6 +91,7 @@ export default async function adminTrashRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const entity = findTrashEntity(request.params.entity);
     if (!entity) return reply.code(404).send({ error: "Unknown trash entity" });
+    if (await denyIfAdminOnly(entity, request, reply)) return;
 
     const rows = await delegateFor(entity).findMany({
       where: onlyDeleted,
@@ -85,6 +121,8 @@ export default async function adminTrashRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const entity = findTrashEntity(request.params.entity);
     if (!entity) return reply.code(404).send({ error: "Unknown trash entity" });
+    // Restoring a trashed ADMIN account would be a privilege-escalation path.
+    if (await denyIfAdminOnly(entity, request, reply)) return;
 
     const id = coerceId(entity.model, request.params.id);
     if (id === null) return reply.code(400).send({ error: "Invalid ID" });

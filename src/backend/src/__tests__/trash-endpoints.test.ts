@@ -240,6 +240,62 @@ describe("trash endpoints (#148)", () => {
     await app.close();
   });
 
+  it("keeps an EDITOR out of ADMIN-only entities, list and restore alike", async () => {
+    const app = await buildTrashApp();
+    const asAdmin = authContext.current;
+    authContext.current = {
+      user: { id: "test-editor", email: "editor@test.local", name: "Ed", role: "EDITOR" },
+    };
+
+    try {
+      // The trash must not become a side door around the per-entity role rules.
+      // `users` is labelled by email, so listing alone would leak admin
+      // addresses; restoring a trashed admin account escalates privilege.
+      for (const key of ["users", "editions", "ticket-tiers", "sponsor-plans"]) {
+        const list = await app.inject({ method: "GET", url: `/api/admin/trash/${key}` });
+        expect(list.statusCode, `GET ${key}`).toBe(403);
+
+        const restore = await app.inject({
+          method: "POST",
+          url: `/api/admin/trash/${key}/1/restore`,
+        });
+        expect(restore.statusCode, `restore ${key}`).toBe(403);
+      }
+
+      // Editorial entities stay reachable — that is the whole point of the split.
+      const articles = await app.inject({ method: "GET", url: "/api/admin/trash/articles" });
+      expect(articles.statusCode).toBe(200);
+    } finally {
+      authContext.current = asAdmin;
+    }
+
+    await app.close();
+  });
+
+  it("hides ADMIN-only entities from an EDITOR's summary", async () => {
+    const app = await buildTrashApp();
+    const asAdmin = authContext.current;
+
+    const adminView = await app.inject({ method: "GET", url: "/api/admin/trash" });
+    const adminKeys = adminView.json().entities.map((e: { entity: string }) => e.entity);
+    expect(adminKeys).toContain("users");
+
+    authContext.current = {
+      user: { id: "test-editor", email: "editor@test.local", name: "Ed", role: "EDITOR" },
+    };
+    try {
+      const editorView = await app.inject({ method: "GET", url: "/api/admin/trash" });
+      const editorKeys = editorView.json().entities.map((e: { entity: string }) => e.entity);
+      expect(editorKeys).not.toContain("users");
+      expect(editorKeys).not.toContain("editions");
+      expect(editorKeys).toContain("articles");
+    } finally {
+      authContext.current = asAdmin;
+    }
+
+    await app.close();
+  });
+
   it("reports a per-entity summary with a total", async () => {
     const app = await buildTrashApp();
     const slug = `zz-trash-summary-${Date.now()}`;
