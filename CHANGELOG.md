@@ -12,6 +12,51 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.4.0] - 2026-07-20
+
+Épique « communication sponsors » : contacts multiples, informations privées,
+offres d'emploi et description en WYSIWYG. Côté speakers, l'édition d'une
+conférence devient un droit accordé au cas par cas. Les emails passent à la
+charte graphique.
+
+### Ajouté
+
+- **Sponsors — contacts secondaires** : plusieurs personnes par sponsor, chacune
+  avec son propre lien de modification, son verrou et sa date d'envoi (#250).
+- **Sponsors — informations privées** réservées à l'organisation : kit de
+  communication (logos web/print, charte, notes) et suivi de réception (#249).
+- **Sponsors Platinum** : contenu promotionnel et idées de co-construction (#252).
+- **Sponsors — offres d'emploi** à relayer, avec une page publique dédiée
+  « Offres d'emploi partenaires » (#251), description bilingue en WYSIWYG (#273).
+- **Sponsors — description de la fiche entreprise en WYSIWYG**, comme les
+  articles (#270), et ajout de Bluesky aux réseaux de la fiche publique (#253).
+- **Speakers — édition de leur conférence** depuis le lien de modification,
+  **en lecture seule par défaut** : l'organisation ouvre le droit conférence par
+  conférence, et uniquement sur le titre et le résumé (#260, #289).
+- **Emails à la charte graphique** : gabarit HTML commun à tous les envois (#269).
+- **Icônes des chiffres clés** sélectionnables dans l'admin (#164).
+- **Identification du build déployé** : `/api/health` expose le commit court, et
+  l'admin l'affiche en badge cliquable vers GitHub (#290).
+
+### Corrigé
+
+- **Articles** : création impossible sans titre EN, et l'erreur réelle n'était
+  pas affichée (#262) ; la sauvegarde en brouillon devient permissive, la
+  validation stricte s'applique à la publication (#263).
+- **Sponsors — « compléments par email »** : ouvre le client mail (`mailto`) au
+  lieu d'un formulaire d'envoi (#271).
+- **Menu Sponsors** : entrée dupliquée, et « Offres d'emploi » affichée même en
+  l'absence d'offre (#276).
+- **CI backend instable** : une édition de test datée 2099 captait les fixtures
+  des autres tests (#292).
+
+### Modifié
+
+- **Conférences — une seule langue** pour le titre et la description : une
+  conférence se donne dans une langue, déjà portée par son champ « langue ». Les
+  quatre colonnes bilingues fusionnent en deux ; les URL publiques sont
+  inchangées (#293).
+
 ## [1.3.0] - 2026-07-18
 
 Grande promotion du Lot 2/3 en production : back-office complet (speakers,

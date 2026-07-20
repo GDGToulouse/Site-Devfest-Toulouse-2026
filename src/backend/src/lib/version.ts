@@ -6,7 +6,7 @@
 // The dev line carries the *upcoming* version with a `-beta` pre-release
 // suffix, so beta never reports the same number as production while holding
 // different code. The promotion PR to `main` drops the suffix.
-export const APP_VERSION = process.env.APP_VERSION || "1.4.0-beta";
+export const APP_VERSION = process.env.APP_VERSION || "1.4.1-beta";
 
 // Deployment environment name (local / beta / prod). ENV_NAME already exists
 // for Docker network aliasing; here we surface it so the admin knows which
