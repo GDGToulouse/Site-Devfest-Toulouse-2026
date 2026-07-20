@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
+import StatIconField from "@/components/admin/StatIconField";
 
 interface KeyFigureData {
   icon: string;
@@ -64,7 +65,7 @@ export default function KeyFiguresTab({ editionId }: KeyFiguresTabProps) {
             // 4-cols + delete from sm up (#243). Each field keeps its own label
             // so it stays clear once wrapped, instead of a single header row.
             <div key={i} className="grid grid-cols-2 gap-3 items-end border-b border-gris/10 pb-4 sm:grid-cols-[1fr_1fr_1fr_1fr_auto] sm:border-0 sm:pb-0">
-              <FormField label="Icône" name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} placeholder="users" />
+              <StatIconField label="Icône" name={`icon-${i}`} value={fig.icon} onChange={(v) => updateFigure(i, "icon", v)} />
               <FormField label="Valeur" name={`value-${i}`} value={fig.value} onChange={(v) => updateFigure(i, "value", v)} placeholder="3000" />
               <FormField label="Label FR" name={`labelFr-${i}`} value={fig.labelFr} onChange={(v) => updateFigure(i, "labelFr", v)} placeholder="Participants" />
               <FormField label="Label EN" name={`labelEn-${i}`} value={fig.labelEn} onChange={(v) => updateFigure(i, "labelEn", v)} placeholder="Attendees" />

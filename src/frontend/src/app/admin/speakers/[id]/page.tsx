@@ -56,6 +56,7 @@ export default function SpeakerEditorPage() {
           bioEn: data.bioEn || "",
           linkedin: data.socialLinks?.linkedin || "",
           twitter: data.socialLinks?.twitter || "",
+          bluesky: data.socialLinks?.bluesky || "",
           github: data.socialLinks?.github || "",
           website: data.socialLinks?.website || "",
           locale: data.locale === "en" ? "en" : "fr",
@@ -86,6 +87,7 @@ export default function SpeakerEditorPage() {
     const socialLinks: Record<string, string> = {};
     if (form.linkedin.trim()) socialLinks.linkedin = form.linkedin.trim();
     if (form.twitter.trim()) socialLinks.twitter = form.twitter.trim();
+    if (form.bluesky.trim()) socialLinks.bluesky = form.bluesky.trim();
     if (form.github.trim()) socialLinks.github = form.github.trim();
     if (form.website.trim()) socialLinks.website = form.website.trim();
 

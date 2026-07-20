@@ -1,5 +1,7 @@
 import nodemailer from "nodemailer";
 
+import { renderEmail } from "./email-template.js";
+
 // SMTP_SECURE = true forces a TLS handshake on connect (port 465 typical).
 // SMTP_AUTH = true enables plain SMTP auth via SMTP_USER / SMTP_PASSWORD.
 // Default profile (secure=false, auth=false) matches the standalone
@@ -26,6 +28,8 @@ interface SendEmailOptions {
   to: string[];
   subject: string;
   text: string;
+  // The message body. It is wrapped in the shared DevFest layout (#269) — pass
+  // the content only, no <html>/<body>.
   html: string;
   // Optional Reply-To so replying to a notification reaches the person who
   // triggered it (e.g. the visitor who filled the contact form) instead of
@@ -34,9 +38,27 @@ interface SendEmailOptions {
   // Optional CC recipients (e.g. the organizers, kept in copy of the brochure
   // confirmation sent to the requester).
   cc?: string[];
+  // Recipient language, for the layout's footer. Defaults to French.
+  locale?: "fr" | "en";
+  // Snippet inboxes show next to the subject. Defaults to the subject.
+  previewText?: string;
 }
 
-export async function sendEmail({ to, subject, text, html, replyTo, cc }: SendEmailOptions) {
+/**
+ * Sends an email, wrapping `html` in the shared brand layout. Wrapping happens
+ * here rather than at each call site so every email — including future ones —
+ * is on-brand by construction, with no way to forget it.
+ */
+export async function sendEmail({
+  to,
+  subject,
+  text,
+  html,
+  replyTo,
+  cc,
+  locale = "fr",
+  previewText,
+}: SendEmailOptions) {
   await transporter.sendMail({
     from: FROM,
     to: to.join(", "),
@@ -44,7 +66,7 @@ export async function sendEmail({ to, subject, text, html, replyTo, cc }: SendEm
     ...(replyTo ? { replyTo } : {}),
     subject,
     text,
-    html,
+    html: renderEmail({ locale, previewText: previewText ?? subject, bodyHtml: html }),
   });
 }
 
@@ -73,7 +95,7 @@ export function interpolateHtml(template: string, vars: Record<string, string>):
   });
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")

@@ -157,10 +157,8 @@ async function main() {
         .filter((id): id is number => id !== undefined);
 
       const talkData = {
-        titleFr: title,
-        titleEn: title,
-        descriptionFr: description,
-        descriptionEn: description,
+        title,
+        description,
         format: normalizeFormat(s.format),
         level: normalizeLevel(s.complexity),
         language: normalizeLanguage(s.language),

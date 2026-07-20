@@ -18,6 +18,14 @@ const CONFERENCES_ENTRY: NavEntry = {
 
 const SPEAKERS_ENTRY: NavEntry = { key: "speakers", labelKey: "speakers", href: "/speakers" };
 const SPONSORS_ENTRY: NavEntry = { key: "sponsors", labelKey: "sponsors", href: "/sponsors" };
+// Partner job offers hang under Sponsors (#251). The parent link already leads
+// to /sponsors, so the submenu lists only the offers — no duplicate entry — and
+// appears only once an offer is actually published.
+const JOB_OFFERS_CHILD: NavEntry = {
+  key: "job-offers",
+  labelKey: "jobOffers",
+  href: "/offres-emploi-partenaires",
+};
 const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites" };
 
 // Build the ordered public nav entries for the given edition. Conference-,
@@ -43,7 +51,11 @@ export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
   }
 
   if (edition?.hasSpeakers) entries.push(SPEAKERS_ENTRY);
-  if (edition?.hasSponsors) entries.push(SPONSORS_ENTRY);
+  if (edition?.hasSponsors) {
+    entries.push(
+      edition.hasJobOffers ? { ...SPONSORS_ENTRY, children: [JOB_OFFERS_CHILD] } : SPONSORS_ENTRY,
+    );
+  }
   entries.push(BLOG_ENTRY);
 
   return entries;

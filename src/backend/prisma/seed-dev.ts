@@ -497,20 +497,23 @@ async function seedDev() {
 
   await prisma.talk.create({
     data: {
-      slug: "kubernetes-en-production", titleFr: "Kubernetes en production", titleEn: "Kubernetes in production",
-      descriptionFr: "Retour d'expérience sur l'exploitation de Kubernetes à grande échelle.",
-      descriptionEn: "Lessons learned running Kubernetes at scale.",
+      slug: "kubernetes-en-production", title: "Kubernetes en production",
+      description: "Retour d'expérience sur l'exploitation de Kubernetes à grande échelle.",
       format: "CONFERENCE", level: "CONFIRME", language: "fr",
+      // Speaker editing opened on this one only (#289), so both states are
+      // testable from a single dev speaker link.
+      isSpeakerEditable: true,
       publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catCloud.id,
       speakers: { connect: [{ id: speakerMarie.id }] },
     },
   });
   await prisma.talk.create({
     data: {
-      slug: "react-server-components", titleFr: "React Server Components", titleEn: "React Server Components",
-      descriptionFr: "Comprendre les Server Components et leur impact.",
-      descriptionEn: "Understanding Server Components and their impact.",
-      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr",
+      // English-language talk (#293): its content stays in English, and the slug
+      // keeps the French-derived form it was indexed under.
+      slug: "react-server-components", title: "React Server Components in practice",
+      description: "Understanding Server Components and their impact.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "en",
       publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catWeb.id,
       speakers: { connect: [{ id: speakerJean.id }] },
     },

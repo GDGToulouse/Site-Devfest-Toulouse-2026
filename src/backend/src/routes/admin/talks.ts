@@ -3,17 +3,15 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateConferences } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 
-const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE"] as const;
+const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
 type TalkFormat = (typeof FORMATS)[number];
 const LEVELS = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"] as const;
 type TalkLevel = (typeof LEVELS)[number];
 
 interface TalkCreateBody {
   editionId: number;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level?: TalkLevel | null;
   language: string;
@@ -21,6 +19,7 @@ interface TalkCreateBody {
   speakerIds?: number[];
   room?: string;
   publicationStatus?: "DRAFT" | "PUBLISHED";
+  isSpeakerEditable?: boolean;
 }
 
 type TalkUpdateBody = Partial<Omit<TalkCreateBody, "editionId">>;
@@ -58,7 +57,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
 
     const talks = await prisma.talk.findMany({
       where: editionId ? { editionId: Number(editionId) } : {},
-      orderBy: editionId ? { titleFr: "asc" } : [{ edition: { year: "desc" } }, { titleFr: "asc" }],
+      orderBy: editionId ? { title: "asc" } : [{ edition: { year: "desc" } }, { title: "asc" }],
       include: {
         speakers: { select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
@@ -87,8 +86,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
   // POST /api/admin/talks
   app.post<{ Body: TalkCreateBody }>("/talks", async (request, reply) => {
     const body = request.body;
-    if (!body.editionId || !body.titleFr?.trim() || !body.titleEn?.trim()) {
-      return reply.code(400).send({ error: "editionId, titleFr and titleEn are required" });
+    if (!body.editionId || !body.title?.trim()) {
+      return reply.code(400).send({ error: "editionId and title are required" });
     }
     if (!body.format || !FORMATS.includes(body.format)) {
       return reply.code(422).send({ error: `Invalid format. Allowed: ${FORMATS.join(", ")}` });
@@ -104,22 +103,21 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       where: { editionId: body.editionId },
       select: { slug: true },
     });
-    const slug = uniqueSlug(slugify(body.titleFr), new Set(existing.map((e) => e.slug)));
+    const slug = uniqueSlug(slugify(body.title), new Set(existing.map((e) => e.slug)));
 
     const talk = await prisma.talk.create({
       data: {
         editionId: body.editionId,
         slug,
-        titleFr: body.titleFr.trim(),
-        titleEn: body.titleEn.trim(),
-        descriptionFr: body.descriptionFr ?? "",
-        descriptionEn: body.descriptionEn ?? "",
+        title: body.title.trim(),
+        description: body.description ?? "",
         format: body.format,
         level: body.level ?? null,
         language: body.language.trim(),
         room: body.room || null,
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        isSpeakerEditable: body.isSpeakerEditable === true,
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
@@ -148,16 +146,15 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     const talk = await prisma.talk.update({
       where: { id: Number(id) },
       data: {
-        ...(body.titleFr !== undefined && { titleFr: body.titleFr.trim() }),
-        ...(body.titleEn !== undefined && { titleEn: body.titleEn.trim() }),
-        ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr }),
-        ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn }),
+        ...(body.title !== undefined && { title: body.title.trim() }),
+        ...(body.description !== undefined && { description: body.description }),
         ...(body.format !== undefined && { format: body.format }),
         ...(body.level !== undefined && { level: body.level ?? null }),
         ...(body.language !== undefined && { language: body.language.trim() }),
         ...(body.room !== undefined && { room: body.room || null }),
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+        ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),

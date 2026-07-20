@@ -1,7 +1,6 @@
 "use client";
 
 import type { TalkFormat, TalkLevel, Category, Speaker } from "@/lib/types";
-import BilingualTabs from "@/components/admin/BilingualTabs";
 
 const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
@@ -16,29 +15,27 @@ const LEVELS: { value: TalkLevel; label: string }[] = [
 ];
 
 export interface TalkFormValue {
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: "" | TalkLevel;
   language: string;
   categoryId: string;
   speakerIds: number[];
   publicationStatus: "DRAFT" | "PUBLISHED";
+  isSpeakerEditable: boolean;
 }
 
 export const emptyTalkForm: TalkFormValue = {
-  titleFr: "",
-  titleEn: "",
-  descriptionFr: "",
-  descriptionEn: "",
+  title: "",
+  description: "",
   format: "CONFERENCE",
   level: "",
   language: "fr",
   categoryId: "",
   speakerIds: [],
   publicationStatus: "DRAFT",
+  isSpeakerEditable: false,
 };
 
 const inputClass =
@@ -63,30 +60,20 @@ export default function TalkForm({ value, onChange, categories, speakers }: Talk
 
   return (
     <div className="space-y-4">
-      <BilingualTabs
-        label="Titre"
-        required
-        isEmpty={(lang) => !(lang === "fr" ? value.titleFr : value.titleEn).trim()}
-        renderPanel={(lang) =>
-          lang === "fr" ? (
-            <input value={value.titleFr} onChange={(e) => onChange({ ...value, titleFr: e.target.value })} className={inputClass} />
-          ) : (
-            <input value={value.titleEn} onChange={(e) => onChange({ ...value, titleEn: e.target.value })} className={inputClass} />
-          )
-        }
-      />
+      {/* Single-language (#293): a talk is given in one language, picked below.
+          No FR/EN tabs — translating a talk's own wording helps nobody. */}
+      <label className="block">
+        <span className="block text-sm font-medium text-noir mb-1">Titre *</span>
+        <input value={value.title} onChange={(e) => onChange({ ...value, title: e.target.value })} className={inputClass} />
+        <span className="block text-xs text-gris mt-1">
+          Dans la langue de la conférence (voir « Langue » ci-dessous).
+        </span>
+      </label>
 
-      <BilingualTabs
-        label="Description"
-        isEmpty={(lang) => !(lang === "fr" ? value.descriptionFr : value.descriptionEn).trim()}
-        renderPanel={(lang) =>
-          lang === "fr" ? (
-            <textarea value={value.descriptionFr} onChange={(e) => onChange({ ...value, descriptionFr: e.target.value })} rows={4} className={inputClass} />
-          ) : (
-            <textarea value={value.descriptionEn} onChange={(e) => onChange({ ...value, descriptionEn: e.target.value })} rows={4} className={inputClass} />
-          )
-        }
-      />
+      <label className="block">
+        <span className="block text-sm font-medium text-noir mb-1">Description</span>
+        <textarea value={value.description} onChange={(e) => onChange({ ...value, description: e.target.value })} rows={4} className={inputClass} />
+      </label>
 
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <label className="block">
@@ -148,6 +135,25 @@ export default function TalkForm({ value, onChange, categories, speakers }: Talk
         />
         <span className="text-sm text-noir">Publié (visible sur le site)</span>
       </label>
+
+      {/* #289 — read-only by default; the flag has an effect the admin cannot
+          see from here (it unlocks a form on the speaker's magic link page),
+          hence the hint. */}
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value.isSpeakerEditable}
+            onChange={(e) => onChange({ ...value, isSpeakerEditable: e.target.checked })}
+            className="rounded border-gris/30 text-malachite focus:ring-malachite"
+          />
+          <span className="text-sm text-noir">Édition autorisée par le speaker</span>
+        </label>
+        <span className="block text-xs text-gris mt-1">
+          Le speaker pourra modifier le titre et la description depuis son lien de
+          modification. Le format, le niveau et la langue restent réservés aux organisateurs.
+        </span>
+      </div>
     </div>
   );
 }

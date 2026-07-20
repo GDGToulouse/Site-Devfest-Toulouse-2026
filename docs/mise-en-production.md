@@ -105,6 +105,27 @@ Mettre à jour, dans la même PR :
 > Le tag git (`v1.2.3`) et la release GitHub, eux, se posent **après** le
 > déploiement vérifié (étape 6) — pas maintenant.
 
+### La ligne `dev` porte la version à venir, suffixée `-beta`
+
+Sans ça, la bêta et la prod afficheraient le **même** numéro tout en contenant
+un code différent — et rien ne le signalerait dans l'admin.
+
+Convention :
+
+| Branche | Version | Exemple |
+|---------|---------|---------|
+| `main` (prod) | version publiée | `1.3.0` |
+| `dev` / `dev-{initiale}` (bêta) | **version à venir** + `-beta` | `1.4.0-beta` |
+
+- Le suffixe dit « numéro pressenti, pas encore figé » : il reste ajustable tant
+  que la promotion n'a pas eu lieu (si le périmètre change, `1.4.0-beta` peut
+  devenir `2.0.0-beta`). C'est un pre-release SemVer valide : `1.4.0-beta` < `1.4.0`.
+- **La PR de promotion `dev → main` retire simplement le suffixe** (`1.4.0-beta`
+  → `1.4.0`) dans les 3 fichiers ci-dessus — c'est ça, le « bump » de l'étape 1.
+- **Juste après le tag**, repasser la ligne `dev` sur la version suivante en
+  `-beta` (`1.4.1-beta` ou `1.5.0-beta`), sinon la bêta réaffiche le numéro de
+  la prod. Voir l'étape 7.
+
 ---
 
 ## 2. Promouvoir le code sur `main`
@@ -186,6 +207,19 @@ problème, il sert au rollback (voir section dédiée).
 Lancer **Deploy** dans Coolify. Le build compile frontend + backend puis le
 backend joue les migrations Prisma et le seed idempotent au démarrage.
 
+> **Prérequis pour la traçabilité du build** (#290) : le compose passe
+> `APP_COMMIT=${SOURCE_COMMIT:-}` en argument de build au backend.
+>
+> ⚠️ Coolify ne fournit `SOURCE_COMMIT` au build que si **Advanced → Include
+> Source Commit in Build** est activé sur la ressource. Le réglage est **désactivé
+> par défaut**, volontairement : le SHA changeant à chaque commit, il **invalide le
+> cache Docker**. Dans le Dockerfile backend, `ARG APP_COMMIT` est donc placé en
+> **dernier**, après `pnpm install` / `prisma generate` / `pnpm build`, pour que
+> seule la dernière couche soit reconstruite.
+>
+> Sans ce réglage, `/api/health` omet simplement `commit` : on perd le marqueur,
+> rien ne casse. C'est un état supporté — et silencieux, d'où cette note.
+
 ---
 
 ## 6. Vérifications obligatoires
@@ -214,8 +248,26 @@ la sidebar admin doit afficher le **nouveau** numéro. Sinon, `APP_VERSION` n'a 
 
 ```bash
 curl -s https://site.devfesttoulouse.fr/api/health
-# → {"status":"ok","version":"1.2.3","environment":"prod", ...}
+# → {"status":"ok","version":"1.2.3","environment":"prod","commit":"7d90b17", ...}
 ```
+
+**Vérifier le commit déployé** (cf. #290) : `commit` porte le SHA court du build,
+injecté par Coolify (`SOURCE_COMMIT`) au moment du build. C'est le seul marqueur
+fiable **entre deux releases** — sur la ligne `dev`, la version ne bouge pas d'un
+merge à l'autre, donc elle ne dit pas si le déploiement a réellement pris.
+
+```bash
+# Le commit déployé en beta correspond-il bien à la tête de `dev` ?
+curl -s https://beta.site.devfesttoulouse.fr/api/health | grep -o '"commit":"[^"]*"'
+git rev-parse --short origin/dev
+```
+
+Les deux doivent coïncider. Sinon, le déploiement n'a pas eu lieu (ou a échoué et
+l'ancien conteneur tourne toujours). Le badge de la sidebar admin affiche ce même
+SHA, cliquable vers le commit GitHub.
+
+> `commit` est **absent** de la réponse hors CI/Coolify (build local) : c'est
+> normal, il ne signale pas une anomalie.
 
 ### Smoke tests — parcours critiques
 
@@ -269,6 +321,26 @@ Reporter la release dans [`CHANGELOG.md`](../CHANGELOG.md) (format
 hors GitHub, versionné avec le code. En pratique, l'ajouter dans la **PR de
 promotion** (étape 1) : une section `## [1.2.3] - AAAA-MM-JJ` listant les
 changements (Ajouté / Corrigé / Modifié). La release GitHub peut réutiliser ce texte.
+
+### Redescendre la version sur la ligne `dev` (à ne pas oublier)
+
+Le bump de l'étape 1 n'existe que sur `main`. Sans cette étape, `dev` et
+`dev-{initiale}` restent sur l'ancien numéro : la bêta finit par annoncer une
+version **plus ancienne que la prod**, ce qui rend le badge de l'admin trompeur.
+
+Après le tag, ouvrir une PR `main → dev` (puis `dev → dev-{initiale}`) qui :
+
+1. reporte `CHANGELOG.md` (la section de la release qui vient d'être publiée) ;
+2. repositionne les 3 fichiers de version sur la **prochaine** version en
+   pre-release — `1.4.0` publiée → `1.4.1-beta` (ou `1.5.0-beta` selon ce qui
+   s'annonce).
+
+```bash
+# Contrôle : les 3 lignes doivent concorder
+git show origin/main:src/backend/src/lib/version.ts | grep APP_VERSION  # 1.4.0
+git show origin/dev:src/backend/src/lib/version.ts  | grep APP_VERSION  # 1.4.1-beta
+curl -s https://beta.site.devfesttoulouse.fr/api/health                 # 1.4.1-beta
+```
 
 > ℹ️ La skill **`deploy-to-prod`** (`.claude/skills/deploy-to-prod`) automatise
 > le choix du bump, le rappel de tous ces garde-fous et la génération de ces

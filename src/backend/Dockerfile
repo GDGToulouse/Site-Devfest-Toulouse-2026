@@ -22,6 +22,17 @@ ENV SEED_SCRIPT=${SEED_SCRIPT}
 
 RUN chmod +x scripts/db-boot.sh
 
+# Commit this image was built from, surfaced by /api/health so a deploy can be
+# told apart from the previous one (the version only moves on releases).
+#
+# Kept LAST on purpose: its value changes on every commit, so every layer below
+# it is invalidated on every build. Everything expensive (install, prisma
+# generate, build) must sit above. Coolify only passes SOURCE_COMMIT when
+# "Include Source Commit in Build" is enabled — off by default precisely
+# because it busts the cache; empty is a supported state (see #290).
+ARG APP_COMMIT=
+ENV APP_COMMIT=${APP_COMMIT}
+
 # Use the boot script: baseline the init migration if upgrading from
 # `prisma db push`, run `prisma migrate deploy`, run the seed, start the server.
 CMD ["sh", "scripts/db-boot.sh"]

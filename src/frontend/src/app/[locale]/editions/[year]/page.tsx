@@ -304,7 +304,7 @@ export default async function BilanPage({ params }: PageProps) {
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
                 {t("sessions", { count: talks.length })}
               </h2>
-              <EditionTalksList talks={talks} locale={locale} replayLabel={t("replay")} />
+              <EditionTalksList talks={talks} replayLabel={t("replay")} />
             </section>
           )}
 

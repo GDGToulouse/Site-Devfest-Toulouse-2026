@@ -45,16 +45,15 @@ export default function TalkEditorPage() {
           return;
         }
         setForm({
-          titleFr: data.titleFr,
-          titleEn: data.titleEn,
-          descriptionFr: data.descriptionFr,
-          descriptionEn: data.descriptionEn,
+          title: data.title,
+          description: data.description,
           format: data.format,
           level: data.level ?? "",
           language: data.language,
           categoryId: data.categoryId ? String(data.categoryId) : "",
           speakerIds: data.speakerIds,
           publicationStatus: data.publicationStatus,
+          isSpeakerEditable: data.isSpeakerEditable,
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -77,21 +76,20 @@ export default function TalkEditorPage() {
   }, [editionId]);
 
   async function handleSave() {
-    if (!form.titleFr.trim() || !form.titleEn.trim() || !editionId) return;
+    if (!form.title.trim() || !editionId) return;
     setIsSaving(true);
     setError(null);
     const payload = {
       editionId,
-      titleFr: form.titleFr.trim(),
-      titleEn: form.titleEn.trim(),
-      descriptionFr: form.descriptionFr,
-      descriptionEn: form.descriptionEn,
+      title: form.title.trim(),
+      description: form.description,
       format: form.format,
       level: form.level || null,
       language: form.language,
       categoryId: form.categoryId ? Number(form.categoryId) : null,
       speakerIds: form.speakerIds,
       publicationStatus: form.publicationStatus,
+      isSpeakerEditable: form.isSpeakerEditable,
     };
 
     if (isNew) {
@@ -149,7 +147,7 @@ export default function TalkEditorPage() {
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={handleSave}
-            disabled={isSaving || !form.titleFr.trim() || !form.titleEn.trim() || !editionId}
+            disabled={isSaving || !form.title.trim() || !editionId}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
             {isSaving ? "Enregistrement…" : "Enregistrer"}

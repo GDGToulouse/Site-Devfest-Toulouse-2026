@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor } from "@/lib/types";
-import EditLinkActions from "@/components/admin/EditLinkActions";
+import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
 import SponsorForm, { emptySponsorForm, type SponsorFormValue } from "@/components/admin/sponsors/SponsorForm";
 
 interface SponsorData extends Sponsor {
@@ -54,8 +54,16 @@ export default function SponsorEditorPage() {
           descriptionEn: data.descriptionEn || "",
           linkedin: data.socialLinks?.linkedin || "",
           twitter: data.socialLinks?.twitter || "",
+          bluesky: data.socialLinks?.bluesky || "",
           locale: data.locale === "en" ? "en" : "fr",
           publicationStatus: data.publicationStatus,
+          comKitReceived: data.comKitReceived ?? false,
+          comKitLogoWebUrl: data.comKitLogoWebUrl || "",
+          comKitLogoPrintUrl: data.comKitLogoPrintUrl || "",
+          comKitCharterUrl: data.comKitCharterUrl || "",
+          comKitNotes: data.comKitNotes || "",
+          platinumPromoIdea: data.platinumPromoIdea || "",
+          platinumCoBuildIdea: data.platinumCoBuildIdea || "",
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -72,6 +80,7 @@ export default function SponsorEditorPage() {
     const socialLinks: Record<string, string> = {};
     if (form.linkedin.trim()) socialLinks.linkedin = form.linkedin.trim();
     if (form.twitter.trim()) socialLinks.twitter = form.twitter.trim();
+    if (form.bluesky.trim()) socialLinks.bluesky = form.bluesky.trim();
 
     const payload = {
       editionId,
@@ -84,6 +93,13 @@ export default function SponsorEditorPage() {
       socialLinks,
       locale: form.locale,
       publicationStatus: form.publicationStatus,
+      comKitReceived: form.comKitReceived,
+      comKitLogoWebUrl: form.comKitLogoWebUrl || undefined,
+      comKitLogoPrintUrl: form.comKitLogoPrintUrl || undefined,
+      comKitCharterUrl: form.comKitCharterUrl || undefined,
+      comKitNotes: form.comKitNotes || undefined,
+      platinumPromoIdea: form.platinumPromoIdea || undefined,
+      platinumCoBuildIdea: form.platinumCoBuildIdea || undefined,
     };
 
     if (isNew) {
@@ -136,14 +152,7 @@ export default function SponsorEditorPage() {
 
         <SponsorForm value={form} onChange={setForm} />
 
-        {!isNew && current && (
-          <EditLinkActions
-            resource="sponsors"
-            entityId={current.id}
-            initialEmail={current.contactEmail ?? ""}
-            initialLocked={current.editLinkLocked}
-          />
-        )}
+        {!isNew && current && <SponsorContacts sponsorId={current.id} />}
 
         {error && <p className="text-sm text-terre-cuite">{error}</p>}
 

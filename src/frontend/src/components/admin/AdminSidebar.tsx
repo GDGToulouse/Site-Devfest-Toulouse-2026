@@ -62,6 +62,8 @@ const iconMap: Record<string, IconDefinition> = {
 interface HealthInfo {
   version: string;
   environment: string;
+  // Absent on builds made outside CI/Coolify (local dev).
+  commit?: string;
 }
 
 function SectionTitle({ title }: { title: string }) {
@@ -126,7 +128,11 @@ export default function AdminSidebar({ user, currentEdition, onLogout, onNavigat
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.version && data?.environment) {
-          setHealth({ version: data.version, environment: data.environment });
+          setHealth({
+            version: data.version,
+            environment: data.environment,
+            commit: data.commit,
+          });
         }
       })
       .catch(() => {
@@ -186,6 +192,21 @@ export default function AdminSidebar({ user, currentEdition, onLogout, onNavigat
       {health && (
         <p className="px-4 pb-2 text-xs text-blanc/40">
           v{health.version} · {health.environment}
+          {/* The commit tells two deploys of the same version apart (#290);
+              linked to GitHub so "what exactly is live?" is one click away. */}
+          {health.commit && (
+            <>
+              {" · "}
+              <a
+                href={`https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/commit/${health.commit}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono hover:text-blanc/70 hover:underline"
+              >
+                {health.commit}
+              </a>
+            </>
+          )}
         </p>
       )}
 

@@ -6,6 +6,11 @@ services:
     volumes:
       - ./src/frontend:/app
       - frontend_node_modules:/app/node_modules
+      # Keep the build cache off the Windows bind mount: Turbopack rewrites its
+      # route manifest constantly, and a restart mid-write leaves it truncated —
+      # Next then compiles /_not-found instead of /[locale] and serves 404 on
+      # every page until .next is wiped. A named volume is native Linux fs.
+      - frontend_next:/app/.next
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     environment:
@@ -35,6 +40,9 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # Normally injected at build time from the deployed commit (#290). Set it
+      # locally to exercise the badge; empty means "not a deployed build".
+      - APP_COMMIT=${APP_COMMIT:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
       - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
@@ -91,5 +99,6 @@ services:
 
 volumes:
   frontend_node_modules:
+  frontend_next:
   backend_node_modules:
   pgdata:

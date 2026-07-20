@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getSponsorBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
@@ -19,7 +20,8 @@ export async function generateMetadata({
 
   if (!sponsor) return { title: "Sponsor not found" };
 
-  const description = localizedField(sponsor, "description", locale) || sponsor.name;
+  // Meta / OG want plain text; the stored description may be rich HTML (#270).
+  const description = htmlToText(localizedField(sponsor, "description", locale)) || sponsor.name;
 
   return {
     title: sponsor.name,
@@ -84,10 +86,18 @@ export default async function SponsorDetailPage({
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">{sponsor.name}</h1>
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
-          {/* Left: description */}
+          {/* Left: description. Rich-text HTML for new content (#270); older
+              plain-text descriptions keep their line breaks via pre-line. */}
           <div>
             {description ? (
-              <p className="text-lg leading-relaxed text-noir whitespace-pre-line">{description}</p>
+              looksLikeHtml(description) ? (
+                <div
+                  className="article-content text-lg leading-relaxed text-noir"
+                  dangerouslySetInnerHTML={{ __html: description }}
+                />
+              ) : (
+                <p className="text-lg leading-relaxed text-noir whitespace-pre-line">{description}</p>
+              )
             ) : null}
           </div>
 
@@ -153,6 +163,42 @@ export default async function SponsorDetailPage({
                   {sp.company && <span className="text-sm text-gris">{sp.company}</span>}
                 </Link>
               ))}
+            </div>
+          </section>
+        )}
+
+        {/* Job offers to relay (#251). Description is server-sanitized HTML. */}
+        {sponsor.jobOffers.length > 0 && (
+          <section className="mt-14">
+            <h2 className="mb-6 text-2xl font-bold text-noir">{t("jobOffersTitle")}</h2>
+            <div className="space-y-4">
+              {sponsor.jobOffers.map((offer) => {
+                // Show the description in the page locale, falling back to the
+                // other language when the translation is missing (#273).
+                const description =
+                  (locale === "en" ? offer.descriptionEn : offer.descriptionFr) ||
+                  offer.descriptionFr ||
+                  offer.descriptionEn;
+                return (
+                <article key={offer.id} className="rounded-2xl border border-gris/15 bg-blanc p-5 shadow-sm">
+                  <h3 className="text-lg font-bold text-noir">{offer.title}</h3>
+                  {description && (
+                    <div
+                      className="article-content mt-2 text-sm text-gris"
+                      dangerouslySetInnerHTML={{ __html: description }}
+                    />
+                  )}
+                  <a
+                    href={offer.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 inline-block font-bold text-bleu hover:underline"
+                  >
+                    {t("jobOfferCta")} →
+                  </a>
+                </article>
+                );
+              })}
             </div>
           </section>
         )}

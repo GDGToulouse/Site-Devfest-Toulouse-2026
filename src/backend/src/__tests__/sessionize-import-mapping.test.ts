@@ -8,7 +8,13 @@ import { importSessionize } from "../lib/sessionize-import.js";
 // surfaces a warning instead of being lost silently. Runs against the test DB
 // on a throwaway edition that is deleted afterwards.
 
-const TEST_YEAR = 2099;
+// Deliberately BEFORE every seeded edition (2016+). Ten other test files pick
+// their fixture edition with `findFirst({ orderBy: { year: "desc" } })`, so a
+// future year here would become "the most recent one" for as long as this test
+// runs — and Vitest runs files in parallel. They would then attach a sponsor to
+// an edition this file is about to delete, failing on Sponsor_editionId_fkey
+// (#292). A past year can never win that ordering.
+const TEST_YEAR = 1999;
 
 // Item ids referenced by the sessions below.
 const FMT_WORKSHOP = 101;
@@ -26,12 +32,12 @@ const payload = {
     ] },
     { id: 2, title: "Niveau", items: [{ id: LEVEL_AVANCE, name: "Avancé" }] },
     { id: 3, title: "Language", items: [{ id: LANG_EN, name: "English" }] },
-    { id: 4, title: "Track", items: [{ id: TRACK_CLOUD, name: "Cloud & DevOps 2099" }] },
+    { id: 4, title: "Track", items: [{ id: TRACK_CLOUD, name: "Cloud & DevOps 1999" }] },
   ],
   sessions: [
-    { id: "s1", title: "Workshop avancé en anglais 2099",
+    { id: "s1", title: "Workshop avancé en anglais 1999",
       categoryItems: [FMT_WORKSHOP, LEVEL_AVANCE, LANG_EN, TRACK_CLOUD] },
-    { id: "s2", title: "Session au format inconnu 2099",
+    { id: "s2", title: "Session au format inconnu 1999",
       categoryItems: [FMT_UNKNOWN, TRACK_CLOUD] },
   ],
 };
@@ -59,18 +65,18 @@ describe("importSessionize category mapping (#247)", () => {
       orderBy: { slug: "asc" },
     });
 
-    const workshop = talks.find((t) => t.titleFr.includes("Workshop avancé"));
+    const workshop = talks.find((t) => t.title.includes("Workshop avancé"));
     expect(workshop?.format).toBe("WORKSHOP");
     expect(workshop?.level).toBe("CONFIRME");
     expect(workshop?.language).toBe("en");
-    expect(workshop?.category?.nameFr).toBe("Cloud & DevOps 2099");
+    expect(workshop?.category?.nameFr).toBe("Cloud & DevOps 1999");
 
     // The "Language" category must NOT become a track category.
     const categories = await prisma.category.findMany({ where: { editionId: edition.id } });
-    expect(categories.map((c) => c.nameFr)).toEqual(["Cloud & DevOps 2099"]);
+    expect(categories.map((c) => c.nameFr)).toEqual(["Cloud & DevOps 1999"]);
 
     // Unknown format falls back to CONFERENCE and is reported.
-    const fallback = talks.find((t) => t.titleFr.includes("format inconnu"));
+    const fallback = talks.find((t) => t.title.includes("format inconnu"));
     expect(fallback?.format).toBe("CONFERENCE");
     expect(report.warnings.some((w) => w.includes("Fireside chat"))).toBe(true);
   });

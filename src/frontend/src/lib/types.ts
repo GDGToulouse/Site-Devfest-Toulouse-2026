@@ -24,6 +24,9 @@ export interface Edition {
   isScheduleReady: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
+  // At least one partner job offer is published and still within its
+  // post-event visibility window.
+  hasJobOffers: boolean;
 }
 
 export interface EditionSummary {
@@ -140,9 +143,17 @@ export interface Sponsor {
   socialLinks: Record<string, string>;
   contactEmail: string | null;
   locale: string;
-  editLinkLocked: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
+  // Private fields (#249) — organizers only, never on public pages.
+  standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string | null;
+  comKitLogoPrintUrl?: string | null;
+  comKitCharterUrl?: string | null;
+  comKitNotes?: string | null;
+  platinumPromoIdea?: string | null;
+  platinumCoBuildIdea?: string | null;
 }
 
 // Public list item (lighter than the admin Sponsor).
@@ -162,6 +173,16 @@ export interface SponsorSpeakerRef {
   company: string | null;
 }
 
+// A job offer a sponsor wants relayed (#251). The description is bilingual
+// rich-text HTML (#273) — the page picks the field for the current locale.
+export interface JobOfferPublic {
+  id: number;
+  title: string;
+  descriptionFr: string;
+  descriptionEn: string;
+  url: string;
+}
+
 export interface SponsorDetail {
   id: number;
   slug: string;
@@ -173,6 +194,16 @@ export interface SponsorDetail {
   descriptionEn: string | null;
   socialLinks: Record<string, string>;
   speakers: SponsorSpeakerRef[];
+  jobOffers: JobOfferPublic[];
+}
+
+// A sponsor with its job offers, for the recap page (#251).
+export interface SponsorWithOffers {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  level: SponsorLevel;
+  jobOffers: JobOfferPublic[];
 }
 
 // Public speaker list item.
@@ -185,10 +216,12 @@ export interface SpeakerPublic {
   isFeatured?: boolean;
 }
 
+// A talk is single-language (#293): `title`/`description` hold its own wording,
+// in the language given by `language`. Only Talk departs from the site's
+// bilingual `*Fr`/`*En` convention — see docs/modele-donnees-metier.md.
 export interface SpeakerTalkRef {
   slug: string;
-  titleFr: string;
-  titleEn: string;
+  title: string;
   format: string;
 }
 
@@ -219,10 +252,8 @@ export interface EditionSpeaker {
 
 export interface EditionTalk {
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
@@ -235,10 +266,8 @@ export interface EditionTalk {
 export interface TalkDetail {
   id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
@@ -250,10 +279,8 @@ export interface TalkDetail {
 export interface Talk {
   id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
@@ -263,6 +290,8 @@ export interface Talk {
   speakerIds: number[];
   speakers: { id: number; name: string }[];
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // Whether the speaker may edit the wording from their magic link (#289).
+  isSpeakerEditable: boolean;
   editionId: number;
 }
 

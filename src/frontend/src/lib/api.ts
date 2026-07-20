@@ -15,6 +15,7 @@ import type {
   SponsorPlan,
   SponsorPublic,
   SponsorDetail,
+  SponsorWithOffers,
   SpeakerPublic,
   SpeakerDetail,
   TalkDetail,
@@ -150,6 +151,10 @@ export async function getSponsors(): Promise<SponsorPublic[]> {
 
 export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | null> {
   return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
+}
+
+export async function getJobOffers(): Promise<SponsorWithOffers[]> {
+  return (await fetchAPI<SponsorWithOffers[]>("/api/job-offers")) || [];
 }
 
 export async function getSpeakers(): Promise<SpeakerPublic[]> {

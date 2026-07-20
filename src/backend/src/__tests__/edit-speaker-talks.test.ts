@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 
 // GET /api/edit/:token exposes the speaker's accepted sessions read-only (#229):
 // only PUBLISHED talks are surfaced, and a sponsor token carries no `talks`.
@@ -12,8 +13,7 @@ const talkIds: number[] = [];
 
 describe("GET /api/edit/:token — speaker sessions (#229)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const speaker = await prisma.speaker.create({
@@ -30,15 +30,15 @@ describe("GET /api/edit/:token — speaker sessions (#229)", () => {
 
     const published = await prisma.talk.create({
       data: {
-        editionId, slug: "sessions-test-published", titleFr: "Talk publié", titleEn: "Published talk",
-        descriptionFr: "", descriptionEn: "", format: "WORKSHOP", language: "fr",
+        editionId, slug: "sessions-test-published", title: "Talk publié",
+        description: "", format: "WORKSHOP", language: "fr",
         publicationStatus: "PUBLISHED", speakers: { connect: { id: speakerId } },
       },
     });
     const draft = await prisma.talk.create({
       data: {
-        editionId, slug: "sessions-test-draft", titleFr: "Talk brouillon", titleEn: "Draft talk",
-        descriptionFr: "", descriptionEn: "", format: "CONFERENCE", language: "fr",
+        editionId, slug: "sessions-test-draft", title: "Talk brouillon",
+        description: "", format: "CONFERENCE", language: "fr",
         publicationStatus: "DRAFT", speakers: { connect: { id: speakerId } },
       },
     });
@@ -61,7 +61,7 @@ describe("GET /api/edit/:token — speaker sessions (#229)", () => {
     expect(body.talks).toHaveLength(1);
     expect(body.talks[0]).toMatchObject({
       slug: "sessions-test-published",
-      titleFr: "Talk publié",
+      title: "Talk publié",
       format: "WORKSHOP",
     });
     await app.close();

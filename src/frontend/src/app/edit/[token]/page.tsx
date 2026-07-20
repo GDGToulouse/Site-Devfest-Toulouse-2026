@@ -3,14 +3,27 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import RichTextEditor from "@/components/admin/RichTextEditor";
+import SponsorPrivateSection, { type SponsorPrivate } from "./SponsorPrivateSection";
+import SponsorJobOffers, { type JobOffersData } from "./SponsorJobOffers";
 
 type Locale = "fr" | "en";
 
+type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
+type TalkLevel = "" | "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
+type TalkLanguage = "fr" | "en";
+
 interface EditTalk {
+  id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  format: "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
+  // Single-language (#293) — in the talk's own `language`, below.
+  title: string;
+  description: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: TalkLanguage;
+  // Organizers open editing talk by talk (#289); false means read-only.
+  isSpeakerEditable: boolean;
 }
 
 interface EditData {
@@ -18,8 +31,12 @@ interface EditData {
   locale?: Locale;
   name: string;
   fields: Record<string, unknown>;
-  // Speaker only, read-only (#229).
+  // Speaker only (#229, editable per talk since #289).
   talks?: EditTalk[];
+  // Sponsor only, private section (#249).
+  private?: SponsorPrivate;
+  // Sponsor only, job offers (#251).
+  jobOffers?: JobOffersData;
 }
 
 type SocialLinks = Record<string, string>;
@@ -48,9 +65,55 @@ const T = {
     websiteUrl: "Site web",
     logo: "Logo",
     mySessions: "Mes sessions",
-    mySessionsHint: "Vos sessions retenues. Pour toute correction, contactez l'organisation.",
+    mySessionsHint:
+      "Vos conférences retenues. Lorsque la modification est ouverte, les changements sont publiés aussitôt sur le programme.",
+    talkReadOnly:
+      "Cette conférence n'est pas modifiable. Contactez l'organisation pour toute correction.",
+    talkTitle: "Titre",
+    talkDescription: "Résumé",
+    talkFormat: "Format",
+    talkLevel: "Niveau",
+    talkLanguage: "Langue de présentation",
+    levelAll: "Tous niveaux",
     format: { CONFERENCE: "Conférence", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
-    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Autre site" },
+    level: { DEBUTANT: "Débutant", INTERMEDIAIRE: "Intermédiaire", CONFIRME: "Confirmé" },
+    language: { fr: "Français", en: "Anglais" },
+    talkSaved: "Conférence enregistrée !",
+    talkRejected: "Le titre est obligatoire et le résumé doit rester sous 5 000 caractères.",
+    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Autre site" },
+    privateSection: "Informations privées",
+    privateHint: "Réservé à l'organisation — ces informations ne sont jamais affichées publiquement.",
+    standContacts: "Personnes présentes sur le stand",
+    standContactsHint: "Leurs réseaux sociaux, pour un relais le jour J.",
+    standName: "Nom",
+    addStandContact: "Ajouter une personne",
+    removeContact: "Retirer",
+    comKit: "Kit de communication",
+    comKitReceived: "Kit de com reçu",
+    comKitLogoWeb: "Logo (version Web)",
+    comKitLogoPrint: "Logo (version Print)",
+    comKitCharter: "Charte graphique",
+    comKitNotes: "Notes / autres supports",
+    comKitEmailIntro:
+      "Des fichiers ou informations complémentaires à transmettre qui ne tiennent pas dans un lien ? Envoyez-les par email à l'organisation.",
+    comKitEmailButton: "Envoyer par email",
+    comKitEmailSubject: "Compléments kit de communication — {name}",
+    comKitEmailBody:
+      "Bonjour,\n\nVeuillez trouver ci-joint des informations complémentaires pour {name}.\n\n[joindre les fichiers]\n",
+    platinumSection: "Réservé aux partenaires Platinum",
+    platinumPromoIdea: "Contenu promotionnel à mettre en avant",
+    platinumPromoIdeaHint: "Vidéo, produit, campagne… que nous pourrions relayer.",
+    platinumCoBuildIdea: "Idées de contenu à co-construire",
+    jobOffers: "Offres d'emploi à relayer",
+    jobOffersHint: "Publiées sur votre fiche et la page « Offres d'emploi des partenaires ».",
+    jobOfferTitle: "Intitulé du poste",
+    jobOfferDescription: "Description",
+    jobOfferUrl: "Lien vers l'offre complète",
+    addJobOffer: "Ajouter une offre",
+    removeJobOffer: "Supprimer",
+    jobOfferQuotaReached: "Vous avez atteint le nombre maximum d'offres pour votre niveau de partenariat.",
+    jobOfferSaved: "Offre enregistrée !",
+    jobOfferRejected: "Une valeur est invalide : le titre est obligatoire et le lien doit commencer par http:// ou https://.",
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
@@ -89,9 +152,55 @@ const T = {
     websiteUrl: "Website",
     logo: "Logo",
     mySessions: "My sessions",
-    mySessionsHint: "Your accepted sessions. For any correction, please contact the organisers.",
+    mySessionsHint:
+      "Your accepted talks. When editing is open, changes are published to the programme right away.",
+    talkReadOnly:
+      "This talk cannot be edited. Please contact the organizers for any correction.",
+    talkTitle: "Title",
+    talkDescription: "Abstract",
+    talkFormat: "Format",
+    talkLevel: "Level",
+    talkLanguage: "Talk language",
+    levelAll: "All levels",
     format: { CONFERENCE: "Conference", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
-    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", github: "GitHub", website: "Other website" },
+    level: { DEBUTANT: "Beginner", INTERMEDIAIRE: "Intermediate", CONFIRME: "Advanced" },
+    language: { fr: "French", en: "English" },
+    talkSaved: "Talk saved!",
+    talkRejected: "A title is required and the abstract must stay under 5,000 characters.",
+    social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Other website" },
+    privateSection: "Private information",
+    privateHint: "Organizers only — this information is never shown publicly.",
+    standContacts: "People staffing the booth",
+    standContactsHint: "Their social handles, for relaying on the day.",
+    standName: "Name",
+    addStandContact: "Add a person",
+    removeContact: "Remove",
+    comKit: "Communication kit",
+    comKitReceived: "Com kit received",
+    comKitLogoWeb: "Logo (web version)",
+    comKitLogoPrint: "Logo (print version)",
+    comKitCharter: "Brand guidelines",
+    comKitNotes: "Notes / other assets",
+    comKitEmailIntro:
+      "Extra files or information to share that don't fit in a link? Email them to the organisers.",
+    comKitEmailButton: "Send by email",
+    comKitEmailSubject: "Communication kit complements — {name}",
+    comKitEmailBody:
+      "Hello,\n\nPlease find attached some additional information for {name}.\n\n[attach the files]\n",
+    platinumSection: "Platinum partners only",
+    platinumPromoIdea: "Promotional content to highlight",
+    platinumPromoIdeaHint: "Video, product, campaign… we could relay.",
+    platinumCoBuildIdea: "Ideas for content to co-build",
+    jobOffers: "Job offers to relay",
+    jobOffersHint: "Published on your page and the “Partner job offers” page.",
+    jobOfferTitle: "Job title",
+    jobOfferDescription: "Description",
+    jobOfferUrl: "Link to the full offer",
+    addJobOffer: "Add an offer",
+    removeJobOffer: "Delete",
+    jobOfferQuotaReached: "You have reached the maximum number of offers for your sponsorship level.",
+    jobOfferSaved: "Offer saved!",
+    jobOfferRejected: "A value is invalid: the title is required and the link must start with http:// or https://.",
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
@@ -251,18 +360,32 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             isEmpty={(lang) =>
               isSpeaker
                 ? !(lang === "fr" ? form.bioFr : form.bioEn)?.trim()
-                : !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.trim()
+                : // Sponsor description is HTML — strip tags before the empty check.
+                  !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.replace(/<[^>]*>/g, "").trim()
             }
             renderPanel={(lang) => {
               const field = isSpeaker
                 ? lang === "fr" ? "bioFr" : "bioEn"
                 : lang === "fr" ? "descriptionFr" : "descriptionEn";
+              // Sponsor description is rich text (#270); speaker bio stays plain.
+              if (isSpeaker) {
+                return (
+                  <textarea
+                    value={form[field] ?? ""}
+                    onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                    rows={5}
+                    className={inputClass}
+                  />
+                );
+              }
               return (
-                <textarea
+                <RichTextEditor
+                  label=""
+                  name={`sponsor-${field}`}
                   value={form[field] ?? ""}
-                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                  rows={5}
-                  className={inputClass}
+                  onChange={(html) => setForm({ ...form, [field]: html })}
+                  showImageButton={false}
+                  minHeight="180px"
                 />
               );
             }}
@@ -293,7 +416,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           <div>
             <p className="mb-3 text-sm font-semibold text-noir">{t.socialLinks}</p>
             <div className="grid gap-5 md:grid-cols-2">
-              {(["linkedin", "twitter", "github", "website"] as const).map((key) => (
+              {(["linkedin", "twitter", "bluesky", "github", "website"] as const).map((key) => (
                 <Field
                   key={key}
                   label={t.social[key as SocialKey]}
@@ -304,27 +427,18 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             </div>
           </div>
 
-          {/* Read-only list of the speaker's accepted sessions (#229, RG-247):
-              informational only, not editable from this page. */}
+          {/* Editable list of the speaker's accepted sessions (#260). Each talk
+              is its own form with its own save button — the API updates one talk
+              at a time and publishes it immediately. */}
           {isSpeaker && data!.talks && data!.talks.length > 0 && (
-            <div>
+            <div className="border-t border-gris/15 pt-6">
               <p className="mb-1 text-sm font-semibold text-noir">{t.mySessions}</p>
-              <p className="mb-3 text-sm text-gris">{t.mySessionsHint}</p>
-              <ul className="space-y-2">
+              <p className="mb-4 text-sm text-gris">{t.mySessionsHint}</p>
+              <div className="space-y-6">
                 {data!.talks.map((talk) => (
-                  <li
-                    key={talk.slug}
-                    className="flex flex-wrap items-center gap-3 rounded-lg border border-gris/15 bg-blanc-casse px-4 py-3"
-                  >
-                    <span className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
-                      {t.format[talk.format]}
-                    </span>
-                    <span className="font-medium text-noir">
-                      {(data!.locale ?? "fr") === "en" ? talk.titleEn : talk.titleFr}
-                    </span>
-                  </li>
+                  <TalkEditor key={talk.id} talk={talk} token={token} t={t} />
                 ))}
-              </ul>
+              </div>
             </div>
           )}
 
@@ -338,6 +452,20 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             </button>
             {saved && <span className="font-medium text-malachite">{t.saved}</span>}
           </div>
+
+          {/* Sponsor private section (#249) — organizers only, own save button.
+              Rendered after the public save so the public/private boundary is
+              visually explicit. */}
+          {!isSpeaker && data!.private && (
+            <SponsorPrivateSection token={token} sponsorName={data!.name} initial={data!.private} t={t} />
+          )}
+
+          {/* Job offers (#251) — sponsor only, published directly. */}
+          {!isSpeaker && data!.jobOffers && (
+            <div className="border-t border-gris/15 pt-6">
+              <SponsorJobOffers token={token} initial={data!.jobOffers} t={t} />
+            </div>
+          )}
           {saveError && (
             <p role="alert" className="font-medium text-terre-cuite">
               {saveError}
@@ -477,6 +605,118 @@ function ImageField({
             </p>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// A read-only value, shown when editing is closed (#289). The speaker still
+// needs to see what was submitted.
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <span className="mb-1 block text-sm font-medium text-noir">{label}</span>
+      <p className="whitespace-pre-line text-sm text-noir">{value || "—"}</p>
+    </div>
+  );
+}
+
+// One session (#260). Read-only unless the organizers opened this talk to
+// editing (#289) — format, level and language are never editable here, they
+// drive the schedule. Self-contained: holds its own draft state and saves
+// itself, since the API updates one talk at a time and publishes it immediately.
+function TalkEditor({
+  talk,
+  token,
+  t,
+}: {
+  talk: EditTalk;
+  token: string;
+  t: (typeof T)[Locale];
+}) {
+  const [title, setTitle] = useState(talk.title);
+  const [description, setDescription] = useState(talk.description);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+
+  async function save() {
+    setSaving(true);
+    setSaved(false);
+    setError("");
+    const res = await fetch(`/api/edit/${token}/talks/${talk.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title, description }),
+    });
+    setSaving(false);
+    if (res.ok) {
+      setSaved(true);
+      return;
+    }
+    setError(t.talkRejected);
+  }
+
+  // Programming metadata: shown as badges, never editable from the link (#289).
+  const badges = [
+    t.format[talk.format],
+    talk.level ? t.level[talk.level] : t.levelAll,
+    t.language[talk.language],
+  ];
+
+  return (
+    <div className="rounded-lg border border-gris/15 bg-blanc-casse p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        {badges.map((badge) => (
+          <span key={badge} className="rounded-full bg-bleu/10 px-3 py-1 text-xs font-bold text-bleu">
+            {badge}
+          </span>
+        ))}
+      </div>
+
+      <div className="space-y-5">
+        {!talk.isSpeakerEditable ? (
+          <>
+            <ReadOnlyField label={t.talkTitle} value={talk.title} />
+            <ReadOnlyField label={t.talkDescription} value={talk.description} />
+            <p className="text-sm text-gris">{t.talkReadOnly}</p>
+          </>
+        ) : (
+          <>
+            {/* Single-language (#293): the talk is given in the language shown
+                in the badges above, so there is nothing to switch between. */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-noir">{t.talkTitle}</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+            </label>
+
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-noir">{t.talkDescription}</span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                className={inputClass}
+              />
+            </label>
+
+            <div className="flex flex-wrap items-center gap-4">
+              <button
+                onClick={save}
+                disabled={saving}
+                className="rounded-[12px] bg-malachite px-5 py-2.5 text-sm font-bold text-blanc hover:bg-malachite/90 disabled:opacity-50"
+              >
+                {saving ? t.saving : t.save}
+              </button>
+              {saved && <span className="text-sm font-medium text-malachite">{t.talkSaved}</span>}
+              {error && (
+                <span role="alert" className="text-sm font-medium text-terre-cuite">
+                  {error}
+                </span>
+              )}
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
