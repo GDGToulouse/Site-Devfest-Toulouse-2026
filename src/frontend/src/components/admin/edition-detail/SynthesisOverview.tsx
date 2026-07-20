@@ -120,7 +120,7 @@ export default function SynthesisOverview({ editionId, year, counts }: Synthesis
           allHref={`/admin/talks?year=${year}`}
           items={talks.slice(0, TOP_N).map((t) => ({
             id: t.id,
-            label: t.titleFr,
+            label: t.title,
             href: `/admin/talks/${t.id}`,
           }))}
           emptyLabel="Aucune conférence pour cette édition."

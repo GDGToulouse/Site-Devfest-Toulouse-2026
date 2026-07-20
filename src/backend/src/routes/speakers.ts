@@ -54,8 +54,8 @@ export default async function speakerRoutes(app: FastifyInstance) {
       include: {
         talks: {
           where: { publicationStatus: "PUBLISHED" },
-          select: { slug: true, titleFr: true, titleEn: true, format: true },
-          orderBy: { titleFr: "asc" },
+          select: { slug: true, title: true, format: true },
+          orderBy: { title: "asc" },
         },
         sponsor: { select: { slug: true, name: true } },
       },

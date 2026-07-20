@@ -144,7 +144,7 @@ export default async function editionRoutes(app: FastifyInstance) {
 
     const talks = await prisma.talk.findMany({
       where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
-      orderBy: { titleFr: "asc" },
+      orderBy: { title: "asc" },
       include: {
         speakers: {
           where: { publicationStatus: "PUBLISHED" },
@@ -157,10 +157,8 @@ export default async function editionRoutes(app: FastifyInstance) {
 
     return talks.map((t) => ({
       slug: t.slug,
-      titleFr: t.titleFr,
-      titleEn: t.titleEn,
-      descriptionFr: t.descriptionFr,
-      descriptionEn: t.descriptionEn,
+      title: t.title,
+      description: t.description,
       format: t.format,
       level: t.level,
       language: t.language,

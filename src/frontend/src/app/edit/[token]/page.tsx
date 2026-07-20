@@ -16,10 +16,9 @@ type TalkLanguage = "fr" | "en";
 interface EditTalk {
   id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  // Single-language (#293) — in the talk's own `language`, below.
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: TalkLanguage;
@@ -611,32 +610,13 @@ function ImageField({
   );
 }
 
-// A pair of read-only bilingual values, shown when editing is closed (#289) —
-// the speaker still needs to see what was submitted for each language.
-function ReadOnlyBilingual({
-  label,
-  fr,
-  en,
-  t,
-}: {
-  label: string;
-  fr: string;
-  en: string;
-  t: (typeof T)[Locale];
-}) {
+// A read-only value, shown when editing is closed (#289). The speaker still
+// needs to see what was submitted.
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
       <span className="mb-1 block text-sm font-medium text-noir">{label}</span>
-      <div className="space-y-2">
-        {([["fr", fr], ["en", en]] as const).map(([lang, text]) => (
-          <p key={lang} className="whitespace-pre-line text-sm text-noir">
-            <span className="mr-2 text-xs font-bold uppercase text-gris">
-              {lang === "fr" ? t.langFr : t.langEn}
-            </span>
-            {text || "—"}
-          </p>
-        ))}
-      </div>
+      <p className="whitespace-pre-line text-sm text-noir">{value || "—"}</p>
     </div>
   );
 }
@@ -654,10 +634,8 @@ function TalkEditor({
   token: string;
   t: (typeof T)[Locale];
 }) {
-  const [titleFr, setTitleFr] = useState(talk.titleFr);
-  const [titleEn, setTitleEn] = useState(talk.titleEn);
-  const [descriptionFr, setDescriptionFr] = useState(talk.descriptionFr);
-  const [descriptionEn, setDescriptionEn] = useState(talk.descriptionEn);
+  const [title, setTitle] = useState(talk.title);
+  const [description, setDescription] = useState(talk.description);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -669,7 +647,7 @@ function TalkEditor({
     const res = await fetch(`/api/edit/${token}/talks/${talk.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ titleFr, titleEn, descriptionFr, descriptionEn }),
+      body: JSON.stringify({ title, description }),
     });
     setSaving(false);
     if (res.ok) {
@@ -699,43 +677,28 @@ function TalkEditor({
       <div className="space-y-5">
         {!talk.isSpeakerEditable ? (
           <>
-            <ReadOnlyBilingual label={t.talkTitle} fr={talk.titleFr} en={talk.titleEn} t={t} />
-            <ReadOnlyBilingual
-              label={t.talkDescription}
-              fr={talk.descriptionFr}
-              en={talk.descriptionEn}
-              t={t}
-            />
+            <ReadOnlyField label={t.talkTitle} value={talk.title} />
+            <ReadOnlyField label={t.talkDescription} value={talk.description} />
             <p className="text-sm text-gris">{t.talkReadOnly}</p>
           </>
         ) : (
           <>
-            <BilingualTabs
-              label={t.talkTitle}
-              labels={{ fr: t.langFr, en: t.langEn }}
-              isEmpty={(lang) => !(lang === "fr" ? titleFr : titleEn)?.trim()}
-              renderPanel={(lang) => (
-                <input
-                  value={lang === "fr" ? titleFr : titleEn}
-                  onChange={(e) => (lang === "fr" ? setTitleFr : setTitleEn)(e.target.value)}
-                  className={inputClass}
-                />
-              )}
-            />
+            {/* Single-language (#293): the talk is given in the language shown
+                in the badges above, so there is nothing to switch between. */}
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-noir">{t.talkTitle}</span>
+              <input value={title} onChange={(e) => setTitle(e.target.value)} className={inputClass} />
+            </label>
 
-            <BilingualTabs
-              label={t.talkDescription}
-              labels={{ fr: t.langFr, en: t.langEn }}
-              isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn)?.trim()}
-              renderPanel={(lang) => (
-                <textarea
-                  value={lang === "fr" ? descriptionFr : descriptionEn}
-                  onChange={(e) => (lang === "fr" ? setDescriptionFr : setDescriptionEn)(e.target.value)}
-                  rows={5}
-                  className={inputClass}
-                />
-              )}
-            />
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-noir">{t.talkDescription}</span>
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={5}
+                className={inputClass}
+              />
+            </label>
 
             <div className="flex flex-wrap items-center gap-4">
               <button

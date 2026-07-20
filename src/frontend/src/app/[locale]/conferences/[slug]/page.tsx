@@ -19,8 +19,9 @@ export async function generateMetadata({
 
   if (!talk) return { title: "Session not found" };
 
-  const title = localizedField(talk, "title", locale);
-  const description = localizedField(talk, "description", locale) || title;
+  // Title and abstract are not localized (#293) — the talk has one language.
+  const title = talk.title;
+  const description = talk.description || title;
 
   return {
     title,
@@ -50,8 +51,8 @@ export default async function TalkDetailPage({
 
   if (!talk) notFound();
 
-  const title = localizedField(talk, "title", locale);
-  const description = localizedField(talk, "description", locale);
+  const title = talk.title;
+  const description = talk.description;
   const categoryName = talk.category ? localizedField(talk.category, "name", locale) : null;
 
   const breadcrumbItems = [

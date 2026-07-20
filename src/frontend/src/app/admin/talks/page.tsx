@@ -60,7 +60,7 @@ export default function TalksDataPage() {
     return talks.filter((t) => {
       if (year && String(t.edition?.year) !== year) return false;
       if (format && t.format !== format) return false;
-      if (q && !t.titleFr.toLowerCase().includes(q) && !t.speakers.some((s) => s.name.toLowerCase().includes(q))) return false;
+      if (q && !t.title.toLowerCase().includes(q) && !t.speakers.some((s) => s.name.toLowerCase().includes(q))) return false;
       return true;
     });
   }, [talks, year, format, search]);
@@ -70,7 +70,7 @@ export default function TalksDataPage() {
   }, [year, format, search]);
 
   const columns = [
-    { key: "title", label: "Titre", render: (t: TalkRow) => <span className="font-medium text-noir">{t.titleFr}</span> },
+    { key: "title", label: "Titre", render: (t: TalkRow) => <span className="font-medium text-noir">{t.title}</span> },
     { key: "format", label: "Format", render: (t: TalkRow) => FORMAT_LABELS[t.format] },
     {
       key: "category",

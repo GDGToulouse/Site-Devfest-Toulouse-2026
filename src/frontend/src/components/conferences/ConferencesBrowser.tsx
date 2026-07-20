@@ -122,7 +122,7 @@ export default function ConferencesBrowser({
         if (cat !== filters.category) return false;
       }
       if (q) {
-        const title = localizedField(talk, "title", locale).toLowerCase();
+        const title = talk.title.toLowerCase();
         const speakers = talk.speakers.map((s) => s.name).join(" ").toLowerCase();
         if (!title.includes(q) && !speakers.includes(q)) return false;
       }

@@ -118,29 +118,22 @@ const talkBodySchema = {
   type: "object",
   additionalProperties: false,
   properties: {
-    titleFr: { type: "string", maxLength: TITLE_MAX },
-    titleEn: { type: "string", maxLength: TITLE_MAX },
-    descriptionFr: { type: "string", maxLength: TEXT_MAX },
-    descriptionEn: { type: "string", maxLength: TEXT_MAX },
+    title: { type: "string", maxLength: TITLE_MAX },
+    description: { type: "string", maxLength: TEXT_MAX },
   },
 };
 
 const TALK_ALLOWED_FIELDS = Object.keys(talkBodySchema.properties);
 
 interface TalkEditBody {
-  titleFr?: string;
-  titleEn?: string;
-  descriptionFr?: string;
-  descriptionEn?: string;
+  title?: string;
+  description?: string;
 }
 
-// A title is the only field that cannot be blank: it's rendered as the session
-// heading and used to derive the slug. Descriptions and level may be cleared.
-function findBlankTitle(body: TalkEditBody): string | null {
-  for (const field of ["titleFr", "titleEn"] as const) {
-    if (body[field] !== undefined && !body[field]!.trim()) return field;
-  }
-  return null;
+// The title is the only field that cannot be blank: it's rendered as the session
+// heading and the slug was derived from it. The description may be cleared.
+function hasBlankTitle(body: TalkEditBody): boolean {
+  return body.title !== undefined && !body.title.trim();
 }
 
 function findForbiddenTalkKey(body: Record<string, unknown>): string | null {
@@ -263,16 +256,14 @@ async function resolveToken(token: string) {
         select: {
           id: true,
           slug: true,
-          titleFr: true,
-          titleEn: true,
-          descriptionFr: true,
-          descriptionEn: true,
+          title: true,
+          description: true,
           format: true,
           level: true,
           language: true,
           isSpeakerEditable: true,
         },
-        orderBy: { titleFr: "asc" },
+        orderBy: { title: "asc" },
       },
     },
   });
@@ -365,15 +356,15 @@ interface SponsorEditBody {
 // they can review the change in one click.
 async function notifyTalkEdited(
   speakerName: string,
-  talk: { id: number; titleFr: string },
+  talk: { id: number; title: string },
 ): Promise<void> {
   const to = await getCfpNotificationEmail();
   const baseUrl = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
   const adminUrl = `${baseUrl}/admin/talks/${talk.id}`;
 
-  const subject = `Conférence modifiée par un·e speaker — ${talk.titleFr}`;
+  const subject = `Conférence modifiée par un·e speaker — ${talk.title}`;
   const text = [
-    `${speakerName} a mis à jour sa conférence « ${talk.titleFr} ».`,
+    `${speakerName} a mis à jour sa conférence « ${talk.title} ».`,
     "",
     `Les modifications sont déjà en ligne (publication directe).`,
     `Fiche admin : ${adminUrl}`,
@@ -381,7 +372,7 @@ async function notifyTalkEdited(
   const html = `
     ${emailHeading("Conférence modifiée par un·e speaker")}
     <p><strong>${escapeHtml(speakerName)}</strong> a mis à jour sa conférence
-    « ${escapeHtml(talk.titleFr)} ».</p>
+    « ${escapeHtml(talk.title)} ».</p>
     <p>Les modifications sont déjà en ligne (publication directe).</p>
     ${emailButton(adminUrl, "Voir la fiche dans l'admin")}
   `;
@@ -615,17 +606,14 @@ export default async function editRoutes(app: FastifyInstance) {
       if (!talk.isSpeakerEditable) return reply.code(403).send({ error: "talk_not_editable" });
 
       const body = request.body;
-      const blankTitle = findBlankTitle(body);
-      if (blankTitle) return reply.code(400).send({ error: "empty_title", field: blankTitle });
+      if (hasBlankTitle(body)) return reply.code(400).send({ error: "empty_title" });
 
       // A field absent from the body is left untouched.
       await prisma.talk.update({
         where: { id: talk.id },
         data: {
-          ...(body.titleFr !== undefined && { titleFr: body.titleFr.trim() }),
-          ...(body.titleEn !== undefined && { titleEn: body.titleEn.trim() }),
-          ...(body.descriptionFr !== undefined && { descriptionFr: body.descriptionFr }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: body.descriptionEn }),
+          ...(body.title !== undefined && { title: body.title.trim() }),
+          ...(body.description !== undefined && { description: body.description }),
         },
       });
 
@@ -635,7 +623,7 @@ export default async function editRoutes(app: FastifyInstance) {
       // Notify the organizers (best-effort: a mail failure must not fail the
       // save the speaker just made).
       try {
-        await notifyTalkEdited(entity.name, { id: talk.id, titleFr: body.titleFr?.trim() || talk.titleFr });
+        await notifyTalkEdited(entity.name, { id: talk.id, title: body.title?.trim() || talk.title });
       } catch (err) {
         request.log.error("Failed to send talk-edit notification: %s", String(err));
       }
