@@ -66,3 +66,81 @@ export function pickPartial<T extends Record<string, unknown>>(
   }
   return out;
 }
+
+/**
+ * Soft delete (#146, sub-step 1/5 of #145).
+ *
+ * Nothing below changes DELETE behaviour yet — the handlers still hard-delete
+ * until #147 switches them over. This is the shared vocabulary they will use.
+ */
+
+/** Prisma `where` fragment selecting live rows. Spread it into any query. */
+export const notDeleted = { deletedAt: null } as const;
+
+/** Prisma `where` fragment selecting rows sitting in the trash. */
+export const onlyDeleted = { deletedAt: { not: null } } as const;
+
+// Slugs and names are unique per edition (`@@unique([editionId, slug])`), and a
+// trashed row keeps occupying its slot: recreating "Jane Doe" while the old one
+// sits in the trash would hit the constraint. So the slug is parked under a
+// reserved prefix on the way in, and reclaimed on the way out.
+//
+// Partial unique indexes (`WHERE deleted_at IS NULL`) would be the tidier fix,
+// but Prisma cannot declare them in the schema — it would take raw SQL in the
+// migration, leaving the schema stating a constraint the database no longer
+// enforces. A visible prefix beats an invisible divergence.
+const TRASH_PREFIX = "__trash_";
+
+/**
+ * Park a unique value so the live namespace frees up. Idempotent.
+ *
+ * `id` is the row's primary key — an Int on most models, a cuid string on User
+ * (Better Auth owns that table). It only has to make the marker unique, so both
+ * are fine as long as the value round-trips.
+ */
+export function parkUniqueValue(value: string, id: number | string): string {
+  if (isParkedValue(value)) return value;
+  return `${TRASH_PREFIX}${id}__${value}`;
+}
+
+/**
+ * Restore a parked value. Returns the original — callers must still check it
+ * is free, since anything could have taken the slot while the row was away.
+ */
+export function unparkUniqueValue(value: string): string {
+  // The id segment is `[^_]+` rather than `\d+` so cuid keys round-trip too.
+  // Non-greedy would stop at the first `__` inside a cuid; anchoring on the
+  // first `__` after a run of non-underscore characters keeps it unambiguous.
+  const match = value.match(/^__trash_[^_]+__(.*)$/s);
+  return match ? match[1] : value;
+}
+
+export function isParkedValue(value: string): boolean {
+  return value.startsWith(TRASH_PREFIX);
+}
+
+/**
+ * Drop a to-one relation whose row sits in the trash.
+ *
+ * Prisma accepts no `where` on a to-one `include`/`select`, so a trashed
+ * category stays attached to a live talk and would keep rendering its coloured
+ * badge on the public site. The query cannot filter it; the serializer can.
+ * Select `deletedAt` on the relation and pass it through here.
+ */
+export function visibleCategory<T extends { deletedAt: Date | null }>(
+  relation: T | null,
+): Omit<T, "deletedAt"> | null {
+  if (!relation || relation.deletedAt) return null;
+  const { deletedAt: _deletedAt, ...rest } = relation;
+  return rest;
+}
+
+/** Payload marking a row as trashed. */
+export function softDeleteData(now: Date = new Date()) {
+  return { deletedAt: now };
+}
+
+/** Payload bringing a row back out of the trash. */
+export function restoreData() {
+  return { deletedAt: null };
+}

@@ -19,6 +19,7 @@ import {
   faHandshake,
   faTag,
   faStar,
+  faTrashCan,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -57,6 +58,7 @@ const iconMap: Record<string, IconDefinition> = {
   handshake: faHandshake,
   tag: faTag,
   star: faStar,
+  trash: faTrashCan,
 };
 
 interface HealthInfo {

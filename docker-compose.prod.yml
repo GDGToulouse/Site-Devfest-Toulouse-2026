@@ -97,6 +97,11 @@ services:
       # HMAC secret to sign per-message brochure download links sent by email.
       # If unset, confirmation emails fall back to the raw URL (no tracking).
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
+      # Scheduled trash purge (#149) — see docs/variables-environnement.md for
+      # the Coolify task. Unset means the endpoint only accepts an ADMIN
+      # session: the purge stops running, nothing opens up.
+      - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}
+      - TRASH_RETENTION_DAYS=${TRASH_RETENTION_DAYS:-}
       # Google Gemini key for the back-office FR<->EN translator. If unset,
       # POST /api/admin/translate returns 503 and the UI button is disabled.
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}

@@ -1,5 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { buildAdminApp } from "./test-admin-app.js";
+import { prisma } from "../lib/prisma.js";
+
+// Same teardown problem as admin-articles.test.ts: these tests delete through
+// the API, which only trashes since #147, so each run left its fixtures behind.
+// TicketTier cannot park its unique `sortOrder` (it is an Int), so the leftovers
+// also kept holding their slot in `@@unique([editionId, sortOrder])`.
+afterAll(async () => {
+  await prisma.ticketTier.deleteMany({ where: { deletedAt: { not: null } } });
+});
 
 describe("Admin Tickets API", () => {
   it("GET /api/admin/tickets should list ticket tiers", async () => {

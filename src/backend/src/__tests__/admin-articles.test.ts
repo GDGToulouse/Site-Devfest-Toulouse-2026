@@ -1,5 +1,19 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterAll } from "vitest";
 import { buildAdminApp } from "./test-admin-app.js";
+import { prisma } from "../lib/prisma.js";
+
+// These tests use the DELETE endpoint as their teardown. Since #147 that only
+// moves the row to the trash, so every run used to leave its fixtures behind —
+// they piled up run after run, and their parked slugs kept holding the unique
+// index. Purge them for real once the file is done.
+afterAll(async () => {
+  await prisma.article.deleteMany({
+    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+  });
+  await prisma.tag.deleteMany({
+    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+  });
+});
 
 describe("Admin Articles API", () => {
   it("GET /api/admin/articles should list articles with pagination", async () => {

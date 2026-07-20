@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateConferences } from "../../lib/revalidate.js";
+import { notDeleted, notFound, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface CategoryCreateBody {
   editionId: number;
@@ -28,7 +29,7 @@ export default async function adminCategoryRoutes(app: FastifyInstance) {
     const { editionId } = request.query;
 
     return prisma.category.findMany({
-      where: editionId ? { editionId: Number(editionId) } : {},
+      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
       include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
       orderBy: editionId ? { sortOrder: "asc" } : [{ edition: { year: "desc" } }, { sortOrder: "asc" }],
     });
@@ -38,8 +39,10 @@ export default async function adminCategoryRoutes(app: FastifyInstance) {
   app.get<{ Params: CategoryIdParams }>("/categories/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const category = await prisma.category.findUnique({
-      where: { id: Number(request.params.id) },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const category = await prisma.category.findFirst({
+      where: { id: Number(request.params.id), ...notDeleted },
       include: { edition: { select: { id: true, year: true } } },
     });
     if (!category) return reply.code(404).send({ error: "Category not found" });
@@ -92,8 +95,16 @@ export default async function adminCategoryRoutes(app: FastifyInstance) {
   app.delete<{ Params: CategoryIdParams }>("/categories/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const { id } = request.params;
-    await prisma.category.delete({ where: { id: Number(id) } });
+    const categoryId = Number(request.params.id);
+    const category = await prisma.category.findFirst({ where: { id: categoryId, ...notDeleted } });
+    if (!category) return notFound(reply, "Category");
+
+    // No slug or unique name to park: Category has no unique constraint beyond
+    // its primary key, so the trashed row blocks nothing.
+    await prisma.category.update({
+      where: { id: categoryId },
+      data: softDeleteData(),
+    });
     revalidateConferences();
     return reply.code(204).send();
   });

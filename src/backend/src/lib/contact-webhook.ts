@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { validateWebhookUrl } from "./webhook-url.js";
+import { notDeleted } from "./admin-helpers.js";
 
 // Common shape of the JSON sent to the configured webhook URL.
 // Mirrors what the form already POSTed before this refactor — keep
@@ -113,8 +114,10 @@ export async function sendContactWebhook(
 
 /** Build the payload from a stored ContactMessage (used by the retry endpoint). */
 export async function buildPayloadFromStored(messageId: number): Promise<ContactWebhookPayload | null> {
-  const m = await prisma.contactMessage.findUnique({
-    where: { id: messageId },
+  // findFirst so the trash filter fits (#147): re-sending the webhook for a
+  // message the organizers deleted would push it back out to third parties.
+  const m = await prisma.contactMessage.findFirst({
+    where: { id: messageId, ...notDeleted },
     include: { category: true },
   });
   if (!m) return null;
