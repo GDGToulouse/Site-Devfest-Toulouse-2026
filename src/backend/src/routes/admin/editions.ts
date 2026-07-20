@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
+import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface EditionBody {
   year: number;
@@ -27,8 +28,11 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   // GET /api/admin/editions — list all editions
   app.get("/editions", async () => {
     const editions = await prisma.edition.findMany({
+      where: notDeleted,
       orderBy: { year: "desc" },
-      include: { _count: { select: { ticketTiers: true, articles: true } } },
+      include: {
+        _count: { select: { ticketTiers: { where: notDeleted }, articles: { where: notDeleted } } },
+      },
     });
 
     return editions.map((e: (typeof editions)[number]) => ({
@@ -52,6 +56,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   // GET /api/admin/editions/current
   app.get("/editions/current", async (_request, reply) => {
     const edition = await prisma.edition.findFirst({
+      where: notDeleted,
       orderBy: { year: "desc" },
     });
 
@@ -89,17 +94,19 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       const id = Number(request.params.id);
       if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-      const edition = await prisma.edition.findUnique({
-        where: { id },
+      // findFirst: findUnique cannot carry the deletedAt filter (#147). The
+      // counts drive the admin synthesis panel, so they must ignore the trash.
+      const edition = await prisma.edition.findFirst({
+        where: { id, ...notDeleted },
         include: {
           _count: {
             select: {
-              ticketTiers: true,
-              articles: true,
-              speakers: true,
-              talks: true,
-              sponsors: true,
-              categories: true,
+              ticketTiers: { where: notDeleted },
+              articles: { where: notDeleted },
+              speakers: { where: notDeleted },
+              talks: { where: notDeleted },
+              sponsors: { where: notDeleted },
+              categories: { where: notDeleted },
             },
           },
         },
@@ -143,7 +150,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.edition.findUnique({ where: { id } });
+    const existing = await prisma.edition.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.status(404).send({ error: "Edition not found" });
 
     const body = request.body;
@@ -192,6 +199,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     if (!body.year) return reply.status(400).send({ error: "year is required" });
 
+    // Deliberately NOT filtered on deletedAt: `year` is unique database-wide and
+    // a trashed edition still owns it. Filtering here would let the create pass
+    // validation only to fail on the constraint — a 409 explains it better.
     const existing = await prisma.edition.findUnique({ where: { year: body.year } });
     if (existing) return reply.status(409).send({ error: "Edition for this year already exists" });
 
@@ -221,18 +231,47 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       const id = Number(request.params.id);
       if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-      const existing = await prisma.edition.findUnique({
-        where: { id },
-        include: { _count: { select: { articles: true } } },
+      // findFirst: findUnique cannot carry the deletedAt filter (#147).
+      // Counts exclude trashed children — an edition whose talks are all in the
+      // trash is genuinely empty and should be removable.
+      const existing = await prisma.edition.findFirst({
+        where: { id, ...notDeleted },
+        include: {
+          _count: {
+            select: {
+              articles: { where: notDeleted },
+              talks: { where: notDeleted },
+              speakers: { where: notDeleted },
+              sponsors: { where: notDeleted },
+              categories: { where: notDeleted },
+              sponsorPlans: { where: notDeleted },
+              ticketTiers: { where: notDeleted },
+            },
+          },
+        },
       });
 
       if (!existing) return reply.status(404).send({ error: "Edition not found" });
 
-      if (existing._count.articles > 0) {
-        return reply.status(409).send({ error: "Cannot delete edition with linked articles" });
+      // Trashing a parent refuses rather than cascading (#147). A logical
+      // cascade would force restore to tell rows trashed *before* from rows
+      // trashed *by* the cascade — otherwise it resurrects what should stay
+      // gone. The article check below already worked this way; the other
+      // children now follow the same rule.
+      const blocking = Object.entries(existing._count)
+        .filter(([, count]) => count > 0)
+        .map(([relation, count]) => `${relation} (${count})`);
+
+      if (blocking.length > 0) {
+        return reply.status(409).send({
+          error: `Cannot delete edition with linked records: ${blocking.join(", ")}`,
+        });
       }
 
-      await prisma.edition.delete({ where: { id } });
+      // Year is unique but numeric — no string parking possible, so a trashed
+      // edition keeps its year until purged. Creating that year again is
+      // blocked meanwhile; the trash has to be emptied first.
+      await prisma.edition.update({ where: { id }, data: softDeleteData() });
       revalidateEdition(existing.year);
       return { success: true };
     }
@@ -271,7 +310,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const edition = await prisma.edition.findUnique({ where: { id } });
+    const edition = await prisma.edition.findFirst({ where: { id, ...notDeleted } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
     const figures = request.body;
@@ -311,7 +350,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { editionId } = request.body;
 
-      const edition = await prisma.edition.findUnique({ where: { id: editionId } });
+      const edition = await prisma.edition.findFirst({ where: { id: editionId, ...notDeleted } });
       if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
       await prisma.siteSetting.upsert({

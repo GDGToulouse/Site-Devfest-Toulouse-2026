@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
 import { revalidateBilletterie } from "../../lib/revalidate.js";
+import { notDeleted, notFound, softDeleteData } from "../../lib/admin-helpers.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 const TICKET_STATUSES: TicketStatus[] = ["AVAILABLE", "SOLD_OUT", "COMING_SOON"];
@@ -147,7 +148,13 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     // Fetch per-ticket availability (sold-out) to seed isSoldOut (best-effort).
     const soldOutByTicket = await fetchBilletwebSoldOut(billetwebEventId, params);
 
-    // Delete existing tiers for this edition
+    // Replace the edition's tiers wholesale. This stays a HARD delete on
+    // purpose, unlike the single-tier DELETE below (#147): the loop right after
+    // re-creates tiers at sortOrder 0..n-1, and a soft-deleted row keeps its
+    // sortOrder slot — `@@unique([editionId, sortOrder])` would reject the
+    // re-import. sortOrder is an Int, so it cannot be parked out of the way the
+    // way a slug can. Tiers replaced by a re-import are mirror images of what
+    // BilletWeb just returned, so there is nothing worth keeping in the trash.
     await prisma.ticketTier.deleteMany({ where: { editionId } });
 
     // Create new tiers from Billetweb data
@@ -183,7 +190,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     Querystring: { editionId?: string };
   }>("/tickets", async (request) => {
     const editionId = request.query.editionId ? Number(request.query.editionId) : undefined;
-    const where = editionId ? { editionId } : {};
+    const where = editionId ? { editionId, ...notDeleted } : { ...notDeleted };
 
     const tiers = await prisma.ticketTier.findMany({
       where,
@@ -224,6 +231,10 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     // constraint as soon as the edition already has a tier at 0.
     let sortOrder = body.sortOrder;
     if (sortOrder === undefined || sortOrder === null) {
+      // Deliberately NOT filtered on deletedAt: `@@unique([editionId, sortOrder])`
+      // is a database-wide constraint and a trashed tier keeps its slot until
+      // purged (sortOrder is an Int, so it cannot be parked). Skipping trashed
+      // rows here would hand out a slot that is still taken.
       const last = await prisma.ticketTier.findFirst({
         where: { editionId: body.editionId },
         orderBy: { sortOrder: "desc" },
@@ -258,7 +269,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.ticketTier.findUnique({ where: { id } });
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const existing = await prisma.ticketTier.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.status(404).send({ error: "Ticket tier not found" });
 
     const body = request.body;
@@ -294,14 +307,27 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     return { id: tier.id };
   });
 
-  // DELETE /api/admin/tickets/:id
+  // DELETE /api/admin/tickets/:id — moves the tier to the trash (#147). The row
+  // survives with `deletedAt` set; #145c restores it, #145d purges it.
   app.delete<{
     Params: { id: string };
   }>("/tickets/:id", async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    await prisma.ticketTier.delete({ where: { id } });
+    const existing = await prisma.ticketTier.findFirst({ where: { id, ...notDeleted } });
+    if (!existing) return notFound(reply, "Ticket tier");
+
+    // sortOrder is deliberately left untouched. The unique slot it holds under
+    // `@@unique([editionId, sortOrder])` cannot be parked the way a slug can —
+    // parking relies on a string prefix and sortOrder is an Int. So a trashed
+    // tier keeps its slot until purged: creating a new tier at that exact
+    // sortOrder fails until then. Appending (the default path in POST) is
+    // unaffected, since it reads past the trashed rows too.
+    await prisma.ticketTier.update({
+      where: { id },
+      data: softDeleteData(),
+    });
     revalidateBilletterie();
     return { success: true };
   });

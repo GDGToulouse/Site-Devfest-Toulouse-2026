@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSponsors } from "../../lib/revalidate.js";
+import { notDeleted, notFound, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface SponsorPlanCreateBody {
   editionId: number;
@@ -43,7 +44,7 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
     if (!editionId) return reply.code(400).send({ error: "editionId required" });
 
     const plans = await prisma.sponsorPlan.findMany({
-      where: { editionId: Number(editionId) },
+      where: { editionId: Number(editionId), ...notDeleted },
       orderBy: { sortOrder: "asc" },
     });
 
@@ -130,8 +131,16 @@ export default async function adminSponsorPlanRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    const { id } = request.params;
-    await prisma.sponsorPlan.delete({ where: { id: Number(id) } });
+    const planId = Number(request.params.id);
+    const plan = await prisma.sponsorPlan.findFirst({ where: { id: planId, ...notDeleted } });
+    if (!plan) return notFound(reply, "Sponsor plan");
+
+    // No slug or unique name to park: SponsorPlan has no unique constraint
+    // beyond its primary key, so the trashed row blocks nothing.
+    await prisma.sponsorPlan.update({
+      where: { id: planId },
+      data: softDeleteData(),
+    });
     revalidateSponsors();
     return reply.code(204).send();
   });

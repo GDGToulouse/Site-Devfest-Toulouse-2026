@@ -85,6 +85,25 @@ describe("soft-delete helpers (#146)", () => {
     expect(isParkedValue("x")).toBe(false);
   });
 
+  it("round-trips with a cuid primary key (User is keyed by string, not Int)", () => {
+    const email = "jane@example.com";
+    const cuid = "clh3k2j9x0000qwer1234asdf";
+    expect(unparkUniqueValue(parkUniqueValue(email, cuid))).toBe(email);
+  });
+
+  it("keeps two rows parked under distinct ids distinct", () => {
+    // Same email parked twice must not collide, or the unique constraint that
+    // parking exists to free would be hit by the parked values themselves.
+    const a = parkUniqueValue("jane@example.com", "cuid-a");
+    const b = parkUniqueValue("jane@example.com", "cuid-b");
+    expect(a).not.toBe(b);
+  });
+
+  it("round-trips an email, whose local part may hold dots and plus signs", () => {
+    const email = "jane.doe+devfest@example.com";
+    expect(unparkUniqueValue(parkUniqueValue(email, 12))).toBe(email);
+  });
+
   it("stamps the deletion date", () => {
     const now = new Date("2026-07-20T12:00:00Z");
     expect(softDeleteData(now)).toEqual({ deletedAt: now });

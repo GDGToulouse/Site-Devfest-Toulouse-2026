@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { sendEmail, escapeHtml } from "../../lib/email.js";
 import { emailButton, emailHeading } from "../../lib/email-template.js";
+import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -20,6 +21,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
   // GET /api/admin/users — list all admin users
   app.get("/users", async () => {
     const users = await prisma.user.findMany({
+      where: notDeleted,
       orderBy: { createdAt: "desc" },
       select: {
         id: true,
@@ -58,6 +60,9 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "Email and name are required" });
     }
 
+    // Deliberately NOT filtered on deletedAt: `email` is unique database-wide.
+    // A trashed account parks its address, so this only matches a live user or
+    // one trashed before #147 — either way, inviting it again must be refused.
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
       return reply.code(409).send({ error: "A user with this email already exists" });
@@ -110,7 +115,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
     const { id } = request.params;
     const { role, name } = request.body;
 
-    const existing = await prisma.user.findUnique({ where: { id } });
+    const existing = await prisma.user.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.code(404).send({ error: "User not found" });
 
     const data: Record<string, string> = {};
@@ -131,7 +136,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "You cannot ban yourself" });
       }
 
-      const existing = await prisma.user.findUnique({ where: { id } });
+      const existing = await prisma.user.findFirst({ where: { id, ...notDeleted } });
       if (!existing) return reply.code(404).send({ error: "User not found" });
 
       const user = await prisma.user.update({
@@ -157,10 +162,21 @@ export default async function adminUserRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "You cannot delete your own account" });
       }
 
-      const existing = await prisma.user.findUnique({ where: { id } });
+      // findFirst: findUnique cannot carry the deletedAt filter (#147).
+      const existing = await prisma.user.findFirst({ where: { id, ...notDeleted } });
       if (!existing) return reply.code(404).send({ error: "User not found" });
 
-      await prisma.user.delete({ where: { id } });
+      // Moves to the trash (#147). `email` is unique, so park it — otherwise
+      // re-inviting that address before the purge would hit the constraint.
+      await prisma.user.update({
+        where: { id },
+        data: { ...softDeleteData(), email: parkUniqueValue(existing.email, id) },
+      });
+
+      // Kill live sessions: a trashed account must not stay signed in. Without
+      // this, the user keeps their admin access until the cookie expires.
+      await prisma.session.deleteMany({ where: { userId: id } });
+
       return { success: true };
     }
   );

@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateArticle } from "../../lib/revalidate.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { missingArticleFields } from "../../lib/article-validation.js";
+import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import {
   isConfigured as translationConfigured,
   QuotaExhaustedError,
@@ -52,7 +53,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const limit = Math.min(Number(request.query.limit) || 20, 100);
     const status = request.query.status;
 
-    const where = status ? { publicationStatus: status as "DRAFT" | "PUBLISHED" } : {};
+    const where = status
+      ? { publicationStatus: status as "DRAFT" | "PUBLISHED", ...notDeleted }
+      : { ...notDeleted };
 
     const [articles, total] = await Promise.all([
       prisma.article.findMany({
@@ -60,7 +63,10 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         orderBy: [{ publishedAt: { sort: "desc", nulls: "first" } }, { createdAt: "desc" }],
         skip: (page - 1) * limit,
         take: limit,
-        include: { tags: true, editions: true },
+        // Nested reads need their own filter: a query extension would not reach
+        // them (Prisma applies those to the top-level operation only), and a
+        // trashed tag or edition would otherwise still show up on a live article.
+        include: { tags: { where: notDeleted }, editions: { where: notDeleted } },
       }),
       prisma.article.count({ where }),
     ]);
@@ -94,9 +100,11 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const article = await prisma.article.findUnique({
-      where: { id },
-      include: { tags: true, editions: true },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const article = await prisma.article.findFirst({
+      where: { id, ...notDeleted },
+      include: { tags: { where: notDeleted }, editions: { where: notDeleted } },
     });
 
     if (!article) return reply.status(404).send({ error: "Article not found" });
@@ -142,6 +150,10 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       });
     }
 
+    // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
+    // constraint, so a trashed article still owns its slug until purged. Parking
+    // frees the readable form, but a row keeping an unparked slug (restored, or
+    // trashed before #147) must still be detected or the create would collide.
     const existing = await prisma.article.findUnique({ where: { slug: body.slug.trim() } });
     if (existing) {
       return reply.status(409).send({ error: "An article with this slug already exists" });
@@ -183,7 +195,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.article.findUnique({ where: { id } });
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const existing = await prisma.article.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.status(404).send({ error: "Article not found" });
 
     const body = request.body;
@@ -278,7 +292,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const article = await prisma.article.findUnique({ where: { id } });
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const article = await prisma.article.findFirst({ where: { id, ...notDeleted } });
     if (!article) return reply.status(404).send({ error: "Article not found" });
 
     const from = request.body?.from;
@@ -357,24 +373,31 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     }
   });
 
-  // DELETE /api/admin/articles/:id
+  // DELETE /api/admin/articles/:id — moves the article to the trash (#147). The
+  // row survives with `deletedAt` set; #145c restores it, #145d purges it.
   app.delete<{
     Params: { id: string };
   }>("/articles/:id", async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.article.findUnique({ where: { id } });
-    if (!existing) return reply.status(404).send({ error: "Article not found" });
+    const existing = await prisma.article.findFirst({ where: { id, ...notDeleted } });
+    if (!existing) return notFound(reply, "Article");
 
-    await prisma.article.delete({ where: { id } });
+    // The slug is globally unique and a trashed row keeps its slot, so park it
+    // out of the live namespace — otherwise re-creating an article under the
+    // same slug would hit the constraint (#146).
+    await prisma.article.update({
+      where: { id },
+      data: { ...softDeleteData(), slug: parkUniqueValue(existing.slug, id) },
+    });
     revalidateArticle(existing.slug);
     return { success: true };
   });
 
   // GET /api/admin/tags — list all tags
   app.get("/tags", async () => {
-    return prisma.tag.findMany({ orderBy: { name: "asc" } });
+    return prisma.tag.findMany({ where: notDeleted, orderBy: { name: "asc" } });
   });
 
   // POST /api/admin/tags — create a tag
@@ -391,6 +414,10 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
+    // Deliberately NOT filtered on deletedAt: both `name` and `slug` are
+    // database-wide unique constraints, so a trashed tag still owns them until
+    // purged. Parking frees the readable form, but a row keeping unparked
+    // values (restored, or trashed before #147) must still be detected.
     const existing = await prisma.tag.findFirst({
       where: { OR: [{ name }, { slug }] },
     });
@@ -400,14 +427,27 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     return reply.status(201).send(tag);
   });
 
-  // DELETE /api/admin/tags/:id
+  // DELETE /api/admin/tags/:id — moves the tag to the trash (#147).
   app.delete<{
     Params: { id: string };
   }>("/tags/:id", async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    await prisma.tag.delete({ where: { id } });
+    const existing = await prisma.tag.findFirst({ where: { id, ...notDeleted } });
+    if (!existing) return notFound(reply, "Tag");
+
+    // Both `name` and `slug` are globally unique and a trashed row keeps its
+    // slots, so park them both — otherwise re-creating a tag under the same
+    // name would hit either constraint (#146).
+    await prisma.tag.update({
+      where: { id },
+      data: {
+        ...softDeleteData(),
+        name: parkUniqueValue(existing.name, id),
+        slug: parkUniqueValue(existing.slug, id),
+      },
+    });
     return { success: true };
   });
 }

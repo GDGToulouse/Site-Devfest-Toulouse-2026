@@ -91,8 +91,14 @@ export const onlyDeleted = { deletedAt: { not: null } } as const;
 // enforces. A visible prefix beats an invisible divergence.
 const TRASH_PREFIX = "__trash_";
 
-/** Park a unique value so the live namespace frees up. Idempotent. */
-export function parkUniqueValue(value: string, id: number): string {
+/**
+ * Park a unique value so the live namespace frees up. Idempotent.
+ *
+ * `id` is the row's primary key — an Int on most models, a cuid string on User
+ * (Better Auth owns that table). It only has to make the marker unique, so both
+ * are fine as long as the value round-trips.
+ */
+export function parkUniqueValue(value: string, id: number | string): string {
   if (isParkedValue(value)) return value;
   return `${TRASH_PREFIX}${id}__${value}`;
 }
@@ -102,7 +108,10 @@ export function parkUniqueValue(value: string, id: number): string {
  * is free, since anything could have taken the slot while the row was away.
  */
 export function unparkUniqueValue(value: string): string {
-  const match = value.match(/^__trash_\d+__(.*)$/s);
+  // The id segment is `[^_]+` rather than `\d+` so cuid keys round-trip too.
+  // Non-greedy would stop at the first `__` inside a cuid; anchoring on the
+  // first `__` after a run of non-underscore characters keeps it unambiguous.
+  const match = value.match(/^__trash_[^_]+__(.*)$/s);
   return match ? match[1] : value;
 }
 

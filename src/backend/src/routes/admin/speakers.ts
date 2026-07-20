@@ -5,6 +5,7 @@ import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -50,7 +51,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     const { editionId } = request.query;
 
     const speakers = await prisma.speaker.findMany({
-      where: editionId ? { editionId: Number(editionId) } : {},
+      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
       include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
       orderBy: editionId ? { name: "asc" } : [{ edition: { year: "desc" } }, { name: "asc" }],
     });
@@ -61,8 +62,10 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
   app.get<{ Params: SpeakerIdParams }>("/speakers/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const speaker = await prisma.speaker.findUnique({
-      where: { id: Number(request.params.id) },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const speaker = await prisma.speaker.findFirst({
+      where: { id: Number(request.params.id), ...notDeleted },
       include: { edition: { select: { id: true, year: true } } },
     });
     if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
@@ -76,6 +79,10 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "editionId and name are required" });
     }
 
+    // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
+    // constraint, so a trashed speaker still owns its slug until purged. Parking
+    // frees the readable form, but a row keeping an unparked slug (restored, or
+    // trashed before #147) must still be counted or the create would collide.
     const existing = await prisma.speaker.findMany({
       where: { editionId: body.editionId },
       select: { slug: true },
@@ -165,17 +172,30 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "unknown action" });
     }
 
-    const { count } = await prisma.speaker.updateMany({ where: { id: { in: ids } }, data });
+    const { count } = await prisma.speaker.updateMany({
+      where: { id: { in: ids }, ...notDeleted },
+      data,
+    });
     revalidateSpeakers();
     return { count };
   });
 
-  // DELETE /api/admin/speakers/:id
+  // DELETE /api/admin/speakers/:id — moves the speaker to the trash (#147). The
+  // row survives with `deletedAt` set; #145c restores it, #145d purges it.
   app.delete<{ Params: SpeakerIdParams }>("/speakers/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const { id } = request.params;
-    await prisma.speaker.delete({ where: { id: Number(id) } });
+    const speakerId = Number(request.params.id);
+    const speaker = await prisma.speaker.findFirst({ where: { id: speakerId, ...notDeleted } });
+    if (!speaker) return notFound(reply, "Speaker");
+
+    // The slug is unique per edition and a trashed row keeps its slot, so park
+    // it out of the live namespace — otherwise re-creating a speaker under the
+    // same name would hit the constraint (#146).
+    await prisma.speaker.update({
+      where: { id: speakerId },
+      data: { ...softDeleteData(), slug: parkUniqueValue(speaker.slug, speakerId) },
+    });
     revalidateSpeakers();
     return reply.code(204).send();
   });
@@ -186,7 +206,8 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
     const id = Number(request.params.id);
-    const speaker = await prisma.speaker.findUnique({ where: { id } });
+    // findFirst, not findUnique: a trashed speaker must not get a fresh edit link.
+    const speaker = await prisma.speaker.findFirst({ where: { id, ...notDeleted } });
     if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
 
     const email = request.body.email?.trim() || speaker.contactEmail;
