@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
@@ -28,8 +29,7 @@ let foreignTalkId: number;
 
 describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const speaker = await prisma.speaker.create({

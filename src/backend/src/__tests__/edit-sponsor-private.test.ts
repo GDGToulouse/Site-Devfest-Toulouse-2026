@@ -3,6 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Sponsor private fields (#249): editable via the magic link, visible in the
@@ -15,8 +16,7 @@ let slug: string;
 
 describe("Sponsor private section (#249)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
     slug = `private-test-sponsor-${Date.now()}`;
 
