@@ -1,19 +1,19 @@
 import type { EditionTalk } from "@/lib/types";
-import { localizedField } from "@/lib/i18n-helpers";
 
 interface EditionTalksListProps {
   talks: EditionTalk[];
-  locale: string;
   replayLabel: string;
 }
 
 // Read-only session list for a past edition (issue #63): title, speakers,
-// category badge and a replay link when a recording is available.
-export default function EditionTalksList({ talks, locale, replayLabel }: EditionTalksListProps) {
+// category badge and a replay link when a recording is available. Takes no
+// locale: a talk's title is not translated (#293).
+export default function EditionTalksList({ talks, replayLabel }: EditionTalksListProps) {
   return (
     <ul className="space-y-4">
       {talks.map((talk) => {
-        const title = localizedField(talk, "title", locale);
+        // Not localized (#293): a talk is given in one language.
+        const title = talk.title;
         const speakerNames = talk.speakers.map((s) => s.name).join(", ");
         return (
           <li

@@ -216,10 +216,12 @@ export interface SpeakerPublic {
   isFeatured?: boolean;
 }
 
+// A talk is single-language (#293): `title`/`description` hold its own wording,
+// in the language given by `language`. Only Talk departs from the site's
+// bilingual `*Fr`/`*En` convention — see docs/modele-donnees-metier.md.
 export interface SpeakerTalkRef {
   slug: string;
-  titleFr: string;
-  titleEn: string;
+  title: string;
   format: string;
 }
 
@@ -250,10 +252,8 @@ export interface EditionSpeaker {
 
 export interface EditionTalk {
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
@@ -266,10 +266,8 @@ export interface EditionTalk {
 export interface TalkDetail {
   id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
@@ -281,10 +279,8 @@ export interface TalkDetail {
 export interface Talk {
   id: number;
   slug: string;
-  titleFr: string;
-  titleEn: string;
-  descriptionFr: string;
-  descriptionEn: string;
+  title: string;
+  description: string;
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;

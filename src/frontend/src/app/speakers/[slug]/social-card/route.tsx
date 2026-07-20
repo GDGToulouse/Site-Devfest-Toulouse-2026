@@ -25,7 +25,7 @@ export async function GET(
   const talkSlug = new URL(request.url).searchParams.get("talk");
   const talk =
     speaker.talks.find((t) => t.slug === talkSlug) ?? speaker.talks[0] ?? null;
-  const talkTitle = talk?.titleFr ?? "";
+  const talkTitle = talk?.title ?? "";
 
   const { name, company, photoUrl } = speaker;
 
