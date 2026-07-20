@@ -23,6 +23,7 @@ import speakerRoutes from "./routes/speakers.js";
 import categoryRoutes from "./routes/categories.js";
 import talkRoutes from "./routes/talks.js";
 import editRoutes from "./routes/edit.js";
+import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
 
@@ -279,6 +280,11 @@ await app.register(editRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)
 await app.register(myApiKeysRoutes, { prefix: "/api/me" });
+
+// Maintenance routes driven by an external scheduler (#149). Deliberately
+// outside the admin group: the cron has no session, so the route checks a
+// shared secret or an ADMIN session itself.
+await app.register(maintenanceRoutes, { prefix: "/api" });
 
 // Admin routes (protected by requireAdmin hook)
 await app.register(adminRoutes, { prefix: "/api/admin" });
