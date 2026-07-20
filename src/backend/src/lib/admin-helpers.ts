@@ -119,6 +119,22 @@ export function isParkedValue(value: string): boolean {
   return value.startsWith(TRASH_PREFIX);
 }
 
+/**
+ * Drop a to-one relation whose row sits in the trash.
+ *
+ * Prisma accepts no `where` on a to-one `include`/`select`, so a trashed
+ * category stays attached to a live talk and would keep rendering its coloured
+ * badge on the public site. The query cannot filter it; the serializer can.
+ * Select `deletedAt` on the relation and pass it through here.
+ */
+export function visibleCategory<T extends { deletedAt: Date | null }>(
+  relation: T | null,
+): Omit<T, "deletedAt"> | null {
+  if (!relation || relation.deletedAt) return null;
+  const { deletedAt: _deletedAt, ...rest } = relation;
+  return rest;
+}
+
 /** Payload marking a row as trashed. */
 export function softDeleteData(now: Date = new Date()) {
   return { deletedAt: now };

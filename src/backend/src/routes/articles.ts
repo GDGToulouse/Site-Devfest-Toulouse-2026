@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 function mapArticleSummary(article: {
   id: number;
@@ -38,6 +39,7 @@ export default async function articleRoutes(app: FastifyInstance) {
 
     const where = {
       publicationStatus: "PUBLISHED" as const,
+      ...notDeleted,
       ...(editionId
         ? { OR: [{ editions: { some: { id: editionId } } }, { editions: { none: {} } }] }
         : {}),
@@ -47,7 +49,10 @@ export default async function articleRoutes(app: FastifyInstance) {
       where,
       orderBy: { publishedAt: "desc" },
       take: limit,
-      include: { tags: true },
+      // Nested reads need their own filter: a query extension would not reach
+      // them (Prisma applies those to the top-level operation only), and a
+      // trashed tag would otherwise still show up on a live article.
+      include: { tags: { where: notDeleted } },
     });
 
     return articles.map(mapArticleSummary);
@@ -68,8 +73,9 @@ export default async function articleRoutes(app: FastifyInstance) {
 
     const where = {
       publicationStatus: "PUBLISHED" as const,
-      ...(tagSlug ? { tags: { some: { slug: tagSlug } } } : {}),
-      ...(editionId ? { editions: { some: { id: editionId } } } : {}),
+      ...notDeleted,
+      ...(tagSlug ? { tags: { some: { slug: tagSlug, ...notDeleted } } } : {}),
+      ...(editionId ? { editions: { some: { id: editionId, ...notDeleted } } } : {}),
     };
 
     const [articles, total] = await Promise.all([
@@ -78,7 +84,7 @@ export default async function articleRoutes(app: FastifyInstance) {
         orderBy: { publishedAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: { tags: true },
+        include: { tags: { where: notDeleted } },
       }),
       prisma.article.count({ where }),
     ]);
@@ -95,9 +101,11 @@ export default async function articleRoutes(app: FastifyInstance) {
   app.get<{
     Params: { slug: string };
   }>("/articles/:slug", async (request, reply) => {
-    const article = await prisma.article.findUnique({
-      where: { slug: request.params.slug },
-      include: { tags: true },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const article = await prisma.article.findFirst({
+      where: { slug: request.params.slug, ...notDeleted },
+      include: { tags: { where: notDeleted } },
     });
 
     if (!article || article.publicationStatus !== "PUBLISHED") {
@@ -129,6 +137,7 @@ export default async function articleRoutes(app: FastifyInstance) {
   // GET /api/tags — all tags
   app.get("/tags", async () => {
     const tags = await prisma.tag.findMany({
+      where: notDeleted,
       orderBy: { name: "asc" },
     });
     return tags.map((tag) => ({ id: tag.id, name: tag.name, slug: tag.slug }));

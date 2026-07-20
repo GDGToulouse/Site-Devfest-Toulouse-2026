@@ -212,6 +212,10 @@ export async function importSessionize(
   }
 
   // 2. Upsert track categories, keyed by nameFr within the edition.
+  // Deliberately NOT filtered on deletedAt (#147): these lookups drive upserts,
+  // so they must see trashed rows. Skipping them would recreate a category that
+  // already exists in the trash, and the slug sets below would hand out names
+  // still held by trashed rows — the create would then hit the unique index.
   const existingCategories = await prisma.category.findMany({
     where: { editionId },
     select: { id: true, nameFr: true },

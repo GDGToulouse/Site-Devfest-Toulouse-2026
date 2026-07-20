@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 // Decreasing importance order (RG-221), used to sort levels for display.
 const LEVEL_ORDER: Record<string, number> = {
@@ -29,7 +30,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const sponsors = await prisma.sponsor.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
     });
 
     return sponsors
@@ -54,10 +55,18 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const sponsor = await prisma.sponsor.findFirst({
-      where: { editionId: edition.id, slug: request.params.slug, publicationStatus: "PUBLISHED" },
+      where: {
+        editionId: edition.id,
+        slug: request.params.slug,
+        publicationStatus: "PUBLISHED",
+        ...notDeleted,
+      },
       include: {
+        // Nested reads need their own filter: a query extension would not reach
+        // them (Prisma applies those to the top-level operation only), and a
+        // trashed speaker would otherwise still show up on a live sponsor page.
         speakers: {
-          where: { publicationStatus: "PUBLISHED" },
+          where: { publicationStatus: "PUBLISHED", ...notDeleted },
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },
@@ -100,6 +109,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       where: {
         editionId: edition.id,
         publicationStatus: "PUBLISHED",
+        ...notDeleted,
         jobOffers: { some: {} },
       },
       select: {
