@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 
 // GET /api/edit/:token exposes the speaker's accepted sessions read-only (#229):
 // only PUBLISHED talks are surfaced, and a sponsor token carries no `talks`.
@@ -12,8 +13,7 @@ const talkIds: number[] = [];
 
 describe("GET /api/edit/:token — speaker sessions (#229)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const speaker = await prisma.speaker.create({

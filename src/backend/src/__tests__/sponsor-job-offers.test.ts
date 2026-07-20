@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Sponsor job offers (#251): CRUD via the magic link, quota per level, HTML
@@ -14,8 +15,7 @@ let goldSlug: string;
 
 describe("Sponsor job offers (#251)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
     goldSlug = `offers-gold-${Date.now()}`;
 

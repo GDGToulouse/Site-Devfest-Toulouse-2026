@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 
 // Secondary contacts (#250): a sponsor can have several contacts, each with its
 // own modification link, lock and expiry — all editing the same sponsor page.
@@ -12,8 +13,7 @@ let sponsorId: number;
 
 describe("Sponsor secondary contacts (#250)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const sponsor = await prisma.sponsor.create({

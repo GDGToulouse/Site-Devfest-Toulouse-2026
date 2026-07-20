@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { buildApp } from "./test-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 
 describe("GET /api/editions/current", () => {
   it("should return the current edition", async () => {
@@ -18,8 +19,7 @@ describe("GET /api/editions/current", () => {
   // hasJobOffers drives the "Offres d'emploi" nav sub-entry: it must only be
   // true while a published sponsor actually has an offer.
   it("flags hasJobOffers only when a published sponsor has an offer", async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
 
     // Baseline: the seed ships no job offer.
     const app = await buildApp();

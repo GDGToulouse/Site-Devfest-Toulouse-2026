@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 import Fastify, { type FastifyInstance } from "fastify";
 import adminSponsorRoutes from "../routes/admin/sponsors.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 
 // Admin management of sponsor contacts (#250): add, list, lock, resend, delete.
 
@@ -21,8 +22,7 @@ describe("Admin sponsor contacts (#250)", () => {
     app = Fastify({ logger: false });
     await app.register(adminSponsorRoutes, { prefix: "/api/admin" });
 
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const sponsor = await prisma.sponsor.create({
