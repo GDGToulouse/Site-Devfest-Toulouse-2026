@@ -208,9 +208,17 @@ Lancer **Deploy** dans Coolify. Le build compile frontend + backend puis le
 backend joue les migrations Prisma et le seed idempotent au démarrage.
 
 > **Prérequis pour la traçabilité du build** (#290) : le compose passe
-> `APP_COMMIT=${SOURCE_COMMIT:-}` en argument de build au backend. `SOURCE_COMMIT`
-> est fourni par Coolify ; s'il est vide, `/api/health` ne renvoie simplement pas
-> de `commit` et l'on perd ce marqueur — sans casser le déploiement.
+> `APP_COMMIT=${SOURCE_COMMIT:-}` en argument de build au backend.
+>
+> ⚠️ Coolify ne fournit `SOURCE_COMMIT` au build que si **Advanced → Include
+> Source Commit in Build** est activé sur la ressource. Le réglage est **désactivé
+> par défaut**, volontairement : le SHA changeant à chaque commit, il **invalide le
+> cache Docker**. Dans le Dockerfile backend, `ARG APP_COMMIT` est donc placé en
+> **dernier**, après `pnpm install` / `prisma generate` / `pnpm build`, pour que
+> seule la dernière couche soit reconstruite.
+>
+> Sans ce réglage, `/api/health` omet simplement `commit` : on perd le marqueur,
+> rien ne casse. C'est un état supporté — et silencieux, d'où cette note.
 
 ---
 
