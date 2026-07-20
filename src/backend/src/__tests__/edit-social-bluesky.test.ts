@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { getSeededEdition } from "./edition-test-helpers.js";
 import { createSponsorWithToken } from "./sponsor-test-helpers.js";
 
 // Bluesky is part of the shared socialLinks allowlist (#253). A sponsor (and a
@@ -12,8 +13,7 @@ let sponsorId: number;
 
 describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
   beforeAll(async () => {
-    const edition = await prisma.edition.findFirst({ orderBy: { year: "desc" } });
-    if (!edition) throw new Error("seed missing an edition");
+    const edition = await getSeededEdition();
     editionId = edition.id;
 
     const sponsor = await createSponsorWithToken({
