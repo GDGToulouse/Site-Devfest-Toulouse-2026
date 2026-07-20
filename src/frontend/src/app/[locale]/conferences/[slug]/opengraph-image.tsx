@@ -15,11 +15,8 @@ export default async function TalkOgImage({
   const { slug, locale } = await params;
   const talk = await getTalkBySlug(slug);
 
-  const title = talk
-    ? locale === "en"
-      ? talk.titleEn
-      : talk.titleFr
-    : "DevFest Toulouse";
+  // Not localized (#293): a talk's title is in the language it is given in.
+  const title = talk?.title ?? "DevFest Toulouse";
   const speakers = talk?.speakers.map((s) => s.name).join(", ") ?? "";
   const category = talk?.category ? (locale === "en" ? talk.category.nameEn : talk.category.nameFr) : "";
 

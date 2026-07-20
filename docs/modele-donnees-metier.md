@@ -67,8 +67,8 @@ Une conférence, un quickie ou une keynote programmée dans le cadre d'une édit
 
 | Information | Description | Exemple |
 |-------------|-------------|---------|
-| Titre | Titre de la session (FR + EN) | « Kotlin Multiplatform en production » |
-| Description | Résumé de la session (FR + EN) | Texte libre |
+| Titre | Titre de la session, dans la langue de la session (#293) | « Kotlin Multiplatform en production » |
+| Description | Résumé de la session, dans la langue de la session | Texte libre |
 | Speaker(s) | Un ou plusieurs speakers associés | Marie Dupont, Jean Martin |
 | Format | Type de session | Conférence (40 min), Quickie (15 min), Keynote |
 | Catégorie | Thématique de la session | Cloud/Infra, IA/ML/Data, UX/accessibilité… |
@@ -348,11 +348,33 @@ Passport digital ── N:M ── Sponsor (stands visités par participant)
 
 Les informations suivantes existent en français **et** en anglais :
 
-- Titre et description des sessions
 - Biographie des speakers
 - Description des sponsors
 - Articles de blog (titre, contenu, extrait)
 - Pages de contenu (FAQ, Code de conduite, À propos, Mentions légales)
 - Description du lieu
+- Nom des catégories / tracks
 
 Les informations non traduites (noms propres, URLs, dates, images, logos) restent identiques dans les deux langues.
+
+### Exception : les sessions (#293)
+
+**Le titre et la description d'une session ne sont PAS traduits.** Une conférence
+se donne dans une langue, portée par `Talk.language` : `Talk.title` et
+`Talk.description` sont rédigés dans cette langue et affichés tels quels sur
+`/fr` comme sur `/en`.
+
+Pourquoi cette exception :
+
+- Traduire l'intitulé d'un talk donné en anglais n'apporte rien au lecteur, et
+  la saisie n'était jamais faite : **tous les talks importés avaient
+  `titleEn == titleFr`** (imports Sessionize et historique dupliquaient la
+  valeur, écrasant au passage toute traduction saisie à la main).
+- Le bilingue était donc une contrainte de saisie sans contrepartie.
+
+Restent traduits autour de la session : les **libellés d'interface** (format,
+niveau, boutons) via next-intl, et le **nom de la catégorie** (`nameFr`/`nameEn`).
+
+> ⚠️ Ne pas réintroduire `titleFr`/`titleEn` sur `Talk`. Le `slug`, lui, est
+> dérivé du titre une seule fois à la création et **ne suit pas** ses
+> modifications : c'est une URL publique indexée.

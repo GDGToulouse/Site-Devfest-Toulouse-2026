@@ -327,10 +327,8 @@ export async function importSessionize(
       await prisma.talk.update({
         where: { id: existingId },
         data: {
-          titleFr: title,
-          titleEn: title,
-          descriptionFr: description,
-          descriptionEn: description,
+          title,
+          description,
           format,
           level,
           language,
@@ -346,10 +344,8 @@ export async function importSessionize(
         data: {
           editionId,
           slug,
-          titleFr: title,
-          titleEn: title,
-          descriptionFr: description,
-          descriptionEn: description,
+          title,
+          description,
           format,
           level,
           language,

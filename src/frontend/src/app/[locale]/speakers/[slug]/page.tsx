@@ -129,7 +129,7 @@ export default async function SpeakerDetailPage({
                     className="block rounded-xl bg-blanc p-4 shadow-card transition-transform hover:-translate-y-0.5"
                   >
                     <span className="font-bold text-noir">
-                      {localizedField(talk, "title", locale)}
+                      {talk.title}
                     </span>
                     <span className="ml-2 text-sm text-gris">{talk.format}</span>
                   </Link>

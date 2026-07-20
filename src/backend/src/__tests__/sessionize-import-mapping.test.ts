@@ -65,7 +65,7 @@ describe("importSessionize category mapping (#247)", () => {
       orderBy: { slug: "asc" },
     });
 
-    const workshop = talks.find((t) => t.titleFr.includes("Workshop avancé"));
+    const workshop = talks.find((t) => t.title.includes("Workshop avancé"));
     expect(workshop?.format).toBe("WORKSHOP");
     expect(workshop?.level).toBe("CONFIRME");
     expect(workshop?.language).toBe("en");
@@ -76,7 +76,7 @@ describe("importSessionize category mapping (#247)", () => {
     expect(categories.map((c) => c.nameFr)).toEqual(["Cloud & DevOps 1999"]);
 
     // Unknown format falls back to CONFERENCE and is reported.
-    const fallback = talks.find((t) => t.titleFr.includes("format inconnu"));
+    const fallback = talks.find((t) => t.title.includes("format inconnu"));
     expect(fallback?.format).toBe("CONFERENCE");
     expect(report.warnings.some((w) => w.includes("Fireside chat"))).toBe(true);
   });

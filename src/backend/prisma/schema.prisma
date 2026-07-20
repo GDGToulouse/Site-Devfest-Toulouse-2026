@@ -495,10 +495,13 @@ model Talk {
   id               Int               @id @default(autoincrement())
   // Slug derived from the title (RG-214). Unique per edition.
   slug             String
-  titleFr          String
-  titleEn          String
-  descriptionFr    String
-  descriptionEn    String
+  // Single-language on purpose (#293): a talk is given in one language, carried
+  // by `language` below. Translating a talk's own title/abstract adds data-entry
+  // work with no reader benefit — every imported talk already had titleEn ==
+  // titleFr. The rest of the site stays bilingual; Talk is the documented
+  // exception (see docs/modele-donnees-metier.md).
+  title            String
+  description      String
   format           TalkFormat
   level            TalkLevel?
   // Spoken language of the talk, e.g. "fr" | "en".

@@ -30,10 +30,8 @@ export default async function talkRoutes(app: FastifyInstance) {
     return {
       id: talk.id,
       slug: talk.slug,
-      titleFr: talk.titleFr,
-      titleEn: talk.titleEn,
-      descriptionFr: talk.descriptionFr,
-      descriptionEn: talk.descriptionEn,
+      title: talk.title,
+      description: talk.description,
       format: talk.format,
       level: talk.level,
       language: talk.language,

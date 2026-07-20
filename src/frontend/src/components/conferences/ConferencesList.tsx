@@ -19,7 +19,8 @@ export default function ConferencesList({ talks, locale, formatLabels }: Confere
   return (
     <ul className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {talks.map((talk) => {
-        const title = localizedField(talk, "title", locale);
+        // The title is not localized (#293) — a talk is given in one language.
+        const title = talk.title;
         const categoryName = talk.category ? localizedField(talk.category, "name", locale) : null;
         const speakerNames = talk.speakers.map((s) => s.name).join(", ");
         // Cap the stacked avatars so a session with many speakers doesn't
