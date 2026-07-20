@@ -5,6 +5,7 @@ import { getAuthContext } from "../../lib/auth-context.js";
 import { onlyDeleted, notDeleted, restoreData, unparkUniqueValue } from "../../lib/admin-helpers.js";
 import { TRASH_ENTITIES, findTrashEntity, delegateFor } from "../../lib/trash-registry.js";
 import { purgeFiles } from "../../lib/trash-files.js";
+import { retentionDays } from "../../lib/trash-purge.js";
 
 /**
  * The trash, backend side (#148): consult it, restore from it, empty it.
@@ -100,6 +101,9 @@ export default async function adminTrashRoutes(app: FastifyInstance) {
 
     return {
       entity: entity.key,
+      // So the UI can show the time left before auto-purge from deletedAt,
+      // without hardcoding 30 and lying when the window is overridden (#150).
+      retentionDays: retentionDays(),
       items: rows.map((row) => {
         const raw = row[entity.labelField];
         const label = typeof raw === "string" ? unparkUniqueValue(raw) : String(raw ?? "");
