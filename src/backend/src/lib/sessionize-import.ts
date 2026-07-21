@@ -1,6 +1,7 @@
 import { fetchAndStoreImage } from "./image-store.js";
 import { prisma } from "./prisma.js";
 import { slugify, uniqueSlug } from "./slug.js";
+import { validateWebhookUrl } from "./webhook-url.js";
 
 // --- Sessionize "All data" JSON shapes (only the fields we consume) ---
 
@@ -372,6 +373,12 @@ export async function loadSessionizeData(opts: { json?: string; url?: string }):
   if (opts.json?.trim()) {
     raw = JSON.parse(opts.json);
   } else if (opts.url?.trim()) {
+    // The URL comes from a back-office form, so guard it against SSRF before
+    // fetching: without this an editor could point it at the cloud metadata
+    // endpoint, an internal DB, or another backend on the shared Coolify network
+    // (#306). validateWebhookUrl rejects loopback/private/link-local hosts and
+    // throws on a bad scheme — same guard the contact webhook already uses.
+    await validateWebhookUrl(opts.url.trim());
     const res = await fetch(opts.url, { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error(`Sessionize fetch failed: HTTP ${res.status}`);
     raw = await res.json();
