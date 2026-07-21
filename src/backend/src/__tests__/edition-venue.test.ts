@@ -67,6 +67,44 @@ describe("edition venue fields (#109)", () => {
     await app.close();
   });
 
+  it("rejects a javascript: directions URL rather than storing an XSS vector", async () => {
+    const edition = await getSeededEdition();
+    touchedEditionId = edition.id;
+    const app = await buildAdminApp();
+
+    // The URL ends up in an href on the public /lieu page. A javascript: scheme
+    // must be refused at write time, not stored (#109 security follow-up).
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/editions/${edition.id}`,
+      // eslint-disable-next-line no-script-url
+      payload: { venueDirectionsUrl: "javascript:alert(document.cookie)" },
+    });
+    expect(res.statusCode).toBe(422);
+    expect(res.json().error).toBe("invalid_url");
+
+    // Nothing was written.
+    const stored = await prisma.edition.findUnique({ where: { id: edition.id } });
+    expect(stored?.venueDirectionsUrl).toBeNull();
+
+    await app.close();
+  });
+
+  it("accepts a normal https directions URL", async () => {
+    const edition = await getSeededEdition();
+    touchedEditionId = edition.id;
+    const app = await buildAdminApp();
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/editions/${edition.id}`,
+      payload: { venueDirectionsUrl: "https://maps.example.com/route" },
+    });
+    expect(res.statusCode).toBe(200);
+
+    await app.close();
+  });
+
   it("sanitizes the rich-text transports/parking on write", async () => {
     const edition = await getSeededEdition();
     touchedEditionId = edition.id;

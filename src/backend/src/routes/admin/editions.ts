@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
-import { sanitizeRichHtml } from "../../lib/sanitize.js";
+import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
 
 interface EditionBody {
   year: number;
@@ -168,6 +168,17 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: "Edition not found" });
 
     const body = request.body;
+
+    // The directions URL lands in an href on the public /lieu page, so reject a
+    // javascript:/data: scheme at the source rather than storing an XSS vector
+    // (#109). Only validate a non-empty value — "" clears the field. isSafeUrl
+    // is the same allowlist used for sponsor/social URLs (#223).
+    if (body.venueDirectionsUrl && !isSafeUrl(body.venueDirectionsUrl)) {
+      return reply.status(422).send({
+        error: "invalid_url",
+        message: "Le lien itinéraire doit être une URL http(s) valide.",
+      });
+    }
     const newStatus = body.status ?? existing.status;
 
     const edition = await prisma.edition.update({

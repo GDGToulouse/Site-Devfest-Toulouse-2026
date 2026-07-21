@@ -33,6 +33,15 @@ export default async function VenuePage() {
   const hasMap = edition.venueLat !== null && edition.venueLng !== null;
   const mapLabel = edition.venueName || t("pageTitle");
 
+  // Defence in depth on the directions href (#109): the admin PUT already
+  // rejects an unsafe scheme (isSafeUrl), but a value stored before that check,
+  // or via any other path, must not become a javascript:/data: XSS vector here.
+  // Only http(s) absolute URLs are rendered as a link.
+  const directionsUrl =
+    edition.venueDirectionsUrl && /^https?:\/\//i.test(edition.venueDirectionsUrl)
+      ? edition.venueDirectionsUrl
+      : null;
+
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
     { label: t("pageTitle"), href: `/${locale}/lieu` },
@@ -55,9 +64,9 @@ export default async function VenuePage() {
           </p>
         )}
 
-        {edition.venueDirectionsUrl && (
+        {directionsUrl && (
           <a
-            href={edition.venueDirectionsUrl}
+            href={directionsUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-4 inline-flex items-center gap-2 rounded-[12px] bg-bismarck px-4 py-2 text-sm font-bold text-blanc hover:bg-bismarck/90"
