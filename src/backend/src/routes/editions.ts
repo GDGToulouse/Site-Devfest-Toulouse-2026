@@ -249,6 +249,19 @@ export default async function editionRoutes(app: FastifyInstance) {
       status: edition.status,
       venueName: edition.venueName,
       venueAddress: edition.venueAddress,
+      // Venue & practical-info page (#109). The map needs both coordinates, so
+      // `hasVenueInfo` drives the nav entry on the presence of at least the map
+      // or one written section — an edition with only a name/address stays as it
+      // was and shows no dedicated page.
+      venueLat: edition.venueLat,
+      venueLng: edition.venueLng,
+      venueTransports: edition.venueTransports,
+      venueParking: edition.venueParking,
+      venueDirectionsUrl: edition.venueDirectionsUrl,
+      hasVenueInfo:
+        (edition.venueLat !== null && edition.venueLng !== null) ||
+        !!edition.venueTransports ||
+        !!edition.venueParking,
       heroImageUrl: edition.heroImageUrl,
       sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,

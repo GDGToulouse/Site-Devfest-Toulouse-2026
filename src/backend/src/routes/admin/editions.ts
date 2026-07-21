@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
+import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
 
 interface EditionBody {
   year: number;
@@ -11,6 +12,13 @@ interface EditionBody {
   status?: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
   venueName?: string;
   venueAddress?: string;
+  // Venue & practical-info page (#109). lat/lng feed the map; transports/parking
+  // are rich-text HTML, sanitized on write; directionsUrl is an itinerary link.
+  venueLat?: number | null;
+  venueLng?: number | null;
+  venueTransports?: string;
+  venueParking?: string;
+  venueDirectionsUrl?: string;
   heroImageUrl?: string;
   sponsorFormUrl?: string;
   aftermovieUrl?: string;
@@ -122,6 +130,12 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         status: edition.status,
         venueName: edition.venueName,
         venueAddress: edition.venueAddress,
+        // #109 — so the admin "Lieu" tab can pre-fill these fields.
+        venueLat: edition.venueLat,
+        venueLng: edition.venueLng,
+        venueTransports: edition.venueTransports,
+        venueParking: edition.venueParking,
+        venueDirectionsUrl: edition.venueDirectionsUrl,
         heroImageUrl: edition.heroImageUrl,
         sponsorFormUrl: edition.sponsorFormUrl,
         aftermovieUrl: edition.aftermovieUrl,
@@ -154,6 +168,17 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (!existing) return reply.status(404).send({ error: "Edition not found" });
 
     const body = request.body;
+
+    // The directions URL lands in an href on the public /lieu page, so reject a
+    // javascript:/data: scheme at the source rather than storing an XSS vector
+    // (#109). Only validate a non-empty value — "" clears the field. isSafeUrl
+    // is the same allowlist used for sponsor/social URLs (#223).
+    if (body.venueDirectionsUrl && !isSafeUrl(body.venueDirectionsUrl)) {
+      return reply.status(422).send({
+        error: "invalid_url",
+        message: "Le lien itinéraire doit être une URL http(s) valide.",
+      });
+    }
     const newStatus = body.status ?? existing.status;
 
     const edition = await prisma.edition.update({
@@ -165,6 +190,14 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         status: newStatus,
         venueName: body.venueName !== undefined ? (body.venueName || null) : existing.venueName,
         venueAddress: body.venueAddress !== undefined ? (body.venueAddress || null) : existing.venueAddress,
+        // #109. Coordinates are numbers: `null` explicitly clears them (an empty
+        // map field), a number sets them; undefined keeps the existing value.
+        venueLat: body.venueLat !== undefined ? body.venueLat : existing.venueLat,
+        venueLng: body.venueLng !== undefined ? body.venueLng : existing.venueLng,
+        // Rich-text HTML, sanitized on write like sponsor descriptions.
+        venueTransports: body.venueTransports !== undefined ? (sanitizeRichHtml(body.venueTransports) || null) : existing.venueTransports,
+        venueParking: body.venueParking !== undefined ? (sanitizeRichHtml(body.venueParking) || null) : existing.venueParking,
+        venueDirectionsUrl: body.venueDirectionsUrl !== undefined ? (body.venueDirectionsUrl || null) : existing.venueDirectionsUrl,
         heroImageUrl: body.heroImageUrl !== undefined ? (body.heroImageUrl || null) : existing.heroImageUrl,
         sponsorFormUrl: body.sponsorFormUrl !== undefined ? (body.sponsorFormUrl || null) : existing.sponsorFormUrl,
         aftermovieUrl: body.aftermovieUrl !== undefined ? (body.aftermovieUrl || null) : existing.aftermovieUrl,
