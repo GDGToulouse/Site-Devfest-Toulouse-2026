@@ -6,7 +6,7 @@ import { missingArticleFields } from "../../lib/article-validation.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import {
   isConfigured as translationConfigured,
-  QuotaExhaustedError,
+  sendTranslationError,
   translate,
   TranslationError,
   type Lang,
@@ -355,21 +355,10 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         translatedAt: to === "en" ? updated.translatedAtEn : updated.translatedAtFr,
       };
     } catch (err) {
-      if (err instanceof QuotaExhaustedError) {
-        return reply.status(429).header("Retry-After", String(err.retryAfterSec ?? 60)).send({
-          error: err.code, message: err.message, retryAfterSec: err.retryAfterSec,
-        });
+      if (!(err instanceof TranslationError)) {
+        request.log.error({ err }, "translate-fields failed");
       }
-      if (err instanceof TranslationError) {
-        const status =
-          err.code === "invalid_input" ? 400 :
-          err.code === "content_too_large" ? 413 :
-          err.code === "tag_mismatch" || err.code === "placeholder_mismatch" ? 422 :
-          502;
-        return reply.status(status).send({ error: err.code, message: err.message });
-      }
-      request.log.error({ err }, "translate-fields failed");
-      return reply.status(500).send({ error: "internal_error" });
+      return sendTranslationError(reply, err);
     }
   });
 

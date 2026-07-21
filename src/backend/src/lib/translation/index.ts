@@ -6,7 +6,7 @@ import { sharedRateLimiter } from "./rate-limiter.js";
 import { modelFor, type Lang, type TranslationRequest, type TranslationResponse } from "./types.js";
 import { validatePreservation } from "./validator.js";
 
-export { TranslationError, QuotaExhaustedError } from "./errors.js";
+export { TranslationError, QuotaExhaustedError, sendTranslationError } from "./errors.js";
 export { sharedRateLimiter } from "./rate-limiter.js";
 export { isConfigured } from "./gemini-client.js";
 export type {
