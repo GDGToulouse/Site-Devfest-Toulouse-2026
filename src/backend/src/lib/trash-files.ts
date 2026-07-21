@@ -2,24 +2,24 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { prisma } from "./prisma.js";
+import { TRASH_ENTITIES } from "./trash-registry.js";
 
 const UPLOADS_DIR = process.env.UPLOADS_DIR || "/app/uploads";
 
-// Every column that can point at an /uploads/ path. Purging a row must not
-// delete a file another row still shows: uploads live in a shared library
-// (/admin/files), they are not owned by the entity that references them.
+// Every column that can point at an /uploads/ path, derived from the single
+// source of truth (each entity's `fileFields` in the registry). Purging a row
+// must not delete a file another row still shows: uploads live in a shared
+// library (/admin/files), they are not owned by the referencing entity.
 //
-// Verified on real data before writing this: one image was already referenced
-// by two different articles. A naive "delete the row's files" purge would have
-// broken the surviving article's illustration.
-const FILE_REFERENCES: readonly { model: string; field: string }[] = [
-  { model: "article", field: "imageUrl" },
-  { model: "speaker", field: "photoUrl" },
-  { model: "sponsor", field: "logoUrl" },
-  { model: "edition", field: "heroImageUrl" },
-  { model: "edition", field: "sponsorHeroImageUrl" },
-  { model: "edition", field: "sponsorBrochureUrl" },
-];
+// Verified on real data: one image was already referenced by two articles. A
+// naive "delete the row's files" purge would have broken the survivor's image.
+//
+// Deriving this instead of maintaining a second flat list (the old shape) means
+// adding an entity with an upload column can no longer forget to update the
+// reference count — the bug this comment used to warn about.
+export const FILE_REFERENCES: readonly { model: string; field: string }[] = TRASH_ENTITIES.flatMap(
+  (entity) => entity.fileFields.map((field) => ({ model: entity.model, field })),
+);
 
 type CountDelegate = { count: (args: unknown) => Promise<number> };
 
