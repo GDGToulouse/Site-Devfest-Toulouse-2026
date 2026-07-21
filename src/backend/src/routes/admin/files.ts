@@ -14,8 +14,12 @@ import {
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 
 const ALLOWED_MIMES = [
-  // Images
-  "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  // Images. SVG is deliberately excluded (#306): served same-origin from
+  // /uploads/ with its native content-type, an SVG carrying <script> executes
+  // in our origin (the CSP allows inline scripts). The magic-link uploader
+  // (edit.ts) already excludes it for this reason; the admin uploader now
+  // matches. No SVG is used anywhere in the product, so nothing regresses.
+  "image/jpeg", "image/png", "image/webp", "image/gif",
   "image/x-icon", "image/vnd.microsoft.icon",
   // Documents
   "application/pdf",
