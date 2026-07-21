@@ -8,6 +8,14 @@ export interface Edition {
   status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
   venueName: string | null;
   venueAddress: string | null;
+  // Venue & practical-info page (#109). Coordinates drive the map; transports/
+  // parking are sanitized rich-text HTML; hasVenueInfo gates the nav entry.
+  venueLat: number | null;
+  venueLng: number | null;
+  venueTransports: string | null;
+  venueParking: string | null;
+  venueDirectionsUrl: string | null;
+  hasVenueInfo: boolean;
   heroImageUrl: string | null;
   sponsorFormUrl: string | null;
   aftermovieUrl: string | null;

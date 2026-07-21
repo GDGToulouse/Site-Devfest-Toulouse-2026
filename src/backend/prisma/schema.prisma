@@ -78,6 +78,15 @@ model Edition {
   status                  EditionStatus     @default(PREPARATION)
   venueName               String?
   venueAddress            String?
+  // Venue & practical-info page (#109). Coordinates drive the Leaflet/OSM map;
+  // transports/parking are rich-text HTML (sanitized on write like sponsor
+  // descriptions); directionsUrl is an external itinerary link. All optional —
+  // the public page and its map only show once coordinates are set.
+  venueLat                Float?
+  venueLng                Float?
+  venueTransports         String?
+  venueParking            String?
+  venueDirectionsUrl      String?
   heroImageUrl            String?
   sponsorFormUrl          String?
   aftermovieUrl           String?

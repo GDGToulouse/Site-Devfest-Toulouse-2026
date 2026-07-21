@@ -17,6 +17,7 @@ function edition(overrides: Partial<Edition> = {}): Edition {
     hasSpeakers: false,
     hasSponsors: false,
     hasJobOffers: false,
+    hasVenueInfo: false,
     ...overrides,
   } as Edition;
 }
@@ -67,10 +68,20 @@ describe("getPublicNavEntries", () => {
     expect(keys(entries).filter((k) => k === "sponsors")).toHaveLength(1);
   });
 
-  it("orders entries program → speakers → sponsors → blog", () => {
+  it("shows the venue link only when the edition has venue info (#109)", () => {
+    expect(keys(getPublicNavEntries(edition()))).not.toContain("venue");
+    expect(keys(getPublicNavEntries(edition({ hasVenueInfo: true })))).toEqual(["venue", "blog"]);
+  });
+
+  it("orders entries program → speakers → sponsors → venue → blog", () => {
     const entries = getPublicNavEntries(
-      edition({ isProgramPublished: true, hasSpeakers: true, hasSponsors: true }),
+      edition({
+        isProgramPublished: true,
+        hasSpeakers: true,
+        hasSponsors: true,
+        hasVenueInfo: true,
+      }),
     );
-    expect(keys(entries)).toEqual(["conferences", "speakers", "sponsors", "blog"]);
+    expect(keys(entries)).toEqual(["conferences", "speakers", "sponsors", "venue", "blog"]);
   });
 });
