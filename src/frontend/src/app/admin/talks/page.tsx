@@ -8,6 +8,7 @@ import type { Talk, TalkFormat } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
 import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface TalkRow extends Talk {
   edition?: { id: number; year: number };
@@ -29,6 +30,8 @@ export default function TalksDataPage() {
   const [format, setFormat] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<TalkRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     adminFetch<TalkRow[]>("/talks").then(({ data }) => {
@@ -48,6 +51,23 @@ export default function TalksDataPage() {
       prev.map((t) => (selectedIds.has(t.id) ? { ...t, publicationStatus: value } : t)),
     );
     setSelectedIds(new Set());
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setError(null);
+    // Soft-delete since #147: 204, the talk moves to the trash.
+    const { status, error: apiError } = await adminFetch(`/talks/${deleteTarget.id}`, {
+      method: "DELETE",
+    });
+    const deletedId = deleteTarget.id;
+    setDeleteTarget(null);
+
+    if (status === 204) {
+      setTalks((prev) => prev.filter((t) => t.id !== deletedId));
+      return;
+    }
+    setError(apiError ?? "Suppression impossible.");
   }
 
   const years = useMemo(
@@ -163,16 +183,33 @@ export default function TalksDataPage() {
             />
           )}
 
+          {error && (
+            <div role="alert" className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite">
+              {error}
+            </div>
+          )}
+
           <DataTable<TalkRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucune conférence"
             onEdit={(t) => router.push(`/admin/talks/${t.id}`)}
+            onDelete={(t) => setDeleteTarget(t)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
           />
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Supprimer la conférence"
+        message={`Supprimer « ${deleteTarget?.title} » ? Elle disparaîtra des pages publiques. Vous pourrez la restaurer depuis la corbeille.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

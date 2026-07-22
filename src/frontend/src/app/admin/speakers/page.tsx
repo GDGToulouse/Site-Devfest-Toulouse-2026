@@ -8,6 +8,7 @@ import type { Speaker } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
 import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface SpeakerRow extends Speaker {
   edition?: { id: number; year: number };
@@ -21,6 +22,8 @@ export default function SpeakersDataPage() {
   const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<SpeakerRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     adminFetch<SpeakerRow[]>("/speakers").then(({ data }) => {
@@ -46,6 +49,24 @@ export default function SpeakersDataPage() {
       ),
     );
     setSelectedIds(new Set());
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setError(null);
+    // Soft-delete since #147: the backend answers 204 and the row moves to the
+    // trash. adminFetch returns 204 explicitly — test the status, not 200.
+    const { status, error: apiError } = await adminFetch(`/speakers/${deleteTarget.id}`, {
+      method: "DELETE",
+    });
+    const deletedId = deleteTarget.id;
+    setDeleteTarget(null);
+
+    if (status === 204) {
+      setSpeakers((prev) => prev.filter((s) => s.id !== deletedId));
+      return;
+    }
+    setError(apiError ?? "Suppression impossible.");
   }
 
   const years = useMemo(
@@ -142,16 +163,33 @@ export default function SpeakersDataPage() {
             />
           )}
 
+          {error && (
+            <div role="alert" className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite">
+              {error}
+            </div>
+          )}
+
           <DataTable<SpeakerRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucun speaker"
             onEdit={(s) => router.push(`/admin/speakers/${s.id}`)}
+            onDelete={(s) => setDeleteTarget(s)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
           />
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Supprimer le speaker"
+        message={`Supprimer « ${deleteTarget?.name} » ? Il disparaîtra des pages publiques. Vous pourrez le restaurer depuis la corbeille.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

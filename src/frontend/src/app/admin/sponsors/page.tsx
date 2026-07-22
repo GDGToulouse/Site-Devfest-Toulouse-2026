@@ -8,6 +8,7 @@ import type { Sponsor, SponsorLevel } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
 import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface SponsorRow extends Sponsor {
   edition?: { id: number; year: number };
@@ -30,6 +31,8 @@ export default function SponsorsDataPage() {
   const [level, setLevel] = useState<string>("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [deleteTarget, setDeleteTarget] = useState<SponsorRow | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     adminFetch<SponsorRow[]>("/sponsors").then(({ data }) => {
@@ -49,6 +52,24 @@ export default function SponsorsDataPage() {
       prev.map((s) => (selectedIds.has(s.id) ? { ...s, publicationStatus: value } : s)),
     );
     setSelectedIds(new Set());
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    setError(null);
+    // Soft-delete since #147: 204, the sponsor moves to the trash. Its contacts
+    // and job offers go with it on the public side; the row itself is restorable.
+    const { status, error: apiError } = await adminFetch(`/sponsors/${deleteTarget.id}`, {
+      method: "DELETE",
+    });
+    const deletedId = deleteTarget.id;
+    setDeleteTarget(null);
+
+    if (status === 204) {
+      setSponsors((prev) => prev.filter((s) => s.id !== deletedId));
+      return;
+    }
+    setError(apiError ?? "Suppression impossible.");
   }
 
   const years = useMemo(
@@ -146,16 +167,33 @@ export default function SponsorsDataPage() {
             />
           )}
 
+          {error && (
+            <div role="alert" className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite">
+              {error}
+            </div>
+          )}
+
           <DataTable<SponsorRow>
             columns={columns}
             data={filtered}
             emptyMessage="Aucun sponsor"
             onEdit={(s) => router.push(`/admin/sponsors/${s.id}`)}
+            onDelete={(s) => setDeleteTarget(s)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
           />
         </>
       )}
+
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title="Supprimer le sponsor"
+        message={`Supprimer « ${deleteTarget?.name} » ? Il disparaîtra des pages publiques. Vous pourrez le restaurer depuis la corbeille.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
