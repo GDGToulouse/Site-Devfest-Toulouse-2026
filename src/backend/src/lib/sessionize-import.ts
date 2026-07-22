@@ -1,6 +1,7 @@
 import { fetchAndStoreImage } from "./image-store.js";
 import { prisma } from "./prisma.js";
 import { slugify, uniqueSlug } from "./slug.js";
+import { validateWebhookUrl } from "./webhook-url.js";
 
 // --- Sessionize "All data" JSON shapes (only the fields we consume) ---
 
@@ -212,6 +213,10 @@ export async function importSessionize(
   }
 
   // 2. Upsert track categories, keyed by nameFr within the edition.
+  // Deliberately NOT filtered on deletedAt (#147): these lookups drive upserts,
+  // so they must see trashed rows. Skipping them would recreate a category that
+  // already exists in the trash, and the slug sets below would hand out names
+  // still held by trashed rows — the create would then hit the unique index.
   const existingCategories = await prisma.category.findMany({
     where: { editionId },
     select: { id: true, nameFr: true },
@@ -368,6 +373,12 @@ export async function loadSessionizeData(opts: { json?: string; url?: string }):
   if (opts.json?.trim()) {
     raw = JSON.parse(opts.json);
   } else if (opts.url?.trim()) {
+    // The URL comes from a back-office form, so guard it against SSRF before
+    // fetching: without this an editor could point it at the cloud metadata
+    // endpoint, an internal DB, or another backend on the shared Coolify network
+    // (#306). validateWebhookUrl rejects loopback/private/link-local hosts and
+    // throws on a bad scheme — same guard the contact webhook already uses.
+    await validateWebhookUrl(opts.url.trim());
     const res = await fetch(opts.url, { headers: { accept: "application/json" } });
     if (!res.ok) throw new Error(`Sessionize fetch failed: HTTP ${res.status}`);
     raw = await res.json();

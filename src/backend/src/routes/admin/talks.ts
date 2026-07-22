@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateConferences } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
+import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
 type TalkFormat = (typeof FORMATS)[number];
@@ -56,10 +57,13 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     const { editionId } = request.query;
 
     const talks = await prisma.talk.findMany({
-      where: editionId ? { editionId: Number(editionId) } : {},
+      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
       orderBy: editionId ? { title: "asc" } : [{ edition: { year: "desc" } }, { title: "asc" }],
       include: {
-        speakers: { select: { id: true, name: true } },
+        // Nested reads need their own filter: a query extension would not reach
+        // them (Prisma applies those to the top-level operation only), and a
+        // trashed speaker would otherwise still show up on a live talk.
+        speakers: { where: notDeleted, select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
         ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
       },
@@ -71,10 +75,12 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
   app.get<{ Params: TalkIdParams }>("/talks/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const talk = await prisma.talk.findUnique({
-      where: { id: Number(request.params.id) },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const talk = await prisma.talk.findFirst({
+      where: { id: Number(request.params.id), ...notDeleted },
       include: {
-        speakers: { select: { id: true, name: true } },
+        speakers: { where: notDeleted, select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
         edition: { select: { id: true, year: true } },
       },
@@ -99,6 +105,10 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "language is required" });
     }
 
+    // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
+    // constraint, so a trashed talk still owns its slug until purged. Parking
+    // frees the readable form, but a row keeping an unparked slug (restored, or
+    // trashed before #147) must still be counted or the create would collide.
     const existing = await prisma.talk.findMany({
       where: { editionId: body.editionId },
       select: { slug: true },
@@ -177,19 +187,29 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     }
 
     const { count } = await prisma.talk.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, ...notDeleted },
       data: { publicationStatus: value },
     });
     revalidateConferences();
     return { count };
   });
 
-  // DELETE /api/admin/talks/:id
+  // DELETE /api/admin/talks/:id — moves the talk to the trash (#147). The row
+  // survives with `deletedAt` set; #145c restores it, #145d purges it for good.
   app.delete<{ Params: TalkIdParams }>("/talks/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const { id } = request.params;
-    await prisma.talk.delete({ where: { id: Number(id) } });
+    const talkId = Number(request.params.id);
+    const talk = await prisma.talk.findFirst({ where: { id: talkId, ...notDeleted } });
+    if (!talk) return notFound(reply, "Talk");
+
+    // The slug is unique per edition and a trashed row keeps its slot, so park
+    // it out of the live namespace — otherwise re-creating a talk under the
+    // same title would hit the constraint (#146).
+    await prisma.talk.update({
+      where: { id: talkId },
+      data: { ...softDeleteData(), slug: parkUniqueValue(talk.slug, talkId) },
+    });
     revalidateConferences();
     return reply.code(204).send();
   });

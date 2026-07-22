@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
+import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface ContactCategoryBody {
   nameFr: string;
@@ -19,8 +20,11 @@ export default async function adminContactRoutes(app: FastifyInstance) {
   // GET /api/admin/contact/categories (ADMIN + EDITOR can read)
   app.get("/contact/categories", async () => {
     const categories = await prisma.contactCategory.findMany({
+      where: notDeleted,
       orderBy: { sortOrder: "asc" },
-      include: { _count: { select: { messages: true } } },
+      // The message count must exclude trashed messages too, otherwise the
+      // admin shows a category as busy when its messages are all in the trash.
+      include: { _count: { select: { messages: { where: notDeleted } } } },
     });
 
     return categories.map((c) => ({
@@ -75,7 +79,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.contactCategory.findUnique({ where: { id } });
+    // findFirst: findUnique cannot carry the deletedAt filter (#147).
+    const existing = await prisma.contactCategory.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.status(404).send({ error: "Category not found" });
 
     const body = request.body;
@@ -106,14 +111,24 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const existing = await prisma.contactCategory.findUnique({ where: { id } });
+    // findFirst rather than findUnique: only the latter's where is restricted to
+    // unique fields, so it cannot carry the deletedAt filter (#147).
+    const existing = await prisma.contactCategory.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.status(404).send({ error: "Category not found" });
 
     if (existing.isSystem) {
       return reply.status(409).send({ error: "System categories cannot be deleted" });
     }
 
-    await prisma.contactCategory.delete({ where: { id } });
+    // Moves to the trash (#147). The slug is optional here but unique when set,
+    // so park it to free the live namespace.
+    await prisma.contactCategory.update({
+      where: { id },
+      data: {
+        ...softDeleteData(),
+        ...(existing.slug ? { slug: parkUniqueValue(existing.slug, id) } : {}),
+      },
+    });
     return { success: true };
   });
 
@@ -125,7 +140,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const limit = Math.min(Number(request.query.limit) || 20, 100);
     const unreadOnly = request.query.unreadOnly === "true";
 
-    const where = unreadOnly ? { isRead: false } : {};
+    // Shared by the list and the count below, so both stay consistent (#147).
+    const where = unreadOnly ? { isRead: false, ...notDeleted } : { ...notDeleted };
 
     const [messages, total] = await Promise.all([
       prisma.contactMessage.findMany({
@@ -187,7 +203,11 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    await prisma.contactMessage.delete({ where: { id } });
+    // Moves to the trash (#147). No unique field to park on a message.
+    const existing = await prisma.contactMessage.findFirst({ where: { id, ...notDeleted } });
+    if (!existing) return reply.status(404).send({ error: "Message not found" });
+
+    await prisma.contactMessage.update({ where: { id }, data: softDeleteData() });
     return { success: true };
   });
 
@@ -199,7 +219,8 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
-    const msg = await prisma.contactMessage.findUnique({ where: { id } });
+    // findFirst: findUnique cannot carry the deletedAt filter (#147).
+    const msg = await prisma.contactMessage.findFirst({ where: { id, ...notDeleted } });
     if (!msg) return reply.status(404).send({ error: "Message not found" });
 
     const emails = request.body.emails

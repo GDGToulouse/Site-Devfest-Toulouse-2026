@@ -15,6 +15,7 @@
     "speakers": "Speakers",
     "sponsors": "Sponsors",
     "jobOffers": "Job offers",
+    "venue": "Venue",
     "blog": "News"
   },
   "cta": {
@@ -336,5 +337,13 @@
     "home": "Home",
     "cta": "View offer",
     "offersAt": "Offers at {name}"
+  },
+  "venue": {
+    "pageTitle": "Venue & practical info",
+    "description": "How to reach DevFest Toulouse, where to park and how to get around.",
+    "home": "Home",
+    "directions": "Directions",
+    "transports": "Getting there",
+    "parking": "Parking"
   }
 }

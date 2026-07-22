@@ -8,7 +8,7 @@ on:
 
 jobs:
   frontend:
-    name: Frontend — Lint & Typecheck
+    name: Frontend — Lint, Test & Build
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -23,6 +23,7 @@ jobs:
           cache-dependency-path: src/frontend/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm test
       - run: pnpm build
 
   backend:

@@ -27,6 +27,9 @@ const JOB_OFFERS_CHILD: NavEntry = {
   href: "/offres-emploi-partenaires",
 };
 const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites" };
+// Venue & practical-info page (#109). Shown only once the edition has map
+// coordinates or a written transports/parking section (hasVenueInfo).
+const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" };
 
 // Build the ordered public nav entries for the given edition. Conference-,
 // speaker- and sponsor-related links only appear once their content is live.
@@ -56,6 +59,7 @@ export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
       edition.hasJobOffers ? { ...SPONSORS_ENTRY, children: [JOB_OFFERS_CHILD] } : SPONSORS_ENTRY,
     );
   }
+  if (edition?.hasVenueInfo) entries.push(VENUE_ENTRY);
   entries.push(BLOG_ENTRY);
 
   return entries;

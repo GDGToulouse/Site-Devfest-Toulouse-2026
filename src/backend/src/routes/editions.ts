@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
+import { notDeleted, visibleCategory } from "../lib/admin-helpers.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -28,14 +29,18 @@ export async function getFeaturedEdition() {
   });
 
   if (setting) {
-    const edition = await prisma.edition.findUnique({
-      where: { id: Number(setting.value) },
+    // findFirst so the trash filter fits (#147). A trashed featured edition
+    // falls through to the fallback below rather than driving the whole public
+    // site — this function decides what every visitor sees.
+    const edition = await prisma.edition.findFirst({
+      where: { id: Number(setting.value), ...notDeleted },
     });
     if (edition) return edition;
   }
 
   // 2. Fallback: latest edition by year
   return prisma.edition.findFirst({
+    where: notDeleted,
     orderBy: { year: "desc" },
   });
 }
@@ -44,6 +49,7 @@ export default async function editionRoutes(app: FastifyInstance) {
   // GET /api/editions — returns all editions (summary)
   app.get("/editions", async () => {
     const editions = await prisma.edition.findMany({
+      where: notDeleted,
       orderBy: { year: "desc" },
       select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true },
     });
@@ -64,15 +70,18 @@ export default async function editionRoutes(app: FastifyInstance) {
     const yearNum = Number(year);
     if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
-    const edition = await prisma.edition.findUnique({
-      where: { year: yearNum },
+    // findFirst: findUnique cannot carry the deletedAt filter (#147). Both
+    // nested levels need their own — the filter does not propagate down an
+    // include, so a trashed article (or tag) would still surface here.
+    const edition = await prisma.edition.findFirst({
+      where: { year: yearNum, ...notDeleted },
       include: {
         keyFigures: { orderBy: { sortOrder: "asc" } },
         articles: {
-          where: { publicationStatus: "PUBLISHED" },
+          where: { publicationStatus: "PUBLISHED", ...notDeleted },
           orderBy: { publishedAt: "desc" },
           take: 4,
-          include: { tags: true },
+          include: { tags: { where: notDeleted } },
         },
       },
     });
@@ -120,11 +129,11 @@ export default async function editionRoutes(app: FastifyInstance) {
     const yearNum = Number(request.params.year);
     if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
-    const edition = await prisma.edition.findUnique({ where: { year: yearNum }, select: { id: true } });
+    const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
     const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
       orderBy: { name: "asc" },
       select: { slug: true, name: true, photoUrl: true, company: true },
     });
@@ -139,19 +148,23 @@ export default async function editionRoutes(app: FastifyInstance) {
     const yearNum = Number(request.params.year);
     if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
-    const edition = await prisma.edition.findUnique({ where: { year: yearNum }, select: { id: true } });
+    const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
     const talks = await prisma.talk.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
       orderBy: { title: "asc" },
       include: {
+        // Nested: the filter does not reach here on its own, and a trashed
+        // speaker would keep appearing under a live talk (#147).
         speakers: {
-          where: { publicationStatus: "PUBLISHED" },
+          where: { publicationStatus: "PUBLISHED", ...notDeleted },
           select: { slug: true, name: true, photoUrl: true },
           orderBy: { name: "asc" },
         },
-        category: { select: { nameFr: true, nameEn: true, color: true } },
+        // `category` is to-one — Prisma takes no `where` there, so `deletedAt`
+        // rides along and the serializer drops a trashed one (#147).
+        category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
       },
     });
 
@@ -163,7 +176,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       level: t.level,
       language: t.language,
       videoUrl: t.videoUrl,
-      category: t.category,
+      category: visibleCategory(t.category),
       speakers: t.speakers,
     }));
   });
@@ -180,7 +193,7 @@ export default async function editionRoutes(app: FastifyInstance) {
     // home page to link back to last edition's content during preparation
     // and announcement phases.
     const previousEdition = await prisma.edition.findFirst({
-      where: { year: { lt: edition.year } },
+      where: { year: { lt: edition.year }, ...notDeleted },
       orderBy: { year: "desc" },
       select: { year: true, aftermovieUrl: true, galleryUrl: true },
     });
@@ -198,21 +211,33 @@ export default async function editionRoutes(app: FastifyInstance) {
       publishedSponsorCount,
       jobOfferCount,
     ] = await Promise.all([
+        // These counts decide whether the nav links show at all, so the trash
+        // has to be excluded: an edition whose talks are all trashed must not
+        // keep advertising a "Conférences" menu that leads to an empty page.
         prisma.talk.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
         }),
         prisma.talk.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", startsAt: { not: null } },
+          where: {
+            editionId: edition.id,
+            publicationStatus: "PUBLISHED",
+            startsAt: { not: null },
+            ...notDeleted,
+          },
         }),
         prisma.speaker.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
         }),
         prisma.sponsor.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
         }),
         // Offers of published sponsors only — same set the recap page lists.
+        // SponsorJobOffer itself is out of the trash's scope, but its sponsor is
+        // not: offers of a trashed sponsor must stop counting.
         prisma.sponsorJobOffer.count({
-          where: { sponsor: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          where: {
+            sponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+          },
         }),
       ]);
 
@@ -224,6 +249,19 @@ export default async function editionRoutes(app: FastifyInstance) {
       status: edition.status,
       venueName: edition.venueName,
       venueAddress: edition.venueAddress,
+      // Venue & practical-info page (#109). The map needs both coordinates, so
+      // `hasVenueInfo` drives the nav entry on the presence of at least the map
+      // or one written section — an edition with only a name/address stays as it
+      // was and shows no dedicated page.
+      venueLat: edition.venueLat,
+      venueLng: edition.venueLng,
+      venueTransports: edition.venueTransports,
+      venueParking: edition.venueParking,
+      venueDirectionsUrl: edition.venueDirectionsUrl,
+      hasVenueInfo:
+        (edition.venueLat !== null && edition.venueLng !== null) ||
+        !!edition.venueTransports ||
+        !!edition.venueParking,
       heroImageUrl: edition.heroImageUrl,
       sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,
@@ -258,6 +296,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       where: {
         editionId: edition.id,
         isVisible: true,
+        ...notDeleted,
       },
       orderBy: { sortOrder: "asc" },
     });
@@ -290,6 +329,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       where: {
         editionId: edition.id,
         isVisible: true,
+        ...notDeleted,
       },
       orderBy: { sortOrder: "asc" },
     });

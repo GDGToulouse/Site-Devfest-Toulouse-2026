@@ -11,11 +11,15 @@ import {
   COMPRESS_QUALITY,
   UPLOADS_DIR,
 } from "../../lib/image-store.js";
-import { TranslationError, QuotaExhaustedError } from "../../lib/translation/errors.js";
+import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 
 const ALLOWED_MIMES = [
-  // Images
-  "image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml",
+  // Images. SVG is deliberately excluded (#306): served same-origin from
+  // /uploads/ with its native content-type, an SVG carrying <script> executes
+  // in our origin (the CSP allows inline scripts). The magic-link uploader
+  // (edit.ts) already excludes it for this reason; the admin uploader now
+  // matches. No SVG is used anywhere in the product, so nothing regresses.
+  "image/jpeg", "image/png", "image/webp", "image/gif",
   "image/x-icon", "image/vnd.microsoft.icon",
   // Documents
   "application/pdf",
@@ -276,26 +280,10 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           tokensUsed: { input: result.inputTokens, output: result.outputTokens },
         };
       } catch (err) {
-        if (err instanceof QuotaExhaustedError) {
-          return reply
-            .code(429)
-            .header("Retry-After", String(err.retryAfterSec ?? 60))
-            .send({
-              error: err.code,
-              message: err.message,
-              retryAfterSec: err.retryAfterSec,
-            });
+        if (!(err instanceof TranslationError)) {
+          request.log.error({ err, filename }, "Unexpected alt-text generation error");
         }
-        if (err instanceof TranslationError) {
-          const status =
-            err.code === "not_configured" ? 503 :
-            err.code === "invalid_input" ? 400 :
-            err.code === "rate_limit" ? 429 :
-            502;
-          return reply.code(status).send({ error: err.code, message: err.message });
-        }
-        request.log.error({ err, filename }, "Unexpected alt-text generation error");
-        return reply.code(500).send({ error: "internal_error" });
+        return sendTranslationError(reply, err);
       }
     },
   );

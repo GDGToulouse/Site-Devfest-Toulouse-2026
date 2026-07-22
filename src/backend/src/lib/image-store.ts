@@ -3,6 +3,8 @@ import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
 
+import { validateWebhookUrl } from "./webhook-url.js";
+
 // Single source of truth for where uploaded media lives. Served publicly at
 // /uploads/ (see index.ts static route). The container mounts it at /app/uploads;
 // UPLOADS_DIR overrides the path when running outside Docker.
@@ -76,6 +78,12 @@ export async function storeImageBuffer(buffer: Buffer, mimetype: string): Promis
 // Throws on any problem (bad status, non-image, oversized, timeout) so callers
 // can decide whether to warn and carry on.
 export async function fetchAndStoreImage(url: string): Promise<string> {
+  // The URL comes from an imported payload (Sessionize speaker photos), so it is
+  // attacker-influenced: guard against SSRF before fetching (#306). Less severe
+  // than the JSON endpoint — sharp rejects non-images and errors are swallowed
+  // by the caller — but it is still a blind internal-port probe otherwise.
+  await validateWebhookUrl(url);
+
   const res = await fetch(url, {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { accept: "image/*" },

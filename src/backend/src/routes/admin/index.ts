@@ -18,6 +18,7 @@ import adminTalkRoutes from "./talks.js";
 import adminImportRoutes from "./import.js";
 import adminApiKeyRoutes from "./api-keys.js";
 import adminTranslateRoutes from "./translate.js";
+import adminTrashRoutes from "./trash.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -36,6 +37,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminCategoryRoutes);
     await editorApp.register(adminTalkRoutes);
     await editorApp.register(adminImportRoutes);
+    // Editors may consult and restore; the purge route carries its own
+    // ADMIN-only guard, since destroying a row for good is not theirs to do.
+    await editorApp.register(adminTrashRoutes);
   });
 
   // Routes restricted to ADMIN only

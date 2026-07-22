@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -19,7 +20,7 @@ export default async function speakerRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED" },
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
       orderBy: { name: "asc" },
       select: { id: true, slug: true, name: true, photoUrl: true, company: true, isFeatured: true },
     });
@@ -32,7 +33,7 @@ export default async function speakerRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", isFeatured: true },
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", isFeatured: true, ...notDeleted },
       orderBy: { name: "asc" },
       take: 8,
       select: { id: true, slug: true, name: true, photoUrl: true, company: true },
@@ -50,10 +51,18 @@ export default async function speakerRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const speaker = await prisma.speaker.findFirst({
-      where: { editionId: edition.id, slug: request.params.slug, publicationStatus: "PUBLISHED" },
+      where: {
+        editionId: edition.id,
+        slug: request.params.slug,
+        publicationStatus: "PUBLISHED",
+        ...notDeleted,
+      },
       include: {
+        // Nested reads need their own filter: a query extension would not reach
+        // them (Prisma applies those to the top-level operation only), and a
+        // trashed talk would otherwise still show up on a live speaker page.
         talks: {
-          where: { publicationStatus: "PUBLISHED" },
+          where: { publicationStatus: "PUBLISHED", ...notDeleted },
           select: { slug: true, title: true, format: true },
           orderBy: { title: "asc" },
         },
