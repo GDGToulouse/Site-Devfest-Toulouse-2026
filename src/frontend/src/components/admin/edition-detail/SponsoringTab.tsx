@@ -23,11 +23,13 @@ const STATUS_OPTIONS: { value: SponsorPageStatus; label: string; hint: string }[
   { value: "SOLD_OUT", label: "Sponsoring complet", hint: "Affiche un message « tout est vendu » avec un lien vers /contact." },
 ];
 
-// A catalogue tier merged with its (optional) binding to this edition (#318).
+// A catalogue tier merged with its (optional) binding to this edition (#320).
+// A single "on /devenir-sponsor" checkbox drives the binding: checking it
+// creates the link (visible), unchecking removes it. Price/order edit inline
+// and save on blur.
 interface EditionTierRow {
   tier: AdminSponsorTier;
-  offered: boolean; // a join row exists
-  isVisible: boolean;
+  offered: boolean; // a live, visible join row exists for this edition
   price: string;
   sortOrder: string;
 }
@@ -87,7 +89,6 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         return {
           tier,
           offered: !!link,
-          isVisible: link?.isVisible ?? true,
           price: link?.price ?? "",
           sortOrder: String(link?.sortOrder ?? 0),
         };
@@ -106,7 +107,8 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
     setRows((prev) => prev.map((r) => (r.tier.id === tierId ? { ...r, ...patch } : r)));
   }
 
-  // Offering a tier upserts the join row; un-offering deletes it.
+  // The single checkbox: checking publishes the offer on /devenir-sponsor (PUT
+  // the link, visible), unchecking removes the link entirely.
   async function toggleOffered(row: EditionTierRow) {
     setSavingTierId(row.tier.id);
     if (row.offered) {
@@ -115,20 +117,20 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
     } else {
       await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
         method: "PUT",
-        body: JSON.stringify({ isVisible: row.isVisible, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
+        body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
       });
       patchRow(row.tier.id, { offered: true });
     }
     setSavingTierId(null);
   }
 
-  // Persist visibility/price/order for an already-offered tier.
+  // Persist the price/order of an already-published offer, on blur.
   async function saveRow(row: EditionTierRow) {
     if (!row.offered) return;
     setSavingTierId(row.tier.id);
     await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
       method: "PUT",
-      body: JSON.stringify({ isVisible: row.isVisible, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
+      body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
     });
     setSavingTierId(null);
   }
@@ -269,91 +271,82 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         </div>
       </div>
 
-      {/* Offers proposed for this edition — pick from the shared catalogue (#318).
-          Editing a tier's name/colour/advantages is done in the catalogue (#319). */}
+      {/* Which catalogue offers appear on this edition's /devenir-sponsor (#320).
+          One checkbox = published & visible; price/order save on blur. Editing a
+          tier's name/colour/advantages is done in the catalogue (#319). */}
       <div className="mb-2">
-        <h3 className="text-lg font-bold text-noir">Offres proposées pour cette édition</h3>
+        <h3 className="text-lg font-bold text-noir">Offres sur « Devenir sponsor »</h3>
         <p className="text-sm text-gris">
-          Cochez les offres du catalogue à proposer, définissez leur tarif et leur ordre d&apos;affichage sur
-          « Devenir sponsor ». Le catalogue lui-même se gère à part.
+          Cochez les offres du catalogue à publier pour cette édition, et fixez leur tarif et leur ordre
+          d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ».
         </p>
       </div>
 
       {rows.length === 0 ? (
-        <p className="text-gris text-sm">Aucune offre dans le catalogue.</p>
+        <p className="text-gris text-sm">
+          Aucune offre dans le catalogue. Créez-en dans « Offres de sponsoring » avant de les publier ici.
+        </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-gris/20">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-blanc-casse/60 border-b border-gris/20">
-                <th className="text-left px-4 py-3 font-medium text-gris">Proposée</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Offre</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Visible</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Tarif (édition)</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Ordre</th>
-                <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.tier.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={row.offered}
-                      disabled={savingTierId === row.tier.id}
-                      onChange={() => toggleOffered(row)}
-                      className="rounded border-gris/30 text-malachite focus:ring-malachite"
-                      aria-label={`Proposer ${row.tier.nameFr}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-noir font-medium">
-                    <span className="inline-block w-4 h-4 rounded-full mr-2 align-middle" style={{ backgroundColor: row.tier.color }} />
-                    {row.tier.nameFr}
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={row.isVisible}
-                      disabled={!row.offered}
-                      onChange={(e) => patchRow(row.tier.id, { isVisible: e.target.checked })}
-                      className="rounded border-gris/30 text-malachite focus:ring-malachite disabled:opacity-40"
-                      aria-label={`Visible : ${row.tier.nameFr}`}
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="text"
-                      value={row.price}
-                      disabled={!row.offered}
-                      placeholder="—"
-                      onChange={(e) => patchRow(row.tier.id, { price: e.target.value })}
-                      className="w-32 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
-                    />
-                  </td>
-                  <td className="px-4 py-3">
-                    <input
-                      type="number"
-                      value={row.sortOrder}
-                      disabled={!row.offered}
-                      onChange={(e) => patchRow(row.tier.id, { sortOrder: e.target.value })}
-                      className="w-16 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
-                    />
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <button
-                      onClick={() => saveRow(row)}
-                      disabled={!row.offered || savingTierId === row.tier.id}
-                      className="text-bleu hover:underline text-sm disabled:opacity-40 disabled:no-underline"
-                    >
-                      {savingTierId === row.tier.id ? "…" : "Enregistrer"}
-                    </button>
-                  </td>
+        <>
+          <div className="overflow-x-auto rounded-xl border border-gris/20">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-blanc-casse/60 border-b border-gris/20">
+                  <th className="text-left px-4 py-3 font-medium text-gris">Sur /devenir-sponsor</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Offre</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Tarif (édition)</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Ordre</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.tier.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={row.offered}
+                        disabled={savingTierId === row.tier.id}
+                        onChange={() => toggleOffered(row)}
+                        className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                        aria-label={`Publier ${row.tier.nameFr} sur /devenir-sponsor`}
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-noir font-medium">
+                      <span className="inline-block w-4 h-4 rounded-full mr-2 align-middle" style={{ backgroundColor: row.tier.color }} />
+                      {row.tier.nameFr}
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="text"
+                        value={row.price}
+                        disabled={!row.offered}
+                        placeholder="—"
+                        onChange={(e) => patchRow(row.tier.id, { price: e.target.value })}
+                        onBlur={() => saveRow(row)}
+                        className="w-32 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
+                      />
+                    </td>
+                    <td className="px-4 py-3">
+                      <input
+                        type="number"
+                        value={row.sortOrder}
+                        disabled={!row.offered}
+                        onChange={(e) => patchRow(row.tier.id, { sortOrder: e.target.value })}
+                        onBlur={() => saveRow(row)}
+                        className="w-16 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {!rows.some((r) => r.offered) && (
+            <p className="mt-3 text-sm text-gris">
+              Aucune offre publiée : la section des formules restera masquée sur « Devenir sponsor ».
+            </p>
+          )}
+        </>
       )}
     </div>
   );
