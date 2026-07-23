@@ -2,27 +2,31 @@ import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import type { SponsorPublic } from "@/lib/types";
 
-// Card size tier, derived from the offer's logoScale (#321). Higher offers get
-// bigger logos, so the wall reads Platinum > Gold > Discovery > Soutien.
-export type SponsorCardSize = "lg" | "md" | "sm";
+// Size band derived from the offer's logoScale (#323). The catalogue seeds four
+// distinct scales (1.0 / 0.8 / 0.6 / 0.5), so the wall reads Platinum > Gold >
+// Discovery > Soutien as strictly decreasing cards. Nothing is hard-coded per
+// level — everything flows from the tier.
+export type SponsorCardSize = "xl" | "lg" | "md" | "sm";
 
-// Map a tier's logoScale to a card size band. Tailwind can't take arbitrary
-// heights cleanly, so we snap to three bands rather than a continuous scale.
-export function sizeForLogoScale(logoScale: number): SponsorCardSize {
-  if (logoScale >= 1) return "lg";
-  if (logoScale >= 0.7) return "md";
+export function bandForLogoScale(logoScale: number): SponsorCardSize {
+  if (logoScale >= 1) return "xl";
+  if (logoScale >= 0.75) return "lg";
+  if (logoScale >= 0.55) return "md";
   return "sm";
 }
 
-const SIZE_CLASSES: Record<SponsorCardSize, { pad: string; box: string; sizes: string; name: string; fallback: string }> = {
-  lg: { pad: "p-8", box: "h-32", sizes: "267px", name: "text-2xl", fallback: "text-3xl" },
-  md: { pad: "p-6", box: "h-24", sizes: "220px", name: "text-xl", fallback: "text-2xl" },
-  sm: { pad: "p-6", box: "h-20", sizes: "200px", name: "text-lg", fallback: "text-xl" },
+// Per-band presentation. `card` is a fixed width so a flex-wrap row stays
+// centred (incomplete rows included). The top band is a wide single card.
+const BAND: Record<SponsorCardSize, { card: string; radius: string; box: string; sizes: string; name: string }> = {
+  xl: { card: "w-full max-w-[440px]", radius: "rounded-[24px]", box: "h-28", sizes: "360px", name: "text-2xl" },
+  lg: { card: "w-[250px]", radius: "rounded-[16px]", box: "h-24", sizes: "230px", name: "text-xl" },
+  md: { card: "w-[230px]", radius: "rounded-[16px]", box: "h-20", sizes: "210px", name: "text-lg" },
+  sm: { card: "w-[210px]", radius: "rounded-[16px]", box: "h-16", sizes: "190px", name: "text-base" },
 };
 
 interface SponsorCardProps {
   sponsor: SponsorPublic;
-  /** Logo size band, derived from the tier's logoScale (#321). */
+  /** Size band, derived from the tier's logoScale (#323). */
   size?: SponsorCardSize;
   /** On the homepage only the logo is shown, without the name (RG-223). */
   logoOnly?: boolean;
@@ -30,34 +34,25 @@ interface SponsorCardProps {
 
 export default function SponsorCard({ sponsor, size = "sm", logoOnly = false }: SponsorCardProps) {
   const showName = !logoOnly || !sponsor.logoUrl;
-  const s = SIZE_CLASSES[size];
+  const b = BAND[size];
   return (
     <Link
       href={`/sponsors/${sponsor.slug}`}
-      className="group block overflow-hidden rounded-2xl bg-blanc shadow-card transition-transform hover:-translate-y-1"
+      // Soft hover: shadow deepens, no bounce (#323).
+      className={`group block overflow-hidden bg-blanc shadow-card border border-[rgba(29,29,27,0.08)] transition-shadow duration-200 hover:shadow-lg ${b.card} ${b.radius}`}
     >
       {/* Banner colour comes from the tier (#321) — a hex value, not a class. */}
       <div className="h-2" style={{ backgroundColor: sponsor.tier.color }} />
-      <div className={`flex flex-col items-center justify-center gap-3 ${s.pad}`}>
-        <div className={`relative flex items-center justify-center w-full ${s.box}`}>
+      <div className="flex flex-col items-center justify-center gap-3 p-6">
+        <div className={`relative flex w-full items-center justify-center ${b.box}`}>
           {sponsor.logoUrl ? (
-            <Image
-              src={sponsor.logoUrl}
-              alt={sponsor.name}
-              fill
-              className="object-contain"
-              sizes={s.sizes}
-            />
+            <Image src={sponsor.logoUrl} alt={sponsor.name} fill className="object-contain" sizes={b.sizes} />
           ) : (
-            <span className={`font-bold text-noir ${s.fallback}`}>
-              {sponsor.name}
-            </span>
+            <span className={`font-bold text-noir ${b.name}`}>{sponsor.name}</span>
           )}
         </div>
         {sponsor.logoUrl && showName && (
-          <span className={`font-bold text-noir ${s.name}`}>
-            {sponsor.name}
-          </span>
+          <span className={`font-bold text-noir ${b.name}`}>{sponsor.name}</span>
         )}
       </div>
     </Link>

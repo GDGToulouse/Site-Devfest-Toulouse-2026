@@ -312,6 +312,7 @@
     "title": "Sponsors",
     "description": "Discover the sponsors of DevFest Toulouse 2026: tech companies from Toulouse and beyond who support the developer ecosystem.",
     "heading": "DevFest Toulouse {year} sponsors",
+    "intro": "DevFest Toulouse exists thanks to its partners. Thank you to the companies that support the Toulouse tech ecosystem and make the event possible.",
     "comingSoonTitle": "Sponsors will be announced soon",
     "comingSoonBody": "The DevFest Toulouse {year} sponsor list will be published here. Does your company want to support the Toulouse tech ecosystem?",
     "becomeSponsorCta": "Become a sponsor",

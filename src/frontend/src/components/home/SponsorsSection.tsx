@@ -1,8 +1,9 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 import type { SponsorPublic } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
-import SponsorCard, { sizeForLogoScale } from "@/components/sponsors/SponsorCard";
+import SponsorCard, { bandForLogoScale } from "@/components/sponsors/SponsorCard";
+import TierHeader from "@/components/sponsors/TierHeader";
 import { surfaceBgClass, type SectionSurface } from "./section-surface";
 
 interface SponsorsSectionProps {
@@ -14,6 +15,7 @@ interface SponsorsSectionProps {
 // over the visible sections (#135).
 export default async function SponsorsSection({ sponsors, surface = "blanc" }: SponsorsSectionProps) {
   const t = await getTranslations("home.sponsors");
+  const locale = await getLocale();
 
   // Hidden when no sponsor is published (US-212).
   if (sponsors.length === 0) return null;
@@ -53,21 +55,18 @@ export default async function SponsorsSection({ sponsors, surface = "blanc" }: S
           </Link>
         </div>
 
-        <div className="space-y-8">
+        <div className="mt-6 space-y-10">
           {byTier.map(({ key, tier, items }) => {
-            const size = sizeForLogoScale(tier.logoScale);
+            const size = bandForLogoScale(tier.logoScale);
+            const title = locale === "en" ? tier.nameEn : tier.nameFr;
             return (
-              <div
-                key={key}
-                className={
-                  size === "lg"
-                    ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                    : "grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-                }
-              >
-                {items.map((s) => (
-                  <SponsorCard key={s.id} sponsor={s} size={size} logoOnly />
-                ))}
+              <div key={key}>
+                <TierHeader title={title} color={tier.color} size={size} />
+                <div className="mt-5 flex flex-wrap items-stretch justify-center gap-[18px]">
+                  {items.map((s) => (
+                    <SponsorCard key={s.id} sponsor={s} size={size} logoOnly />
+                  ))}
+                </div>
               </div>
             );
           })}
