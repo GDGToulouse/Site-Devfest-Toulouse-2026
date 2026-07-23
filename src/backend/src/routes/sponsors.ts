@@ -3,7 +3,6 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
-import { tierKeyToLegacyLevel } from "../lib/sponsor-tier.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -16,7 +15,8 @@ function parseSocial(raw: string | null): Record<string, string> {
 }
 
 export default async function sponsorRoutes(app: FastifyInstance) {
-  // GET /api/sponsors — published sponsors of the featured edition, ordered by level.
+  // GET /api/sponsors — published sponsors of the featured edition, ordered by
+  // tier rank. The tier drives grouping, banner colour and logo size on the wall.
   app.get("/sponsors", async (_request, reply) => {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
@@ -32,16 +32,18 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         slug: s.slug,
         name: s.name,
         logoUrl: s.logoUrl,
-        // Legacy `level` string kept for the untouched front (#317 shim).
-        level: tierKeyToLegacyLevel(s.tier.key),
-        // Real tier model for the front to move onto (#318 → #321).
-        tier: { nameFr: s.tier.nameFr, nameEn: s.tier.nameEn, logoScale: s.tier.logoScale, color: s.tier.color },
-        rank: s.tier.rank,
+        tier: {
+          key: s.tier.key,
+          rank: s.tier.rank,
+          nameFr: s.tier.nameFr,
+          nameEn: s.tier.nameEn,
+          logoScale: s.tier.logoScale,
+          color: s.tier.color,
+        },
         websiteUrl: s.websiteUrl,
       }))
       // Higher rank = more prominent (RG-221), so sort descending.
-      .sort((a, b) => (b.rank - a.rank) || a.name.localeCompare(b.name))
-      .map(({ rank: _rank, ...rest }) => rest);
+      .sort((a, b) => (b.tier.rank - a.tier.rank) || a.name.localeCompare(b.name));
   });
 
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).
@@ -61,7 +63,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         ...notDeleted,
       },
       include: {
-        tier: { select: { key: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live sponsor page.
@@ -87,10 +89,14 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       slug: sponsor.slug,
       name: sponsor.name,
       logoUrl: sponsor.logoUrl,
-      // Legacy `level` string kept for the untouched front (#317 shim).
-      level: tierKeyToLegacyLevel(sponsor.tier.key),
-      // Real tier model for the front to move onto (#318 → #321).
-      tier: { nameFr: sponsor.tier.nameFr, nameEn: sponsor.tier.nameEn, logoScale: sponsor.tier.logoScale, color: sponsor.tier.color },
+      tier: {
+        key: sponsor.tier.key,
+        rank: sponsor.tier.rank,
+        nameFr: sponsor.tier.nameFr,
+        nameEn: sponsor.tier.nameEn,
+        logoScale: sponsor.tier.logoScale,
+        color: sponsor.tier.color,
+      },
       websiteUrl: sponsor.websiteUrl,
       descriptionFr: sponsor.descriptionFr,
       descriptionEn: sponsor.descriptionEn,
@@ -119,7 +125,6 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         slug: true,
         name: true,
         logoUrl: true,
-        tier: { select: { key: true } },
         jobOffers: {
           select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
           orderBy: { createdAt: "asc" },
@@ -128,7 +133,6 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       orderBy: { name: "asc" },
     });
 
-    // Legacy `level` string kept for the untouched front (#317 shim).
-    return sponsors.map(({ tier, ...rest }) => ({ ...rest, level: tierKeyToLegacyLevel(tier.key) }));
+    return sponsors;
   });
 }

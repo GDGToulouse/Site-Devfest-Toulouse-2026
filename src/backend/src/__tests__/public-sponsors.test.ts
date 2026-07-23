@@ -4,9 +4,9 @@ import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 import { tierIdByKey } from "./sponsor-test-helpers.js";
 
-// #318 — the public /api/sponsors response now carries the real tier object
-// (nameFr, nameEn, logoScale, color) alongside the legacy `level` shim (#317),
-// and stays ordered by tier rank (RG-221).
+// #321 — the public /api/sponsors response carries the tier object
+// (key, rank, nameFr, nameEn, logoScale, color) and no longer any legacy
+// `level` string; it stays ordered by tier rank (RG-221).
 const createdSponsorIds: number[] = [];
 
 afterEach(async () => {
@@ -16,8 +16,8 @@ afterEach(async () => {
   }
 });
 
-describe("Public sponsors carry tier + level (#318)", () => {
-  it("exposes tier and level, ranked by tier", async () => {
+describe("Public sponsors carry the tier (#321)", () => {
+  it("exposes the tier and no legacy level, ranked by tier", async () => {
     const edition = await getSeededEdition();
     const goldId = await tierIdByKey("gold");
     const platinumId = await tierIdByKey("platinum");
@@ -41,18 +41,20 @@ describe("Public sponsors carry tier + level (#318)", () => {
     const mine = body.filter((s: { id: number }) => s.id === gold.id || s.id === platinum.id);
     expect(mine).toHaveLength(2);
 
-    // Every item carries the tier object AND the legacy level string.
+    // Every item carries the tier object (key/rank/name/color/logoScale). The
+    // legacy `level` string is gone (#321).
     for (const s of mine) {
-      expect(s.tier).toMatchObject({ nameFr: expect.any(String), nameEn: expect.any(String), color: expect.any(String) });
+      expect(s.tier).toMatchObject({ key: expect.any(String), nameFr: expect.any(String), nameEn: expect.any(String), color: expect.any(String) });
       expect(typeof s.tier.logoScale).toBe("number");
-      expect(typeof s.level).toBe("string");
+      expect(typeof s.tier.rank).toBe("number");
+      expect(s.level).toBeUndefined();
     }
 
     // Platinum (higher rank) comes before gold despite the name order.
     const platIdx = body.findIndex((s: { id: number }) => s.id === platinum.id);
     const goldIdx = body.findIndex((s: { id: number }) => s.id === gold.id);
     expect(platIdx).toBeLessThan(goldIdx);
-    expect(body[platIdx].level).toBe("PLATINUM");
-    expect(body[goldIdx].level).toBe("GOLD");
+    expect(body[platIdx].tier.key).toBe("platinum");
+    expect(body[goldIdx].tier.key).toBe("gold");
   });
 });

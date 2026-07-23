@@ -14,7 +14,6 @@ import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
-import { tierKeyToLegacyLevel } from "../lib/sponsor-tier.js";
 import { sanitizeRichHtml } from "../lib/sanitize.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
@@ -437,9 +436,8 @@ export default async function editRoutes(app: FastifyInstance) {
       // them, kept in a separate block so the UI can render them apart. The
       // public sponsor route never returns these.
       private: {
-        // Legacy `level` string kept for the untouched front (#317 shim);
-        // `tier` carries the real model for #318.
-        level: tierKeyToLegacyLevel(entity.tier.key),
+        // The sponsoring tier: drives the promo-idea gating and the label shown
+        // to the sponsor. Replaces the former legacy `level` string (#321).
         tier: {
           key: entity.tier.key,
           nameFr: entity.tier.nameFr,

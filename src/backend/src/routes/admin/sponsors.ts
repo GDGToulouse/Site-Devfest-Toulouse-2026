@@ -6,7 +6,6 @@ import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
-import { tierKeyToLegacyLevel } from "../../lib/sponsor-tier.js";
 
 interface StandContact {
   name?: string;
@@ -57,16 +56,12 @@ interface SponsorBulkBody {
 function serialize(s: {
   socialLinks: string | null;
   standContacts?: string | null;
-  tier?: { key: string } | null;
   [k: string]: unknown;
 }) {
   return {
     ...s,
     socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
     standContacts: s.standContacts ? JSON.parse(s.standContacts) : [],
-    // Legacy `level` string kept for the untouched admin front (#317 shim);
-    // present only when the tier was included in the query.
-    ...(s.tier ? { level: tierKeyToLegacyLevel(s.tier.key) } : {}),
   };
 }
 
@@ -82,7 +77,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const sponsors = await prisma.sponsor.findMany({
       where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
       include: {
-        tier: { select: { key: true } },
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
         ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
       },
       // Higher tier rank first (RG-221), then name.
@@ -103,7 +98,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       where: { id: Number(request.params.id), ...notDeleted },
       include: {
         edition: { select: { id: true, year: true } },
-        tier: { select: { key: true } },
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
         // Job offers for admin consultation/moderation (#251).
         jobOffers: { orderBy: { createdAt: "asc" } },
       },
@@ -139,7 +134,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const slug = uniqueSlug(slugify(body.name), new Set(existing.map((e) => e.slug)));
 
     const sponsor = await prisma.sponsor.create({
-      include: { tier: { select: { key: true } } },
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         editionId: body.editionId,
         slug,
@@ -191,7 +186,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
 
     const sponsor = await prisma.sponsor.update({
       where: { id: Number(id) },
-      include: { tier: { select: { key: true } } },
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
         ...(body.tierId !== undefined && { tierId: body.tierId }),
