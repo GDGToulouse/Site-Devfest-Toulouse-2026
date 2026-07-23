@@ -36,9 +36,12 @@ export default async function AboutSection({ surface = "blanc" }: AboutSectionPr
               <h2 className="text-3xl lg:text-5xl font-bold text-blanc mb-6">
                 {t("behindTitle")}
               </h2>
-              <div className="bg-blanc/90 rounded-m p-6 lg:p-8">
+              <div className="bg-blanc/90 rounded-m p-6 lg:p-8 space-y-4">
                 <p className="text-base lg:text-lg text-noir leading-relaxed">
                   {t("gdgDescription")}
+                </p>
+                <p className="text-base lg:text-lg text-noir leading-relaxed">
+                  {t("gdgHistory")}
                 </p>
               </div>
             </div>

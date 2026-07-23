@@ -8,6 +8,7 @@ import adminTicketRoutes from "../routes/admin/tickets.js";
 import adminSettingsRoutes from "../routes/admin/settings.js";
 import adminPageRoutes from "../routes/admin/pages.js";
 import adminContactRoutes from "../routes/admin/contact.js";
+import adminSponsorTierRoutes from "../routes/admin/sponsor-tiers.js";
 
 export async function buildAdminApp() {
   const app = Fastify({ logger: false });
@@ -19,6 +20,7 @@ export async function buildAdminApp() {
   await app.register(adminSettingsRoutes, { prefix: "/api/admin" });
   await app.register(adminPageRoutes, { prefix: "/api/admin" });
   await app.register(adminContactRoutes, { prefix: "/api/admin" });
+  await app.register(adminSponsorTierRoutes, { prefix: "/api/admin" });
 
   return app;
 }

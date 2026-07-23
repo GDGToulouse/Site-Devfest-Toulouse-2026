@@ -2,6 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import { buildApp } from "./test-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
+import { tierIdByKey } from "./sponsor-test-helpers.js";
 
 describe("GET /api/editions/current", () => {
   it("should return the current edition", async () => {
@@ -30,7 +31,7 @@ describe("GET /api/editions/current", () => {
     const sponsor = await prisma.sponsor.create({
       data: {
         name: "Nav Offers", slug: `nav-offers-${Date.now()}`, editionId: edition.id,
-        level: "GOLD", publicationStatus: "PUBLISHED",
+        tierId: await tierIdByKey("gold"), publicationStatus: "PUBLISHED",
       },
     });
     await prisma.sponsorJobOffer.create({

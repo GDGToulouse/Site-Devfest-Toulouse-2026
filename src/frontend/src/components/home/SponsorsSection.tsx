@@ -1,11 +1,10 @@
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
-import type { SponsorLevel, SponsorPublic } from "@/lib/types";
+import type { SponsorPublic } from "@/lib/types";
 import { Link } from "@/i18n/navigation";
-import SponsorCard from "@/components/sponsors/SponsorCard";
+import SponsorCard, { bandForLogoScale } from "@/components/sponsors/SponsorCard";
+import TierHeader from "@/components/sponsors/TierHeader";
 import { surfaceBgClass, type SectionSurface } from "./section-surface";
-
-const LEVEL_ORDER: SponsorLevel[] = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"];
 
 interface SponsorsSectionProps {
   sponsors: SponsorPublic[];
@@ -16,14 +15,21 @@ interface SponsorsSectionProps {
 // over the visible sections (#135).
 export default async function SponsorsSection({ sponsors, surface = "blanc" }: SponsorsSectionProps) {
   const t = await getTranslations("home.sponsors");
+  const locale = await getLocale();
 
   // Hidden when no sponsor is published (US-212).
   if (sponsors.length === 0) return null;
 
-  const byLevel = LEVEL_ORDER.map((level) => ({
-    level,
-    items: sponsors.filter((s) => s.level === level),
-  })).filter((g) => g.items.length > 0);
+  // Group by tier, preserving the server's rank-descending order (#321).
+  const byTier: { key: string; tier: SponsorPublic["tier"]; items: SponsorPublic[] }[] = [];
+  for (const s of sponsors) {
+    let group = byTier.find((g) => g.key === s.tier.key);
+    if (!group) {
+      group = { key: s.tier.key, tier: s.tier, items: [] };
+      byTier.push(group);
+    }
+    group.items.push(s);
+  }
 
   return (
     <section className={`section-y relative overflow-hidden px-6 ${surfaceBgClass(surface)}`}>
@@ -49,21 +55,21 @@ export default async function SponsorsSection({ sponsors, surface = "blanc" }: S
           </Link>
         </div>
 
-        <div className="space-y-8">
-          {byLevel.map(({ level, items }) => (
-            <div
-              key={level}
-              className={
-                level === "PLATINUM"
-                  ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                  : "grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-              }
-            >
-              {items.map((s) => (
-                <SponsorCard key={s.id} sponsor={s} large={level === "PLATINUM"} logoOnly />
-              ))}
-            </div>
-          ))}
+        <div className="mt-6 space-y-10">
+          {byTier.map(({ key, tier, items }) => {
+            const size = bandForLogoScale(tier.logoScale);
+            const title = locale === "en" ? tier.nameEn : tier.nameFr;
+            return (
+              <div key={key}>
+                <TierHeader title={title} color={tier.color} size={size} />
+                <div className="mt-5 flex flex-wrap items-stretch justify-center gap-[18px]">
+                  {items.map((s) => (
+                    <SponsorCard key={s.id} sponsor={s} size={size} logoOnly />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         <div className="mt-8 text-center">

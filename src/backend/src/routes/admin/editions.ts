@@ -28,8 +28,6 @@ interface EditionBody {
   sponsorHeroImageUrl?: string;
   sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
   sponsorTemporaryFormUrl?: string;
-  // SponsorLevel names offered when creating a sponsor for this edition (US-245).
-  openSponsorLevels?: string[];
 }
 
 export default async function adminEditionRoutes(app: FastifyInstance) {
@@ -145,7 +143,6 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
-        openSponsorLevels: edition.openSponsorLevels ? JSON.parse(edition.openSponsorLevels) : [],
         ticketTiersCount: edition._count.ticketTiers,
         articlesCount: edition._count.articles,
         speakersCount: edition._count.speakers,
@@ -207,9 +204,6 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: body.sponsorHeroImageUrl !== undefined ? (body.sponsorHeroImageUrl || null) : existing.sponsorHeroImageUrl,
         sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
         sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
-        openSponsorLevels: body.openSponsorLevels !== undefined
-          ? (body.openSponsorLevels.length > 0 ? JSON.stringify(body.openSponsorLevels) : null)
-          : existing.openSponsorLevels,
       },
     });
 
@@ -277,7 +271,6 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               speakers: { where: notDeleted },
               sponsors: { where: notDeleted },
               categories: { where: notDeleted },
-              sponsorPlans: { where: notDeleted },
               ticketTiers: { where: notDeleted },
             },
           },
@@ -373,6 +366,80 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     revalidateEdition(edition.year);
     return { success: true, count: figures.length };
+  });
+
+  // --- Sponsor tiers offered by an edition (#318) ---
+  // Which catalogue tiers this edition proposes, with a per-edition price
+  // override, visibility and display order. Pure join rows (no soft delete).
+
+  // GET /api/admin/editions/:id/sponsor-tiers — the edition's tier bindings,
+  // joined to the catalogue. Trashed tiers are defended against here too.
+  app.get<{ Params: { id: string } }>("/editions/:id/sponsor-tiers", async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const links = await prisma.editionSponsorTier.findMany({
+      where: { editionId: id },
+      include: {
+        tier: { select: { id: true, key: true, nameFr: true, nameEn: true, color: true, standSize: true, rank: true, deletedAt: true } },
+      },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return links
+      .filter((l) => l.tier.deletedAt === null)
+      .map((l) => {
+        const { deletedAt: _deletedAt, ...tier } = l.tier;
+        return { id: l.id, tierId: l.tierId, isVisible: l.isVisible, price: l.price, sortOrder: l.sortOrder, tier };
+      });
+  });
+
+  // PUT /api/admin/editions/:id/sponsor-tiers/:tierId — offer a tier for this
+  // edition (upsert). Creating the row means "proposed"; the body tunes it.
+  app.put<{
+    Params: { id: string; tierId: string };
+    Body: { isVisible?: boolean; price?: string | null; sortOrder?: number };
+  }>("/editions/:id/sponsor-tiers/:tierId", async (request, reply) => {
+    const editionId = Number(request.params.id);
+    const tierId = Number(request.params.tierId);
+    if (isNaN(editionId) || isNaN(tierId)) return reply.status(400).send({ error: "Invalid ID" });
+
+    const edition = await prisma.edition.findFirst({ where: { id: editionId, ...notDeleted }, select: { id: true } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+    const tier = await prisma.sponsorTier.findFirst({ where: { id: tierId, ...notDeleted }, select: { id: true } });
+    if (!tier) return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
+
+    const body = request.body;
+    const link = await prisma.editionSponsorTier.upsert({
+      where: { editionId_tierId: { editionId, tierId } },
+      update: {
+        ...(body.isVisible !== undefined && { isVisible: body.isVisible }),
+        ...(body.price !== undefined && { price: body.price || null }),
+        ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+      },
+      create: {
+        editionId,
+        tierId,
+        isVisible: body.isVisible ?? true,
+        price: body.price || null,
+        sortOrder: body.sortOrder ?? 0,
+      },
+    });
+
+    revalidateSponsors();
+    return { id: link.id, tierId: link.tierId, isVisible: link.isVisible, price: link.price, sortOrder: link.sortOrder };
+  });
+
+  // DELETE /api/admin/editions/:id/sponsor-tiers/:tierId — stop offering a tier
+  // for this edition. Hard delete of the join row; idempotent.
+  app.delete<{ Params: { id: string; tierId: string } }>("/editions/:id/sponsor-tiers/:tierId", async (request, reply) => {
+    const editionId = Number(request.params.id);
+    const tierId = Number(request.params.tierId);
+    if (isNaN(editionId) || isNaN(tierId)) return reply.status(400).send({ error: "Invalid ID" });
+
+    await prisma.editionSponsorTier.deleteMany({ where: { editionId, tierId } });
+    revalidateSponsors();
+    return reply.code(204).send();
   });
 
   // --- Featured Edition ---

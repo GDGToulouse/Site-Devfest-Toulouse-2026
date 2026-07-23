@@ -48,7 +48,8 @@
     },
     "about": {
       "behindTitle": "Derrière le #DevFestToulouse",
-      "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés. Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
+      "gdgDescription": "Le DevFest Toulouse est organisé par le GDG Toulouse, une communauté de développeurs passionnés.",
+      "gdgHistory": "Depuis 2016, nous rassemblons chaque année les acteurs de la tech toulousaine autour de conférences, de workshops et de moments de partage.",
       "ecosystemTitle": "Plongez dans notre écosystème",
       "carouselPrev": "Photo précédente",
       "carouselNext": "Photo suivante"
@@ -311,6 +312,7 @@
     "title": "Sponsors",
     "description": "Découvrez les sponsors du DevFest Toulouse 2026 : entreprises tech de Toulouse et d'ailleurs qui soutiennent l'écosystème développeur.",
     "heading": "Sponsors du DevFest Toulouse {year}",
+    "intro": "Le DevFest Toulouse existe grâce à ses partenaires. Merci aux entreprises qui soutiennent l'écosystème tech toulousain et rendent l'événement possible.",
     "comingSoonTitle": "Les sponsors seront annoncés prochainement",
     "comingSoonBody": "La liste des sponsors du DevFest Toulouse {year} sera publiée ici. Votre entreprise souhaite soutenir l'écosystème tech toulousain ?",
     "becomeSponsorCta": "Devenir sponsor",
@@ -319,14 +321,7 @@
     "visitWebsite": "Visiter le site",
     "speakersOf": "Speakers de {name}",
     "jobOffersTitle": "Offres d'emploi",
-    "jobOfferCta": "Voir l'offre",
-    "level": {
-      "PLATINUM": "Platinum",
-      "GOLD": "Gold",
-      "SILVER": "Silver",
-      "SOUTIEN": "Soutien",
-      "COMMUNAUTE": "Communauté"
-    }
+    "jobOfferCta": "Voir l'offre"
   },
   "jobOffers": {
     "title": "Offres d'emploi des partenaires",

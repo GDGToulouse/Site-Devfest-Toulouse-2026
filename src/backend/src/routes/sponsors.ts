@@ -4,15 +4,6 @@ import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
 
-// Decreasing importance order (RG-221), used to sort levels for display.
-const LEVEL_ORDER: Record<string, number> = {
-  PLATINUM: 0,
-  GOLD: 1,
-  SILVER: 2,
-  SOUTIEN: 3,
-  COMMUNAUTE: 4,
-};
-
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
   try {
@@ -24,13 +15,15 @@ function parseSocial(raw: string | null): Record<string, string> {
 }
 
 export default async function sponsorRoutes(app: FastifyInstance) {
-  // GET /api/sponsors — published sponsors of the featured edition, ordered by level.
+  // GET /api/sponsors — published sponsors of the featured edition, ordered by
+  // tier rank. The tier drives grouping, banner colour and logo size on the wall.
   app.get("/sponsors", async (_request, reply) => {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const sponsors = await prisma.sponsor.findMany({
       where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+      include: { tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } } },
     });
 
     return sponsors
@@ -39,10 +32,18 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         slug: s.slug,
         name: s.name,
         logoUrl: s.logoUrl,
-        level: s.level,
+        tier: {
+          key: s.tier.key,
+          rank: s.tier.rank,
+          nameFr: s.tier.nameFr,
+          nameEn: s.tier.nameEn,
+          logoScale: s.tier.logoScale,
+          color: s.tier.color,
+        },
         websiteUrl: s.websiteUrl,
       }))
-      .sort((a, b) => (LEVEL_ORDER[a.level] - LEVEL_ORDER[b.level]) || a.name.localeCompare(b.name));
+      // Higher rank = more prominent (RG-221), so sort descending.
+      .sort((a, b) => (b.tier.rank - a.tier.rank) || a.name.localeCompare(b.name));
   });
 
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).
@@ -62,6 +63,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         ...notDeleted,
       },
       include: {
+        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live sponsor page.
@@ -87,7 +89,14 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       slug: sponsor.slug,
       name: sponsor.name,
       logoUrl: sponsor.logoUrl,
-      level: sponsor.level,
+      tier: {
+        key: sponsor.tier.key,
+        rank: sponsor.tier.rank,
+        nameFr: sponsor.tier.nameFr,
+        nameEn: sponsor.tier.nameEn,
+        logoScale: sponsor.tier.logoScale,
+        color: sponsor.tier.color,
+      },
       websiteUrl: sponsor.websiteUrl,
       descriptionFr: sponsor.descriptionFr,
       descriptionEn: sponsor.descriptionEn,
@@ -116,7 +125,6 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         slug: true,
         name: true,
         logoUrl: true,
-        level: true,
         jobOffers: {
           select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
           orderBy: { createdAt: "asc" },

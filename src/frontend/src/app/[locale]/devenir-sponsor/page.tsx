@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getCurrentEdition, getSponsorPlans, getContactCategories } from "@/lib/api";
+import { getCurrentEdition, getSponsorTiers, getContactCategories } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ContactForm from "@/components/ContactForm";
 import { Link } from "@/i18n/navigation";
@@ -32,9 +32,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SponsorPage() {
   const locale = await getLocale();
   const t = await getTranslations("sponsor");
-  const [edition, plans, categories] = await Promise.all([
+  const [edition, tiers, categories] = await Promise.all([
     getCurrentEdition(),
-    getSponsorPlans(),
+    getSponsorTiers(),
     getContactCategories(),
   ]);
 
@@ -176,38 +176,27 @@ export default async function SponsorPage() {
                 {t("plansTitle")}
               </h2>
 
-              {plans.length === 0 ? (
+              {tiers.length === 0 ? (
                 <p className="mt-6 text-gris">{t("noPlans")}</p>
               ) : (
                 <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-0">
-                  {plans.map((plan) => {
-                    const name = localizedField(plan as unknown as Record<string, unknown>, "name", locale);
-                    const subtitle = localizedField(plan as unknown as Record<string, unknown>, "subtitle", locale);
-                    const advantages = plan.advantages || [];
+                  {tiers.map((tier) => {
+                    const name = localizedField(tier as unknown as Record<string, unknown>, "name", locale);
+                    const subtitle = localizedField(tier as unknown as Record<string, unknown>, "subtitle", locale);
+                    const advantages = tier.advantages || [];
 
                     // CTA target depends on the page mode
-                    const planCtaHref = status === "OPEN" ? "#contact" : (tempUrl || "#contact");
-                    const planCtaExternal = status !== "OPEN" && Boolean(tempUrl);
+                    const tierCtaHref = status === "OPEN" ? "#contact" : (tempUrl || "#contact");
+                    const tierCtaExternal = status !== "OPEN" && Boolean(tempUrl);
 
                     return (
                       <div
-                        key={plan.id}
-                        className={`relative flex flex-col border border-gris/20 bg-blanc rounded-2xl ${
-                          plan.isFeatured
-                            ? "lg:-my-4 lg:shadow-xl lg:z-10 lg:scale-[1.03]"
-                            : ""
-                        }`}
+                        key={tier.id}
+                        className="relative flex flex-col border border-gris/20 bg-blanc rounded-2xl"
                       >
                         {/* Color header */}
-                        <div
-                          className={`px-6 py-4 text-center rounded-t-2xl ${
-                            plan.isFeatured ? "py-5" : ""
-                          }`}
-                          style={{ backgroundColor: plan.color }}
-                        >
-                          <p className={`font-bold text-blanc ${plan.isFeatured ? "text-2xl" : "text-xl"}`}>
-                            {name}
-                          </p>
+                        <div className="px-6 py-4 text-center rounded-t-2xl" style={{ backgroundColor: tier.color }}>
+                          <p className="font-bold text-blanc text-xl">{name}</p>
                         </div>
 
                         {/* Subtitle */}
@@ -218,13 +207,13 @@ export default async function SponsorPage() {
                         )}
 
                         {/* Stand size */}
-                        {plan.standSize && (
-                          <p className="text-center text-3xl lg:text-4xl font-bold px-4 pt-4" style={{ color: plan.color }}>
-                            {plan.standSize}
+                        {tier.standSize && (
+                          <p className="text-center text-3xl lg:text-4xl font-bold px-4 pt-4" style={{ color: tier.color }}>
+                            {tier.standSize}
                           </p>
                         )}
 
-                        {!plan.standSize && (
+                        {!tier.standSize && (
                           <p className="text-center text-lg font-bold text-gris/50 px-4 pt-6">
                             —
                           </p>
@@ -249,10 +238,10 @@ export default async function SponsorPage() {
                         {/* CTA button */}
                         <div className="px-6 pb-6">
                           <a
-                            href={planCtaHref}
-                            {...(planCtaExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+                            href={tierCtaHref}
+                            {...(tierCtaExternal ? { target: "_blank", rel: "noopener noreferrer" } : {})}
                             className="block w-full text-center py-3 rounded-lg font-bold text-blanc transition-opacity hover:opacity-90"
-                            style={{ backgroundColor: plan.color }}
+                            style={{ backgroundColor: tier.color }}
                           >
                             {t("ctaContact")}
                           </a>

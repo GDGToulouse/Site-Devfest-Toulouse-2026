@@ -14,7 +14,6 @@ import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
-import { offerQuotaForLevel } from "../lib/job-offers.js";
 import { sanitizeRichHtml } from "../lib/sanitize.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
@@ -272,7 +271,7 @@ async function resolveToken(token: string) {
   // Sponsors resolve through their contacts (#250): the token lives on a
   // SponsorContact, and the lock/send-date are per-contact. We flatten the
   // contact's token fields onto the sponsor so the rest of the route (which
-  // reads entity.level, entity.standContacts, entity.id, entity.editLinkLocked,
+  // reads entity.tier, entity.standContacts, entity.id, entity.editLinkLocked,
   // …) keeps working unchanged, and expose contactId/contactEmail for the
   // notification Reply-To.
   const contact = await prisma.sponsorContact.findUnique({
@@ -281,6 +280,8 @@ async function resolveToken(token: string) {
       sponsor: {
         include: {
           edition: { select: { startDate: true, endDate: true } },
+          // Tier drives the job-offer quota and the promo-ideas gating (#317).
+          tier: { select: { key: true, nameFr: true, nameEn: true, jobOfferQuota: true, allowsPromoIdeas: true } },
           // Job offers the sponsor can manage from the link (#251).
           jobOffers: { orderBy: { createdAt: "asc" } },
         },
@@ -435,22 +436,29 @@ export default async function editRoutes(app: FastifyInstance) {
       // them, kept in a separate block so the UI can render them apart. The
       // public sponsor route never returns these.
       private: {
-        level: entity.level,
+        // The sponsoring tier: drives the promo-idea gating and the label shown
+        // to the sponsor. Replaces the former legacy `level` string (#321).
+        tier: {
+          key: entity.tier.key,
+          nameFr: entity.tier.nameFr,
+          nameEn: entity.tier.nameEn,
+          allowsPromoIdeas: entity.tier.allowsPromoIdeas,
+        },
         standContacts: parseStandContacts(entity.standContacts),
         comKitReceived: entity.comKitReceived,
         comKitLogoWebUrl: entity.comKitLogoWebUrl,
         comKitLogoPrintUrl: entity.comKitLogoPrintUrl,
         comKitCharterUrl: entity.comKitCharterUrl,
         comKitNotes: entity.comKitNotes,
-        // Platinum-only ideas (#252). Sent for every sponsor; the UI shows the
-        // fields only when level === PLATINUM.
+        // Promo-idea fields (#252). Sent for every sponsor; the UI shows them
+        // only when the tier allows promo ideas.
         platinumPromoIdea: entity.platinumPromoIdea,
         platinumCoBuildIdea: entity.platinumCoBuildIdea,
         // Address the sponsor should email complements to (#271). The UI builds
         // a mailto: link from it — no server-side send for this case anymore.
         sponsorContactEmail,
       },
-      // Job offers (#251): the sponsor's offers plus its level quota, so the
+      // Job offers (#251): the sponsor's offers plus its tier quota, so the
       // UI can disable "add" at the cap.
       jobOffers: {
         items: entity.jobOffers.map((o) => ({
@@ -460,7 +468,7 @@ export default async function editRoutes(app: FastifyInstance) {
           descriptionEn: o.descriptionEn,
           url: o.url,
         })),
-        quota: offerQuotaForLevel(entity.level),
+        quota: entity.tier.jobOfferQuota,
       },
     };
   });
@@ -530,12 +538,12 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
           ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
           ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
-          // Platinum-only ideas (#252): silently ignored for non-Platinum
-          // sponsors, so the field can't be set by tampering with the payload.
-          ...(entity.level === "PLATINUM" && body.platinumPromoIdea !== undefined && {
+          // Promo-idea fields (#252): silently ignored for tiers that don't
+          // allow them, so the field can't be set by tampering with the payload.
+          ...(entity.tier.allowsPromoIdeas && body.platinumPromoIdea !== undefined && {
             platinumPromoIdea: body.platinumPromoIdea || null,
           }),
-          ...(entity.level === "PLATINUM" && body.platinumCoBuildIdea !== undefined && {
+          ...(entity.tier.allowsPromoIdeas && body.platinumCoBuildIdea !== undefined && {
             platinumCoBuildIdea: body.platinumCoBuildIdea || null,
           }),
         },
@@ -667,9 +675,9 @@ export default async function editRoutes(app: FastifyInstance) {
       if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
       if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
 
-      // Quota is per level (#251). Count what's already there; a lowered level
+      // Quota is per tier (#251). Count what's already there; a lowered tier
       // keeps existing offers but blocks new ones beyond the new cap.
-      const quota = offerQuotaForLevel(entity.level);
+      const quota = entity.tier.jobOfferQuota;
       if (entity.jobOffers.length >= quota) {
         return reply.code(409).send({ error: "quota_reached", quota });
       }

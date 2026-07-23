@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // A 1x1 transparent PNG — smallest valid raster image sharp will accept.
 const PNG_1x1 = Buffer.from(
@@ -34,7 +34,7 @@ describe("POST /api/edit/:token/upload", () => {
     const edition = await getSeededEdition();
     editionId = edition.id;
     const sponsor = await createSponsorWithToken(
-      { name: "Upload Test Sponsor", slug: "upload-test-sponsor", level: "GOLD", editionId },
+      { name: "Upload Test Sponsor", slug: "upload-test-sponsor", tierId: await tierIdByKey("gold"), editionId },
       TOKEN,
     );
     sponsorId = sponsor.id;

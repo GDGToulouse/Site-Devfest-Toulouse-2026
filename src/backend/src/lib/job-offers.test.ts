@@ -1,21 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { offerQuotaForLevel, areOffersVisible, offersVisibilityCutoff } from "./job-offers.js";
+import { areOffersVisible, offersVisibilityCutoff } from "./job-offers.js";
 
-// Quota per level and the one-month-after-the-event visibility window (#251).
-
-describe("offerQuotaForLevel", () => {
-  it("gives 4 to Platinum, 2 to Gold, 1 to the rest", () => {
-    expect(offerQuotaForLevel("PLATINUM")).toBe(4);
-    expect(offerQuotaForLevel("GOLD")).toBe(2);
-    expect(offerQuotaForLevel("SILVER")).toBe(1);
-    expect(offerQuotaForLevel("SOUTIEN")).toBe(1);
-    expect(offerQuotaForLevel("COMMUNAUTE")).toBe(1);
-  });
-
-  it("defaults to 1 for an unknown level", () => {
-    expect(offerQuotaForLevel("MYSTERY")).toBe(1);
-  });
-});
+// The one-month-after-the-event offer visibility window (#251). The per-tier
+// quota moved onto SponsorTier.jobOfferQuota (#317) and is covered end-to-end by
+// sponsor-job-offers.test.ts.
 
 describe("offers visibility window", () => {
   const start = new Date("2026-11-19T09:00:00Z");

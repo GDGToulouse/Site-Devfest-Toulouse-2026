@@ -7,9 +7,6 @@ import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
-const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
-type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
-
 interface StandContact {
   name?: string;
   linkedin?: string;
@@ -20,7 +17,7 @@ interface StandContact {
 interface SponsorCreateBody {
   editionId: number;
   name: string;
-  level: SponsorLevel;
+  tierId: number;
   logoUrl?: string;
   websiteUrl?: string;
   descriptionFr?: string;
@@ -79,10 +76,14 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
 
     const sponsors = await prisma.sponsor.findMany({
       where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
-      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      include: {
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
+        ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
+      },
+      // Higher tier rank first (RG-221), then name.
       orderBy: editionId
-        ? [{ level: "asc" }, { name: "asc" }]
-        : [{ edition: { year: "desc" } }, { level: "asc" }, { name: "asc" }],
+        ? [{ tier: { rank: "desc" } }, { name: "asc" }]
+        : [{ edition: { year: "desc" } }, { tier: { rank: "desc" } }, { name: "asc" }],
     });
     return sponsors.map(serialize);
   });
@@ -97,6 +98,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       where: { id: Number(request.params.id), ...notDeleted },
       include: {
         edition: { select: { id: true, year: true } },
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
         // Job offers for admin consultation/moderation (#251).
         jobOffers: { orderBy: { createdAt: "asc" } },
       },
@@ -109,11 +111,15 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   app.post<{ Body: SponsorCreateBody }>("/sponsors", async (request, reply) => {
     const body = request.body;
 
-    if (!body.editionId || !body.name?.trim() || !body.level) {
-      return reply.code(400).send({ error: "editionId, name and level are required" });
+    if (!body.editionId || !body.name?.trim() || !body.tierId) {
+      return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
-    if (!SPONSOR_LEVELS.includes(body.level)) {
-      return reply.code(422).send({ error: `Invalid level. Allowed: ${SPONSOR_LEVELS.join(", ")}` });
+    const tier = await prisma.sponsorTier.findFirst({
+      where: { id: body.tierId, ...notDeleted },
+      select: { id: true },
+    });
+    if (!tier) {
+      return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
     }
 
     // Build a slug unique within the edition. Deliberately NOT filtered on
@@ -128,11 +134,12 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const slug = uniqueSlug(slugify(body.name), new Set(existing.map((e) => e.slug)));
 
     const sponsor = await prisma.sponsor.create({
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         editionId: body.editionId,
         slug,
         name: body.name.trim(),
-        level: body.level,
+        tierId: body.tierId,
         logoUrl: body.logoUrl || null,
         websiteUrl: body.websiteUrl || null,
         // Rich-text HTML (#270): sanitized on write, like article content.
@@ -167,15 +174,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const { id } = request.params;
     const body = request.body;
 
-    if (body.level !== undefined && !SPONSOR_LEVELS.includes(body.level)) {
-      return reply.code(422).send({ error: `Invalid level. Allowed: ${SPONSOR_LEVELS.join(", ")}` });
+    if (body.tierId !== undefined) {
+      const tier = await prisma.sponsorTier.findFirst({
+        where: { id: body.tierId, ...notDeleted },
+        select: { id: true },
+      });
+      if (!tier) {
+        return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
+      }
     }
 
     const sponsor = await prisma.sponsor.update({
       where: { id: Number(id) },
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.level !== undefined && { level: body.level }),
+        ...(body.tierId !== undefined && { tierId: body.tierId }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
         ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
         // Rich-text HTML (#270): sanitized on write, like article content.

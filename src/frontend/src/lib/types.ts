@@ -122,7 +122,10 @@ export interface ContentPage {
   updatedAt: string;
 }
 
-export interface SponsorPlan {
+// A sponsoring offer shown on /devenir-sponsor (#318). One row of the shared
+// SponsorTier catalogue, joined to the current edition (price is the edition
+// override). Replaces the former SponsorPlan.
+export interface SponsorTierPublic {
   id: number;
   nameFr: string;
   nameEn: string;
@@ -130,21 +133,59 @@ export interface SponsorPlan {
   subtitleEn: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
-  price: string | null;
   standSize: string | null;
-  advantages: { fr: string; en: string }[];
   color: string;
-  isFeatured: boolean;
+  logoScale: number;
+  advantages: { fr: string; en: string }[];
+  price: string | null;
 }
 
-export type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
+// The catalogue tier as seen by the admin (#318 select, #319 CRUD).
+export interface AdminSponsorTier {
+  id: number;
+  key: string;
+  nameFr: string;
+  nameEn: string;
+  subtitleFr: string | null;
+  subtitleEn: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  advantages: { fr: string; en: string }[];
+  standSize: string | null;
+  color: string;
+  logoScale: number;
+  rank: number;
+  jobOfferQuota: number;
+  allowsPromoIdeas: boolean;
+}
+
+// The tier summary the public sponsor routes expose (#321): drives grouping,
+// ordering (rank), banner colour and logo size on the wall.
+export interface SponsorTierRef {
+  key: string;
+  rank: number;
+  nameFr: string;
+  nameEn: string;
+  logoScale: number;
+  color: string;
+}
+
+// The tier summary the admin sponsor routes expose (#321): the name to show and
+// the key/rank to filter and order by.
+export interface AdminSponsorTierRef {
+  key: string;
+  nameFr: string;
+  nameEn: string;
+  rank: number;
+}
 
 export interface Sponsor {
   id: number;
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
+  tierId: number;
+  tier: AdminSponsorTierRef;
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
@@ -170,7 +211,7 @@ export interface SponsorPublic {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
+  tier: SponsorTierRef;
   websiteUrl: string | null;
 }
 
@@ -196,7 +237,7 @@ export interface SponsorDetail {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
+  tier: SponsorTierRef;
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
@@ -210,7 +251,6 @@ export interface SponsorWithOffers {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
   jobOffers: JobOfferPublic[];
 }
 

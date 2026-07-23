@@ -23,7 +23,7 @@ const apiTags = [
   { name: "admin-settings", description: "Administration des paramètres" },
   { name: "admin-contact", description: "Administration des messages de contact" },
   { name: "admin-tickets", description: "Administration des tarifs de billetterie" },
-  { name: "admin-sponsor-plans", description: "Administration des offres de sponsoring" },
+  { name: "admin-sponsor-tiers", description: "Administration du catalogue d'offres de sponsoring" },
   { name: "admin-images", description: "Administration des fichiers" },
   { name: "admin-cache", description: "Invalidation du cache HTTP" },
   { name: "admin-api-keys", description: "Vue d'ensemble admin des jetons d'API" },

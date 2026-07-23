@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getSponsors } from "@/lib/api";
-import type { SponsorLevel } from "@/lib/types";
+import type { SponsorPublic } from "@/lib/types";
 import Breadcrumb from "@/components/Breadcrumb";
-import SponsorCard from "@/components/sponsors/SponsorCard";
+import SponsorCard, { bandForLogoScale } from "@/components/sponsors/SponsorCard";
+import TierHeader from "@/components/sponsors/TierHeader";
 import { Link } from "@/i18n/navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -20,7 +21,19 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-const LEVEL_ORDER: SponsorLevel[] = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"];
+// Group sponsors by tier, preserving the server's rank-descending order (#321).
+function groupByTier(sponsors: SponsorPublic[]) {
+  const groups: { key: string; tier: SponsorPublic["tier"]; items: SponsorPublic[] }[] = [];
+  for (const s of sponsors) {
+    let group = groups.find((g) => g.key === s.tier.key);
+    if (!group) {
+      group = { key: s.tier.key, tier: s.tier, items: [] };
+      groups.push(group);
+    }
+    group.items.push(s);
+  }
+  return groups;
+}
 
 export default async function SponsorsPage() {
   const locale = await getLocale();
@@ -33,11 +46,7 @@ export default async function SponsorsPage() {
     { label: t("title"), href: `/${locale}/sponsors` },
   ];
 
-  // Group sponsors by level, keeping the importance order.
-  const byLevel = LEVEL_ORDER.map((level) => ({
-    level,
-    items: sponsors.filter((s) => s.level === level),
-  })).filter((g) => g.items.length > 0);
+  const byTier = groupByTier(sponsors);
 
   return (
     <div className="px-6 py-8 lg:py-12">
@@ -56,26 +65,26 @@ export default async function SponsorsPage() {
           </Link>
         </div>
 
-        {byLevel.length === 0 ? (
-          <p className="mt-12 text-lg text-gris">{t("empty")}</p>
+        <p className="mx-auto mt-4 max-w-[640px] text-center text-gris">{t("intro")}</p>
+
+        {byTier.length === 0 ? (
+          <p className="mt-12 text-center text-lg text-gris">{t("empty")}</p>
         ) : (
-          <div className="mt-10 space-y-12">
-            {byLevel.map(({ level, items }) => (
-              <section key={level}>
-                <h2 className="mb-6 text-2xl font-bold text-noir">{t(`level.${level}`)}</h2>
-                <div
-                  className={
-                    level === "PLATINUM"
-                      ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                      : "grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-                  }
-                >
-                  {items.map((s) => (
-                    <SponsorCard key={s.id} sponsor={s} large={level === "PLATINUM"} />
-                  ))}
-                </div>
-              </section>
-            ))}
+          <div className="mt-4">
+            {byTier.map(({ key, tier, items }) => {
+              const size = bandForLogoScale(tier.logoScale);
+              const title = locale === "en" ? tier.nameEn : tier.nameFr;
+              return (
+                <section key={key} className="mt-[52px] first:mt-10">
+                  <TierHeader title={title} color={tier.color} size={size} />
+                  <div className="mt-6 flex flex-wrap items-stretch justify-center gap-[18px]">
+                    {items.map((s) => (
+                      <SponsorCard key={s.id} sponsor={s} size={size} />
+                    ))}
+                  </div>
+                </section>
+              );
+            })}
           </div>
         )}
       </div>
