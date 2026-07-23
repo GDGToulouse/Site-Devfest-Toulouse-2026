@@ -4,7 +4,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getCurrentEdition, getSponsors } from "@/lib/api";
 import type { SponsorPublic } from "@/lib/types";
 import Breadcrumb from "@/components/Breadcrumb";
-import SponsorCard, { sizeForLogoScale } from "@/components/sponsors/SponsorCard";
+import SponsorCard, { bandForLogoScale } from "@/components/sponsors/SponsorCard";
+import TierHeader from "@/components/sponsors/TierHeader";
 import { Link } from "@/i18n/navigation";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -64,23 +65,19 @@ export default async function SponsorsPage() {
           </Link>
         </div>
 
+        <p className="mx-auto mt-4 max-w-[640px] text-center text-gris">{t("intro")}</p>
+
         {byTier.length === 0 ? (
-          <p className="mt-12 text-lg text-gris">{t("empty")}</p>
+          <p className="mt-12 text-center text-lg text-gris">{t("empty")}</p>
         ) : (
-          <div className="mt-10 space-y-12">
+          <div className="mt-4">
             {byTier.map(({ key, tier, items }) => {
-              const size = sizeForLogoScale(tier.logoScale);
+              const size = bandForLogoScale(tier.logoScale);
               const title = locale === "en" ? tier.nameEn : tier.nameFr;
               return (
-                <section key={key}>
-                  <h2 className="mb-6 text-2xl font-bold text-noir">{title}</h2>
-                  <div
-                    className={
-                      size === "lg"
-                        ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                        : "grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4"
-                    }
-                  >
+                <section key={key} className="mt-[52px] first:mt-10">
+                  <TierHeader title={title} color={tier.color} size={size} />
+                  <div className="mt-6 flex flex-wrap items-stretch justify-center gap-[18px]">
                     {items.map((s) => (
                       <SponsorCard key={s.id} sponsor={s} size={size} />
                     ))}
