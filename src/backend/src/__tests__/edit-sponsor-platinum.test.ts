@@ -66,10 +66,12 @@ describe("Sponsor Platinum promo content (#252)", () => {
     await app.close();
   });
 
-  it("exposes the level in the private block so the UI can gate the fields", async () => {
+  it("exposes the tier in the private block so the UI can gate the fields", async () => {
     const app = await buildEditApp();
     const res = await app.inject({ method: "GET", url: `/api/edit/${PLATINUM_TOKEN}` });
-    expect(res.json().private.level).toBe("PLATINUM");
+    const priv = res.json().private;
+    expect(priv.tier.key).toBe("platinum");
+    expect(priv.tier.allowsPromoIdeas).toBe(true);
     await app.close();
   });
 });

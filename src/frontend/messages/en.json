@@ -320,14 +320,7 @@
     "visitWebsite": "Visit website",
     "speakersOf": "Speakers from {name}",
     "jobOffersTitle": "Job offers",
-    "jobOfferCta": "View offer",
-    "level": {
-      "PLATINUM": "Platinum",
-      "GOLD": "Gold",
-      "SILVER": "Silver",
-      "SOUTIEN": "Supporter",
-      "COMMUNAUTE": "Community"
-    }
+    "jobOfferCta": "View offer"
   },
   "jobOffers": {
     "title": "Partner job offers",

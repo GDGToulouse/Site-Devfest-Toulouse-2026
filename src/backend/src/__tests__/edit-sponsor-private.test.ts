@@ -62,7 +62,7 @@ describe("Sponsor private section (#249)", () => {
     const body = res.json();
     expect(body.private).toBeDefined();
     expect(body.private.comKitReceived).toBe(true);
-    expect(body.private.level).toBe("GOLD");
+    expect(body.private.tier.key).toBe("gold");
     await app.close();
   });
 

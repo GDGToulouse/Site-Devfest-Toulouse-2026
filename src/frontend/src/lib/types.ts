@@ -159,15 +159,24 @@ export interface AdminSponsorTier {
   allowsPromoIdeas: boolean;
 }
 
-// Legacy level kept alive by the #317 shim until #321 rebinds the public wall.
-export type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
-
-// The tier summary the public sponsor routes expose alongside `level` (#318).
+// The tier summary the public sponsor routes expose (#321): drives grouping,
+// ordering (rank), banner colour and logo size on the wall.
 export interface SponsorTierRef {
+  key: string;
+  rank: number;
   nameFr: string;
   nameEn: string;
   logoScale: number;
   color: string;
+}
+
+// The tier summary the admin sponsor routes expose (#321): the name to show and
+// the key/rank to filter and order by.
+export interface AdminSponsorTierRef {
+  key: string;
+  nameFr: string;
+  nameEn: string;
+  rank: number;
 }
 
 export interface Sponsor {
@@ -175,8 +184,8 @@ export interface Sponsor {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
   tierId: number;
+  tier: AdminSponsorTierRef;
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
@@ -202,7 +211,6 @@ export interface SponsorPublic {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
   tier: SponsorTierRef;
   websiteUrl: string | null;
 }
@@ -229,7 +237,6 @@ export interface SponsorDetail {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
   tier: SponsorTierRef;
   websiteUrl: string | null;
   descriptionFr: string | null;
@@ -244,7 +251,6 @@ export interface SponsorWithOffers {
   slug: string;
   name: string;
   logoUrl: string | null;
-  level: SponsorLevel;
   jobOffers: JobOfferPublic[];
 }
 

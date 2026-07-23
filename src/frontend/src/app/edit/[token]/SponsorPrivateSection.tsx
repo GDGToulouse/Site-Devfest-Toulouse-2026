@@ -2,8 +2,6 @@
 
 import { useState } from "react";
 
-type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
-
 interface StandContact {
   name?: string;
   linkedin?: string;
@@ -12,7 +10,8 @@ interface StandContact {
 }
 
 export interface SponsorPrivate {
-  level: SponsorLevel;
+  // The sponsoring tier: `allowsPromoIdeas` gates the promo fields (#321).
+  tier: { allowsPromoIdeas: boolean };
   standContacts: StandContact[];
   comKitReceived: boolean;
   comKitLogoWebUrl: string | null;
@@ -84,7 +83,7 @@ export default function SponsorPrivateSection({
   const [comKitNotes, setComKitNotes] = useState(initial.comKitNotes ?? "");
   const [platinumPromoIdea, setPlatinumPromoIdea] = useState(initial.platinumPromoIdea ?? "");
   const [platinumCoBuildIdea, setPlatinumCoBuildIdea] = useState(initial.platinumCoBuildIdea ?? "");
-  const isPlatinum = initial.level === "PLATINUM";
+  const isPlatinum = initial.tier.allowsPromoIdeas;
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
