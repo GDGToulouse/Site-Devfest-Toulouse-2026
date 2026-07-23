@@ -122,7 +122,10 @@ export interface ContentPage {
   updatedAt: string;
 }
 
-export interface SponsorPlan {
+// A sponsoring offer shown on /devenir-sponsor (#318). One row of the shared
+// SponsorTier catalogue, joined to the current edition (price is the edition
+// override). Replaces the former SponsorPlan.
+export interface SponsorTierPublic {
   id: number;
   nameFr: string;
   nameEn: string;
@@ -130,14 +133,42 @@ export interface SponsorPlan {
   subtitleEn: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
-  price: string | null;
   standSize: string | null;
-  advantages: { fr: string; en: string }[];
   color: string;
-  isFeatured: boolean;
+  logoScale: number;
+  advantages: { fr: string; en: string }[];
+  price: string | null;
 }
 
+// The catalogue tier as seen by the admin (#318 select, #319 CRUD).
+export interface AdminSponsorTier {
+  id: number;
+  key: string;
+  nameFr: string;
+  nameEn: string;
+  subtitleFr: string | null;
+  subtitleEn: string | null;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  advantages: { fr: string; en: string }[];
+  standSize: string | null;
+  color: string;
+  logoScale: number;
+  rank: number;
+  jobOfferQuota: number;
+  allowsPromoIdeas: boolean;
+}
+
+// Legacy level kept alive by the #317 shim until #321 rebinds the public wall.
 export type SponsorLevel = "PLATINUM" | "GOLD" | "SILVER" | "SOUTIEN" | "COMMUNAUTE";
+
+// The tier summary the public sponsor routes expose alongside `level` (#318).
+export interface SponsorTierRef {
+  nameFr: string;
+  nameEn: string;
+  logoScale: number;
+  color: string;
+}
 
 export interface Sponsor {
   id: number;
@@ -145,6 +176,7 @@ export interface Sponsor {
   name: string;
   logoUrl: string | null;
   level: SponsorLevel;
+  tierId: number;
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
@@ -171,6 +203,7 @@ export interface SponsorPublic {
   name: string;
   logoUrl: string | null;
   level: SponsorLevel;
+  tier: SponsorTierRef;
   websiteUrl: string | null;
 }
 
@@ -197,6 +230,7 @@ export interface SponsorDetail {
   name: string;
   logoUrl: string | null;
   level: SponsorLevel;
+  tier: SponsorTierRef;
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;

@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
-import type { Sponsor } from "@/lib/types";
+import type { Sponsor, AdminSponsorTier } from "@/lib/types";
 import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
 import SponsorForm, { emptySponsorForm, type SponsorFormValue } from "@/components/admin/sponsors/SponsorForm";
 
@@ -21,12 +21,25 @@ export default function SponsorEditorPage() {
 
   const [form, setForm] = useState<SponsorFormValue>(emptySponsorForm);
   const [current, setCurrent] = useState<SponsorData | null>(null);
+  const [tiers, setTiers] = useState<AdminSponsorTier[]>([]);
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [editionId, setEditionId] = useState<number | null>(null);
   const [editionYear, setEditionYear] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // The tier catalogue drives the "Niveau" <select> and the promo-idea gating.
+  useEffect(() => {
+    adminFetch<AdminSponsorTier[]>("/sponsor-tiers").then(({ data }) => {
+      if (!data) return;
+      setTiers(data);
+      // A brand-new sponsor needs a tier picked up front (tierId is required):
+      // default to the most important one (list is sorted by rank desc).
+      if (isNew && data[0]) setForm((f) => (f.tierId === null ? { ...f, tierId: data[0].id } : f));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (isNew) {
@@ -47,7 +60,7 @@ export default function SponsorEditorPage() {
         setCurrent(data);
         setForm({
           name: data.name,
-          level: data.level,
+          tierId: data.tierId,
           logoUrl: data.logoUrl || "",
           websiteUrl: data.websiteUrl || "",
           descriptionFr: data.descriptionFr || "",
@@ -74,7 +87,7 @@ export default function SponsorEditorPage() {
   }, [sponsorId, isNew]);
 
   async function handleSave() {
-    if (!form.name.trim() || !editionId) return;
+    if (!form.name.trim() || !editionId || !form.tierId) return;
     setIsSaving(true);
     setError(null);
     const socialLinks: Record<string, string> = {};
@@ -85,7 +98,7 @@ export default function SponsorEditorPage() {
     const payload = {
       editionId,
       name: form.name.trim(),
-      level: form.level,
+      tierId: form.tierId,
       logoUrl: form.logoUrl || undefined,
       websiteUrl: form.websiteUrl || undefined,
       descriptionFr: form.descriptionFr || undefined,
@@ -150,7 +163,7 @@ export default function SponsorEditorPage() {
           <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
         )}
 
-        <SponsorForm value={form} onChange={setForm} />
+        <SponsorForm value={form} onChange={setForm} tiers={tiers} />
 
         {!isNew && current && <SponsorContacts sponsorId={current.id} />}
 
@@ -159,7 +172,7 @@ export default function SponsorEditorPage() {
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={handleSave}
-            disabled={isSaving || !form.name.trim() || !editionId}
+            disabled={isSaving || !form.name.trim() || !editionId || !form.tierId}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
             {isSaving ? "Enregistrement…" : "Enregistrer"}

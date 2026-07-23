@@ -284,6 +284,37 @@ export default async function editionRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/editions/current/sponsor-tiers — visible sponsoring offers for the
+  // featured edition (#318). Replaces the removed sponsor-plans route: reads the
+  // catalogue through the per-edition binding, ordered by the edition's sortOrder,
+  // with its price override.
+  app.get("/editions/current/sponsor-tiers", async (_request, reply) => {
+    const edition = await getFeaturedEdition();
+    if (!edition) return reply.status(404).send({ error: "No edition found" });
+
+    const links = await prisma.editionSponsorTier.findMany({
+      where: { editionId: edition.id, isVisible: true, tier: { ...notDeleted } },
+      include: { tier: true },
+      orderBy: { sortOrder: "asc" },
+    });
+
+    return links.map((l) => ({
+      id: l.tier.id,
+      nameFr: l.tier.nameFr,
+      nameEn: l.tier.nameEn,
+      subtitleFr: l.tier.subtitleFr,
+      subtitleEn: l.tier.subtitleEn,
+      descriptionFr: l.tier.descriptionFr,
+      descriptionEn: l.tier.descriptionEn,
+      standSize: l.tier.standSize,
+      color: l.tier.color,
+      logoScale: l.tier.logoScale,
+      advantages: l.tier.advantages ? JSON.parse(l.tier.advantages) : [],
+      // Per-edition price override (may be null).
+      price: l.price,
+    }));
+  });
+
   // GET /api/editions/current/ticket-tiers — returns visible tiers for the featured edition
   app.get("/editions/current/ticket-tiers", async (_request, reply) => {
     const edition = await getFeaturedEdition();
