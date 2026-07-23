@@ -168,8 +168,11 @@ Sans migration, cette étape est facultative.
 
 ## Étape 5 — Déployer + vérifier
 
-Le déploiement Coolify se déclenche sur le push `main`. Rappeler la config prod
-critique (détails : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §3) :
+Le déploiement prod n'est **pas** automatique : contrairement à la beta (push `dev` →
+déploiement auto), un push sur `main` ne déploie rien tout seul. Rappeler à
+l'utilisateur de lancer le **Redeploy** dans Coolify sur la ressource prod (souvent
+« without cache »), puis attendre sa confirmation avant de sonder la version. Rappeler la
+config prod critique (détails : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §3) :
 
 - `ENV_NAME=prod`, `BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_PLAUSIBLE_SRC` → **Available at Buildtime** cochés.
 - `SESSION_SECRET` runtime **obligatoire** en prod (sinon Better Auth crashe au boot).
