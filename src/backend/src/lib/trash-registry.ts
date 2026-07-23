@@ -87,10 +87,11 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     adminOnly: true,
   },
   {
-    key: "sponsor-plans",
-    model: "sponsorPlan",
+    key: "sponsor-tiers",
+    model: "sponsorTier",
     labelField: "nameFr",
-    parkedFields: [],
+    // `key` is @unique — park it while trashed so a new tier can reuse it (#317).
+    parkedFields: ["key"],
     fileFields: [],
     adminOnly: true,
   },

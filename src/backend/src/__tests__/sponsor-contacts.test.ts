@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
+import { tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Secondary contacts (#250): a sponsor can have several contacts, each with its
 // own modification link, lock and expiry — all editing the same sponsor page.
@@ -18,7 +19,7 @@ describe("Sponsor secondary contacts (#250)", () => {
 
     const sponsor = await prisma.sponsor.create({
       data: {
-        name: "Multi Contact Sponsor", slug: `multi-contact-${Date.now()}`, editionId, level: "GOLD",
+        name: "Multi Contact Sponsor", slug: `multi-contact-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
         publicationStatus: "PUBLISHED",
         contacts: {
           create: [

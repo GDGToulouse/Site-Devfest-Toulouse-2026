@@ -3,7 +3,7 @@ import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Sponsor job offers (#251): CRUD via the magic link, quota per level, HTML
 // sanitized, exposed publicly.
@@ -20,7 +20,7 @@ describe("Sponsor job offers (#251)", () => {
     goldSlug = `offers-gold-${Date.now()}`;
 
     const sponsor = await createSponsorWithToken(
-      { name: "Offers Gold", slug: goldSlug, editionId, level: "GOLD", publicationStatus: "PUBLISHED" },
+      { name: "Offers Gold", slug: goldSlug, editionId, tierId: await tierIdByKey("gold"), publicationStatus: "PUBLISHED" },
       GOLD_TOKEN,
     );
     goldSponsorId = sponsor.id;
@@ -92,7 +92,7 @@ describe("Sponsor job offers (#251)", () => {
 
   it("only edits offers belonging to the token's sponsor", async () => {
     const other = await prisma.sponsor.create({
-      data: { name: "Other", slug: `offers-other-${Date.now()}`, editionId, level: "GOLD" },
+      data: { name: "Other", slug: `offers-other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
     });
     const foreignOffer = await prisma.sponsorJobOffer.create({
       data: { sponsorId: other.id, title: "Foreign", descriptionFr: "", descriptionEn: "", url: "https://x.org" },

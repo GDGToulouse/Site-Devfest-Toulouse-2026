@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Platinum-only promo ideas (#252): writable via the magic link only when the
 // sponsor is Platinum. For any other level the fields are silently ignored, so
@@ -20,13 +20,13 @@ describe("Sponsor Platinum promo content (#252)", () => {
     editionId = edition.id;
 
     const platinum = await createSponsorWithToken({
-      name: "Platinum Test", slug: `platinum-test-${Date.now()}`, editionId, level: "PLATINUM",
+      name: "Platinum Test", slug: `platinum-test-${Date.now()}`, editionId, tierId: await tierIdByKey("platinum"),
       publicationStatus: "PUBLISHED",
     }, PLATINUM_TOKEN);
     platinumId = platinum.id;
 
     const gold = await createSponsorWithToken({
-      name: "Gold Test", slug: `gold-test-${Date.now()}`, editionId, level: "GOLD",
+      name: "Gold Test", slug: `gold-test-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
       publicationStatus: "PUBLISHED",
     }, GOLD_TOKEN);
     goldId = gold.id;
