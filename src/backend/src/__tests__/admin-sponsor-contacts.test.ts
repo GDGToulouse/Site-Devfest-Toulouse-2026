@@ -10,6 +10,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import adminSponsorRoutes from "../routes/admin/sponsors.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
+import { tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Admin management of sponsor contacts (#250): add, list, lock, resend, delete.
 
@@ -26,7 +27,7 @@ describe("Admin sponsor contacts (#250)", () => {
     editionId = edition.id;
 
     const sponsor = await prisma.sponsor.create({
-      data: { name: "Admin Contacts Sponsor", slug: `admin-contacts-${Date.now()}`, editionId, level: "GOLD" },
+      data: { name: "Admin Contacts Sponsor", slug: `admin-contacts-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
     });
     sponsorId = sponsor.id;
   });
@@ -85,7 +86,7 @@ describe("Admin sponsor contacts (#250)", () => {
 
   it("rejects a contact that belongs to another sponsor (404)", async () => {
     const other = await prisma.sponsor.create({
-      data: { name: "Other Sponsor", slug: `other-${Date.now()}`, editionId, level: "GOLD" },
+      data: { name: "Other Sponsor", slug: `other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
     });
     const otherContact = await prisma.sponsorContact.create({
       data: { sponsorId: other.id, email: "x@example.org" },

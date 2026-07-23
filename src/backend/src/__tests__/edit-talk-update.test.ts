@@ -10,7 +10,7 @@ vi.mock("nodemailer", () => ({
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
 // their published sessions (#260), and only where the organizers opened editing
@@ -225,7 +225,7 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
   it("rejects a sponsor token (404 — no session to edit)", async () => {
     const sponsorToken = "test-talk-update-sponsor-token-8899aabbccddeeff";
     const sponsor = await createSponsorWithToken({
-      name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId, level: "GOLD",
+      name: "Talk Update Sponsor", slug: "talk-update-sponsor", editionId, tierId: await tierIdByKey("gold"),
       publicationStatus: "PUBLISHED",
     }, sponsorToken);
     const app = await buildEditApp();

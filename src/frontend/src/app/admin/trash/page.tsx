@@ -20,7 +20,7 @@ const TRASH_ENTITIES: { key: string; label: string; adminOnly: boolean }[] = [
   { key: "contact-categories", label: "Catégories de contact", adminOnly: false },
   { key: "contact-messages", label: "Messages", adminOnly: false },
   { key: "ticket-tiers", label: "Tarifs billetterie", adminOnly: true },
-  { key: "sponsor-plans", label: "Plans sponsors", adminOnly: true },
+  { key: "sponsor-tiers", label: "Niveaux sponsors", adminOnly: true },
   { key: "editions", label: "Éditions", adminOnly: true },
   { key: "users", label: "Utilisateurs", adminOnly: true },
 ];

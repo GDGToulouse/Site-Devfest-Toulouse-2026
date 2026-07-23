@@ -1,18 +1,8 @@
 // Job-offer business rules (#251).
-
-// How many job offers a sponsor may publish, by level. A stricter cap for
-// lower tiers keeps the perk proportionate to the sponsorship.
-const OFFER_QUOTA: Record<string, number> = {
-  PLATINUM: 4,
-  GOLD: 2,
-  SILVER: 1,
-  SOUTIEN: 1,
-  COMMUNAUTE: 1,
-};
-
-export function offerQuotaForLevel(level: string): number {
-  return OFFER_QUOTA[level] ?? 1;
-}
+//
+// The per-tier quota (how many offers a sponsor may publish) moved onto
+// SponsorTier.jobOfferQuota with #317 — read it from the sponsor's tier instead
+// of a hard-coded table.
 
 // Offers stay visible until one month after the event. We anchor on the
 // edition's end date (fall back to its start date), so the cut-off follows the

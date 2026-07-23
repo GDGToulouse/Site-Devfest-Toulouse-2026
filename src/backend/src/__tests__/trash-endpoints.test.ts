@@ -251,7 +251,7 @@ describe("trash endpoints (#148)", () => {
       // The trash must not become a side door around the per-entity role rules.
       // `users` is labelled by email, so listing alone would leak admin
       // addresses; restoring a trashed admin account escalates privilege.
-      for (const key of ["users", "editions", "ticket-tiers", "sponsor-plans"]) {
+      for (const key of ["users", "editions", "ticket-tiers", "sponsor-tiers"]) {
         const list = await app.inject({ method: "GET", url: `/api/admin/trash/${key}` });
         expect(list.statusCode, `GET ${key}`).toBe(403);
 

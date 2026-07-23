@@ -10,7 +10,6 @@ import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
 import adminFileRoutes from "./files.js";
 import adminUserRoutes from "./users.js";
-import adminSponsorPlanRoutes from "./sponsor-plans.js";
 import adminSponsorRoutes from "./sponsors.js";
 import adminSpeakerRoutes from "./speakers.js";
 import adminCategoryRoutes from "./categories.js";
@@ -50,7 +49,6 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(adminTicketRoutes);
     await adminApp.register(adminSettingsRoutes);
     await adminApp.register(adminUserRoutes);
-    await adminApp.register(adminSponsorPlanRoutes);
     await adminApp.register(adminApiKeyRoutes);
   });
 }

@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Sponsor description is rich-text HTML (#270): sanitized on write via the
 // magic link, same pipeline as article content.
@@ -18,7 +18,7 @@ describe("Sponsor rich-text description (#270)", () => {
     editionId = edition.id;
 
     const sponsor = await createSponsorWithToken(
-      { name: "Desc Sponsor", slug: `desc-sponsor-${Date.now()}`, editionId, level: "GOLD" },
+      { name: "Desc Sponsor", slug: `desc-sponsor-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
       TOKEN,
     );
     sponsorId = sponsor.id;

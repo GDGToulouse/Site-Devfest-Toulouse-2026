@@ -44,15 +44,6 @@ enum UserRole {
 // Lot 2 — Speakers, Sessions & Sponsors (enums)
 // ============================================
 
-// Sponsoring levels, ordered by decreasing importance (RG-221).
-enum SponsorLevel {
-  PLATINUM
-  GOLD
-  SILVER
-  SOUTIEN
-  COMMUNAUTE
-}
-
 // Talk formats (RG-211).
 enum TalkFormat {
   CONFERENCE // 40 min
@@ -101,10 +92,6 @@ model Edition {
   sponsorPageStatus       SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
   sponsorTemporaryFormUrl String?
-  // Which SponsorLevel values are offered when creating a sponsor for this
-  // edition (US-245, RG-230). JSON array of SponsorLevel names; null/empty
-  // means all levels are allowed.
-  openSponsorLevels       String?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -113,7 +100,7 @@ model Edition {
   ticketTiers  TicketTier[]
   articles     Article[]
   keyFigures   KeyFigure[]
-  sponsorPlans SponsorPlan[]
+  sponsorTiers EditionSponsorTier[]
   speakers     Speaker[]
   talks        Talk[]
   sponsors     Sponsor[]
@@ -181,30 +168,65 @@ model Tag {
 
 // --- Sponsor Plans ---
 
-model SponsorPlan {
+// Global sponsoring-tier catalogue (#316/#317). One row = one complete offer,
+// shared across editions. Replaces both the SponsorLevel enum (level assigned to
+// a signed sponsor) and the SponsorPlan model (offer shown on /devenir-sponsor).
+// The per-edition binding (price, visibility, order) lives in EditionSponsorTier.
+model SponsorTier {
   id            Int       @id @default(autoincrement())
+  // Stable key used in code/imports and to park the row when trashed
+  // (e.g. "platinum", "gold", "discovery", "soutien-communautes").
+  key           String    @unique
   nameFr        String
   nameEn        String
   subtitleFr    String?
   subtitleEn    String?
   descriptionFr String?
   descriptionEn String?
-  price         String?
+  // JSON array of { fr: string, en: string }.
+  advantages    String?
   standSize     String?
-  advantages    String? // JSON array of { fr: string, en: string }
   color         String    @default("#109E6E")
-  isFeatured    Boolean   @default(false)
-  isVisible     Boolean   @default(true)
-  sortOrder     Int       @default(0)
+  // Logo display scale on the sponsor wall (#315): higher tier, larger logo.
+  logoScale     Float     @default(1)
+  // Importance rank — higher means more prominent (Platinum). Sorted descending.
+  rank          Int       @default(0)
+  // How many job offers a sponsor of this tier may publish (#251, ex-OFFER_QUOTA).
+  jobOfferQuota Int       @default(1)
+  // Whether sponsors of this tier may fill the promo/co-build ideas (#252,
+  // ex-condition level === PLATINUM).
+  allowsPromoIdeas Boolean @default(false)
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt     DateTime?
 
-  editionId Int
-  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  sponsors     Sponsor[]
+  editionLinks EditionSponsorTier[]
 
   @@index([deletedAt])
+}
+
+// Binds a SponsorTier to an Edition (#317): which offers are proposed for a
+// given edition, at what price, in what order, and whether they are shown on
+// /devenir-sponsor. Replaces Edition.openSponsorLevels and the per-edition role
+// of SponsorPlan. Pure join row — not a trash entity, so no soft delete.
+model EditionSponsorTier {
+  id        Int      @id @default(autoincrement())
+  isVisible Boolean  @default(true)
+  price     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId Int
+  edition   Edition     @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  tierId    Int
+  tier      SponsorTier @relation(fields: [tierId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, tierId])
+  @@index([editionId])
+  @@index([tierId])
 }
 
 // --- Ticketing ---
@@ -591,7 +613,6 @@ model Sponsor {
   slug          String
   name          String
   logoUrl       String?
-  level         SponsorLevel
   websiteUrl    String?
   descriptionFr String?
   descriptionEn String?
@@ -628,6 +649,11 @@ model Sponsor {
   editionId Int
   edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
+  // Sponsoring tier from the shared catalogue (#317). Replaces the SponsorLevel
+  // enum: the level assigned to a sponsor IS an entry of the SponsorTier catalogue.
+  tierId Int
+  tier   SponsorTier @relation(fields: [tierId], references: [id])
+
   // Speakers working for this sponsor's company (RG-226).
   speakers Speaker[]
 
@@ -635,11 +661,12 @@ model Sponsor {
   // modification link (#250). Replaces the single editToken on Sponsor.
   contacts SponsorContact[]
 
-  // Job offers the sponsor wants relayed (#251). Count capped by level.
+  // Job offers the sponsor wants relayed (#251). Count capped by tier.
   jobOffers SponsorJobOffer[]
 
   @@unique([editionId, slug])
   @@index([editionId])
+  @@index([tierId])
   @@index([deletedAt])
 }
 
