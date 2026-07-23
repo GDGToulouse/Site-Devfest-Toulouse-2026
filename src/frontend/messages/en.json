@@ -48,7 +48,8 @@
     },
     "about": {
       "behindTitle": "Behind #DevFestToulouse",
-      "gdgDescription": "DevFest Toulouse is organized by GDG Toulouse, a passionate developer community. Since 2016, we bring together the Toulouse tech community every year around talks, workshops, and networking.",
+      "gdgDescription": "DevFest Toulouse is organized by GDG Toulouse, a passionate developer community.",
+      "gdgHistory": "Since 2016, we bring together the Toulouse tech community every year around talks, workshops, and networking.",
       "ecosystemTitle": "Dive into our ecosystem",
       "carouselPrev": "Previous photo",
       "carouselNext": "Next photo"
