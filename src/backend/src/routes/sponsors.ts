@@ -23,7 +23,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
 
     const sponsors = await prisma.sponsor.findMany({
       where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-      include: { tier: { select: { key: true, rank: true } } },
+      include: { tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } } },
     });
 
     return sponsors
@@ -34,6 +34,8 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         logoUrl: s.logoUrl,
         // Legacy `level` string kept for the untouched front (#317 shim).
         level: tierKeyToLegacyLevel(s.tier.key),
+        // Real tier model for the front to move onto (#318 → #321).
+        tier: { nameFr: s.tier.nameFr, nameEn: s.tier.nameEn, logoScale: s.tier.logoScale, color: s.tier.color },
         rank: s.tier.rank,
         websiteUrl: s.websiteUrl,
       }))
@@ -59,7 +61,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         ...notDeleted,
       },
       include: {
-        tier: { select: { key: true } },
+        tier: { select: { key: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live sponsor page.
@@ -87,6 +89,8 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       logoUrl: sponsor.logoUrl,
       // Legacy `level` string kept for the untouched front (#317 shim).
       level: tierKeyToLegacyLevel(sponsor.tier.key),
+      // Real tier model for the front to move onto (#318 → #321).
+      tier: { nameFr: sponsor.tier.nameFr, nameEn: sponsor.tier.nameEn, logoScale: sponsor.tier.logoScale, color: sponsor.tier.color },
       websiteUrl: sponsor.websiteUrl,
       descriptionFr: sponsor.descriptionFr,
       descriptionEn: sponsor.descriptionEn,
