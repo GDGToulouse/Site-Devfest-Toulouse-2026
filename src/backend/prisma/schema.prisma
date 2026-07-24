@@ -104,7 +104,7 @@ model Edition {
   speakers     Speaker[]
   talks        Talk[]
   sponsors     Sponsor[]
-  categories   Category[]
+  categories   EditionCategory[]
 
   @@index([deletedAt])
 }
@@ -719,23 +719,43 @@ model SponsorJobOffer {
 
 // --- Categories / Tracks (RG-213, US-246) ---
 
+// A track, shared across editions (#338). Tracks recur year after year, so the
+// category is a global entity and each edition opts in through EditionCategory
+// — same split as SponsorTier / EditionSponsorTier (#316).
 model Category {
   id        Int       @id @default(autoincrement())
-  nameFr    String
+  // Unique globally, not per edition: two tracks with the same name would be
+  // the same track, and the point here is to stop duplicating them.
+  nameFr    String    @unique
   nameEn    String
   // Track colour used to tint the talk cards (hex string).
   color     String    @default("#109E6E")
-  sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
 
-  editionId Int
-  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editions EditionCategory[]
+  talks    Talk[]
 
-  talks Talk[]
-
-  @@index([editionId])
   @@index([deletedAt])
+}
+
+// Which editions propose a given track, and in which order for that year
+// (#338). `sortOrder` lives here rather than on Category: the display order is
+// a per-edition editorial choice, exactly like EditionSponsorTier.sortOrder.
+model EditionCategory {
+  id        Int      @id @default(autoincrement())
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId  Int
+  edition    Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, categoryId])
+  @@index([editionId])
+  @@index([categoryId])
 }

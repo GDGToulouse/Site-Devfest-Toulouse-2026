@@ -319,13 +319,27 @@ async function seedDev() {
   await prisma.talk.deleteMany({ where: { editionId: edition.id } });
   await prisma.speaker.deleteMany({ where: { editionId: edition.id } });
   await prisma.sponsor.deleteMany({ where: { editionId: edition.id } });
-  await prisma.category.deleteMany({ where: { editionId: edition.id } });
+  // Categories are shared across editions since #338, so they are upserted by
+  // name and merely re-bound to this edition rather than wiped and recreated —
+  // deleting them would take other editions' bindings down with them.
+  await prisma.editionCategory.deleteMany({ where: { editionId: edition.id } });
 
-  const catCloud = await prisma.category.create({
-    data: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#509EE3", sortOrder: 0, editionId: edition.id },
+  const catCloud = await prisma.category.upsert({
+    where: { nameFr: "Cloud & DevOps" },
+    update: { nameEn: "Cloud & DevOps", color: "#509EE3" },
+    create: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#509EE3" },
   });
-  const catWeb = await prisma.category.create({
-    data: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839", sortOrder: 1, editionId: edition.id },
+  const catWeb = await prisma.category.upsert({
+    where: { nameFr: "Web & Mobile" },
+    update: { nameEn: "Web & Mobile", color: "#EC6839" },
+    create: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839" },
+  });
+  await prisma.editionCategory.createMany({
+    data: [
+      { editionId: edition.id, categoryId: catCloud.id, sortOrder: 0 },
+      { editionId: edition.id, categoryId: catWeb.id, sortOrder: 1 },
+    ],
+    skipDuplicates: true,
   });
   console.log("Categories created: 2");
 

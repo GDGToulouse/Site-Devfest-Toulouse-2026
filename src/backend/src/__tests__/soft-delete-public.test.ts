@@ -121,7 +121,12 @@ describe("public API hides trashed content (#147)", () => {
     const edition = await getSeededEdition();
 
     const category = await prisma.category.create({
-      data: { editionId: edition.id, nameFr: "ZZ Piste test", nameEn: "ZZ Test track", color: "#123456" },
+      data: {
+        nameFr: `ZZ Piste test ${Date.now()}`,
+        nameEn: "ZZ Test track",
+        color: "#123456",
+        editions: { create: { editionId: edition.id } },
+      },
     });
     createdCategoryIds.push(category.id);
     const talk = await prisma.talk.create({
@@ -143,7 +148,7 @@ describe("public API hides trashed content (#147)", () => {
     // nothing.
     const before = await app.inject({ method: "GET", url: `/api/talks/${talk.slug}` });
     expect(before.statusCode).toBe(200);
-    expect(before.json().category).toMatchObject({ nameFr: "ZZ Piste test" });
+    expect(before.json().category).toMatchObject({ nameFr: category.nameFr });
 
     // A to-one relation takes no `where` in Prisma, so the query cannot filter
     // this out — only the serializer can. Without that, the trashed category

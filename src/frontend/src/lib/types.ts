@@ -366,13 +366,14 @@ export interface Talk {
 }
 
 // Session category / track.
+// A track, shared across editions (#338). The edition binding — and the display
+// order for that year — lives on the EditionCategory join, exposed as
+// `editions` by the admin API.
 export interface Category {
   id: number;
   nameFr: string;
   nameEn: string;
   color: string;
-  sortOrder: number;
-  editionId: number;
 }
 
 // Admin speaker entity (CRUD).
