@@ -71,6 +71,13 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/me/:path*`,
       },
       {
+        // The trash purge is triggered from the back-office (#335). Without
+        // this rewrite the browser hits Next.js instead of the API and gets a
+        // 404 HTML page, since maintenance routes sit under /api, not /api/admin.
+        source: "/api/maintenance/:path*",
+        destination: `${backendUrl}/api/maintenance/:path*`,
+      },
+      {
         source: "/api/health",
         destination: `${backendUrl}/api/health`,
       },
