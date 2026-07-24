@@ -71,7 +71,9 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     key: "categories",
     model: "category",
     labelField: "nameFr",
-    parkedFields: [],
+    // nameFr became globally unique with shared categories (#338), so a trashed
+    // track keeps holding its name unless it is parked on the way out.
+    parkedFields: ["nameFr"],
     fileFields: [],
     adminOnly: false,
   },

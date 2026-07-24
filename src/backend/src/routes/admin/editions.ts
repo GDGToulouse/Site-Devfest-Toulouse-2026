@@ -112,7 +112,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               speakers: { where: notDeleted },
               talks: { where: notDeleted },
               sponsors: { where: notDeleted },
-              categories: { where: notDeleted },
+              // `categories` is the EditionCategory join since #338: the join
+              // row carries no deletedAt, so the filter targets the track.
+              categories: { where: { category: notDeleted } },
             },
           },
         },
@@ -270,7 +272,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               talks: { where: notDeleted },
               speakers: { where: notDeleted },
               sponsors: { where: notDeleted },
-              categories: { where: notDeleted },
+              // `categories` is the EditionCategory join since #338: the join
+              // row carries no deletedAt, so the filter targets the track.
+              categories: { where: { category: notDeleted } },
               ticketTiers: { where: notDeleted },
             },
           },

@@ -9,10 +9,14 @@ export default async function categoryRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
-    return prisma.category.findMany({
-      where: { editionId: edition.id, ...notDeleted },
+    // Categories are global since #338; the edition binding — and the display
+    // order for that year — lives on the join. Reading through it keeps the
+    // response shape unchanged for the session filters.
+    const links = await prisma.editionCategory.findMany({
+      where: { editionId: edition.id, category: notDeleted },
       orderBy: { sortOrder: "asc" },
-      select: { id: true, nameFr: true, nameEn: true, color: true },
+      select: { category: { select: { id: true, nameFr: true, nameEn: true, color: true } } },
     });
+    return links.map((link) => link.category);
   });
 }

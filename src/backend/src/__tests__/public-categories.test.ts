@@ -21,9 +21,20 @@ afterEach(async () => {
   }
 });
 
-async function makeCategory(editionId: number, overrides: Record<string, unknown> = {}) {
+// nameFr is globally unique since #338, and the edition binding moved to the
+// EditionCategory join — with sortOrder now carried by that join.
+async function makeCategory(
+  editionId: number,
+  overrides: { nameFr?: string; sortOrder?: number; deletedAt?: Date } = {},
+) {
+  const { sortOrder = 0, ...categoryFields } = overrides;
   const c = await prisma.category.create({
-    data: { nameFr: "Cat FR", nameEn: "Cat EN", editionId, ...overrides },
+    data: {
+      nameFr: categoryFields.nameFr ?? `Cat FR ${Date.now()}-${Math.round(performance.now() * 1000)}`,
+      nameEn: "Cat EN",
+      ...categoryFields,
+      editions: { create: { editionId, sortOrder } },
+    },
   });
   createdIds.push(c.id);
   return c;
@@ -32,9 +43,12 @@ async function makeCategory(editionId: number, overrides: Record<string, unknown
 describe("Public categories (#308)", () => {
   it("lists the featured edition's live categories, ordered by sortOrder", async () => {
     const edition = await getSeededEdition();
-    const second = await makeCategory(edition.id, { nameFr: "Deuxième", sortOrder: 900 });
-    const first = await makeCategory(edition.id, { nameFr: "Première", sortOrder: 800 });
-    const trashed = await makeCategory(edition.id, { nameFr: "Corbeille", sortOrder: 950, deletedAt: new Date() });
+    // Names carry a suffix: nameFr is globally unique since #338, so fixed
+    // labels would collide with a parallel file or a leftover row.
+    const tag = `${Date.now()}`;
+    const second = await makeCategory(edition.id, { nameFr: `Deuxième ${tag}`, sortOrder: 900 });
+    const first = await makeCategory(edition.id, { nameFr: `Première ${tag}`, sortOrder: 800 });
+    const trashed = await makeCategory(edition.id, { nameFr: `Corbeille ${tag}`, sortOrder: 950, deletedAt: new Date() });
 
     const app = await buildApp();
     const res = await app.inject({ method: "GET", url: "/api/categories" });

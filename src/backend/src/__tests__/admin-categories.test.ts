@@ -24,13 +24,19 @@ afterEach(async () => {
   }
 });
 
+// Since #338 a category is global and `editionIds` binds it to editions.
 async function createCategory(editionId: number, overrides: Record<string, unknown> = {}) {
   const app = await buildApp();
   const suffix = `${Date.now()}-${Math.round(performance.now() * 1000)}`;
   const res = await app.inject({
     method: "POST",
     url: "/api/admin/categories",
-    payload: { editionId, nameFr: `Piste ${suffix}`, nameEn: `Track ${suffix}`, ...overrides },
+    payload: {
+      editionIds: [editionId],
+      nameFr: `Piste ${suffix}`,
+      nameEn: `Track ${suffix}`,
+      ...overrides,
+    },
   });
   await app.close();
   if (res.statusCode === 201) createdIds.push(res.json().id);
@@ -46,25 +52,26 @@ describe("Admin Categories API (#308)", () => {
     await app.close();
   });
 
-  it("creates a category and reads back the stored values", async () => {
+  it("creates a category bound to the given edition", async () => {
     const edition = await getSeededEdition();
-    const res = await createCategory(edition.id, { color: "#abcdef", sortOrder: 3 });
+    const res = await createCategory(edition.id, { color: "#abcdef" });
     expect(res.statusCode).toBe(201);
     const { id } = res.json();
 
     const stored = await prisma.category.findUnique({ where: { id } });
-    expect(stored?.editionId).toBe(edition.id);
     expect(stored?.color).toBe("#abcdef");
-    expect(stored?.sortOrder).toBe(3);
+    // The edition binding lives on the join since #338.
+    const link = await prisma.editionCategory.findFirst({ where: { categoryId: id } });
+    expect(link?.editionId).toBe(edition.id);
+    expect(res.json().editions).toHaveLength(1);
   });
 
-  it("defaults color and sortOrder when omitted", async () => {
+  it("defaults the colour when omitted", async () => {
     const edition = await getSeededEdition();
     const { id } = (await createCategory(edition.id)).json();
 
     const stored = await prisma.category.findUnique({ where: { id } });
     expect(stored?.color).toBe("#109E6E");
-    expect(stored?.sortOrder).toBe(0);
   });
 
   it("returns a category by id, 404 for an unknown one", async () => {
@@ -85,18 +92,107 @@ describe("Admin Categories API (#308)", () => {
     const edition = await getSeededEdition();
     const { id } = (await createCategory(edition.id)).json();
 
+    const renamed = `Piste modifiée ${Date.now()}`;
     const app = await buildApp();
     const res = await app.inject({
       method: "PUT",
       url: `/api/admin/categories/${id}`,
-      payload: { nameFr: "Piste modifiée", color: "#123456" },
+      payload: { nameFr: renamed, color: "#123456" },
     });
     await app.close();
     expect(res.statusCode).toBe(200);
 
     const stored = await prisma.category.findUnique({ where: { id } });
-    expect(stored?.nameFr).toBe("Piste modifiée");
+    expect(stored?.nameFr).toBe(renamed);
     expect(stored?.color).toBe("#123456");
+  });
+
+  // --- #338: the track is shared, the edition binding is editable.
+
+  it("shares one category across several editions", async () => {
+    const edition = await getSeededEdition();
+    const other = await prisma.edition.findFirst({
+      where: { id: { not: edition.id }, deletedAt: null },
+    });
+    if (!other) return; // single-edition seed: nothing to share with.
+
+    const { id } = (await createCategory(edition.id)).json();
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/categories/${id}`,
+      payload: { editionIds: [edition.id, other.id] },
+    });
+    await app.close();
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().editions.map((e: { id: number }) => e.id).sort()).toEqual(
+      [edition.id, other.id].sort(),
+    );
+    // One row, two bindings — not two duplicated tracks.
+    const links = await prisma.editionCategory.count({ where: { categoryId: id } });
+    expect(links).toBe(2);
+  });
+
+  it("replaces the edition selection wholesale, dropping the ones removed", async () => {
+    const edition = await getSeededEdition();
+    const { id } = (await createCategory(edition.id)).json();
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/categories/${id}`,
+      payload: { editionIds: [] },
+    });
+    await app.close();
+
+    expect(res.statusCode).toBe(200);
+    expect(await prisma.editionCategory.count({ where: { categoryId: id } })).toBe(0);
+  });
+
+  it("refuses a duplicate name — the track identifies itself globally", async () => {
+    const edition = await getSeededEdition();
+    const first = (await createCategory(edition.id)).json();
+
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/admin/categories",
+      payload: { editionIds: [edition.id], nameFr: first.nameFr, nameEn: "Other" },
+    });
+    await app.close();
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("rejects an unknown edition instead of silently ignoring it", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/admin/categories",
+      payload: { editionIds: [99999999], nameFr: `X ${Date.now()}`, nameEn: "X" },
+    });
+    await app.close();
+    expect(res.statusCode).toBe(422);
+  });
+
+  it("frees the name when trashed, so the same track can be recreated", async () => {
+    const edition = await getSeededEdition();
+    const created = (await createCategory(edition.id)).json();
+
+    const app = await buildApp();
+    await app.inject({ method: "DELETE", url: `/api/admin/categories/${created.id}` });
+
+    // The trashed row parked its name, so the slot is free again.
+    const again = await app.inject({
+      method: "POST",
+      url: "/api/admin/categories",
+      payload: { editionIds: [edition.id], nameFr: created.nameFr, nameEn: created.nameEn },
+    });
+    await app.close();
+
+    expect(again.statusCode).toBe(201);
+    createdIds.push(again.json().id);
   });
 
   it("soft-deletes on DELETE, keeping the row with deletedAt set (#147)", async () => {
