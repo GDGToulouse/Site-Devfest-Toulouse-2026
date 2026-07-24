@@ -310,6 +310,28 @@ export interface EditionTalk {
   speakers: { slug: string; name: string; photoUrl: string | null }[];
 }
 
+// Hall of replays (#102): a filmed talk, carrying the edition it was given in
+// so the visitor can place it without opening each edition page.
+export interface Replay {
+  slug: string;
+  title: string;
+  format: TalkFormat;
+  language: string;
+  videoUrl: string;
+  year: number;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null }[];
+}
+
+// The filter values that actually have replays behind them, so the UI never
+// offers a choice leading to an empty list.
+export interface ReplayFilters {
+  years: number[];
+  formats: TalkFormat[];
+  categories: { nameFr: string; nameEn: string }[];
+  total: number;
+}
+
 // Public talk detail.
 export interface TalkDetail {
   id: number;

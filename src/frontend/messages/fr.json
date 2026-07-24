@@ -82,7 +82,8 @@
     "followUs": "Suivez l'aventure en ligne :",
     "legalNotice": "Mentions légales",
     "codeOfConduct": "Code de conduite",
-    "sitemap": "Plan du site"
+    "sitemap": "Plan du site",
+    "replays": "Replays"
   },
   "notFound": {
     "title": "Page introuvable",
@@ -340,5 +341,33 @@
     "directions": "Itinéraire",
     "transports": "Accès & transports",
     "parking": "Parking"
+  },
+  "replays": {
+    "title": "Replays",
+    "pageTitle": "Replays — toutes les conférences filmées | DevFest Toulouse",
+    "heading": "Replays",
+    "description": "Revoyez les conférences filmées du DevFest Toulouse, toutes éditions confondues.",
+    "home": "Accueil",
+    "intro": "Retrouvez {count, plural, one {# conférence filmée} other {# conférences filmées}} depuis 2017, toutes éditions confondues. Cherchez par titre ou par speaker, filtrez par année ou par format.",
+    "results": "{count, plural, one {# conférence} other {# conférences}}",
+    "watch": "Revoir",
+    "empty": "Les replays ne sont pas encore disponibles.",
+    "noResults": "Aucune conférence ne correspond à votre recherche.",
+    "filters": {
+      "search": "Rechercher",
+      "searchPlaceholder": "Titre ou nom de speaker…",
+      "year": "Année",
+      "format": "Format",
+      "category": "Catégorie",
+      "all": "Toutes",
+      "submit": "Filtrer",
+      "reset": "Réinitialiser"
+    },
+    "format": {
+      "CONFERENCE": "Conférence",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote",
+      "WORKSHOP": "Workshop"
+    }
   }
 }

@@ -141,6 +141,16 @@ export default async function Footer() {
                       </Link>
                     </li>
                   ))}
+                  {/* Replays span every edition (#102), so they belong with the
+                      archives rather than under a single year. */}
+                  <li>
+                    <Link
+                      href="/replays"
+                      className="text-blanc text-base hover:opacity-70 transition-opacity"
+                    >
+                      {tFooter("replays")}
+                    </Link>
+                  </li>
                 </ul>
               </div>
             )}
