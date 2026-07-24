@@ -71,33 +71,63 @@ jobs:
       - name: Verify the result holds the invariant
         run: node scripts/check-version-consistency.mjs --against-main
 
+      # Plain `gh`, already installed on GitHub runners, rather than a
+      # third-party action: this workflow runs with write access, and the whole
+      # behaviour stays readable in this repository.
+      #
+      # Idempotent by hand: re-running force-pushes the branch and reuses the
+      # open PR instead of opening a second one.
       - name: Open the pull request
-        uses: peter-evans/create-pull-request@v8
-        with:
-          base: dev
-          branch: chore/backport-version-${{ steps.bump.outputs.next }}
-          # Idempotent: re-running the workflow updates the existing PR instead
-          # of opening a second one.
-          title: "chore(version): redescente ${{ steps.released.outputs.version }} + ligne dev en ${{ steps.bump.outputs.next }}"
-          commit-message: |
-            chore(version): backport ${{ steps.released.outputs.version }}, carry ${{ steps.bump.outputs.next }} on dev
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASED: ${{ steps.released.outputs.version }}
+          NEXT: ${{ steps.bump.outputs.next }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/backport-version-$NEXT"
 
-            The release bump and CHANGELOG entry live only on main (the promotion
-            PR is squashed), so dev would keep advertising an older version than
-            production — the drift described in #288.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-            Refs #288
-          body: |
-            Redescente automatique après la publication du tag `v${{ steps.released.outputs.version }}` (#288).
+          # Nothing to carry down: the backport already landed.
+          if git diff --quiet; then
+            echo "La ligne dev est déjà sur $NEXT — rien à faire."
+            exit 0
+          fi
 
-            - **CHANGELOG.md** : reprise de la section publiée sur `main`.
-            - **Version** : ligne `dev` positionnée sur **`${{ steps.bump.outputs.next }}`** dans les 3 emplacements (`version.ts`, `src/backend/package.json`, `src/frontend/package.json`).
+          git checkout -b "$BRANCH"
+          git add CHANGELOG.md src/backend/src/lib/version.ts src/backend/package.json src/frontend/package.json
+          git commit --file - <<EOF
+          chore(version): backport $RELEASED, carry $NEXT on dev
 
-            > Le bump proposé est un **patch**. Si le prochain périmètre est une fonctionnalité ou une rupture, ajustez le numéro avant de merger (`1.x.0-beta` / `2.0.0-beta`) — cf. `docs/mise-en-production.md`, étape 1.
+          The release bump and CHANGELOG entry live only on main (the promotion
+          PR is squashed), so dev would keep advertising an older version than
+          production — the drift described in #288.
 
-            Sans cette redescente, la bêta annoncerait une version antérieure à la production et le badge de l'admin deviendrait trompeur.
+          Refs #288
+          EOF
+          git push --force origin "$BRANCH"
 
-            Refs #288
-          labels: |
-            infra
-          delete-branch: true
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "PR déjà ouverte pour $BRANCH — mise à jour par le push."
+            exit 0
+          fi
+
+          gh pr create \
+            --base dev \
+            --head "$BRANCH" \
+            --title "chore(version): redescente $RELEASED + ligne dev en $NEXT" \
+            --label infra \
+            --body "$(cat <<EOF
+          Redescente automatique après la publication du tag \`v$RELEASED\` (#288).
+
+          - **CHANGELOG.md** : reprise de la section publiée sur \`main\`.
+          - **Version** : ligne \`dev\` positionnée sur **\`$NEXT\`** dans les 3 emplacements (\`version.ts\`, \`src/backend/package.json\`, \`src/frontend/package.json\`).
+
+          > Le bump proposé est un **patch**. Si le prochain périmètre est une fonctionnalité ou une rupture, ajustez le numéro avant de merger (\`1.x.0-beta\` / \`2.0.0-beta\`) — cf. \`docs/mise-en-production.md\`, étape 1.
+
+          Sans cette redescente, la bêta annoncerait une version antérieure à la production et le badge de l'admin deviendrait trompeur.
+
+          Refs #288
+          EOF
+          )"
