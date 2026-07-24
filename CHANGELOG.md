@@ -12,6 +12,55 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.5.0] - 2026-07-23
+
+Le sponsoring devient un **catalogue d'offres** que l'organisation édite elle-même,
+au lieu de quatre niveaux figés dans le code. La suppression n'est plus définitive :
+tout passe d'abord par une **corbeille**. S'y ajoutent la page « Lieu & infos
+pratiques », un durcissement issu de l'audit de sécurité, et les premiers tests
+automatisés du frontend.
+
+### Ajouté
+
+- **Sponsoring — catalogue d'offres éditable** : une offre (nom, sous-titre,
+  description, avantages, taille de stand, couleur, échelle de logo, quota
+  d'offres d'emploi) se crée et se modifie depuis l'admin. Chaque édition choisit
+  les offres qu'elle propose, avec son propre prix et son ordre d'affichage
+  (#316, #317, #318, #319, #320).
+- **Mur de sponsors repensé** : en-têtes de niveau centrés aux couleurs de l'offre
+  et **logos de taille dégressive** selon le rang — le tout piloté par le
+  catalogue, sans valeur codée en dur (#321, #323, absorbe #315).
+- **Corbeille avant suppression** : les éléments supprimés (12 entités) sont
+  conservés puis effaçables définitivement. Consultation, restauration et
+  suppression immédiate depuis l'admin ; purge automatique après 30 jours via une
+  tâche planifiée externe (#145, #146, #147, #148, #149, #150).
+- **Page « Lieu & infos pratiques »** : carte, accès, transports et informations
+  pratiques de l'édition, alimentée depuis l'admin (#109).
+- **Boutons Supprimer** dans les listes admin des speakers, conférences et
+  sponsors, jusque-là absents (#300).
+- **Tests frontend** : outillage Vitest + Testing Library et premiers tests de
+  composants, plus la couverture des routes publiques et de CRUD admin
+  jusqu'alors non testées (#308, partiel).
+
+### Corrigé
+
+- **Sécurité — 3 CVE** sur des dépendances directes (#304).
+- **Sécurité — SSRF à l'import Sessionize** et XSS possible via l'upload de SVG,
+  désormais refusé (#306).
+- **Traduction** : les endpoints renvoyaient des statuts HTTP incohérents (#305).
+- **Accueil** : le paragraphe de présentation du GDG manquait un saut de
+  ligne avant « Depuis 2016 » (#322).
+
+### Modifié
+
+- **Sponsoring — modèle de données** : l'énumération `SponsorLevel` et le modèle
+  `SponsorPlan` fusionnent dans un catalogue `SponsorTier` relié aux éditions.
+  Les sponsors existants sont **remappés automatiquement** par la migration.
+  L'API publique expose désormais `tier` (et non plus `level`) — frontend et
+  backend doivent être déployés ensemble (#317, #321).
+- **Dette technique** : suppression du composant `Toast` mort et des duplications
+  de références de fichiers et de mapping sponsor (#307).
+
 ## [1.4.0] - 2026-07-20
 
 Épique « communication sponsors » : contacts multiples, informations privées,
