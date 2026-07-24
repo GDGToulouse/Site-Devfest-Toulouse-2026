@@ -5,6 +5,7 @@ import { emailHeading } from "../lib/email-template.js";
 import { makeToken } from "../lib/brochure-token.js";
 import { sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 interface ContactBody {
   firstName: string;
@@ -35,7 +36,7 @@ export default async function contactRoutes(app: FastifyInstance) {
   // /contact <select> filters them out client-side.
   app.get("/contact/categories", async () => {
     const categories = await prisma.contactCategory.findMany({
-      where: { isActive: true },
+      where: { isActive: true, ...notDeleted },
       orderBy: { sortOrder: "asc" },
     });
 
@@ -63,8 +64,10 @@ export default async function contactRoutes(app: FastifyInstance) {
     // Resolve the category upfront so the validator knows whether the
     // submission is a sponsor-brochure request (where company + jobTitle
     // are mandatory) or a generic contact (where both fields are optional).
+    // findFirst so the trash filter fits (#147): a message must not be routed
+    // to a category the organizers deleted — its recipients would never see it.
     const category = categoryId
-      ? await prisma.contactCategory.findUnique({ where: { id: categoryId } })
+      ? await prisma.contactCategory.findFirst({ where: { id: categoryId, ...notDeleted } })
       : null;
     const requiresCompanyInfo = category?.slug === "sponsor-brochure";
 

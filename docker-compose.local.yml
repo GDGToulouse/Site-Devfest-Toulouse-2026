@@ -57,6 +57,11 @@ services:
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
+      # Lets the scheduled trash purge authenticate without a session (#149).
+      # Unset locally by default: the endpoint then only accepts an ADMIN
+      # session, which is the safe fallback rather than an open door.
+      - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}
+      - TRASH_RETENTION_DAYS=${TRASH_RETENTION_DAYS:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
     command: >

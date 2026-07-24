@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
+import { notDeleted, visibleCategory } from "../lib/admin-helpers.js";
 
 export default async function talkRoutes(app: FastifyInstance) {
   // GET /api/talks/:slug — detail of a published talk + its published speakers
@@ -14,14 +15,25 @@ export default async function talkRoutes(app: FastifyInstance) {
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
     const talk = await prisma.talk.findFirst({
-      where: { editionId: edition.id, slug: request.params.slug, publicationStatus: "PUBLISHED" },
+      where: {
+        editionId: edition.id,
+        slug: request.params.slug,
+        publicationStatus: "PUBLISHED",
+        ...notDeleted,
+      },
       include: {
+        // Nested reads need their own filter: a query extension would not reach
+        // them (Prisma applies those to the top-level operation only), and a
+        // trashed speaker would otherwise still show up on a live talk page.
         speakers: {
-          where: { publicationStatus: "PUBLISHED" },
+          where: { publicationStatus: "PUBLISHED", ...notDeleted },
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },
-        category: { select: { nameFr: true, nameEn: true, color: true } },
+        // `category` is to-one: Prisma takes no `where` there, so a trashed
+        // category cannot be filtered out by the query. `deletedAt` comes along
+        // and the serializer below drops it (#147).
+        category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
       },
     });
 
@@ -35,7 +47,7 @@ export default async function talkRoutes(app: FastifyInstance) {
       format: talk.format,
       level: talk.level,
       language: talk.language,
-      category: talk.category,
+      category: visibleCategory(talk.category),
       speakers: talk.speakers,
     };
   });

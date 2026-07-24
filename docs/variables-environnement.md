@@ -43,6 +43,8 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 |----------|:-----------:|-------------|---------|
 | `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. | `a1b2c3d4...` |
 | `MAGIC_LINK_SECRET` | oui | Secret pour générer et vérifier les liens de modification speakers/sponsors. Distinct du `SESSION_SECRET`. | `e5f6g7h8...` |
+| `TRASH_PURGE_SECRET` | non | Secret partagé permettant à la tâche planifiée d'appeler la purge de corbeille sans session (en-tête `X-Purge-Secret`). **Sans cette variable, l'endpoint n'accepte qu'une session ADMIN** — la purge automatique ne tourne pas, mais rien ne casse. | (32+ caractères aléatoires) |
+| `TRASH_RETENTION_DAYS` | non | Délai de conservation en corbeille avant purge définitive. Défaut **30**. Une valeur invalide ou `< 1` retombe sur 30 : une faute de frappe ne doit pas vider la corbeille. | `30` |
 
 ## OAuth — Google + GitHub (backend uniquement)
 
@@ -108,6 +110,78 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 | **Lot 3 — Programme** | aucune variable supplémentaire |
 | **Lot 4 — Contenu** | aucune variable supplémentaire |
 | **Lot 5 — Jour J** | aucune variable supplémentaire (OAuth Google déjà configuré au Lot 2) |
+
+---
+
+## Tâche planifiée — purge de la corbeille (#149)
+
+Supprimer un élément depuis l'admin le place en **corbeille** : la ligne survit,
+masquée de l'admin comme du site public, et reste restaurable. Au-delà du délai
+de conservation (`TRASH_RETENTION_DAYS`, 30 jours par défaut), elle doit être
+détruite pour de bon — ainsi que les fichiers qu'elle était seule à utiliser.
+
+Le déclencheur est **externe au backend** : pas de minuterie applicative. Elle se
+réinitialiserait à chaque redéploiement, se déclencherait deux fois si un jour
+deux conteneurs tournent, et serait invisible depuis la configuration.
+
+### Mise en place dans Coolify
+
+1. Générer un secret et le poser en variable d'environnement du backend :
+
+   ```bash
+   openssl rand -hex 32
+   ```
+
+   → `TRASH_PURGE_SECRET` (runtime, **pas** « Available at Buildtime » : il n'est
+   lu qu'à l'exécution).
+
+2. Créer une **Scheduled Task** sur la ressource backend :
+
+   | Champ | Valeur |
+   |---|---|
+   | Command | voir ci-dessous |
+   | Frequency | `0 4 * * *` (tous les jours à 4 h) |
+   | Container | le conteneur backend |
+
+   ```bash
+   curl -fsS -X POST http://localhost:4000/api/maintenance/purge-trash \
+     -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
+   ```
+
+   L'appel se fait **depuis le conteneur**, sur `localhost` : le secret ne
+   transite jamais par le réseau public.
+
+3. Vérifier — la commande est sans effet de bord, elle ne fait que lire :
+
+   ```bash
+   curl -fsS http://localhost:4000/api/maintenance/purge-trash \
+     -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
+   # → {"retentionDays":30,"cutoff":"2026-06-20T…"}
+   ```
+
+### Ce que renvoie la purge
+
+```json
+{
+  "cutoff": "2026-06-20T04:00:00.000Z",
+  "retentionDays": 30,
+  "totalPurged": 3,
+  "entities": [{ "entity": "articles", "purged": 3, "filesDeleted": 1, "filesKept": 2 }]
+}
+```
+
+`filesKept` compte les fichiers **conservés parce qu'un autre élément les
+utilise encore** : les uploads sont une bibliothèque partagée, purger une ligne
+ne doit pas casser l'illustration d'une autre.
+
+### Garde-fous
+
+- **Idempotente** : relancée, elle ne trouve plus rien (`purged: 0`). Un cron qui
+  se déclenche deux fois, ou qui rejoue après un timeout, est sans danger.
+- **Sans secret configuré**, l'endpoint n'accepte qu'une **session ADMIN** : la
+  purge automatique ne tourne pas, mais rien ne casse et rien ne s'ouvre.
+- **Un EDITOR ne peut pas** déclencher la purge, même connecté.
+- Les éléments **vivants** ne sont jamais touchés, quel que soit le délai.
 
 ---
 

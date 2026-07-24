@@ -220,15 +220,17 @@ async function seedDev() {
   });
   console.log(`Key figures 2025 created: ${keyFigures2025.length}`);
 
-  // --- Sponsor Plans for 2026 ---
-  await prisma.sponsorPlan.deleteMany({ where: { editionId: edition.id } });
-  const sponsorPlans = [
+  // --- Sponsor tier catalogue (#317) ---
+  // The catalogue is global (shared across editions), so it is upserted by key
+  // rather than wiped. Each tier carries its display attributes (colour, logo
+  // scale), its job-offer quota and whether it may fill promo ideas.
+  const TIER_CATALOG = [
     {
-      nameFr: "Platinum", nameEn: "Platinum",
+      key: "platinum", nameFr: "Platinum", nameEn: "Platinum",
       subtitleFr: "Au dessus de la mêlée !", subtitleEn: "Above the pack!",
       descriptionFr: "La visibilité la plus complète avec un grand stand pour vous mettre en avant.",
       descriptionEn: "The most comprehensive visibility with a large booth to showcase your brand.",
-      price: null, standSize: "12m²",
+      standSize: "12m²",
       advantages: JSON.stringify([
         { fr: "Stand premium de 12m²", en: "Premium 12m² booth" },
         { fr: "Logo sur tous les supports de communication", en: "Logo on all communication materials" },
@@ -239,14 +241,14 @@ async function seedDev() {
         { fr: "Intervention sur scène", en: "On-stage speaking slot" },
         { fr: "Accès à la liste des participants (opt-in)", en: "Access to attendee list (opt-in)" },
       ]),
-      color: "#41B38E", isFeatured: false, isVisible: true, sortOrder: 1, editionId: edition.id,
+      color: "#109E6E", logoScale: 1.0, rank: 40, jobOfferQuota: 4, allowsPromoIdeas: true,
     },
     {
-      nameFr: "Gold", nameEn: "Gold",
+      key: "gold", nameFr: "Gold", nameEn: "Gold",
       subtitleFr: "Le Best-seller", subtitleEn: "The Best-seller",
       descriptionFr: "Le stand idéal pour être au contact des participants et promouvoir votre marque.",
       descriptionEn: "The ideal booth to connect with attendees and promote your brand.",
-      price: null, standSize: "6m²",
+      standSize: "6m²",
       advantages: JSON.stringify([
         { fr: "Stand de 6m²", en: "6m² booth" },
         { fr: "Logo sur le site web", en: "Logo on the website" },
@@ -255,39 +257,62 @@ async function seedDev() {
         { fr: "Logo sur les supports de communication", en: "Logo on communication materials" },
         { fr: "Roll-up sur le stand", en: "Roll-up at the booth" },
       ]),
-      color: "#FFD428", isFeatured: true, isVisible: true, sortOrder: 2, editionId: edition.id,
+      color: "#FFD428", logoScale: 0.8, rank: 30, jobOfferQuota: 2, allowsPromoIdeas: false,
     },
     {
-      nameFr: "Discovery", nameEn: "Discovery",
+      key: "discovery", nameFr: "Discovery", nameEn: "Discovery",
       subtitleFr: "Un coup de pouce aux PME", subtitleEn: "A boost for SMEs",
       descriptionFr: "Un format accessible pour les PME souhaitant se faire connaître auprès de la communauté tech.",
       descriptionEn: "An accessible format for SMEs wanting to get known in the tech community.",
-      price: null, standSize: "2m²",
+      standSize: "2m²",
       advantages: JSON.stringify([
         { fr: "Stand de 2m²", en: "2m² booth" },
         { fr: "Logo sur le site web", en: "Logo on the website" },
         { fr: "Mention sur les réseaux sociaux", en: "Social media mention" },
         { fr: "Billets inclus", en: "Included tickets" },
       ]),
-      color: "#EE7CAD", isFeatured: false, isVisible: true, sortOrder: 3, editionId: edition.id,
+      color: "#EE7CAD", logoScale: 0.6, rank: 20, jobOfferQuota: 1, allowsPromoIdeas: false,
     },
     {
-      nameFr: "Soutien", nameEn: "Support",
+      key: "soutien-communautes", nameFr: "Soutien et Communautés", nameEn: "Support & Communities",
       subtitleFr: "Visibilité numérique", subtitleEn: "Digital visibility",
       descriptionFr: "Associez votre marque à l'événement sans avoir à gérer un stand physique.",
       descriptionEn: "Associate your brand with the event without managing a physical booth.",
-      price: null, standSize: null,
+      standSize: null,
       advantages: JSON.stringify([
         { fr: "Logo sur le site web", en: "Logo on the website" },
         { fr: "Mention sur les réseaux sociaux", en: "Social media mention" },
         { fr: "Billets inclus", en: "Included tickets" },
         { fr: "Visibilité sur les écrans de l'événement", en: "Visibility on event screens" },
       ]),
-      color: "#507BBD", isFeatured: false, isVisible: true, sortOrder: 4, editionId: edition.id,
+      color: "#507BBD", logoScale: 0.5, rank: 10, jobOfferQuota: 1, allowsPromoIdeas: false,
     },
   ];
-  await prisma.sponsorPlan.createMany({ data: sponsorPlans });
-  console.log(`Sponsor plans created: ${sponsorPlans.length}`);
+  const sponsorTiers: Record<string, { id: number }> = {};
+  for (const t of TIER_CATALOG) {
+    sponsorTiers[t.key] = await prisma.sponsorTier.upsert({
+      where: { key: t.key },
+      update: t,
+      create: t,
+    });
+  }
+  console.log(`Sponsor tiers upserted: ${TIER_CATALOG.length}`);
+
+  // --- Which tiers this edition proposes (#317) ---
+  const EDITION_TIERS = [
+    { key: "platinum", sortOrder: 1 },
+    { key: "gold", sortOrder: 2 },
+    { key: "discovery", sortOrder: 3 },
+    { key: "soutien-communautes", sortOrder: 4 },
+  ];
+  for (const et of EDITION_TIERS) {
+    await prisma.editionSponsorTier.upsert({
+      where: { editionId_tierId: { editionId: edition.id, tierId: sponsorTiers[et.key].id } },
+      update: { isVisible: true, price: null, sortOrder: et.sortOrder },
+      create: { editionId: edition.id, tierId: sponsorTiers[et.key].id, isVisible: true, price: null, sortOrder: et.sortOrder },
+    });
+  }
+  console.log(`Edition sponsor tiers created: ${EDITION_TIERS.length}`);
 
   // --- Lot 2: Categories, Sponsors, Speakers, Talks (dev sample data) ---
   // Wipe in dependency order so re-running the dev seed is idempotent.
@@ -434,12 +459,19 @@ async function seedDev() {
       websiteUrl: "https://example.com/labo-ouvert" },
   ];
 
+  // Map the demo levels onto the tier catalogue seeded above (#317).
+  const DEMO_LEVEL_TO_TIER: Record<"PLATINUM" | "GOLD" | "SOUTIEN", string> = {
+    PLATINUM: "platinum",
+    GOLD: "gold",
+    SOUTIEN: "soutien-communautes",
+  };
+
   for (const s of DEMO_SPONSORS) {
     await prisma.sponsor.create({
       data: {
         slug: s.slug,
         name: s.name,
-        level: s.level,
+        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
         logoUrl: `/images/sponsors/${s.slug}.svg`,
         websiteUrl: s.websiteUrl,
         descriptionFr: s.descriptionFr,

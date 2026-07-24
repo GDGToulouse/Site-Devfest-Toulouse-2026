@@ -2,22 +2,14 @@
 
 import { useState } from "react";
 
-import type { SponsorLevel } from "@/lib/types";
+import type { AdminSponsorTier } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 
-const LEVELS: { value: SponsorLevel; label: string }[] = [
-  { value: "PLATINUM", label: "Platinum" },
-  { value: "GOLD", label: "Gold" },
-  { value: "SILVER", label: "Silver" },
-  { value: "SOUTIEN", label: "Soutien" },
-  { value: "COMMUNAUTE", label: "Communauté" },
-];
-
 export interface SponsorFormValue {
   name: string;
-  level: SponsorLevel;
+  tierId: number | null;
   logoUrl: string;
   websiteUrl: string;
   descriptionFr: string;
@@ -39,7 +31,7 @@ export interface SponsorFormValue {
 
 export const emptySponsorForm: SponsorFormValue = {
   name: "",
-  level: "PLATINUM",
+  tierId: null,
   logoUrl: "",
   websiteUrl: "",
   descriptionFr: "",
@@ -64,10 +56,16 @@ const inputClass =
 interface SponsorFormProps {
   value: SponsorFormValue;
   onChange: (value: SponsorFormValue) => void;
+  tiers: AdminSponsorTier[];
 }
 
-export default function SponsorForm({ value, onChange }: SponsorFormProps) {
+export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps) {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+
+  // The promo-idea fields (#252) are gated on the selected tier, not on a
+  // hard-coded Platinum level (#318).
+  const selectedTier = tiers.find((t) => t.id === value.tierId);
+  const allowsPromoIdeas = selectedTier?.allowsPromoIdeas ?? false;
 
   return (
     <div className="space-y-4">
@@ -78,9 +76,14 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
         </label>
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">Niveau *</span>
-          <select value={value.level} onChange={(e) => onChange({ ...value, level: e.target.value as SponsorLevel })} className={inputClass}>
-            {LEVELS.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
+          <select
+            value={value.tierId ?? ""}
+            onChange={(e) => onChange({ ...value, tierId: e.target.value ? Number(e.target.value) : null })}
+            className={inputClass}
+          >
+            <option value="" disabled>Choisir un niveau…</option>
+            {tiers.map((t) => (
+              <option key={t.id} value={t.id}>{t.nameFr}</option>
             ))}
           </select>
         </label>
@@ -217,10 +220,10 @@ export default function SponsorForm({ value, onChange }: SponsorFormProps) {
           <textarea value={value.comKitNotes} onChange={(e) => onChange({ ...value, comKitNotes: e.target.value })} rows={3} className={inputClass} />
         </label>
 
-        {/* Platinum-only ideas (#252) — shown only when level is Platinum. */}
-        {value.level === "PLATINUM" && (
+        {/* Promo ideas (#252) — shown only for tiers that allow them (#318). */}
+        {allowsPromoIdeas && (
           <div className="mt-4 rounded-lg border border-jaune/40 bg-jaune/5 p-4">
-            <p className="text-sm font-semibold text-noir mb-3">💎 Réservé aux partenaires Platinum</p>
+            <p className="text-sm font-semibold text-noir mb-3">💎 Réservé aux partenaires premium</p>
             <label className="block">
               <span className="block text-sm font-medium text-noir mb-1">Contenu promotionnel à mettre en avant</span>
               <textarea value={value.platinumPromoIdea} onChange={(e) => onChange({ ...value, platinumPromoIdea: e.target.value })} rows={3} className={inputClass} />

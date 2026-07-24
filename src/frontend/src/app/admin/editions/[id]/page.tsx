@@ -6,6 +6,7 @@ import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import Tabs from "@/components/admin/Tabs";
 import GeneralTab from "@/components/admin/edition-detail/GeneralTab";
+import VenueTab from "@/components/admin/edition-detail/VenueTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
@@ -20,6 +21,12 @@ interface EditionData {
   status: string;
   venueName: string | null;
   venueAddress: string | null;
+  // Venue & practical-info page (#109), edited in the dedicated "Lieu" tab.
+  venueLat: number | null;
+  venueLng: number | null;
+  venueTransports: string | null;
+  venueParking: string | null;
+  venueDirectionsUrl: string | null;
   heroImageUrl: string | null;
   sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
@@ -41,6 +48,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 
 const TABS = [
   { key: "general", label: "Général" },
+  { key: "venue", label: "Lieu" },
   { key: "ticketing", label: "Billetterie" },
   { key: "sponsoring", label: "Sponsoring" },
   { key: "cfp", label: "CFP" },
@@ -113,6 +121,9 @@ export default function EditionDetailPage() {
 
         {activeTab === "general" && (
           <GeneralTab edition={edition} onSaved={loadEdition} />
+        )}
+        {activeTab === "venue" && (
+          <VenueTab edition={edition} onSaved={loadEdition} />
         )}
         {activeTab === "ticketing" && (
           <TicketingTab editionId={edition.id} />

@@ -27,6 +27,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
       { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"] },
       { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"] },
+      { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN", "EDITOR"] },
       { label: "Catégories", path: "/admin/categories", icon: "tag", roles: ["ADMIN", "EDITOR"] },
     ],
   },
@@ -50,6 +51,9 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Éditions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
       { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
       { label: "Clés API", path: "/admin/api-keys", icon: "key", roles: ["ADMIN"] },
+      // Both roles reach the page; ADMIN-only entities (users, editions…) are
+      // filtered out inside it, mirroring the API's 403 (#150).
+      { label: "Corbeille", path: "/admin/trash", icon: "trash", roles: ["ADMIN", "EDITOR"] },
       { label: "Paramètres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
     ],
   },

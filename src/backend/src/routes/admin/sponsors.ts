@@ -5,9 +5,7 @@ import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
-
-const SPONSOR_LEVELS = ["PLATINUM", "GOLD", "SILVER", "SOUTIEN", "COMMUNAUTE"] as const;
-type SponsorLevel = (typeof SPONSOR_LEVELS)[number];
+import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface StandContact {
   name?: string;
@@ -19,7 +17,7 @@ interface StandContact {
 interface SponsorCreateBody {
   editionId: number;
   name: string;
-  level: SponsorLevel;
+  tierId: number;
   logoUrl?: string;
   websiteUrl?: string;
   descriptionFr?: string;
@@ -77,11 +75,15 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const { editionId } = request.query;
 
     const sponsors = await prisma.sponsor.findMany({
-      where: editionId ? { editionId: Number(editionId) } : {},
-      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
+      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
+      include: {
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
+        ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
+      },
+      // Higher tier rank first (RG-221), then name.
       orderBy: editionId
-        ? [{ level: "asc" }, { name: "asc" }]
-        : [{ edition: { year: "desc" } }, { level: "asc" }, { name: "asc" }],
+        ? [{ tier: { rank: "desc" } }, { name: "asc" }]
+        : [{ edition: { year: "desc" } }, { tier: { rank: "desc" } }, { name: "asc" }],
     });
     return sponsors.map(serialize);
   });
@@ -90,10 +92,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   app.get<{ Params: SponsorIdParams }>("/sponsors/:id", {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
-    const sponsor = await prisma.sponsor.findUnique({
-      where: { id: Number(request.params.id) },
+    // findFirst, not findUnique: the latter only accepts unique fields in its
+    // top-level where, so it cannot carry the `deletedAt` filter (#147).
+    const sponsor = await prisma.sponsor.findFirst({
+      where: { id: Number(request.params.id), ...notDeleted },
       include: {
         edition: { select: { id: true, year: true } },
+        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
         // Job offers for admin consultation/moderation (#251).
         jobOffers: { orderBy: { createdAt: "asc" } },
       },
@@ -106,14 +111,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   app.post<{ Body: SponsorCreateBody }>("/sponsors", async (request, reply) => {
     const body = request.body;
 
-    if (!body.editionId || !body.name?.trim() || !body.level) {
-      return reply.code(400).send({ error: "editionId, name and level are required" });
+    if (!body.editionId || !body.name?.trim() || !body.tierId) {
+      return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
-    if (!SPONSOR_LEVELS.includes(body.level)) {
-      return reply.code(422).send({ error: `Invalid level. Allowed: ${SPONSOR_LEVELS.join(", ")}` });
+    const tier = await prisma.sponsorTier.findFirst({
+      where: { id: body.tierId, ...notDeleted },
+      select: { id: true },
+    });
+    if (!tier) {
+      return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
     }
 
-    // Build a slug unique within the edition.
+    // Build a slug unique within the edition. Deliberately NOT filtered on
+    // deletedAt: uniqueness is a database-wide constraint, so a trashed sponsor
+    // still owns its slug until purged. Parking frees the readable form, but a
+    // row keeping an unparked slug (restored, or trashed before #147) must still
+    // be counted or the create would collide.
     const existing = await prisma.sponsor.findMany({
       where: { editionId: body.editionId },
       select: { slug: true },
@@ -121,11 +134,12 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const slug = uniqueSlug(slugify(body.name), new Set(existing.map((e) => e.slug)));
 
     const sponsor = await prisma.sponsor.create({
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         editionId: body.editionId,
         slug,
         name: body.name.trim(),
-        level: body.level,
+        tierId: body.tierId,
         logoUrl: body.logoUrl || null,
         websiteUrl: body.websiteUrl || null,
         // Rich-text HTML (#270): sanitized on write, like article content.
@@ -160,15 +174,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const { id } = request.params;
     const body = request.body;
 
-    if (body.level !== undefined && !SPONSOR_LEVELS.includes(body.level)) {
-      return reply.code(422).send({ error: `Invalid level. Allowed: ${SPONSOR_LEVELS.join(", ")}` });
+    if (body.tierId !== undefined) {
+      const tier = await prisma.sponsorTier.findFirst({
+        where: { id: body.tierId, ...notDeleted },
+        select: { id: true },
+      });
+      if (!tier) {
+        return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
+      }
     }
 
     const sponsor = await prisma.sponsor.update({
       where: { id: Number(id) },
+      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.level !== undefined && { level: body.level }),
+        ...(body.tierId !== undefined && { tierId: body.tierId }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
         ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
         // Rich-text HTML (#270): sanitized on write, like article content.
@@ -209,21 +230,31 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     }
 
     const { count } = await prisma.sponsor.updateMany({
-      where: { id: { in: ids } },
+      where: { id: { in: ids }, ...notDeleted },
       data: { publicationStatus: value },
     });
     revalidateSponsors();
     return { count };
   });
 
-  // DELETE /api/admin/sponsors/:id
+  // DELETE /api/admin/sponsors/:id — moves the sponsor to the trash (#147). The
+  // row survives with `deletedAt` set; #145c restores it, #145d purges it.
   app.delete<{ Params: SponsorIdParams }>("/sponsors/:id", {
     schema: {
       params: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
     },
   }, async (request, reply) => {
-    const { id } = request.params;
-    await prisma.sponsor.delete({ where: { id: Number(id) } });
+    const sponsorId = Number(request.params.id);
+    const sponsor = await prisma.sponsor.findFirst({ where: { id: sponsorId, ...notDeleted } });
+    if (!sponsor) return notFound(reply, "Sponsor");
+
+    // The slug is unique per edition and a trashed row keeps its slot, so park
+    // it out of the live namespace — otherwise re-creating a sponsor under the
+    // same name would hit the constraint (#146).
+    await prisma.sponsor.update({
+      where: { id: sponsorId },
+      data: { ...softDeleteData(), slug: parkUniqueValue(sponsor.slug, sponsorId) },
+    });
     revalidateSponsors();
     return reply.code(204).send();
   });
@@ -266,7 +297,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
     async (request, reply) => {
       const sponsorId = Number(request.params.id);
-      const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
+      // findFirst, not findUnique: a trashed sponsor must not gain new contacts.
+      const sponsor = await prisma.sponsor.findFirst({ where: { id: sponsorId, ...notDeleted } });
       if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
 
       const email = request.body.email?.trim();

@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import {
   isConfigured,
-  QuotaExhaustedError,
+  sendTranslationError,
   sharedRateLimiter,
   translate,
   TranslationError,
@@ -48,28 +48,10 @@ export default async function adminTranslateRoutes(app: FastifyInstance) {
       );
       return result;
     } catch (err) {
-      if (err instanceof QuotaExhaustedError) {
-        return reply
-          .status(429)
-          .header("Retry-After", String(err.retryAfterSec ?? 60))
-          .send({
-            error: err.code,
-            message: err.message,
-            retryAfterSec: err.retryAfterSec,
-          });
+      if (!(err instanceof TranslationError)) {
+        request.log.error({ err }, "Unexpected translation error");
       }
-      if (err instanceof TranslationError) {
-        const status =
-          err.code === "invalid_input" ? 400 :
-          err.code === "content_too_large" ? 413 :
-          err.code === "rate_limit" ? 429 :
-          err.code === "not_configured" ? 503 :
-          err.code === "tag_mismatch" || err.code === "placeholder_mismatch" ? 422 :
-          502;
-        return reply.status(status).send({ error: err.code, message: err.message });
-      }
-      request.log.error({ err }, "Unexpected translation error");
-      return reply.status(500).send({ error: "internal_error" });
+      return sendTranslationError(reply, err);
     }
   });
 

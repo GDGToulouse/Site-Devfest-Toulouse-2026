@@ -12,7 +12,7 @@ import type {
   CfpSettings,
   ContactCategory,
   PaginatedArticles,
-  SponsorPlan,
+  SponsorTierPublic,
   SponsorPublic,
   SponsorDetail,
   SponsorWithOffers,
@@ -141,8 +141,8 @@ export async function getAboutCarousel(): Promise<CarouselSlide[]> {
   return (await fetchAPI<CarouselSlide[]>("/api/settings/carousel")) || [];
 }
 
-export async function getSponsorPlans(): Promise<SponsorPlan[]> {
-  return (await fetchAPI<SponsorPlan[]>("/api/editions/current/sponsor-plans")) || [];
+export async function getSponsorTiers(): Promise<SponsorTierPublic[]> {
+  return (await fetchAPI<SponsorTierPublic[]>("/api/editions/current/sponsor-tiers")) || [];
 }
 
 export async function getSponsors(): Promise<SponsorPublic[]> {

@@ -4,7 +4,7 @@ import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken } from "./sponsor-test-helpers.js";
+import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Sponsor private fields (#249): editable via the magic link, visible in the
 // admin, but NEVER exposed on any public route.
@@ -21,7 +21,7 @@ describe("Sponsor private section (#249)", () => {
     slug = `private-test-sponsor-${Date.now()}`;
 
     const sponsor = await createSponsorWithToken({
-      name: "Private Test Sponsor", slug, editionId, level: "GOLD",
+      name: "Private Test Sponsor", slug, editionId, tierId: await tierIdByKey("gold"),
       publicationStatus: "PUBLISHED", contactEmail: "sponsor@example.org",
     }, TOKEN, { email: "sponsor@example.org" });
     sponsorId = sponsor.id;
@@ -62,7 +62,7 @@ describe("Sponsor private section (#249)", () => {
     const body = res.json();
     expect(body.private).toBeDefined();
     expect(body.private.comKitReceived).toBe(true);
-    expect(body.private.level).toBe("GOLD");
+    expect(body.private.tier.key).toBe("gold");
     await app.close();
   });
 

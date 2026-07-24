@@ -5,6 +5,7 @@ import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 import { extractPrefix, verifyApiKey } from "./api-key.js";
+import { notDeleted } from "./admin-helpers.js";
 
 // Update `lastUsedAt` at most once per minute to avoid spamming the DB on
 // high-traffic keys. Good enough for "seen recently" UI hints.
@@ -30,8 +31,13 @@ async function resolveSession(request: FastifyRequest): Promise<AuthenticatedUse
   });
   if (!session) return null;
 
-  const user = await prisma.user.findUnique({
-    where: { email: session.user.email },
+  // findFirst so the trash filter can ride along: a trashed account must lose
+  // its access immediately (#147). Deleting it also parks the email, which
+  // would already make this lookup miss — but access control must not depend on
+  // that side effect. Rows trashed before #147, or half-restored, would slip
+  // through. `deletedAt` is the authority.
+  const user = await prisma.user.findFirst({
+    where: { email: session.user.email, ...notDeleted },
     select: { id: true, email: true, name: true, role: true, banned: true },
   });
   if (!user || user.banned) {
@@ -58,7 +64,12 @@ async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser
   const apiKey = await prisma.apiKey.findUnique({
     where: { prefix },
     include: {
-      user: { select: { id: true, email: true, name: true, role: true, banned: true } },
+      // `deletedAt` comes along so the trashed-owner check below can run: the
+      // filter cannot live in the include (Prisma takes no `where` on a to-one
+      // relation), so it is enforced right after the lookup.
+      user: {
+        select: { id: true, email: true, name: true, role: true, banned: true, deletedAt: true },
+      },
     },
   });
   if (!apiKey) {
@@ -75,6 +86,13 @@ async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser
   }
   if (apiKey.user.banned) {
     request.log.debug({ authPhase: "auth-context.bearer.reject", reason: "user_banned", keyId: apiKey.id });
+    return null;
+  }
+  // A key outlives its owner otherwise: trashing the account leaves the ApiKey
+  // row untouched (it is not cascaded, by design), so the token would keep
+  // working until the 30-day purge (#147).
+  if (apiKey.user.deletedAt) {
+    request.log.debug({ authPhase: "auth-context.bearer.reject", reason: "user_trashed", keyId: apiKey.id });
     return null;
   }
 
