@@ -1,0 +1,88 @@
+name: Version backport
+
+# Carries a release back down to the dev line (#288).
+#
+# The SemVer bump lives in the dev → main promotion PR, so release commits exist
+# only on `main`. Nothing brought them back: in July `main` shipped 1.3.0 while
+# `dev` still said 1.1.3, and the beta advertised an older version than
+# production. Publishing a `v*` tag now opens the backport PR by itself.
+#
+# It opens a PR rather than pushing: `dev` is protected, and the CHANGELOG merge
+# deserves a human read before landing.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version publiée (ex. 1.5.0) — pour rejouer une redescente oubliée"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Ouvrir la PR de redescente vers dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Resolve released version
+        id: released
+        run: |
+          RAW="${{ github.event.inputs.version || github.ref_name }}"
+          echo "version=${RAW#v}" >> "$GITHUB_OUTPUT"
+
+      # The released CHANGELOG section lives only on `main`; take that file
+      # wholesale rather than replaying the edit — it is the published text.
+      - name: Bring the released CHANGELOG down
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- CHANGELOG.md
+
+      - name: Move the dev line to the next -beta
+        id: bump
+        run: echo "next=$(node scripts/bump-beta-version.mjs '${{ steps.released.outputs.version }}')" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the result holds the invariant
+        run: node scripts/check-version-consistency.mjs --against-main
+
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          base: dev
+          branch: chore/backport-version-${{ steps.bump.outputs.next }}
+          # Idempotent: re-running the workflow updates the existing PR instead
+          # of opening a second one.
+          title: "chore(version): redescente ${{ steps.released.outputs.version }} + ligne dev en ${{ steps.bump.outputs.next }}"
+          commit-message: |
+            chore(version): backport ${{ steps.released.outputs.version }}, carry ${{ steps.bump.outputs.next }} on dev
+
+            The release bump and CHANGELOG entry live only on main (the promotion
+            PR is squashed), so dev would keep advertising an older version than
+            production — the drift described in #288.
+
+            Refs #288
+          body: |
+            Redescente automatique après la publication du tag `v${{ steps.released.outputs.version }}` (#288).
+
+            - **CHANGELOG.md** : reprise de la section publiée sur `main`.
+            - **Version** : ligne `dev` positionnée sur **`${{ steps.bump.outputs.next }}`** dans les 3 emplacements (`version.ts`, `src/backend/package.json`, `src/frontend/package.json`).
+
+            > Le bump proposé est un **patch**. Si le prochain périmètre est une fonctionnalité ou une rupture, ajustez le numéro avant de merger (`1.x.0-beta` / `2.0.0-beta`) — cf. `docs/mise-en-production.md`, étape 1.
+
+            Sans cette redescente, la bêta annoncerait une version antérieure à la production et le badge de l'admin deviendrait trompeur.
+
+            Refs #288
+          labels: |
+            infra
+          delete-branch: true
