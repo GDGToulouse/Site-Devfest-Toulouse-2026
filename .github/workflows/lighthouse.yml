@@ -1,0 +1,118 @@
+name: Lighthouse
+
+# Perf/quality audit of the key public pages (#238).
+#
+# Kept out of ci.yml on purpose: this job builds both apps, boots Postgres, the
+# API and the site, then runs three Lighthouse passes per URL. That is minutes,
+# not seconds — too slow to sit in front of every push. It runs on pull requests
+# to the protected branches, and on demand.
+on:
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+jobs:
+  lighthouse:
+    name: Lighthouse — Performance & Quality
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: devfest
+          POSTGRES_PASSWORD: devfest
+          POSTGRES_DB: devfest_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U devfest"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://devfest:devfest@localhost:5432/devfest_test
+      # Throwaway secret for the disposable test DB — Better Auth needs one at
+      # seed time; never a real credential.
+      SESSION_SECRET: ci-test-secret-not-a-real-credential
+      UPLOADS_DIR: ${{ github.workspace }}/ci-uploads
+      BACKEND_URL: http://localhost:4000
+      FRONTEND_URL: http://localhost:3000
+      # Must match the audited origin, so canonical/hreflang point at the pages
+      # actually being crawled. As a side effect robots.ts serves `Disallow: /`
+      # (it only opens up on the production URL) — that is why `is-crawlable` and
+      # the aggregate SEO score are excluded in lighthouserc.json in favour of
+      # per-audit SEO assertions.
+      BASE_URL: http://localhost:3000
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # --- API: audited pages are server-rendered from real data, so the
+      # backend has to be up and seeded before the site is built.
+      - name: Install backend
+        working-directory: src/backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        working-directory: src/backend
+        run: pnpm exec prisma generate
+
+      - name: Apply migrations
+        working-directory: src/backend
+        run: pnpm exec prisma migrate deploy
+
+      # seed-dev.ts (not seed.ts): it creates the demo edition, tickets,
+      # articles, speakers and sponsors the audited pages render. Auditing empty
+      # pages would score well and mean nothing.
+      - name: Seed test data
+        working-directory: src/backend
+        run: pnpm exec tsx prisma/seed-dev.ts
+
+      - name: Build backend
+        working-directory: src/backend
+        run: pnpm build
+
+      - name: Start backend
+        working-directory: src/backend
+        run: |
+          pnpm start &
+          npx wait-on http://localhost:4000/api/health --timeout 60000
+
+      # --- Site
+      - name: Install frontend
+        working-directory: src/frontend
+        run: pnpm install --frozen-lockfile
+
+      # BACKEND_URL is read at build time by next.config.ts rewrites, so it must
+      # be set here and not only at runtime (#189).
+      - name: Build frontend
+        working-directory: src/frontend
+        run: pnpm build
+
+      - name: Start frontend
+        working-directory: src/frontend
+        run: |
+          pnpm start &
+          npx wait-on http://localhost:3000/fr --timeout 60000
+
+      - name: Run Lighthouse CI
+        working-directory: src/frontend
+        run: npx --yes @lhci/cli@0.15.1 autorun
+
+      # Reports are written to disk rather than pushed to Lighthouse's public
+      # temporary storage; this artifact is how a red build gets inspected once
+      # the runner is gone.
+      - name: Upload Lighthouse reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-reports
+          path: src/frontend/.lighthouseci
+          retention-days: 7
+          if-no-files-found: ignore

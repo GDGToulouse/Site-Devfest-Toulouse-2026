@@ -85,6 +85,25 @@ La bascule de statut dans le back-office déclenche une purge immédiate du cach
 - **INP** (Interaction to Next Paint) : < 200ms
 - **CLS** (Cumulative Layout Shift) : < 0.1
 
+### Mesure automatisée en CI (#238)
+
+Le workflow [`lighthouse.yml`](../.github/workflows/lighthouse.yml) audite les pages
+clés (accueil, billetterie, speakers, article) sur les PR vers `dev` et `main`, et à la
+demande (`workflow_dispatch`). Il démarre Postgres, l'API et le site avec les données de
+`seed-dev.ts` — auditer des pages vides donnerait de bons scores sans signification.
+
+Seuils dans [`src/frontend/lighthouserc.json`](../src/frontend/lighthouserc.json). Trois
+écarts assumés entre ces objectifs et ce qui est **réellement mesurable en CI** :
+
+| Point | Décision | Pourquoi |
+|---|---|---|
+| **INP** | Non asserté | N'existe pas en mode lab : c'est une métrique terrain. À suivre via le RUM en production (#118). |
+| **Performance, LCP, CLS** | `warn`, pas `error` | Bruités sur runner GitHub partagé. Un rouge intermittent finirait ignoré, ce qui vaut moins qu'un avertissement lu. |
+| **Score SEO agrégé** | Remplacé par des assertions par audit | En dehors de la production, [`robots.ts`](../src/frontend/src/app/robots.ts) sert `Disallow: /` (volontaire : ne pas indexer beta/local/CI). L'audit `is-crawlable` échoue donc toujours et pèse ~31 % du score SEO, le plafonnant à 0.69 sur une page parfaitement saine. Les autres audits SEO (`document-title`, `meta-description`, `canonical`, `hreflang`…) sont assertés individuellement en `error`. |
+
+Accessibilité et bonnes pratiques restent en `error` à ≥ 90 : ces scores sont stables en
+lab et méritent de bloquer une PR.
+
 ### Optimisation des ressources
 - Images : formats modernes (WebP/AVIF) avec fallback, `srcset` et `sizes` pour le responsive, lazy loading natif (`loading="lazy"`)
 - Fonts : préchargement des polices critiques (`<link rel="preload">`), `font-display: swap`
