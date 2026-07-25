@@ -287,6 +287,22 @@ export interface SpeakerDetail {
   talks: SpeakerTalkRef[];
 }
 
+// Detail of a speaker from a past edition (#103). Year-scoped, since
+// `/api/speakers/:slug` only serves the featured edition. No sponsor relation:
+// historical imports carry none.
+export interface EditionSpeakerDetail {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  city: string | null;
+  bioFr: string | null;
+  bioEn: string | null;
+  socialLinks: Record<string, string>;
+  year: number;
+  talks: { slug: string; title: string; format: TalkFormat; videoUrl: string | null }[];
+}
+
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
 
@@ -341,6 +357,22 @@ export interface TalkDetail {
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
+}
+
+// Detail of a past talk (#343). `/api/talks/:slug` only serves the featured
+// edition, so replays of past years need this year-scoped shape — it carries
+// the recording and the edition it belongs to.
+export interface EditionTalkDetail {
+  slug: string;
+  title: string;
+  description: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  videoUrl: string | null;
+  year: number;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }

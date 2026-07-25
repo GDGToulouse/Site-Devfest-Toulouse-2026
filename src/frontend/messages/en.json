@@ -353,6 +353,15 @@
     "watch": "Watch again",
     "empty": "Replays are not available yet.",
     "noResults": "No talk matches your search.",
+    "backToReplays": "All replays",
+    "editionLabel": "{year} edition",
+    "abstract": "Abstract",
+    "speakersLabel": "Speakers",
+    "filterBy": "Filter on {value}",
+    "language": {
+      "fr": "French",
+      "en": "English"
+    },
     "filters": {
       "search": "Search",
       "searchPlaceholder": "Title or speaker name…",

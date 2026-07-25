@@ -1,17 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
-import { notDeleted } from "../lib/admin-helpers.js";
-
-function parseSocial(raw: string | null): Record<string, string> {
-  if (!raw) return {};
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
-  } catch {
-    return {};
-  }
-}
+import { notDeleted, parseSocialLinks } from "../lib/admin-helpers.js";
 
 export default async function speakerRoutes(app: FastifyInstance) {
   // GET /api/speakers — published speakers of the featured edition, alphabetical.
@@ -81,7 +71,7 @@ export default async function speakerRoutes(app: FastifyInstance) {
       city: speaker.city,
       bioFr: speaker.bioFr,
       bioEn: speaker.bioEn,
-      socialLinks: parseSocial(speaker.socialLinks),
+      socialLinks: parseSocialLinks(speaker.socialLinks),
       sponsor: speaker.sponsor,
       talks: speaker.talks,
     };

@@ -20,7 +20,9 @@ import type {
   SpeakerDetail,
   TalkDetail,
   EditionSpeaker,
+  EditionSpeakerDetail,
   EditionTalk,
+  EditionTalkDetail,
   Replay,
   ReplayFilters,
   EcosystemPartner,
@@ -183,6 +185,23 @@ export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]
 
 export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
+}
+
+// Detail of one past speaker (#103), year-scoped for the same reason.
+export async function getEditionSpeakerBySlug(
+  year: number,
+  slug: string,
+): Promise<EditionSpeakerDetail | null> {
+  return fetchAPI<EditionSpeakerDetail>(`/api/editions/${year}/speakers/${slug}`);
+}
+
+// Detail of one past talk (#343). Scoped by year: slugs are unique per edition,
+// and `/api/talks/:slug` would answer 404 outside the featured one.
+export async function getEditionTalkBySlug(
+  year: number,
+  slug: string,
+): Promise<EditionTalkDetail | null> {
+  return fetchAPI<EditionTalkDetail>(`/api/editions/${year}/talks/${slug}`);
 }
 
 // Hall of replays (#102). Search and filters are applied server-side so the page
