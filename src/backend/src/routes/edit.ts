@@ -9,7 +9,7 @@ import {
   revalidateSpeakers,
   revalidateSponsors,
 } from "../lib/revalidate.js";
-import { storeImageBuffer } from "../lib/image-store.js";
+import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
@@ -23,13 +23,23 @@ const TEXT_MAX = 5_000;
 const SHORT_MAX = 200;
 const URL_MAX = 2_048;
 
-// Logo/photo upload through a token (#241). Unlike the admin uploader, this
-// endpoint is unauthenticated (the token is the only credential), so it is
-// deliberately narrower: raster images only — SVG is excluded because it can
-// carry inline scripts and /uploads/ serves files with their native
-// content-type, which would let a submitted logo run JS in a visitor's browser.
+// Logo/photo upload through a token (#241). This endpoint is unauthenticated —
+// the token is the only credential — so it long refused SVG outright: an
+// uploaded one is served same-origin with its native content-type and would run
+// JS in a visitor's browser.
+//
+// Allowed again since #346, because storeImageBuffer strips scripts, handlers
+// and remote references before the file reaches the disk, and .svg is served
+// under a sandbox CSP. A vector logo is exactly what a sponsor has to hand, so
+// the narrower rule cost more than it protected once the payload was neutered.
 const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
-const UPLOAD_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const UPLOAD_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
 
 const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
 
@@ -803,7 +813,16 @@ export default async function editRoutes(app: FastifyInstance) {
     const buffer = await data.toBuffer();
     if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
 
-    const url = await storeImageBuffer(buffer, data.mimetype);
-    return { url };
+    try {
+      const url = await storeImageBuffer(buffer, data.mimetype);
+      return { url };
+    } catch (err) {
+      // An SVG whose only content was executable leaves nothing to render —
+      // tell the sponsor their file was refused rather than return a 500.
+      if (err instanceof UnsafeSvgError) {
+        return reply.code(400).send({ error: "invalid_file_type" });
+      }
+      throw err;
+    }
   });
 }

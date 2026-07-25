@@ -1,12 +1,15 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 
 import Fastify from "fastify";
 import multipart from "@fastify/multipart";
+import fs from "node:fs";
+import path from "node:path";
 import adminFileRoutes from "../routes/admin/files.js";
+import { UPLOADS_DIR } from "../lib/image-store.js";
 
-// The admin uploader used to accept image/svg+xml. Served same-origin from
-// /uploads/, an SVG carrying <script> runs in our origin (#306). The magic-link
-// uploader already refuses SVG; this proves the admin one now does too.
+// #306 refused SVG outright; #346 accepts it again, but only sanitized. What
+// matters is no longer the status code — it is what ends up on disk, since
+// /uploads/ serves these files same-origin.
 
 async function buildFilesApp() {
   const app = Fastify({ logger: false });
@@ -34,36 +37,65 @@ function multipartBody(filename: string, contentType: string, content: Buffer) {
   };
 }
 
-describe("admin uploader rejects SVG (#306)", () => {
-  it("refuses an image/svg+xml upload", async () => {
-    const app = await buildFilesApp();
-    const svg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>');
-    const { payload, headers } = multipartBody("payload.svg", "image/svg+xml", svg);
+const written: string[] = [];
 
-    const res = await app.inject({ method: "POST", url: "/api/admin/files", payload, headers });
+afterEach(async () => {
+  for (const name of written.splice(0)) {
+    await fs.promises.unlink(path.join(UPLOADS_DIR, name)).catch(() => {});
+  }
+});
 
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toContain("Invalid file type");
+async function upload(filename: string, contentType: string, content: Buffer) {
+  const app = await buildFilesApp();
+  const { payload, headers } = multipartBody(filename, contentType, content);
+  const res = await app.inject({ method: "POST", url: "/api/admin/files", payload, headers });
+  await app.close();
 
-    await app.close();
-  });
+  const body = res.statusCode === 200 ? res.json() : null;
+  if (body?.filename) written.push(body.filename as string);
+  return { res, body };
+}
 
-  it("still accepts a PNG", async () => {
-    const app = await buildFilesApp();
-    const { payload, headers } = multipartBody("ok.png", "image/png", PNG_1x1);
+describe("admin uploader — SVG is stored sanitized (#346)", () => {
+  it("should strip a script from an uploaded SVG before writing it", async () => {
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><path d="M0 0h24v24H0z"/></svg>',
+    );
 
-    const res = await app.inject({ method: "POST", url: "/api/admin/files", payload, headers });
+    const { res, body } = await upload("logo.svg", "image/svg+xml", svg);
 
     expect(res.statusCode).toBe(200);
-    expect(res.json().url).toMatch(/^\/uploads\//);
+    const stored = await fs.promises.readFile(path.join(UPLOADS_DIR, body!.filename), "utf8");
+    expect(stored).not.toMatch(/<script/i);
+    expect(stored).not.toContain("alert(1)");
+    expect(stored).toContain("<path");
+  });
 
-    // Clean up the file this test wrote to the uploads dir.
-    const { UPLOADS_DIR } = await import("../lib/image-store.js");
-    const fs = await import("node:fs");
-    const path = await import("node:path");
-    const name = res.json().filename as string;
-    await fs.promises.unlink(path.join(UPLOADS_DIR, name)).catch(() => {});
+  it("should strip event handlers before writing", async () => {
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><path d="M0 0" onload="alert(1)"/></svg>',
+    );
 
-    await app.close();
+    const { body } = await upload("handler.svg", "image/svg+xml", svg);
+
+    const stored = await fs.promises.readFile(path.join(UPLOADS_DIR, body!.filename), "utf8");
+    expect(stored).not.toMatch(/onload/i);
+  });
+
+  // Nothing renderable is left, so there is no logo to store — say so instead
+  // of writing an empty document.
+  it("should refuse an SVG that is nothing but a script", async () => {
+    const svg = Buffer.from("<script>alert(1)</script>");
+
+    const { res } = await upload("evil.svg", "image/svg+xml", svg);
+
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("should still accept a PNG", async () => {
+    const { res, body } = await upload("ok.png", "image/png", PNG_1x1);
+
+    expect(res.statusCode).toBe(200);
+    expect(body!.url).toMatch(/^\/uploads\//);
   });
 });

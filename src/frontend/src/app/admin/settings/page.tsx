@@ -390,12 +390,12 @@ const LOGO_FIELDS: AssetField[] = [
   {
     key: "identity_logo_main",
     label: "Logo principal (couleur)",
-    helpText: "PNG à fond transparent, ≥ 512px de large. Utilisé partout par défaut.",
+    helpText: "Format SVG conseillé (sinon PNG fond transparent ≥ 512px de large). Utilisé partout par défaut.",
   },
   {
     key: "identity_logo_white",
     label: "Logo blanc (fond foncé)",
-    helpText: "Variante claire pour le footer et les fonds sombres. PNG à fond transparent.",
+    helpText: "Variante claire pour le footer et les fonds sombres. SVG recommandé, PNG transparent accepté.",
   },
   {
     key: "identity_logo_monochrome",
@@ -405,7 +405,7 @@ const LOGO_FIELDS: AssetField[] = [
   {
     key: "identity_logo_square",
     label: "Logo carré (header / avatars)",
-    helpText: "Version compacte carrée pour le header et les avatars sociaux. PNG ≥ 512×512.",
+    helpText: "Version compacte carrée pour le header et les avatars sociaux. PNG ou SVG ≥ 512×512.",
   },
 ];
 
@@ -418,10 +418,7 @@ const FAVICON_FIELDS: AssetField[] = [
   {
     key: "identity_favicon_svg",
     label: "Favicon SVG",
-    // Kept because identity.ts still emits it when set, but the picker cannot
-    // supply one: SVG upload is refused since #306 and this field offers no
-    // manual entry. Say so rather than advertise an impossible choice (#341).
-    helpText: "Vectoriel, pris en priorité par les navigateurs récents. Dépôt SVG indisponible pour l'instant — utilisez les icônes PNG ci-dessous.",
+    helpText: "Vectoriel moderne (scalable, mode sombre). viewBox carré (32×32 ou similaire). Pris en priorité par les navigateurs récents.",
   },
   {
     key: "identity_favicon_png_192",
@@ -548,9 +545,9 @@ function IdentityTab({
 
         <h2 className="text-lg font-bold text-noir mb-4">Favicon &amp; icônes</h2>
         <p className="text-xs text-gris mb-3">
-          Les navigateurs choisissent automatiquement la meilleure résolution disponible :
-          les PNG par taille, puis le .ico en dernier fallback. Le SVG reste prioritaire
-          s&apos;il est déjà renseigné, mais ne peut pas être déposé ici.
+          Les navigateurs choisissent automatiquement la meilleure résolution disponible.
+          Le SVG est préféré quand il est défini ; sinon les PNG par taille ; le .ico sert toujours
+          de dernier fallback.
         </p>
         <div className="space-y-3">
           {FAVICON_FIELDS.map((field) => (
