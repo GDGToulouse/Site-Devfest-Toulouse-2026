@@ -15,6 +15,7 @@ import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
 import { getCfpSettings, getCurrentEdition, getIdentitySettings, getSeoSettings, getSocialLinks } from "@/lib/api";
 import { buildFaviconMetadata, getLogoUrl } from "@/lib/identity";
+import { jsonLdScript } from "@/lib/seo";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
@@ -144,7 +145,7 @@ export default async function LocaleLayout({
       )}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
       />
       <a
         href="#main-content"

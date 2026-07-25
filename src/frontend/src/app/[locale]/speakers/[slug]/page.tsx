@@ -7,6 +7,7 @@ import { getSpeakerBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
+import { jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -72,7 +73,7 @@ export default async function SpeakerDetailPage({
     <div className="px-6 py-8 lg:py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(personJsonLd) }}
       />
       <div className="mx-auto max-w-4xl">
         <Breadcrumb items={breadcrumbItems} />

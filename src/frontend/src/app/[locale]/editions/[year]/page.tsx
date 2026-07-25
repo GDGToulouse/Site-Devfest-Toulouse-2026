@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getEditionByYear, getEditions, getEditionSpeakers, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
@@ -142,12 +142,12 @@ export default async function BilanPage({ params }: PageProps) {
     <div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
       />
       {speakersJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(speakersJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(speakersJsonLd) }}
         />
       )}
       {/* Hero banner */}

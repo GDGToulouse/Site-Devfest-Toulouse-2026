@@ -13,7 +13,7 @@ import {
   getEcosystemPartners,
 } from "@/lib/api";
 
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
@@ -242,7 +242,7 @@ export default async function HomePage() {
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(
+            __html: jsonLdScript(
               buildEventJsonLd(edition, tiers, {
                 description: tSite("description"),
                 ogImage: seoSettings.seo_og_image || null,
