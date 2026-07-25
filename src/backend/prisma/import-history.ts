@@ -73,6 +73,8 @@ async function main() {
     warnings: [],
   };
 
+  const missingCategories = new Set<string>();
+
   for (const [yearStr, ed] of Object.entries(data.editions)) {
     const year = Number(yearStr);
     if (!Number.isInteger(year)) {
@@ -187,7 +189,9 @@ async function main() {
         if (categoryId) report.categories.linked++;
         else {
           report.categories.unmatched++;
-          report.warnings.push(`${year}: catégorie « ${categoryName} » absente du catalogue.`);
+          // One line per missing category, not per talk: on an instance without
+          // the catalogue that would be 279 identical warnings burying the rest.
+          missingCategories.add(categoryName);
         }
       }
 
@@ -234,6 +238,12 @@ async function main() {
     console.log(
       `${year}: speakers +${report.speakers.created}/~${report.speakers.updated}, ` +
         `talks +${report.talks.created}/~${report.talks.updated}`,
+    );
+  }
+
+  for (const name of [...missingCategories].sort()) {
+    report.warnings.push(
+      `Catégorie « ${name} » absente du catalogue : les talks concernés restent sans catégorie.`,
     );
   }
 
