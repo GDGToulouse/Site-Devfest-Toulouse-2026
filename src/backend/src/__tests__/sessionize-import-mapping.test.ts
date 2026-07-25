@@ -47,7 +47,11 @@ describe("importSessionize category mapping (#247)", () => {
     const edition = await prisma.edition.findUnique({ where: { year: TEST_YEAR } });
     if (edition) {
       await prisma.talk.deleteMany({ where: { editionId: edition.id } });
-      await prisma.category.deleteMany({ where: { editionId: edition.id } });
+      // Categories are global since #338; only drop the ones this edition
+      // introduced, reached through the join.
+      await prisma.category.deleteMany({
+        where: { editions: { some: { editionId: edition.id } } },
+      });
       await prisma.edition.delete({ where: { id: edition.id } });
     }
   });
@@ -72,7 +76,9 @@ describe("importSessionize category mapping (#247)", () => {
     expect(workshop?.category?.nameFr).toBe("Cloud & DevOps 1999");
 
     // The "Language" category must NOT become a track category.
-    const categories = await prisma.category.findMany({ where: { editionId: edition.id } });
+    const categories = await prisma.category.findMany({
+      where: { editions: { some: { editionId: edition.id } } },
+    });
     expect(categories.map((c) => c.nameFr)).toEqual(["Cloud & DevOps 1999"]);
 
     // Unknown format falls back to CONFERENCE and is reported.

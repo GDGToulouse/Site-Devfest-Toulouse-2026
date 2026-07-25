@@ -59,6 +59,41 @@ export async function getAdminSession(): Promise<AdminUser | null> {
   return data.user;
 }
 
+export interface PurgeReport {
+  cutoff: string;
+  retentionDays: number;
+  entities: { entity: string; purged: number; filesDeleted: number; filesKept: number }[];
+  totalPurged: number;
+}
+
+/**
+ * Run the trash purge by hand (#335).
+ *
+ * Not `adminFetch`: maintenance routes live under `/api`, not `/api/admin`, so
+ * that helper's prefix would 404. The endpoint accepts an ADMIN session as a
+ * fallback for the cron secret, hence `credentials: "include"` and no header.
+ */
+export async function purgeExpiredTrash(): Promise<{
+  data: PurgeReport | null;
+  status: number;
+  error?: string;
+}> {
+  try {
+    const res = await fetch("/api/maintenance/purge-trash", {
+      method: "POST",
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      const error = body?.error || body?.message;
+      return { data: null, status: res.status, ...(error ? { error } : {}) };
+    }
+    return { data: await res.json(), status: res.status };
+  } catch {
+    return { data: null, status: 0 };
+  }
+}
+
 // Better Auth's sign-in/social endpoint is POST-only: it returns the provider
 // authorization URL as JSON ({ url, redirect }) instead of issuing a 302. A
 // plain <a href> performed a GET and got back `null` (404). We POST, then

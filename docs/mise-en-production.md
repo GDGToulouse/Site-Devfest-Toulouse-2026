@@ -328,19 +328,38 @@ Le bump de l'étape 1 n'existe que sur `main`. Sans cette étape, `dev` et
 `dev-{initiale}` restent sur l'ancien numéro : la bêta finit par annoncer une
 version **plus ancienne que la prod**, ce qui rend le badge de l'admin trompeur.
 
-Après le tag, ouvrir une PR `main → dev` (puis `dev → dev-{initiale}`) qui :
+**Cette redescente est automatisée depuis #288.** Le push du tag déclenche
+[`version-backport.yml`](../.github/workflows/version-backport.yml), qui ouvre
+une PR vers `dev` :
 
-1. reporte `CHANGELOG.md` (la section de la release qui vient d'être publiée) ;
-2. repositionne les 3 fichiers de version sur la **prochaine** version en
-   pre-release — `1.4.0` publiée → `1.4.1-beta` (ou `1.5.0-beta` selon ce qui
-   s'annonce).
+1. reportant `CHANGELOG.md` (la section de la release qui vient d'être publiée) ;
+2. repositionnant les 3 fichiers de version sur la **prochaine** version en
+   pre-release — `1.4.0` publiée → `1.4.1-beta`.
+
+Il reste deux gestes humains : **relire et merger** cette PR, puis la **remonter
+sur les branches `dev-{initiale}`** (merge classique).
+
+> Le bump proposé est un **patch**. Si le prochain périmètre est une
+> fonctionnalité ou une rupture, corriger le numéro dans la PR avant de merger
+> (`1.5.0-beta`, `2.0.0-beta`).
 
 ```bash
-# Contrôle : les 3 lignes doivent concorder
+# La PR a-t-elle bien été ouverte ?
+gh pr list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --base dev --search "chore(version)"
+
+# Rejouer une redescente oubliée (tag antérieur à l'automatisation)
+gh workflow run version-backport.yml -f version=1.4.0
+
+# Contrôle final : les 3 lignes doivent concorder
 git show origin/main:src/backend/src/lib/version.ts | grep APP_VERSION  # 1.4.0
 git show origin/dev:src/backend/src/lib/version.ts  | grep APP_VERSION  # 1.4.1-beta
 curl -s https://beta.site.devfesttoulouse.fr/api/health                 # 1.4.1-beta
 ```
+
+> 🛡️ Un garde-fou CI (`Version — Consistency Guard`) échoue sur toute PR vers
+> `dev` dont la version ne serait pas un `-beta` strictement supérieur à celle
+> de `main`, et sur tout bump partiel où les 3 fichiers divergeraient. La dérive
+> ne peut donc plus passer inaperçue.
 
 > ℹ️ La skill **`deploy-to-prod`** (`.claude/skills/deploy-to-prod`) automatise
 > le choix du bump, le rappel de tous ces garde-fous et la génération de ces

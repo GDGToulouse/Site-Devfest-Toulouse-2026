@@ -22,6 +22,7 @@ import sponsorRoutes from "./routes/sponsors.js";
 import speakerRoutes from "./routes/speakers.js";
 import categoryRoutes from "./routes/categories.js";
 import talkRoutes from "./routes/talks.js";
+import replayRoutes from "./routes/replays.js";
 import editRoutes from "./routes/edit.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
@@ -276,6 +277,7 @@ await app.register(sponsorRoutes, { prefix: "/api" });
 await app.register(speakerRoutes, { prefix: "/api" });
 await app.register(categoryRoutes, { prefix: "/api" });
 await app.register(talkRoutes, { prefix: "/api" });
+await app.register(replayRoutes, { prefix: "/api" });
 await app.register(editRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)

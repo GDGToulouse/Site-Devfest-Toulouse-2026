@@ -212,27 +212,44 @@ export async function importSessionize(
     }
   }
 
-  // 2. Upsert track categories, keyed by nameFr within the edition.
+  // 2. Upsert track categories, keyed by nameFr — globally since #338, not per
+  // edition: a track already declared by another year is reused rather than
+  // duplicated, and only its binding to this edition is created.
   // Deliberately NOT filtered on deletedAt (#147): these lookups drive upserts,
   // so they must see trashed rows. Skipping them would recreate a category that
-  // already exists in the trash, and the slug sets below would hand out names
-  // still held by trashed rows — the create would then hit the unique index.
+  // already exists in the trash and hit the unique index on nameFr.
   const existingCategories = await prisma.category.findMany({
-    where: { editionId },
     select: { id: true, nameFr: true },
   });
   const categoryIdByName = new Map(existingCategories.map((c) => [c.nameFr, c.id]));
-  let sortOrder = existingCategories.length;
+  const existingLinks = await prisma.editionCategory.findMany({
+    where: { editionId },
+    select: { categoryId: true },
+  });
+  const linkedCategoryIds = new Set(existingLinks.map((l) => l.categoryId));
+  let sortOrder = existingLinks.length;
+
   for (const name of new Set(trackByItemId.values())) {
-    if (categoryIdByName.has(name)) {
+    let categoryId = categoryIdByName.get(name);
+
+    if (categoryId === undefined) {
+      const created = await prisma.category.create({
+        data: { nameFr: name, nameEn: name, color: "#109E6E" },
+      });
+      categoryId = created.id;
+      categoryIdByName.set(name, categoryId);
+      report.categories.created++;
+    } else {
       report.categories.reused++;
-      continue;
     }
-    const created = await prisma.category.create({
-      data: { editionId, nameFr: name, nameEn: name, color: "#109E6E", sortOrder: sortOrder++ },
-    });
-    categoryIdByName.set(name, created.id);
-    report.categories.created++;
+
+    // The track may exist globally without this edition proposing it yet.
+    if (!linkedCategoryIds.has(categoryId)) {
+      await prisma.editionCategory.create({
+        data: { editionId, categoryId, sortOrder: sortOrder++ },
+      });
+      linkedCategoryIds.add(categoryId);
+    }
   }
 
   // 3. Upsert speakers, keyed by slug. Track the resulting db id per Sessionize id.

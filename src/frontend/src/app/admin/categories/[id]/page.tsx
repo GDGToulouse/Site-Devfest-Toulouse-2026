@@ -11,9 +11,8 @@ interface CategoryData {
   nameFr: string;
   nameEn: string;
   color: string;
-  sortOrder: number;
-  editionId: number;
-  edition?: { id: number; year: number };
+  // A track is shared across editions since #338.
+  editions: { id: number; year: number; sortOrder: number }[];
 }
 
 export default function CategoryEditorPage() {
@@ -25,31 +24,32 @@ export default function CategoryEditorPage() {
 
   const [form, setForm] = useState<CategoryFormValue>(emptyCategoryForm);
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
-  const [editionId, setEditionId] = useState<number | null>(null);
-  const [editionYear, setEditionYear] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // The edition list drives the selector in both modes now that a track can
+    // belong to several years.
+    adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
+      if (data) setEditions(data);
+    });
+
     if (isNew) {
-      adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
-        if (data) {
-          setEditions(data);
-          const preset = Number(searchParams.get("editionId"));
-          const chosen = data.find((e) => e.id === preset) ?? data[0];
-          if (chosen) setEditionId(chosen.id);
-        }
-      });
+      const preset = Number(searchParams.get("editionId"));
+      if (preset) setForm((f) => ({ ...f, editionIds: [preset] }));
     } else if (categoryId) {
       adminFetch<CategoryData>(`/categories/${categoryId}`).then(({ data, status }) => {
         if (status === 404 || !data) {
           router.push("/admin/categories");
           return;
         }
-        setForm({ nameFr: data.nameFr, nameEn: data.nameEn, color: data.color, sortOrder: String(data.sortOrder) });
-        setEditionId(data.editionId);
-        setEditionYear(data.edition?.year ?? null);
+        setForm({
+          nameFr: data.nameFr,
+          nameEn: data.nameEn,
+          color: data.color,
+          editionIds: data.editions.map((e) => e.id),
+        });
         setIsLoading(false);
       });
     }
@@ -57,33 +57,30 @@ export default function CategoryEditorPage() {
   }, [categoryId, isNew]);
 
   async function handleSave() {
-    if (!form.nameFr.trim() || !form.nameEn.trim() || !editionId) return;
+    if (!form.nameFr.trim() || !form.nameEn.trim()) return;
     setIsSaving(true);
     setError(null);
     const payload = {
-      editionId,
       nameFr: form.nameFr.trim(),
       nameEn: form.nameEn.trim(),
       color: form.color,
-      sortOrder: Number(form.sortOrder) || 0,
+      editionIds: form.editionIds,
     };
-    if (isNew) {
-      const { data, status } = await adminFetch<{ id: number }>("/categories", { method: "POST", body: JSON.stringify(payload) });
-      setIsSaving(false);
-      if (status >= 400 || !data) {
-        setError("Échec de la création.");
-        return;
-      }
-      router.push(`/admin/categories/${data.id}`);
-    } else {
-      const { status } = await adminFetch(`/categories/${categoryId}`, { method: "PUT", body: JSON.stringify(payload) });
-      setIsSaving(false);
-      if (status >= 400) {
-        setError("Échec de l'enregistrement.");
-        return;
-      }
-      router.push("/admin/categories");
+    const { data, status, error: apiError } = isNew
+      ? await adminFetch<{ id: number }>("/categories", { method: "POST", body: JSON.stringify(payload) })
+      : await adminFetch<{ id: number }>(`/categories/${categoryId}`, { method: "PUT", body: JSON.stringify(payload) });
+    setIsSaving(false);
+
+    if (status === 409) {
+      // The name identifies the track globally: say so rather than a generic failure.
+      setError(apiError ?? "Une catégorie porte déjà ce nom.");
+      return;
     }
+    if (status >= 400 || (isNew && !data)) {
+      setError(apiError ?? (isNew ? "Échec de la création." : "Échec de l'enregistrement."));
+      return;
+    }
+    router.push(isNew && data ? `/admin/categories/${data.id}` : "/admin/categories");
   }
 
   if (isLoading) return <p className="text-gris">Chargement...</p>;
@@ -98,31 +95,14 @@ export default function CategoryEditorPage() {
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
-        {isNew ? (
-          <label className="block max-w-[240px]">
-            <span className="block text-sm font-medium text-noir mb-1">Édition *</span>
-            <select
-              value={editionId ?? ""}
-              onChange={(e) => setEditionId(Number(e.target.value))}
-              className="w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-            >
-              {editions.map((e) => (
-                <option key={e.id} value={e.id}>{e.year}</option>
-              ))}
-            </select>
-          </label>
-        ) : (
-          <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
-        )}
-
-        <CategoryForm value={form} onChange={setForm} />
+        <CategoryForm value={form} onChange={setForm} editions={editions} />
 
         {error && <p className="text-sm text-terre-cuite">{error}</p>}
 
         <div className="flex items-center gap-3 pt-2">
           <button
             onClick={handleSave}
-            disabled={isSaving || !form.nameFr.trim() || !form.nameEn.trim() || !editionId}
+            disabled={isSaving || !form.nameFr.trim() || !form.nameEn.trim()}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
             {isSaving ? "Enregistrement…" : "Enregistrer"}

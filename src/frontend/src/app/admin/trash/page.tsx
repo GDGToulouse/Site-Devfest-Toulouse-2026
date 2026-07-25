@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { adminFetch, getAdminSession } from "@/lib/admin-api";
+import { adminFetch, getAdminSession, purgeExpiredTrash } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
 
@@ -71,6 +71,12 @@ export default function TrashPage() {
   const [restoreTarget, setRestoreTarget] = useState<TrashItem | null>(null);
   const [purgeTarget, setPurgeTarget] = useState<TrashItem | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Manual purge of everything past the retention window (#335): the scheduled
+  // task is not enabled, so the trash would otherwise never empty on its own.
+  const [isPurgeAllOpen, setIsPurgeAllOpen] = useState(false);
+  const [isPurging, setIsPurging] = useState(false);
+  const [purgeReport, setPurgeReport] = useState<string | null>(null);
 
   useEffect(() => {
     // Mirror AdminShell's convention: fetch the role, gate the admin-only tabs.
@@ -153,6 +159,34 @@ export default function TrashPage() {
     await Promise.all([loadItems(selectedEntity), loadCounts()]);
   }
 
+  async function handlePurgeAll() {
+    setIsPurgeAllOpen(false);
+    setActionError(null);
+    setPurgeReport(null);
+    setIsPurging(true);
+
+    const { data, status, error: purgeError } = await purgeExpiredTrash();
+    setIsPurging(false);
+
+    if (!data) {
+      setActionError(
+        status === 401 || status === 403
+          ? "La purge est réservée aux administrateurs. Votre session a peut-être expiré."
+          : purgeError ?? "Purge impossible.",
+      );
+      return;
+    }
+
+    // Zero is a normal outcome, not a failure: the endpoint is idempotent and
+    // only destroys what is past the retention window.
+    setPurgeReport(
+      data.totalPurged === 0
+        ? "Aucun élément n'avait dépassé le délai de conservation : rien n'a été supprimé."
+        : `${data.totalPurged} élément${data.totalPurged > 1 ? "s" : ""} supprimé${data.totalPurged > 1 ? "s" : ""} définitivement.`,
+    );
+    await Promise.all([loadItems(selectedEntity), loadCounts()]);
+  }
+
   const visibleEntities = TRASH_ENTITIES.filter((e) => isAdmin || !e.adminOnly);
 
   // Wait for the role before rendering tabs, or an EDITOR briefly sees the
@@ -163,13 +197,27 @@ export default function TrashPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-noir">Corbeille</h1>
-        <p className="mt-1 text-sm text-gris">
-          Les éléments supprimés sont conservés {retentionDays} jours, puis
-          définitivement effacés. Vous pouvez les restaurer ou les supprimer
-          immédiatement.
-        </p>
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-noir">Corbeille</h1>
+          <p className="mt-1 text-sm text-gris">
+            Les éléments supprimés sont conservés {retentionDays} jours, puis
+            définitivement effacés. Vous pouvez les restaurer ou les supprimer
+            immédiatement.
+          </p>
+        </div>
+        {/* Global action: purges every entity at once, so it belongs to the page
+            header rather than to the selected entity tab (#335). */}
+        {isAdmin && (
+          <button
+            type="button"
+            onClick={() => setIsPurgeAllOpen(true)}
+            disabled={isPurging}
+            className="shrink-0 rounded-lg border border-terre-cuite px-4 py-2 text-sm font-medium text-terre-cuite transition-colors hover:bg-terre-cuite hover:text-blanc disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {isPurging ? "Purge en cours…" : "Purger les éléments expirés"}
+          </button>
+        )}
       </div>
 
       {/* Entity tabs, with a count badge each. */}
@@ -208,6 +256,15 @@ export default function TrashPage() {
           className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite"
         >
           {actionError}
+        </div>
+      )}
+
+      {purgeReport && (
+        <div
+          role="status"
+          className="mb-4 rounded-lg bg-malachite/10 px-4 py-3 text-sm text-malachite"
+        >
+          {purgeReport}
         </div>
       )}
 
@@ -272,6 +329,16 @@ export default function TrashPage() {
         confirmLabel="Restaurer"
         onConfirm={handleRestore}
         onCancel={() => setRestoreTarget(null)}
+      />
+
+      <ConfirmDialog
+        isOpen={isPurgeAllOpen}
+        title="Purger les éléments expirés"
+        message={`Supprimer définitivement tous les éléments en corbeille depuis plus de ${retentionDays} jours, quel que soit leur type ? Les éléments plus récents sont conservés. Cette action est irréversible.`}
+        confirmLabel="Purger"
+        variant="danger"
+        onConfirm={handlePurgeAll}
+        onCancel={() => setIsPurgeAllOpen(false)}
       />
 
       <ConfirmDialog

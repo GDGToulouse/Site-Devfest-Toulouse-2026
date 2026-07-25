@@ -21,6 +21,8 @@ import type {
   TalkDetail,
   EditionSpeaker,
   EditionTalk,
+  Replay,
+  ReplayFilters,
   EcosystemPartner,
   CarouselSlide,
 } from "./types";
@@ -181,4 +183,32 @@ export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]
 
 export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
+}
+
+// Hall of replays (#102). Search and filters are applied server-side so the page
+// stays SSR and indexable, instead of shipping the whole catalogue to filter it
+// in the browser.
+export async function getReplays(params: {
+  q?: string;
+  year?: string;
+  format?: string;
+  category?: string;
+} = {}): Promise<Replay[]> {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+  const suffix = query.toString() ? `?${query}` : "";
+  return (await fetchAPI<Replay[]>(`/api/replays${suffix}`)) || [];
+}
+
+export async function getReplayFilters(): Promise<ReplayFilters> {
+  return (
+    (await fetchAPI<ReplayFilters>("/api/replays/filters")) || {
+      years: [],
+      formats: [],
+      categories: [],
+      total: 0,
+    }
+  );
 }
