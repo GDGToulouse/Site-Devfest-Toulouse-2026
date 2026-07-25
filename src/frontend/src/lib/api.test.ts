@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
-import { getTags, getSpeakerBySlug, BackendUnavailableError } from "./api";
+import { getTags, getSpeakerBySlug, getIdentitySettings, BackendUnavailableError } from "./api";
 
 // #345 — every failure used to collapse into `null`, so "this article does not
 // exist" and "the backend is down" were indistinguishable. Pages turned the
@@ -79,6 +79,38 @@ describe("fetchAPI — an outage throws instead", () => {
     mockFetch(() => new Response("", { status: 500 }));
 
     await expect(getTags()).rejects.toThrow();
+    expect(console.error).toHaveBeenCalled();
+  });
+});
+
+// `next build` prerenders manifest.ts and sitemap.ts with no backend running.
+// Throwing there fails the whole build — which is exactly what broke CI when
+// this change first landed.
+describe("fetchAPI — build time degrades instead of throwing", () => {
+  beforeEach(() => {
+    vi.stubEnv("NEXT_PHASE", "phase-production-build");
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("should return null when the backend is unreachable during a build", async () => {
+    mockFetch(() => Promise.reject(new Error("ECONNREFUSED")));
+
+    await expect(getIdentitySettings()).resolves.toEqual({});
+  });
+
+  it("should return null on a 5xx during a build", async () => {
+    mockFetch(() => new Response("", { status: 500 }));
+
+    await expect(getTags()).resolves.toEqual([]);
+  });
+
+  it("should still log the failure", async () => {
+    mockFetch(() => new Response("", { status: 500 }));
+
+    await getTags();
     expect(console.error).toHaveBeenCalled();
   });
 });

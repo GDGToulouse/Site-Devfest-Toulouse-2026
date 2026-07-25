@@ -60,7 +60,20 @@ export class BackendUnavailableError extends Error {
  *
  * Every failure is logged server-side: an unexplained empty page used to leave
  * no trace at all, which made two incidents needlessly hard to diagnose.
+ *
+ * Exception at build time — see `isBuildTime`.
  */
+
+/**
+ * `next build` prerenders manifest.ts, sitemap.ts and the static pages with no
+ * backend running — that is expected, and each of those already degrades to its
+ * own fallback. Throwing there would fail the build, so during that phase a
+ * failure keeps the previous behaviour and returns null.
+ *
+ * `NEXT_PHASE` is set by Next itself: nothing to configure in CI or Docker.
+ */
+const isBuildTime = () => process.env.NEXT_PHASE === "phase-production-build";
+
 async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
   const url = `${BACKEND_URL}${path}`;
   let res: Response;
@@ -69,6 +82,7 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
     res = await fetch(url, { next: { revalidate } });
   } catch (cause) {
     console.error(`[api] ${path} — backend unreachable`, cause);
+    if (isBuildTime()) return null;
     throw new BackendUnavailableError(path, null, cause);
   }
 
@@ -76,6 +90,7 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
 
   if (!res.ok) {
     console.error(`[api] ${path} — backend answered HTTP ${res.status}`);
+    if (isBuildTime()) return null;
     throw new BackendUnavailableError(path, res.status);
   }
 
@@ -85,6 +100,7 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
     // A 200 that is not JSON means something is answering in the backend's
     // place — a proxy error page, a misrouted request. Not a missing resource.
     console.error(`[api] ${path} — malformed JSON in a ${res.status} response`, cause);
+    if (isBuildTime()) return null;
     throw new BackendUnavailableError(path, res.status, cause);
   }
 }
