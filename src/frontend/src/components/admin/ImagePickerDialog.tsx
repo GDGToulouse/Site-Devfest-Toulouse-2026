@@ -328,14 +328,17 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
               >
                 Choisir un fichier
               </button>
+              {/* No SVG: the backend refuses it since #306 — a same-origin SVG
+                  carrying a script executes in our origin. Offering it here
+                  only produced a 400 the admin could not explain (#341). */}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico,.svg"
+                accept="image/jpeg,image/png,image/webp,image/gif,image/x-icon,image/vnd.microsoft.icon,.ico"
                 onChange={handleFileChange}
                 className="hidden"
               />
-              <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, SVG, ICO — max 20 Mo</p>
+              <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, ICO — max 20 Mo</p>
             </div>
           )}
 
