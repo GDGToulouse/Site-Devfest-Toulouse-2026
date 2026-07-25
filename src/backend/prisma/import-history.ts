@@ -16,6 +16,7 @@ import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
 import {
   buildSocialLinks,
+  normalizeCategory,
   normalizeFormat,
   normalizeLevel,
   normalizeLanguage,
@@ -32,7 +33,28 @@ interface Report {
   speakers: { created: number; updated: number };
   talks: { created: number; updated: number };
   links: number;
+  categories: { linked: number; unmatched: number };
   warnings: string[];
+}
+
+/**
+ * Resolve a category name to its id in the shared catalogue (#338), and make
+ * sure it is offered on this edition — otherwise the talk keeps a category the
+ * public filters cannot show.
+ *
+ * Categories are never created here: the catalogue is curated in the admin, and
+ * a typo in the history file should surface as a warning, not as a new track.
+ */
+async function linkCategory(name: string, editionId: number) {
+  const category = await prisma.category.findUnique({ where: { nameFr: name } });
+  if (!category) return null;
+
+  await prisma.editionCategory.upsert({
+    where: { editionId_categoryId: { editionId, categoryId: category.id } },
+    create: { editionId, categoryId: category.id },
+    update: {},
+  });
+  return category.id;
 }
 
 async function main() {
@@ -47,6 +69,7 @@ async function main() {
     speakers: { created: 0, updated: 0 },
     talks: { created: 0, updated: 0 },
     links: 0,
+    categories: { linked: 0, unmatched: 0 },
     warnings: [],
   };
 
@@ -156,6 +179,18 @@ async function main() {
         .map((n) => idByName.get(n.trim().toLowerCase()))
         .filter((id): id is number => id !== undefined);
 
+      // Track published by the edition itself, mapped onto the shared catalogue.
+      const categoryName = normalizeCategory(s);
+      let categoryId: number | null = null;
+      if (categoryName) {
+        categoryId = await linkCategory(categoryName, edition.id);
+        if (categoryId) report.categories.linked++;
+        else {
+          report.categories.unmatched++;
+          report.warnings.push(`${year}: catégorie « ${categoryName} » absente du catalogue.`);
+        }
+      }
+
       const talkData = {
         title,
         description,
@@ -163,14 +198,22 @@ async function main() {
         level: normalizeLevel(s.complexity),
         language: normalizeLanguage(s.language),
         videoUrl: s.youtube?.trim() || null,
+        categoryId,
         publicationStatus: "PUBLISHED" as const,
       };
 
       const existingId = talkSlugToId.get(baseSlug);
       if (existingId) {
+        // Never blank out a category set in the admin: on a re-run the file may
+        // have nothing to say about a talk that was curated by hand since.
+        const { categoryId: _, ...rest } = talkData;
         await prisma.talk.update({
           where: { id: existingId },
-          data: { ...talkData, speakers: { set: speakerDbIds.map((id) => ({ id })) } },
+          data: {
+            ...rest,
+            ...(categoryId ? { categoryId } : {}),
+            speakers: { set: speakerDbIds.map((id) => ({ id })) },
+          },
         });
         report.talks.updated++;
       } else {

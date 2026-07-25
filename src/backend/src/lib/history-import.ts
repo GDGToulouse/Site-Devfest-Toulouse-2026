@@ -30,6 +30,9 @@ export interface HistorySession {
   complexity?: string;
   tags?: string[];
   youtube?: string;
+  // Track as published by the edition itself. 2016-2019 expose it through
+  // `tags`; 2023-2025 carry it here, recovered from the archived sites.
+  category?: string;
 }
 
 export interface HistoryEdition {
@@ -93,6 +96,77 @@ export function normalizeLevel(complexity: string | undefined): "DEBUTANT" | "IN
 export function normalizeLanguage(language: string | undefined): string {
   const l = (language || "").toLowerCase();
   return l === "en" ? "en" : "fr";
+}
+
+// Editions named their tracks differently every year — three spelling
+// generations in the 2016-2019 `tags`, then the WordPress terms of 2023-2025.
+// They all funnel into the shared catalogue introduced by #338 so a category
+// spans editions instead of being recreated each year.
+const CATEGORY_BY_TAG: Record<string, string> = {
+  // 2016-2019 tags
+  web: "Front-end / UX / Accessibilité",
+  _web: "Front-end / UX / Accessibilité",
+  mobile: "Applications mobiles",
+  "native mobile apps": "Applications mobiles",
+  _native_mobile_apps: "Applications mobiles",
+  cloud: "Infra / DevOps / Sécurité",
+  _cloud___infra: "Infra / DevOps / Sécurité",
+  languages: "Langages de programmation",
+  langages: "Langages de programmation",
+  _languages: "Langages de programmation",
+  "methods & tools": "Méthodes et outils de développement",
+  "method & tools": "Méthodes et outils de développement",
+  "méthodes et outils": "Méthodes et outils de développement",
+  _method___tools: "Méthodes et outils de développement",
+  ia: "IA / Machine Learning / Data",
+  data: "IA / Machine Learning / Data",
+  "machine learning": "IA / Machine Learning / Data",
+  "big data / ml / ai": "IA / Machine Learning / Data",
+  _big_data___ml___ai: "IA / Machine Learning / Data",
+  iot: "Internet des objets / Systèmes embarqués",
+  _iot: "Internet des objets / Systèmes embarqués",
+  wtf: "Tech créative / Autres sujets",
+  _wtf: "Tech créative / Autres sujets",
+  general: "Tech créative / Autres sujets",
+  keynote: "Tech créative / Autres sujets",
+
+  // 2023-2025 WordPress terms
+  "wtf / autre": "Tech créative / Autres sujets",
+  "ux / accessibilité": "Front-end / UX / Accessibilité",
+  "cloud / infra / ops": "Infra / DevOps / Sécurité",
+  "cloud / infra / {dev, git, sec}ops": "Infra / DevOps / Sécurité",
+  "cloud / infra / {dev-git-sec}ops": "Infra / DevOps / Sécurité",
+  "iot / embarqué": "Internet des objets / Systèmes embarqués",
+
+  // Terms already spelled like the current catalogue
+  "applications mobiles": "Applications mobiles",
+  "developer experience": "Developer Experience",
+  "dev assisté par ia": "Dev assisté par IA",
+  "front-end / ux / accessibilité": "Front-end / UX / Accessibilité",
+  "ia / machine learning / data": "IA / Machine Learning / Data",
+  "infra / devops / sécurité": "Infra / DevOps / Sécurité",
+  "internet des objets / systèmes embarqués": "Internet des objets / Systèmes embarqués",
+  "langages de programmation": "Langages de programmation",
+  "low code / no code": "Low code / No code",
+  "méthodes et outils de développement": "Méthodes et outils de développement",
+  "tech créative / autres sujets": "Tech créative / Autres sujets",
+};
+
+/**
+ * Resolve a session's track name in the shared catalogue.
+ *
+ * `category` (2023-2025) wins over `tags` (2016-2019) because it is the term the
+ * edition itself published. Returns null when nothing matches — the category is
+ * optional on Talk, and inventing one would be worse than leaving it empty.
+ */
+export function normalizeCategory(session: HistorySession): string | null {
+  const candidates = [session.category, ...(session.tags ?? [])];
+  for (const raw of candidates) {
+    if (!raw) continue;
+    const key = raw.toLowerCase().replace(/\s+/g, " ").trim();
+    if (CATEGORY_BY_TAG[key]) return CATEGORY_BY_TAG[key];
+  }
+  return null;
 }
 
 // Photos for 2016-2019 reference paths (/images/speakers/...) that are not
