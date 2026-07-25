@@ -92,7 +92,13 @@ export default async function ReplaysPage({
                   key={`${replay.year}-${replay.slug}`}
                   replay={replay}
                   locale={locale}
-                  labels={{ watch: t("watch"), formatLabels }}
+                  current={current}
+                  labels={{
+                    watch: t("watch"),
+                    filterBy: t("filterBy", { value: "{value}" }),
+                    languageLabels: { fr: t("language.fr"), en: t("language.en") },
+                    formatLabels,
+                  }}
                 />
               ))}
             </div>

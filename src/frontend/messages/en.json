@@ -90,6 +90,12 @@
     "description": "The page you are looking for does not exist or has been moved.",
     "backHome": "Back to home"
   },
+  "error": {
+    "title": "Page temporarily unavailable",
+    "description": "This page could not be loaded. The problem is on our side, not yours — please try again in a moment.",
+    "retry": "Try again",
+    "backHome": "Back to home"
+  },
   "header": {
     "menu": "Menu",
     "close": "Close"
@@ -353,6 +359,15 @@
     "watch": "Watch again",
     "empty": "Replays are not available yet.",
     "noResults": "No talk matches your search.",
+    "backToReplays": "All replays",
+    "editionLabel": "{year} edition",
+    "abstract": "Abstract",
+    "speakersLabel": "Speakers",
+    "filterBy": "Filter on {value}",
+    "language": {
+      "fr": "French",
+      "en": "English"
+    },
     "filters": {
       "search": "Search",
       "searchPlaceholder": "Title or speaker name…",

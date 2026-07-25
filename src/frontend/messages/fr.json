@@ -90,6 +90,12 @@
     "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
     "backHome": "Retour à l'accueil"
   },
+  "error": {
+    "title": "Page temporairement indisponible",
+    "description": "Cette page n'a pas pu être chargée. Le problème vient de chez nous, pas de vous — réessayez dans un instant.",
+    "retry": "Réessayer",
+    "backHome": "Retour à l'accueil"
+  },
   "header": {
     "menu": "Menu",
     "close": "Fermer"
@@ -353,6 +359,15 @@
     "watch": "Revoir",
     "empty": "Les replays ne sont pas encore disponibles.",
     "noResults": "Aucune conférence ne correspond à votre recherche.",
+    "backToReplays": "Tous les replays",
+    "editionLabel": "Édition {year}",
+    "abstract": "Résumé",
+    "speakersLabel": "Speakers",
+    "filterBy": "Filtrer sur {value}",
+    "language": {
+      "fr": "Français",
+      "en": "Anglais"
+    },
     "filters": {
       "search": "Rechercher",
       "searchPlaceholder": "Titre ou nom de speaker…",

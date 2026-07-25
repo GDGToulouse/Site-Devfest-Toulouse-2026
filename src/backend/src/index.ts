@@ -141,6 +141,18 @@ await app.register(fastifyStatic, {
   // on every visit (#197).
   maxAge: "365d",
   immutable: true,
+  // Defence in depth for SVG (#346). Uploads are sanitized before storage, but
+  // a file predating that — or a case the allowlist misses — must still be
+  // inert when opened directly: served same-origin with its native
+  // content-type, an SVG runs script in our origin. `sandbox` drops it into an
+  // opaque origin with scripts disabled; `nosniff` stops a mislabelled file
+  // from being reinterpreted as something executable.
+  setHeaders: (reply, filePath) => {
+    reply.setHeader("X-Content-Type-Options", "nosniff");
+    if (filePath.toLowerCase().endsWith(".svg")) {
+      reply.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+    }
+  },
 });
 
 // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.

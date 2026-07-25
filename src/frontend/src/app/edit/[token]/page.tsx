@@ -117,6 +117,10 @@ const T = {
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
+    // Sponsors only: a low-resolution or margin-padded logo renders badly once
+    // the higher tiers scale it up (#315). Informative, never blocking (#340).
+    logoHint:
+      "Logo en haute définition (largeur ≥ 1000 px), sans marge autour du logo. PNG ou WebP à fond transparent de préférence.",
     uploadError: "Envoi impossible : vérifiez que le fichier est une image de moins de 5 Mo.",
     currentImage: "Aperçu",
     orUrl: "ou collez l'adresse d'une image en ligne",
@@ -204,6 +208,8 @@ const T = {
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
+    logoHint:
+      "High-resolution logo (width ≥ 1000 px), with no built-in margin. PNG or WebP with a transparent background preferred.",
     uploadError: "Upload failed: make sure the file is an image under 5 MB.",
     currentImage: "Preview",
     orUrl: "or paste the address of an online image",
@@ -410,6 +416,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             value={form[imageField] ?? ""}
             onChange={(v) => setForm({ ...form, [imageField]: v })}
             t={t}
+            hint={isSpeaker ? undefined : t.logoHint}
           />
 
           {/* Social links — a responsive grid, no more raw lowercase labels. */}
@@ -530,12 +537,16 @@ function ImageField({
   value,
   onChange,
   t,
+  hint,
 }: {
   label: string;
   token: string;
   value: string;
   onChange: (v: string) => void;
   t: (typeof T)[Locale];
+  // Extra guidance under the format line. Sponsors get logo requirements; a
+  // speaker photo has different ones, so it stays absent there (#340).
+  hint?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -592,6 +603,7 @@ function ImageField({
               }}
             />
             <p className="mt-1 text-xs text-gris">{t.uploadHint}</p>
+            {hint && <p className="mt-1 text-xs text-gris">{hint}</p>}
           </div>
           <div>
             <label className="block">

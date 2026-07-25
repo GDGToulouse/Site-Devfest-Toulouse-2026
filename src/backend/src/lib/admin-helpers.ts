@@ -120,6 +120,24 @@ export function isParkedValue(value: string): boolean {
 }
 
 /**
+ * Speaker social links are stored as a JSON string. Malformed content must not
+ * take a public page down, so anything unparseable degrades to no links.
+ *
+ * Lives here rather than in a route module: both the featured-edition speaker
+ * detail and the year-scoped one (#103) need it, and importing between route
+ * files would create a cycle.
+ */
+export function parseSocialLinks(raw: string | null): Record<string, string> {
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    return parsed && typeof parsed === "object" ? (parsed as Record<string, string>) : {};
+  } catch {
+    return {};
+  }
+}
+
+/**
  * Drop a to-one relation whose row sits in the trash.
  *
  * Prisma accepts no `where` on a to-one `include`/`select`, so a trashed

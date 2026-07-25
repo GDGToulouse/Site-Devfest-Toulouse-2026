@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import sharp from "sharp";
 
 import { validateWebhookUrl } from "./webhook-url.js";
+import { sanitizeSvg } from "./svg-sanitize.js";
 
 // Single source of truth for where uploaded media lives. Served publicly at
 // /uploads/ (see index.ts static route). The container mounts it at /app/uploads;
@@ -28,7 +29,18 @@ const EXT_BY_MIME: Record<string, string> = {
   "image/png": ".png",
   "image/webp": ".webp",
   "image/gif": ".gif",
+  "image/svg+xml": ".svg",
 };
+
+export const SVG_MIME = "image/svg+xml";
+
+/** Raised when an SVG carries nothing renderable once stripped of scripts. */
+export class UnsafeSvgError extends Error {
+  constructor() {
+    super("SVG rejected: nothing renderable left after sanitization");
+    this.name = "UnsafeSvgError";
+  }
+}
 
 // Compress a raster image buffer, keeping the original when re-encoding would
 // not save bytes. Returns the buffer to persist.
@@ -64,12 +76,26 @@ function compress(buffer: Buffer, mimetype: string): Promise<Buffer> {
 
 // Persist an image buffer under /uploads/ and return its public URL.
 export async function storeImageBuffer(buffer: Buffer, mimetype: string): Promise<string> {
+  // SVG is XML, not pixels: it can carry scripts, handlers and remote
+  // references, and /uploads/ serves it same-origin. Strip all of that before
+  // it ever reaches the disk (#346) — both uploaders funnel through here.
+  if (mimetype === SVG_MIME) {
+    const safe = sanitizeSvg(buffer.toString("utf8"));
+    if (!safe) throw new UnsafeSvgError();
+    return writeBuffer(Buffer.from(safe, "utf8"), ".svg");
+  }
+
   const finalBuffer = await compress(buffer, mimetype);
-  const ext = EXT_BY_MIME[mimetype] ?? ".jpg";
+  return writeBuffer(finalBuffer, EXT_BY_MIME[mimetype] ?? ".jpg");
+}
+
+// Content-addressed by name: a given URL never changes content, which is what
+// lets index.ts cache /uploads/ immutably.
+async function writeBuffer(buffer: Buffer, ext: string): Promise<string> {
   const uniqueName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`;
 
   await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
-  await fs.promises.writeFile(path.join(UPLOADS_DIR, uniqueName), finalBuffer);
+  await fs.promises.writeFile(path.join(UPLOADS_DIR, uniqueName), buffer);
 
   return `/uploads/${uniqueName}`;
 }

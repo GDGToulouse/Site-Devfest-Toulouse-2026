@@ -42,7 +42,9 @@ function fileIconColor(ext: string): string {
   }
 }
 
-const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+// Mirrors ALLOWED_MIMES in the backend (routes/admin/files.ts). SVG is back
+// since #346, sanitized before storage and served under a sandbox CSP.
+const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export default function FilesAdminPage() {
   const [files, setFiles] = useState<FileInfo[]>([]);
@@ -201,7 +203,7 @@ export default function FilesAdminPage() {
         >
           <p className="text-gris mb-2">Aucun fichier</p>
           <p className="text-sm text-gris">Glissez des fichiers ici ou utilisez le bouton Uploader</p>
-          <p className="text-xs text-gris mt-2">Images (JPEG, PNG, WebP, GIF, SVG) — Documents (PDF, PPT, DOC, XLS) — max 20 Mo</p>
+          <p className="text-xs text-gris mt-2">Images (JPEG, PNG, WebP, GIF, SVG, ICO) — Documents (PDF, PPT, DOC, XLS) — max 20 Mo</p>
         </div>
       ) : (
         <div

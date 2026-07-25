@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getEditionByYear, getEditions, getEditionSpeakers, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
-import { absoluteUrl } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
@@ -142,12 +142,12 @@ export default async function BilanPage({ params }: PageProps) {
     <div>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
       />
       {speakersJsonLd && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(speakersJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(speakersJsonLd) }}
         />
       )}
       {/* Hero banner */}
@@ -294,7 +294,7 @@ export default async function BilanPage({ params }: PageProps) {
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
                 {t("speakers", { count: speakers.length })}
               </h2>
-              <EditionSpeakersGrid speakers={speakers} />
+              <EditionSpeakersGrid speakers={speakers} year={edition.year} />
             </section>
           )}
 
@@ -304,7 +304,7 @@ export default async function BilanPage({ params }: PageProps) {
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
                 {t("sessions", { count: talks.length })}
               </h2>
-              <EditionTalksList talks={talks} replayLabel={t("replay")} />
+              <EditionTalksList talks={talks} replayLabel={t("replay")} year={edition.year} />
             </section>
           )}
 

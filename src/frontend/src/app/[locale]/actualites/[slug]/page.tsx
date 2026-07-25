@@ -7,6 +7,7 @@ import { Link } from "@/i18n/navigation";
 import { getArticleBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
+import { jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -82,7 +83,7 @@ export default async function ArticleDetailPage({
       <div className="mx-auto max-w-4xl">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(articleJsonLd) }}
         />
 
         <Breadcrumb items={breadcrumbItems} />

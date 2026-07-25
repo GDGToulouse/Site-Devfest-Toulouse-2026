@@ -8,6 +8,7 @@ import { localizedField } from "@/lib/i18n-helpers";
 import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
+import { jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -78,7 +79,7 @@ export default async function SponsorDetailPage({
     <div className="px-6 py-8 lg:py-12">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(orgJsonLd) }}
       />
       <div className="mx-auto max-w-6xl">
         <Breadcrumb items={breadcrumbItems} />

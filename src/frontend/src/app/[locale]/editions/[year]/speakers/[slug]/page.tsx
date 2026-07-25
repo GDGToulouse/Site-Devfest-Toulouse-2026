@@ -1,61 +1,68 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getSpeakerBySlug } from "@/lib/api";
+import { getEditionSpeakerBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
+import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import { Link } from "@/i18n/navigation";
 import { jsonLdScript } from "@/lib/seo";
+
+// Detail of a speaker from a past edition (#103). `/speakers/[slug]` is scoped
+// to the featured edition, so historical speakers had no page at all.
+
+interface RouteParams {
+  year: string;
+  slug: string;
+}
 
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<RouteParams>;
 }): Promise<Metadata> {
-  const { slug } = await params;
+  const { year, slug } = await params;
   const locale = await getLocale();
-  const speaker = await getSpeakerBySlug(slug);
+  const speaker = await getEditionSpeakerBySlug(Number(year), slug);
 
   if (!speaker) return { title: "Speaker not found" };
 
-  const description = localizedField(speaker, "bio", locale) || speaker.name;
-
+  const bio = localizedField(speaker, "bio", locale);
+  const path = `/editions/${year}/speakers/${slug}`;
   return {
     title: speaker.name,
-    description,
+    description: bio || speaker.name,
     alternates: {
-      canonical: `/${locale}/speakers/${slug}`,
-      languages: {
-        fr: `/fr/speakers/${slug}`,
-        en: `/en/speakers/${slug}`,
-        "x-default": `/fr/speakers/${slug}`,
-      },
+      canonical: `/${locale}${path}`,
+      languages: { fr: `/fr${path}`, en: `/en${path}`, "x-default": `/fr${path}` },
     },
-    // OG image is generated dynamically by ./opengraph-image (RG-208).
-    openGraph: { title: speaker.name, description },
+    openGraph: { title: speaker.name, description: bio || speaker.name },
   };
 }
 
-export default async function SpeakerDetailPage({
+export default async function EditionSpeakerDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<RouteParams>;
 }) {
-  const { slug } = await params;
+  const { year, slug } = await params;
   const locale = await getLocale();
-  const t = await getTranslations("speakers");
-  const speaker = await getSpeakerBySlug(slug);
+  const t = await getTranslations("replays");
+  const ts = await getTranslations("speakers");
 
+  const yearNum = Number(year);
+  if (!Number.isInteger(yearNum)) notFound();
+
+  const speaker = await getEditionSpeakerBySlug(yearNum, slug);
   if (!speaker) notFound();
 
   const bio = localizedField(speaker, "bio", locale);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
-    { label: t("title"), href: `/${locale}/speakers` },
-    { label: speaker.name, href: `/${locale}/speakers/${slug}` },
+    { label: t("title"), href: `/${locale}/replays` },
+    { label: speaker.name, href: `/${locale}/editions/${year}/speakers/${slug}` },
   ];
 
   const personJsonLd = {
@@ -80,17 +87,17 @@ export default async function SpeakerDetailPage({
 
         <div className="mt-8 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
           <div className="relative h-40 w-40 shrink-0 overflow-hidden rounded-full bg-blanc-casse">
-            {speaker.photoUrl ? (
-              <Image src={speaker.photoUrl} alt={speaker.name} fill className="object-cover" sizes="160px" />
-            ) : (
-              <span className="flex h-full w-full items-center justify-center text-5xl font-bold text-gris">
-                {speaker.name.charAt(0)}
-              </span>
-            )}
+            <SpeakerPhoto photoUrl={speaker.photoUrl} name={speaker.name} size={160} />
           </div>
 
           <div className="text-center sm:text-left">
-            <h1 className="text-3xl lg:text-5xl font-bold text-noir">{speaker.name}</h1>
+            <Link
+              href={`/editions/${speaker.year}`}
+              className="inline-block rounded-full bg-bismarck/10 px-3 py-1 text-sm font-bold text-bismarck transition-colors hover:bg-bismarck/20"
+            >
+              {t("editionLabel", { year: speaker.year })}
+            </Link>
+            <h1 className="mt-3 text-3xl font-bold text-noir lg:text-5xl">{speaker.name}</h1>
             {(speaker.company || speaker.city) && (
               <p className="mt-2 text-lg text-gris">
                 {[speaker.company, speaker.city].filter(Boolean).join(" · ")}
@@ -115,24 +122,20 @@ export default async function SpeakerDetailPage({
           </div>
         </div>
 
-        {bio && (
-          <p className="mt-8 whitespace-pre-line text-lg leading-relaxed text-noir">{bio}</p>
-        )}
+        {bio && <p className="mt-8 whitespace-pre-line text-lg leading-relaxed text-noir">{bio}</p>}
 
         {speaker.talks.length > 0 && (
           <section className="mt-12">
-            <h2 className="mb-4 text-2xl font-bold text-noir">{t("sessionsTitle")}</h2>
+            <h2 className="mb-4 text-2xl font-bold text-noir">{ts("sessionsTitle")}</h2>
             <ul className="space-y-3">
               {speaker.talks.map((talk) => (
                 <li key={talk.slug}>
                   <Link
-                    href={`/conferences/${talk.slug}`}
+                    href={`/editions/${speaker.year}/conferences/${talk.slug}`}
                     className="block rounded-xl bg-blanc p-4 shadow-card transition-transform hover:-translate-y-0.5"
                   >
-                    <span className="font-bold text-noir">
-                      {talk.title}
-                    </span>
-                    <span className="ml-2 text-sm text-gris">{talk.format}</span>
+                    <span className="font-bold text-noir">{talk.title}</span>
+                    <span className="ml-2 text-sm text-gris">{t(`format.${talk.format}`)}</span>
                   </Link>
                 </li>
               ))}
@@ -140,9 +143,9 @@ export default async function SpeakerDetailPage({
           </section>
         )}
 
-        <div className="mt-10">
-          <Link href="/speakers" className="font-bold text-bleu hover:underline">
-            ← {t("backToList")}
+        <div className="mt-12">
+          <Link href="/replays" className="text-sm font-medium text-bleu hover:underline">
+            ← {t("backToReplays")}
           </Link>
         </div>
       </div>
