@@ -31,16 +31,61 @@ import type {
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
+/**
+ * Raised when the backend could not answer at all — 5xx, network failure,
+ * timeout. Distinct from "the resource does not exist", which stays a `null`.
+ *
+ * It exists so a page can tell the two apart (#345): both used to collapse into
+ * `null`, so an outage rendered `notFound()` and that 404 was cached for an
+ * hour by `s-maxage=3600` — on a resource that exists.
+ */
+export class BackendUnavailableError extends Error {
+  constructor(
+    readonly path: string,
+    readonly status: number | null,
+    cause?: unknown,
+  ) {
+    super(`Backend unavailable for ${path}${status ? ` (HTTP ${status})` : ""}`);
+    this.name = "BackendUnavailableError";
+    this.cause = cause;
+  }
+}
+
+/**
+ * Fetch from the backend.
+ *
+ * Returns `null` only when the backend positively answered "not found". Any
+ * other failure throws, so the page renders the error boundary — and is not
+ * cached — instead of a 404 that would outlive the outage.
+ *
+ * Every failure is logged server-side: an unexplained empty page used to leave
+ * no trace at all, which made two incidents needlessly hard to diagnose.
+ */
 async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
   const url = `${BACKEND_URL}${path}`;
+  let res: Response;
+
   try {
-    const res = await fetch(url, {
-      next: { revalidate },
-    });
-    if (!res.ok) return null;
-    return res.json();
-  } catch {
-    return null;
+    res = await fetch(url, { next: { revalidate } });
+  } catch (cause) {
+    console.error(`[api] ${path} — backend unreachable`, cause);
+    throw new BackendUnavailableError(path, null, cause);
+  }
+
+  if (res.status === 404) return null;
+
+  if (!res.ok) {
+    console.error(`[api] ${path} — backend answered HTTP ${res.status}`);
+    throw new BackendUnavailableError(path, res.status);
+  }
+
+  try {
+    return (await res.json()) as T;
+  } catch (cause) {
+    // A 200 that is not JSON means something is answering in the backend's
+    // place — a proxy error page, a misrouted request. Not a missing resource.
+    console.error(`[api] ${path} — malformed JSON in a ${res.status} response`, cause);
+    throw new BackendUnavailableError(path, res.status, cause);
   }
 }
 

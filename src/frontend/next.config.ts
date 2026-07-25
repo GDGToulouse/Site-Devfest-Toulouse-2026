@@ -119,7 +119,17 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "s-maxage=300, stale-while-revalidate=60" },
         ],
       },
-      // Cache-Control: all other public pages — 1 hour
+      // Cache-Control: all other public pages — 1 hour.
+      //
+      // `headers()` matches on path only: it cannot tell a rendered page from a
+      // failed one, so a 500 leaves with this header too. Harmless as things
+      // stand — `s-maxage` addresses shared caches, browsers ignore it, and
+      // Traefik does not cache in front of us (verified: no `age`/`x-cache` on
+      // production responses). Next re-renders the page as soon as the backend
+      // answers again, so recovery is immediate (#345).
+      //
+      // Putting a CDN in front would change that: the error would then be
+      // cached for an hour. Serve 5xx with `no-store` at that layer.
       {
         source: "/:locale(fr|en)/:path+",
         headers: [
