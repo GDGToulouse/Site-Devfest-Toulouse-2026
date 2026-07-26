@@ -6,6 +6,7 @@ import { getEditionTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
+import YouTubeFacade from "@/components/YouTubeFacade";
 import { Link } from "@/i18n/navigation";
 
 // Detail of a past talk (#343). `/conferences/[slug]` only serves the featured
@@ -101,18 +102,13 @@ export default async function EditionTalkDetailPage({
 
         <h1 className="mt-4 text-3xl font-bold text-noir lg:text-5xl">{talk.title}</h1>
 
-        {/* Only talks that were filmed carry a video: 2016 has none at all. */}
+        {/* Only talks that were filmed carry a video: 2016 has none at all.
+            The facade keeps YouTube out of the page until the visitor asks for
+            it, so embedding here costs nothing on load (#348). */}
         {talk.videoUrl && (
-          <a
-            href={talk.videoUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-6 inline-flex w-fit items-center gap-2 rounded-lg bg-terre-cuite px-4 py-2 text-sm font-medium text-blanc transition-colors hover:bg-terre-cuite/90"
-          >
-            <span aria-hidden="true">▶</span>
-            {t("watch")}
-            <span className="sr-only"> — {talk.title}</span>
-          </a>
+          <div className="mt-6">
+            <YouTubeFacade videoUrl={talk.videoUrl} title={talk.title} />
+          </div>
         )}
 
         {talk.description && (
