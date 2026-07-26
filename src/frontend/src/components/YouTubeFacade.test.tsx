@@ -39,6 +39,17 @@ describe("YouTubeFacade — on click", () => {
 
     expect(iframe()).toHaveAttribute("src", expect.stringContaining("/embed/Jcs2Fp8jHEQ"));
   });
+
+  // The whole reason for the facade: embedding must not cost anything until the
+  // visitor asks for the video. The thumbnail is one image, the player is not.
+  it("should keep the video playing on the page, not send the visitor away", async () => {
+    render(<YouTubeFacade videoUrl={WATCH_URL} title="Un talk" />);
+
+    await userEvent.click(screen.getByRole("button"));
+
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(iframe()).toHaveAttribute("allowFullScreen");
+  });
 });
 
 describe("YouTubeFacade — URL forms", () => {
