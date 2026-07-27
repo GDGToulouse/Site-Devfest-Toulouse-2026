@@ -108,6 +108,17 @@ describe("ReplayCard — the whole card opens the talk", () => {
     expect(container.querySelector("article")!.className).toContain("relative");
   });
 
+  // globals.css sets `:focus-visible { outline: 3px solid ... }` for the whole
+  // site. The card must not opt out of it: an earlier attempt to move the ring
+  // onto the pseudo-element only stacked a second indicator on top of the first,
+  // since the global rule wins the cascade anyway.
+  it("should leave the site-wide focus outline alone", () => {
+    renderCard();
+
+    const title = screen.getByRole("link", { name: "Un talk mémorable" });
+    expect(title.className).not.toMatch(/outline-none|\[outline:none\]/);
+  });
+
   // Nesting <a> inside <a> is invalid HTML: browsers "repair" it by breaking the
   // structure apart, which would strand the inner links — keyboard included.
   it("should keep every link a sibling, never nested", () => {
@@ -116,6 +127,29 @@ describe("ReplayCard — the whole card opens the talk", () => {
     );
 
     expect(container.querySelector("a a")).toBeNull();
+  });
+
+  // Lifting a *container* rather than its links puts a non-link surface above
+  // the stretched area: its padding and gaps become dead spots that answer to
+  // nothing. Only elements that are themselves links may be positioned.
+  it("should not lift any non-link container above the stretched area", () => {
+    const { container } = render(
+      <ReplayCard replay={replay} locale="fr" current={noFilter} labels={labels} />,
+    );
+
+    const lifted = [...container.querySelectorAll("div")].filter((el) =>
+      /(^| )relative( |$)/.test(el.className),
+    );
+    expect(lifted).toHaveLength(0);
+  });
+
+  // The language badge shares the tags' look but is a <span>, not a link. It
+  // must not inherit their `relative`, or it would cover the stretched link with
+  // a surface that answers to nothing.
+  it("should not lift the language badge, which is not a link", () => {
+    renderCard();
+
+    expect(screen.getByText("Anglais").className).not.toMatch(/(^| )relative( |$)/);
   });
 
   // The stretched pseudo-element paints over the card, so anything meant to stay

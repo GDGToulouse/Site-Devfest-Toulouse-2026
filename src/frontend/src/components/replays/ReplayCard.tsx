@@ -38,10 +38,11 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
 
   // Tags share one muted style so the reading order stays title → speakers →
   // tags. Only the category keeps its own colour, which carries meaning.
-  // `relative` lifts each tag above the title's stretched link (#350), so a tag
-  // still filters instead of opening the talk.
-  const tagClass =
-    "relative rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors hover:brightness-95";
+  const badgeClass = "rounded-full px-2 py-0.5 text-[11px] font-medium";
+  // Tag links add `relative` to sit above the title's stretched link (#350), so
+  // clicking one filters instead of opening the talk. Non-link badges must not:
+  // they would cover the stretched area without being clickable themselves.
+  const tagClass = `relative ${badgeClass} transition-colors hover:brightness-95`;
 
   return (
     <article className="group relative flex h-full flex-col rounded-[16px] border border-[rgba(29,29,27,0.08)] bg-blanc p-5 shadow-card transition-shadow duration-200 hover:shadow-lg">
@@ -53,16 +54,17 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
       <h3 className="text-lg font-bold leading-snug text-noir">
         <Link
           href={talkHref}
-          className="after:absolute after:inset-0 after:rounded-[16px] group-hover:text-bleu focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-malachite/50"
+          className="after:absolute after:inset-0 after:rounded-[16px] group-hover:text-bleu"
         >
           {replay.title}
         </Link>
       </h3>
 
-      {/* Everything below has to be lifted back above the stretched area, or the
-          pseudo-element would swallow its clicks. */}
+      {/* Only the links inside are lifted above the stretched area, never their
+          container: a positioned wrapper would sit on top of the pseudo-element
+          without being a link itself, leaving dead spots in its own padding. */}
       {replay.speakers.length > 0 && (
-        <div className="relative mt-3">
+        <div className="mt-3">
           <SpeakerAvatars speakers={replay.speakers} year={replay.year} />
         </div>
       )}
@@ -93,7 +95,7 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
           </Link>
         )}
         {/* Language is not a filter of its own, so it stays a plain badge. */}
-        <span className={`${tagClass} bg-blanc-casse text-gris`}>{languageLabel}</span>
+        <span className={`${badgeClass} bg-blanc-casse text-gris`}>{languageLabel}</span>
       </div>
 
       <a
