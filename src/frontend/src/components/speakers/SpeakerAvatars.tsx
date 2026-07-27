@@ -70,7 +70,12 @@ export default function SpeakerAvatars({
           : speakers.map((speaker, i) => (
               <span key={speaker.slug}>
                 {i > 0 && ", "}
-                <Link href={speakerHref(speaker.slug)} className="hover:text-bleu hover:underline">
+                {/* `relative` keeps the name clickable when a caller stretches
+                    a link over the whole card (#350). */}
+                <Link
+                  href={speakerHref(speaker.slug)}
+                  className="relative hover:text-bleu hover:underline"
+                >
                   {speaker.name}
                 </Link>
               </span>
