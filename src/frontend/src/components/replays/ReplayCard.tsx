@@ -38,21 +38,31 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
 
   // Tags share one muted style so the reading order stays title → speakers →
   // tags. Only the category keeps its own colour, which carries meaning.
+  // `relative` lifts each tag above the title's stretched link (#350), so a tag
+  // still filters instead of opening the talk.
   const tagClass =
-    "rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors hover:brightness-95";
+    "relative rounded-full px-2 py-0.5 text-[11px] font-medium transition-colors hover:brightness-95";
 
   return (
-    <article className="flex h-full flex-col rounded-[16px] border border-[rgba(29,29,27,0.08)] bg-blanc p-5 shadow-card transition-shadow duration-200 hover:shadow-lg">
-      {/* The whole card is not a single link: the tags below are links too, and
-          nesting <a> inside <a> is invalid HTML. The title carries the link. */}
+    <article className="group relative flex h-full flex-col rounded-[16px] border border-[rgba(29,29,27,0.08)] bg-blanc p-5 shadow-card transition-shadow duration-200 hover:shadow-lg">
+      {/* The card cannot be wrapped in a link: the speakers and tags below are
+          links too, and nesting <a> inside <a> is invalid HTML. Instead the
+          title's link stretches over the whole card through a pseudo-element,
+          so clicking anywhere opens the talk (#350) while the DOM keeps a
+          single, correctly-labelled <a>. Inner links sit above it. */}
       <h3 className="text-lg font-bold leading-snug text-noir">
-        <Link href={talkHref} className="hover:text-bleu focus:outline-none focus:ring-2 focus:ring-malachite/50">
+        <Link
+          href={talkHref}
+          className="after:absolute after:inset-0 after:rounded-[16px] group-hover:text-bleu focus-visible:outline-none focus-visible:after:ring-2 focus-visible:after:ring-malachite/50"
+        >
           {replay.title}
         </Link>
       </h3>
 
+      {/* Everything below has to be lifted back above the stretched area, or the
+          pseudo-element would swallow its clicks. */}
       {replay.speakers.length > 0 && (
-        <div className="mt-3">
+        <div className="relative mt-3">
           <SpeakerAvatars speakers={replay.speakers} year={replay.year} />
         </div>
       )}
@@ -90,7 +100,7 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
         href={replay.videoUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex w-fit items-center gap-2 self-start rounded-lg bg-terre-cuite px-4 py-2 text-sm font-medium text-blanc transition-colors hover:bg-terre-cuite/90"
+        className="relative mt-4 inline-flex w-fit items-center gap-2 self-start rounded-lg bg-terre-cuite px-4 py-2 text-sm font-medium text-blanc transition-colors hover:bg-terre-cuite/90"
       >
         {/* Play glyph, decorative: the link text already names the action. */}
         <span aria-hidden="true">▶</span>
