@@ -26,7 +26,10 @@ afterEach(async () => {
 async function makeSpeaker(
   editionId: number,
   name: string,
-  { publicationStatus = "PUBLISHED" as const, deletedAt = null as Date | null },
+  {
+    publicationStatus = "PUBLISHED",
+    deletedAt = null,
+  }: { publicationStatus?: "DRAFT" | "PUBLISHED"; deletedAt?: Date | null },
 ) {
   const speaker = await prisma.speaker.create({
     data: {
