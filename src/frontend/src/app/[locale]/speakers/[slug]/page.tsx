@@ -49,6 +49,9 @@ export default async function SpeakerDetailPage({
   // Talk formats are translated under `replays` — the only namespace that owns
   // them. Named for what it does, so the two lookups stay legible.
   const tFormat = await getTranslations("replays");
+  // Levels are only spelled out under `conferences` — `replays` has no level.*
+  // key at all, so a third lookup is unavoidable here (#359).
+  const tLevel = await getTranslations("conferences");
   // The edition is only needed to name the current line-up in the footer link
   // (#357); fetched alongside the speaker so the two calls do not serialize.
   const [speaker, edition] = await Promise.all([getSpeakerBySlug(slug), getCurrentEdition()]);
@@ -151,10 +154,39 @@ export default async function SpeakerDetailPage({
                             href={`/editions/${participation.year}/conferences/${talk.slug}`}
                             className="block rounded-xl bg-blanc p-4 shadow-card transition-transform hover:-translate-y-0.5"
                           >
-                            <span className="font-bold text-noir">{talk.title}</span>
-                            <span className="ml-2 text-sm text-gris">
-                              {tFormat(`format.${talk.format}`)}
-                            </span>
+                            {/* One line, truncated: titles range from three words
+                                to a full sentence, and letting them wrap made the
+                                cards ragged. The full wording is one click away,
+                                and on hover meanwhile. */}
+                            <p className="truncate font-bold text-noir" title={talk.title}>
+                              {talk.title}
+                            </p>
+                            {/* Same badges as the talk page, in the same order, so
+                                a session reads identically wherever it shows up. */}
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-bleu/10 px-3 py-1 text-sm font-bold text-bleu">
+                                {tFormat(`format.${talk.format}`)}
+                              </span>
+                              {talk.category && (
+                                <span
+                                  className="rounded-full px-3 py-1 text-sm font-bold"
+                                  style={{
+                                    backgroundColor: `${talk.category.color}20`,
+                                    color: talk.category.color,
+                                  }}
+                                >
+                                  {localizedField(talk.category, "name", locale)}
+                                </span>
+                              )}
+                              {talk.level && (
+                                <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">
+                                  {tLevel(`level.${talk.level}`)}
+                                </span>
+                              )}
+                              <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">
+                                {talk.language === "en" ? tFormat("language.en") : tFormat("language.fr")}
+                              </span>
+                            </div>
                           </Link>
                         </li>
                       ))}
