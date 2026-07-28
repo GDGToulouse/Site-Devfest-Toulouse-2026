@@ -124,7 +124,7 @@ export default async function EditionTalkDetailPage({
               {talk.speakers.map((sp) => (
                 <Link
                   key={sp.slug}
-                  href={`/editions/${talk.year}/speakers/${sp.slug}`}
+                  href={`/speakers/${sp.slug}`}
                   className="group flex flex-col items-center gap-3 text-center"
                 >
                   <div className="relative h-24 w-24 overflow-hidden rounded-full bg-blanc-casse">

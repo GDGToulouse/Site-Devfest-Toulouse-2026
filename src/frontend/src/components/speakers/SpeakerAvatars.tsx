@@ -3,9 +3,6 @@ import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 
 interface SpeakerAvatarsProps {
   speakers: { slug: string; name: string; photoUrl: string | null }[];
-  // Past editions link to their year-scoped speaker page; the current edition
-  // uses the plain /speakers route. Omit for the featured edition.
-  year?: number;
   // Stacked avatars stay readable up to a point; beyond it the rest is folded
   // into a +N bubble while the names line still lists everyone.
   max?: number;
@@ -18,17 +15,16 @@ interface SpeakerAvatarsProps {
 // which had drifted into two separate implementations of the same design.
 export default function SpeakerAvatars({
   speakers,
-  year,
   max = 4,
   asPlainText = false,
 }: SpeakerAvatarsProps) {
   const shown = speakers.slice(0, max);
   const extra = speakers.length - shown.length;
 
-  // `/speakers/[slug]` only serves the featured edition, so a past speaker needs
-  // its year-scoped page (#103) — linking there instead would 404.
-  const speakerHref = (slug: string) =>
-    year === undefined ? `/speakers/${slug}` : `/editions/${year}/speakers/${slug}`;
+  // One person, one URL (#352). This used to branch on a `year` prop because
+  // `/speakers/[slug]` was scoped to the featured edition and 404ed on anyone
+  // else; the slug is global now, so the edition has no place in the path.
+  const speakerHref = (slug: string) => `/speakers/${slug}`;
 
   const avatarClass =
     "relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-blanc-casse ring-2 ring-blanc";
@@ -70,7 +66,12 @@ export default function SpeakerAvatars({
           : speakers.map((speaker, i) => (
               <span key={speaker.slug}>
                 {i > 0 && ", "}
-                <Link href={speakerHref(speaker.slug)} className="hover:text-bleu hover:underline">
+                {/* `relative` keeps the name clickable when a caller stretches
+                    a link over the whole card (#350). */}
+                <Link
+                  href={speakerHref(speaker.slug)}
+                  className="relative hover:text-bleu hover:underline"
+                >
                   {speaker.name}
                 </Link>
               </span>

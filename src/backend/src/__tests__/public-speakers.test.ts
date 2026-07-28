@@ -23,14 +23,21 @@ afterEach(async () => {
   }
 });
 
-async function makeSpeaker(editionId: number, overrides: Record<string, unknown> = {}) {
+// #351 — publicationStatus and isFeatured moved to the participation, so the
+// helper splits its overrides: those two go to SpeakerEdition, the rest stay on
+// the identity. Callers keep the pre-#351 signature.
+async function makeSpeaker(
+  editionId: number,
+  { publicationStatus = "PUBLISHED" as const, isFeatured = false, ...identity }: Record<string, unknown> = {},
+) {
   const s = await prisma.speaker.create({
     data: {
       name: "Test Speaker",
       slug: `test-speaker-${Date.now()}-${Math.round(performance.now())}`,
-      editionId,
-      publicationStatus: "PUBLISHED",
-      ...overrides,
+      ...identity,
+      editions: {
+        create: [{ editionId, publicationStatus: publicationStatus as "PUBLISHED" | "DRAFT", isFeatured: isFeatured as boolean }],
+      },
     },
   });
   createdIds.push(s.id);
@@ -100,8 +107,11 @@ describe("Public speakers (#308)", () => {
     expect(body.bioFr).toBe("Bio FR");
     // Private field never leaks even on the detail route.
     expect(body).not.toHaveProperty("contactEmail");
-    // Only the published talk shows up.
-    const titles = body.talks.map((t: { title: string }) => t.title);
+    // Only the published talk shows up. Talks hang off the participations since
+    // #352 — the page groups them by edition.
+    const titles = body.participations.flatMap((p: { talks: { title: string }[] }) =>
+      p.talks.map((t) => t.title),
+    );
     expect(titles).toContain("Live Talk");
     expect(titles).not.toContain("Draft Talk");
   });

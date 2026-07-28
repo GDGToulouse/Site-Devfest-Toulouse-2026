@@ -132,67 +132,12 @@ export default async function editionRoutes(app: FastifyInstance) {
     const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
-    const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-      orderBy: { name: "asc" },
-      select: { slug: true, name: true, photoUrl: true, company: true },
+    const links = await prisma.speakerEdition.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
+      orderBy: { speaker: { name: "asc" } },
+      select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
     });
-    return speakers;
-  });
-
-  // GET /api/editions/:year/speakers/:slug — detail of one past speaker (#103).
-  //
-  // `/api/speakers/:slug` scopes to the featured edition, so a 2019 speaker
-  // answers 404. Speaker.slug is unique per edition, hence the year in the path.
-  app.get<{ Params: { year: string; slug: string } }>("/editions/:year/speakers/:slug", {
-    schema: {
-      params: {
-        type: "object",
-        required: ["year", "slug"],
-        properties: { year: { type: "string" }, slug: { type: "string" } },
-      },
-    },
-  }, async (request, reply) => {
-    const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
-
-    const edition = await prisma.edition.findFirst({
-      where: { year: yearNum, ...notDeleted },
-      select: { id: true, year: true },
-    });
-    if (!edition) return reply.status(404).send({ error: "Edition not found" });
-
-    const speaker = await prisma.speaker.findFirst({
-      where: {
-        editionId: edition.id,
-        slug: request.params.slug,
-        publicationStatus: "PUBLISHED",
-        ...notDeleted,
-      },
-      include: {
-        // Nested filter again: a trashed talk must not ride along (#147).
-        talks: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
-          select: { slug: true, title: true, format: true, videoUrl: true },
-          orderBy: { title: "asc" },
-        },
-      },
-    });
-
-    if (!speaker) return reply.status(404).send({ error: "Speaker not found" });
-
-    return {
-      slug: speaker.slug,
-      name: speaker.name,
-      photoUrl: speaker.photoUrl,
-      company: speaker.company,
-      city: speaker.city,
-      bioFr: speaker.bioFr,
-      bioEn: speaker.bioEn,
-      socialLinks: parseSocialLinks(speaker.socialLinks),
-      year: edition.year,
-      talks: speaker.talks,
-    };
+    return links.map((link) => link.speaker);
   });
 
   // GET /api/editions/:year/talks — published talks of any edition by year,
@@ -213,7 +158,13 @@ export default async function editionRoutes(app: FastifyInstance) {
         // Nested: the filter does not reach here on its own, and a trashed
         // speaker would keep appearing under a live talk (#147).
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          // Since #351 the question is not "is this person published" but "is
+          // this person published *for this edition*" — the status lives on the
+          // participation, and the talk tells us which edition to look at.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true },
           orderBy: { name: "asc" },
         },
@@ -270,7 +221,11 @@ export default async function editionRoutes(app: FastifyInstance) {
         // Nested reads carry their own filter: a trashed speaker would keep
         // showing up under a live talk otherwise (#147).
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          // Published *for this edition* (#351), same reasoning as the list above.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },
@@ -338,8 +293,10 @@ export default async function editionRoutes(app: FastifyInstance) {
             ...notDeleted,
           },
         }),
-        prisma.speaker.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+        // Counted on the participations (#351): the identity is not what makes
+        // a speaker part of this edition.
+        prisma.speakerEdition.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
         }),
         prisma.sponsor.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },

@@ -12,6 +12,24 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+### Modifié
+
+- **Un speaker est une personne, plus une ligne par édition** : `Speaker` porte
+  désormais l'identité, et `SpeakerEdition` la participation à une année, avec son
+  statut de publication et sa mise en avant. Une personne présente sur plusieurs
+  éditions n'existe plus qu'une fois (#351).
+- **Une personne, une URL** : la fiche speaker vit sur `/speakers/<slug>` quelle
+  que soit l'édition, et liste ses conférences par année décroissante. L'ancienne
+  URL `/editions/<année>/speakers/<slug>` est supprimée (#352).
+- **Le sponsor employeur est rattaché à l'année**, plus à la personne : quelqu'un
+  ayant changé d'entreprise entre deux éditions affiche le bon employeur sur
+  chacune (#353).
+
+### Ajouté
+
+- **Hall of fame** (`/hall-of-fame`) : toutes les personnes ayant parlé au DevFest
+  Toulouse, toutes éditions confondues, filtrables par année (#352).
+
 ## [1.5.0] - 2026-07-23
 
 Le sponsoring devient un **catalogue d'offres** que l'organisation édite elle-même,

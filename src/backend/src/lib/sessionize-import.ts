@@ -253,8 +253,9 @@ export async function importSessionize(
   }
 
   // 3. Upsert speakers, keyed by slug. Track the resulting db id per Sessionize id.
+  // Reconciled across every edition since #351: someone who already spoke a
+  // previous year must be reused, not duplicated under `ada-lovelace-2`.
   const existingSpeakers = await prisma.speaker.findMany({
-    where: { editionId },
     select: { id: true, slug: true, photoUrl: true },
   });
   const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
@@ -279,6 +280,7 @@ export async function importSessionize(
       report,
     );
 
+    let speakerId: number;
     const existingId = speakerSlugToId.get(baseSlug);
     if (existingId) {
       const updated = await prisma.speaker.update({
@@ -291,6 +293,7 @@ export async function importSessionize(
           socialLinks: count > 0 ? JSON.stringify(social) : null,
         },
       });
+      speakerId = updated.id;
       dbIdBySzSpeakerId.set(sz.id, updated.id);
       report.speakers.updated++;
     } else {
@@ -298,20 +301,28 @@ export async function importSessionize(
       takenSpeakerSlugs.add(slug);
       const created = await prisma.speaker.create({
         data: {
-          editionId,
           slug,
           name,
           company: sz.tagLine?.trim() || null,
           bioFr: sz.bio?.trim() || null,
           photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
-          publicationStatus: "DRAFT",
         },
       });
       speakerSlugToId.set(slug, created.id);
+      speakerId = created.id;
       dbIdBySzSpeakerId.set(sz.id, created.id);
       report.speakers.created++;
     }
+
+    // The participation starts as a draft even when the person is already
+    // published on another edition (#351): being announced for 2024 must not
+    // put someone live on the edition being prepared.
+    await prisma.speakerEdition.upsert({
+      where: { speakerId_editionId: { speakerId, editionId } },
+      create: { speakerId, editionId, publicationStatus: "DRAFT" },
+      update: {},
+    });
   }
 
   // 4. Upsert sessions (talks), keyed by slug, linking speakers + category.

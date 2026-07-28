@@ -10,8 +10,15 @@ import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
-interface SpeakerRow extends Speaker {
-  edition?: { id: number; year: number };
+// #351: a speaker takes part in several editions, so the row carries them all.
+type SpeakerRow = Speaker;
+
+// The participation the admin is currently looking at. With no year filter a
+// person may hold several, in which case the most recent one is shown — the
+// API already sorts `editions` newest first.
+function currentParticipation(speaker: SpeakerRow, year: string) {
+  if (!year) return speaker.editions[0];
+  return speaker.editions.find((e) => String(e.year) === year);
 }
 
 export default function SpeakersDataPage() {
@@ -33,18 +40,34 @@ export default function SpeakersDataPage() {
   }, []);
 
   async function applyBulk(action: "setStatus" | "setFeatured", value: "DRAFT" | "PUBLISHED" | boolean) {
+    // Both actions target one participation since #351, so an edition has to be
+    // picked: applying to every year a speaker took part in would publish people
+    // on editions the admin was not even looking at.
+    const editionId = selectedEditionId;
+    if (!editionId) {
+      setError("Choisissez une édition avant d'appliquer une action groupée.");
+      return;
+    }
+
     const ids = [...selectedIds];
     const { status } = await adminFetch("/speakers/bulk", {
       method: "POST",
-      body: JSON.stringify({ ids, action, value }),
+      body: JSON.stringify({ ids, editionId, action, value }),
     });
     if (status !== 200) return;
     setSpeakers((prev) =>
       prev.map((s) =>
         selectedIds.has(s.id)
-          ? action === "setStatus"
-            ? { ...s, publicationStatus: value as "DRAFT" | "PUBLISHED" }
-            : { ...s, isFeatured: value as boolean }
+          ? {
+              ...s,
+              editions: s.editions.map((e) =>
+                e.id === editionId
+                  ? action === "setStatus"
+                    ? { ...e, publicationStatus: value as "DRAFT" | "PUBLISHED" }
+                    : { ...e, isFeatured: value as boolean }
+                  : e,
+              ),
+            }
           : s,
       ),
     );
@@ -70,14 +93,21 @@ export default function SpeakersDataPage() {
   }
 
   const years = useMemo(
-    () => [...new Set(speakers.map((s) => s.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
+    () => [...new Set(speakers.flatMap((s) => s.editions.map((e) => e.year)))].sort((a, b) => b - a),
     [speakers],
   );
+
+  // The edition the bulk actions apply to, read off the year filter.
+  // Cheap lookup, left to the React Compiler rather than a useMemo it cannot
+  // preserve (the surrounding memoized values would stop being optimized).
+  const selectedEditionId = year
+    ? (speakers.flatMap((s) => s.editions).find((e) => String(e.year) === year)?.id ?? null)
+    : null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return speakers.filter((s) => {
-      if (year && String(s.edition?.year) !== year) return false;
+      if (year && !s.editions.some((e) => String(e.year) === year)) return false;
       if (q && !s.name.toLowerCase().includes(q) && !(s.company ?? "").toLowerCase().includes(q)) return false;
       return true;
     });
@@ -101,15 +131,30 @@ export default function SpeakersDataPage() {
     {
       key: "status",
       label: "Statut",
-      render: (s: SpeakerRow) => (
-        <StatusBadge
-          status={s.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
-          variant={s.publicationStatus === "PUBLISHED" ? "green" : "gray"}
-        />
-      ),
+      render: (s: SpeakerRow) => {
+        const participation = currentParticipation(s, year);
+        if (!participation) return "—";
+        return (
+          <StatusBadge
+            status={participation.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
+            variant={participation.publicationStatus === "PUBLISHED" ? "green" : "gray"}
+          />
+        );
+      },
     },
-    { key: "featured", label: "À la une", render: (s: SpeakerRow) => (s.isFeatured ? "★" : "") },
-    { key: "edition", label: "Édition", render: (s: SpeakerRow) => s.edition?.year ?? "—" },
+    {
+      key: "featured",
+      label: "À la une",
+      render: (s: SpeakerRow) => (currentParticipation(s, year)?.isFeatured ? "★" : ""),
+    },
+    {
+      key: "editions",
+      label: "Éditions",
+      // Every year the person took part in, so a multi-edition speaker reads as
+      // one row instead of the duplicates the old model produced.
+      render: (s: SpeakerRow) =>
+        s.editions.length ? s.editions.map((e) => e.year).join(", ") : "—",
+    },
   ];
 
   return (
@@ -152,7 +197,14 @@ export default function SpeakersDataPage() {
             <span className="text-sm text-gris">{filtered.length} speaker{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && !selectedEditionId && (
+            <div role="status" className="mb-4 rounded-lg bg-jaune/10 px-4 py-3 text-sm text-noir">
+              Les actions groupées s&apos;appliquent à une édition : choisissez une année dans le
+              filtre ci-dessus.
+            </div>
+          )}
+
+          {selectedIds.size > 0 && selectedEditionId && (
             <BulkActionBar
               count={selectedIds.size}
               entitySingular="speaker"

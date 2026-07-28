@@ -22,9 +22,11 @@ export async function GET(
     return new Response("Speaker not found", { status: 404 });
   }
 
+  // Talks hang off the participations since #352; flatten them back, newest
+  // edition first, so the default pick stays the most recent session.
+  const talks = speaker.participations.flatMap((p) => p.talks);
   const talkSlug = new URL(request.url).searchParams.get("talk");
-  const talk =
-    speaker.talks.find((t) => t.slug === talkSlug) ?? speaker.talks[0] ?? null;
+  const talk = talks.find((t) => t.slug === talkSlug) ?? talks[0] ?? null;
   const talkTitle = talk?.title ?? "";
 
   const { name, company, photoUrl } = speaker;

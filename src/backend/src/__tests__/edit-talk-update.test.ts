@@ -36,10 +36,9 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
       data: {
         name: "Talk Update Speaker",
         slug: "talk-update-speaker",
-        editionId,
         editToken: TOKEN,
         editTokenSentAt: new Date(),
-        publicationStatus: "PUBLISHED",
+        editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },
     });
     speakerId = speaker.id;
@@ -48,10 +47,9 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
       data: {
         name: "Other Speaker",
         slug: "talk-update-other-speaker",
-        editionId,
         editToken: OTHER_TOKEN,
         editTokenSentAt: new Date(),
-        publicationStatus: "PUBLISHED",
+        editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },
     });
     otherSpeakerId = other.id;

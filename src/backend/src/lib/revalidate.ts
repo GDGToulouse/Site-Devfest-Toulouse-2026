@@ -83,6 +83,20 @@ export function revalidateSpeakers(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/speakers"),
+    // The archive lists everyone, so it goes stale on any speaker change (#352).
+    ...bilingualPaths("/hall-of-fame"),
+  ]);
+}
+
+// One person's page (#352). Separate from revalidateSpeakers because there are
+// ~240 of these: purging them all on every edit would be absurd, and never
+// purging them means a speaker who fixes their bio from their magic link sees
+// nothing change for an hour.
+export function revalidateSpeaker(slug: string): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(`/speakers/${slug}`),
+    // The OG image is its own route — same reason as the home page (#183).
+    ...bilingualPaths(`/speakers/${slug}/opengraph-image`),
   ]);
 }
 

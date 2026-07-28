@@ -270,7 +270,19 @@ export interface SpeakerPublic {
 export interface SpeakerTalkRef {
   slug: string;
   title: string;
-  format: string;
+  format: TalkFormat;
+  videoUrl: string | null;
+}
+
+// One year a person took part in (#352). Carries its own talks so the page can
+// section them by edition — and so a year with no published session still shows,
+// which a flat talk list could not express.
+export interface SpeakerParticipation {
+  year: number;
+  isFeatured: boolean;
+  // The employer of that year (#353), null unless the sponsor is published.
+  sponsor: { slug: string; name: string } | null;
+  talks: SpeakerTalkRef[];
 }
 
 export interface SpeakerDetail {
@@ -283,24 +295,18 @@ export interface SpeakerDetail {
   bioFr: string | null;
   bioEn: string | null;
   socialLinks: Record<string, string>;
-  sponsor: { slug: string; name: string } | null;
-  talks: SpeakerTalkRef[];
+  // Newest year first.
+  participations: SpeakerParticipation[];
 }
 
-// Detail of a speaker from a past edition (#103). Year-scoped, since
-// `/api/speakers/:slug` only serves the featured edition. No sponsor relation:
-// historical imports carry none.
-export interface EditionSpeakerDetail {
+// A row of /hall-of-fame (#352): every person who ever spoke. Deliberately lean
+// — 239 of these ship in one payload, so no bio and no social links.
+export interface HallOfFameEntry {
   slug: string;
   name: string;
   photoUrl: string | null;
   company: string | null;
-  city: string | null;
-  bioFr: string | null;
-  bioEn: string | null;
-  socialLinks: Record<string, string>;
-  year: number;
-  talks: { slug: string; title: string; format: TalkFormat; videoUrl: string | null }[];
+  years: number[];
 }
 
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
@@ -408,7 +414,23 @@ export interface Category {
   color: string;
 }
 
+// One year a speaker took part in, as exposed by the admin API (#351): the
+// editorial state is per-edition, so it lives here and not on the person.
+export interface SpeakerEdition {
+  // The edition's id — not the join row's. The attach/detach endpoints are keyed
+  // on (speakerId, editionId), so this is what they take.
+  id: number;
+  year: number;
+  isFeatured: boolean;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  // The sponsor this person worked for that year (#353).
+  sponsorId: number | null;
+}
+
 // Admin speaker entity (CRUD).
+// A person, shared across editions (#351) — same shape as Category since #338.
+// The edition binding, the publication status and the featured flag live on the
+// `editions` participations, newest year first.
 export interface Speaker {
   id: number;
   slug: string;
@@ -422,10 +444,7 @@ export interface Speaker {
   contactEmail: string | null;
   locale: string;
   editLinkLocked: boolean;
-  isFeatured: boolean;
-  sponsorId: number | null;
-  publicationStatus: "DRAFT" | "PUBLISHED";
-  editionId: number;
+  editions: SpeakerEdition[];
 }
 
 export interface EditionDetail {

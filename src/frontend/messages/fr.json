@@ -83,7 +83,8 @@
     "legalNotice": "Mentions légales",
     "codeOfConduct": "Code de conduite",
     "sitemap": "Plan du site",
-    "replays": "Replays"
+    "replays": "Replays",
+    "hallOfFame": "Hall of fame"
   },
   "notFound": {
     "title": "Page introuvable",
@@ -313,7 +314,20 @@
     "home": "Accueil",
     "empty": "Les conférenciers seront annoncés prochainement.",
     "sessionsTitle": "Sessions",
-    "backToList": "Tous les conférenciers"
+    "noSessionThatYear": "Aucune session publiée pour cette édition.",
+    "backToList": "Tous les conférenciers",
+    "backToHallOfFame": "Voir le hall of fame"
+  },
+  "hallOfFame": {
+    "title": "Hall of fame",
+    "description": "Tous les conférenciers du DevFest Toulouse depuis 2016 : {count} personnes, toutes éditions confondues.",
+    "heading": "Hall of fame",
+    "intro": "{count} personnes ont pris la parole au DevFest Toulouse depuis 2016.",
+    "home": "Accueil",
+    "empty": "Aucun conférencier pour le moment.",
+    "allYears": "Toutes les éditions",
+    "filterLabel": "Filtrer par édition",
+    "countLabel": "{count} conférenciers"
   },
   "sponsors": {
     "title": "Sponsors",
