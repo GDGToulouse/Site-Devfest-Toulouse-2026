@@ -7,6 +7,7 @@ import {
   revalidateConferences,
   revalidateJobOffers,
   revalidateSpeakers,
+  revalidateSpeaker,
   revalidateSponsors,
 } from "../lib/revalidate.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
@@ -547,6 +548,9 @@ export default async function editRoutes(app: FastifyInstance) {
         },
       });
       revalidateSpeakers();
+      // Their own page too (#352), or the bio they just fixed stays stale for an
+      // hour on the very page the link is meant to update.
+      revalidateSpeaker(entity.slug);
     } else {
       const body = request.body as SponsorEditBody;
       await prisma.sponsor.update({

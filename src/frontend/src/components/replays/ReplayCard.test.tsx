@@ -85,9 +85,11 @@ describe("ReplayCard", () => {
     expect(hrefOf(/Revoir/)).toBe("https://www.youtube.com/watch?v=abc");
   });
 
-  it("should link a speaker to their year-scoped page", () => {
+  it("should link a speaker to their single page, with no edition in the path", () => {
     renderCard();
-    expect(hrefOf("Ada Lovelace")).toBe("/editions/2019/speakers/ada");
+    // #352 — one person, one URL. The card still points its talk link at the
+    // edition, because a talk really does belong to one year.
+    expect(hrefOf("Ada Lovelace")).toBe("/speakers/ada");
   });
 });
 
@@ -173,7 +175,7 @@ describe("ReplayCard — the whole card opens the talk", () => {
   it("should still send each inner link to its own destination", () => {
     renderCard();
 
-    expect(hrefOf("Ada Lovelace")).toBe("/editions/2019/speakers/ada");
+    expect(hrefOf("Ada Lovelace")).toBe("/speakers/ada");
     expect(hrefOf("2019")).toBe("/replays?year=2019");
     expect(hrefOf(/Revoir/)).toBe("https://www.youtube.com/watch?v=abc");
     expect(hrefOf("Un talk mémorable")).toBe("/editions/2019/conferences/un-talk");

@@ -93,13 +93,11 @@ describe("Speaker identity across editions (#351)", () => {
     expect(detail.statusCode).toBe(200);
   });
 
-  it("hides a person whose participation on the featured edition is a draft", async () => {
+  it("keeps a draft of the current edition out of the list, yet still serves their page", async () => {
     const current = await getSeededEdition();
     const past = await getPastEdition();
 
-    // Mirror image of the previous case: published on a past edition only. The
-    // pre-#351 code keyed visibility off the speaker row, so a person published
-    // anywhere would have leaked onto the current edition.
+    // Mirror image of the previous case: published on a past edition only.
     const person = await makePerson("Draft Here Published There", [
       { editionId: current.id, publicationStatus: "DRAFT" },
       { editionId: past.id, publicationStatus: "PUBLISHED" },
@@ -110,11 +108,17 @@ describe("Speaker identity across editions (#351)", () => {
     const detail = await app.inject({ method: "GET", url: `/api/speakers/${person.slug}` });
     await app.close();
 
+    // This is the subtlest rule of #352, and the two assertions pull apart on
+    // purpose: the LIST answers "who is speaking this year" and stays scoped to
+    // the featured edition, while the PAGE belongs to the person and exists as
+    // soon as they are published on any edition. Before #352 the detail 404ed
+    // here, which is exactly what left historical speakers unreachable.
     expect(list.json().map((s: { id: number }) => s.id)).not.toContain(person.id);
-    expect(detail.statusCode).toBe(404);
+    expect(detail.statusCode).toBe(200);
+    expect(detail.json().participations.map((p: { year: number }) => p.year)).toEqual([past.year]);
   });
 
-  it("scopes the talks on a speaker page to the featured edition", async () => {
+  it("files each talk under the edition it was given at", async () => {
     const current = await getSeededEdition();
     const past = await getPastEdition();
 
@@ -142,11 +146,15 @@ describe("Speaker identity across editions (#351)", () => {
     const res = await app.inject({ method: "GET", url: `/api/speakers/${person.slug}` });
     await app.close();
 
-    // Without the edition filter the shared identity would drag every past
-    // year's sessions onto the current page.
-    const titles = res.json().talks.map((t: { title: string }) => t.title);
-    expect(titles).toContain("Session de cette année");
-    expect(titles).not.toContain("Session d'une autre année");
+    // Both years show on the page since #352, but each session must sit under
+    // its own edition: a shared identity must never make a 2019 talk look like
+    // it happened this year.
+    const participations = res.json().participations;
+    const current2026 = participations.find((p: { year: number }) => p.year === current.year);
+    const past2019 = participations.find((p: { year: number }) => p.year === past.year);
+
+    expect(current2026.talks.map((t: { title: string }) => t.title)).toEqual(["Session de cette année"]);
+    expect(past2019.talks.map((t: { title: string }) => t.title)).toEqual(["Session d'une autre année"]);
   });
 
   it("keeps a participation for a speaker who has no talk at all", async () => {

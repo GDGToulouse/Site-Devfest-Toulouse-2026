@@ -107,8 +107,11 @@ describe("Public speakers (#308)", () => {
     expect(body.bioFr).toBe("Bio FR");
     // Private field never leaks even on the detail route.
     expect(body).not.toHaveProperty("contactEmail");
-    // Only the published talk shows up.
-    const titles = body.talks.map((t: { title: string }) => t.title);
+    // Only the published talk shows up. Talks hang off the participations since
+    // #352 — the page groups them by edition.
+    const titles = body.participations.flatMap((p: { talks: { title: string }[] }) =>
+      p.talks.map((t) => t.title),
+    );
     expect(titles).toContain("Live Talk");
     expect(titles).not.toContain("Draft Talk");
   });

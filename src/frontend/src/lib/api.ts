@@ -18,9 +18,9 @@ import type {
   SponsorWithOffers,
   SpeakerPublic,
   SpeakerDetail,
+  HallOfFameEntry,
   TalkDetail,
   EditionSpeaker,
-  EditionSpeakerDetail,
   EditionTalk,
   EditionTalkDetail,
   Replay,
@@ -234,6 +234,12 @@ export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | nu
   return fetchAPI<SpeakerDetail>(`/api/speakers/${slug}`);
 }
 
+// Every person who ever spoke (#352). Also feeds the sitemap, so both list the
+// exact same set by construction.
+export async function getHallOfFame(): Promise<HallOfFameEntry[]> {
+  return (await fetchAPI<HallOfFameEntry[]>("/api/speakers/hall-of-fame")) || [];
+}
+
 export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {
   return fetchAPI<TalkDetail>(`/api/talks/${slug}`);
 }
@@ -246,14 +252,6 @@ export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]
 
 export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
-}
-
-// Detail of one past speaker (#103), year-scoped for the same reason.
-export async function getEditionSpeakerBySlug(
-  year: number,
-  slug: string,
-): Promise<EditionSpeakerDetail | null> {
-  return fetchAPI<EditionSpeakerDetail>(`/api/editions/${year}/speakers/${slug}`);
 }
 
 // Detail of one past talk (#343). Scoped by year: slugs are unique per edition,

@@ -83,7 +83,8 @@
     "legalNotice": "Legal notice",
     "codeOfConduct": "Code of conduct",
     "sitemap": "Sitemap",
-    "replays": "Replays"
+    "replays": "Replays",
+    "hallOfFame": "Hall of fame"
   },
   "notFound": {
     "title": "Page not found",
@@ -313,7 +314,20 @@
     "home": "Home",
     "empty": "Speakers will be announced soon.",
     "sessionsTitle": "Sessions",
-    "backToList": "All speakers"
+    "noSessionThatYear": "No published session for this edition.",
+    "backToList": "All speakers",
+    "backToHallOfFame": "See the hall of fame"
+  },
+  "hallOfFame": {
+    "title": "Hall of fame",
+    "description": "Every DevFest Toulouse speaker since 2016: {count} people, across all editions.",
+    "heading": "Hall of fame",
+    "intro": "{count} people have spoken at DevFest Toulouse since 2016.",
+    "home": "Home",
+    "empty": "No speaker yet.",
+    "allYears": "All editions",
+    "filterLabel": "Filter by edition",
+    "countLabel": "{count} speakers"
   },
   "sponsors": {
     "title": "Sponsors",
