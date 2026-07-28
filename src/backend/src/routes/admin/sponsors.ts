@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateJobOffers, revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
@@ -162,6 +162,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     });
 
     revalidateSponsors();
+    revalidateSponsor(sponsor.slug);
     return reply.code(201).send(serialize(sponsor));
   });
 
@@ -216,6 +217,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     });
 
     revalidateSponsors();
+    // No second slug to purge here, unlike speakers (#351): a sponsor's slug is
+    // computed once at creation and never recomputed on update.
+    revalidateSponsor(sponsor.slug);
     return serialize(sponsor);
   });
 
@@ -256,6 +260,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       data: { ...softDeleteData(), slug: parkUniqueValue(sponsor.slug, sponsorId) },
     });
     revalidateSponsors();
+    // The slug it had while public — the parked one was never served, and its
+    // page has to stop answering from cache now that the row is trashed.
+    revalidateSponsor(sponsor.slug);
     return reply.code(204).send();
   });
 
