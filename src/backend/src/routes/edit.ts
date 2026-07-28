@@ -8,7 +8,9 @@ import {
   revalidateJobOffers,
   revalidateSpeakers,
   revalidateSpeaker,
+  revalidateSponsor,
   revalidateSponsors,
+  revalidateTalk,
 } from "../lib/revalidate.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
@@ -281,6 +283,9 @@ async function resolveToken(token: string) {
           level: true,
           language: true,
           isSpeakerEditable: true,
+          // Needed to purge the dated URL when the speaker edits their session
+          // (#360) — a talk answers on two paths.
+          edition: { select: { year: true } },
         },
         orderBy: { title: "asc" },
       },
@@ -587,7 +592,12 @@ export default async function editRoutes(app: FastifyInstance) {
         body.websiteUrl !== undefined ||
         body.logoUrl !== undefined ||
         body.socialLinks !== undefined;
-      if (touchesPublic) revalidateSponsors();
+      if (touchesPublic) {
+        revalidateSponsors();
+        // The company's own page too (#360) — editing from the magic link is
+        // precisely when someone watches for their change to appear.
+        revalidateSponsor(entity.slug);
+      }
     }
 
     return { saved: true };
@@ -656,8 +666,10 @@ export default async function editRoutes(app: FastifyInstance) {
         },
       });
 
-      // Direct publication: the change is public right away.
+      // Direct publication: the change is public right away — including on the
+      // session's own two pages (#360), which is what the speaker will reload.
       revalidateConferences();
+      revalidateTalk(talk.slug, talk.edition.year);
 
       // Notify the organizers (best-effort: a mail failure must not fail the
       // save the speaker just made).

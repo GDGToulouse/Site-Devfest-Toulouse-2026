@@ -107,6 +107,32 @@ export function revalidateConferences(): Promise<void> {
   ]);
 }
 
+/**
+ * One talk's own pages (#360).
+ *
+ * A talk is reachable by two URLs: the current-edition one, and the dated one a
+ * past edition links to (#343). Both cache separately, so both have to go, or
+ * an edit shows up on one page and not the other.
+ *
+ * Only the undated route carries an OG image — `editions/[year]/conferences`
+ * has none.
+ */
+export function revalidateTalk(slug: string, year: number): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(`/conferences/${slug}`),
+    ...bilingualPaths(`/conferences/${slug}/opengraph-image`),
+    ...bilingualPaths(`/editions/${year}/conferences/${slug}`),
+  ]);
+}
+
+/**
+ * One sponsor's own page (#360). No OG image on this route, unlike speakers and
+ * talks — nothing else to purge.
+ */
+export function revalidateSponsor(slug: string): Promise<void> {
+  return revalidatePaths([...bilingualPaths(`/sponsors/${slug}`)]);
+}
+
 export function revalidateCfp(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
