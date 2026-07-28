@@ -294,7 +294,7 @@ export default async function BilanPage({ params }: PageProps) {
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
                 {t("speakers", { count: speakers.length })}
               </h2>
-              <EditionSpeakersGrid speakers={speakers} year={edition.year} />
+              <EditionSpeakersGrid speakers={speakers} />
             </section>
           )}
 

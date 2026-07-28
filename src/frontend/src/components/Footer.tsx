@@ -142,13 +142,22 @@ export default async function Footer() {
                     </li>
                   ))}
                   {/* Replays span every edition (#102), so they belong with the
-                      archives rather than under a single year. */}
+                      archives rather than under a single year. The hall of fame
+                      (#352) is the same kind of cross-edition view. */}
                   <li>
                     <Link
                       href="/replays"
                       className="text-blanc text-base hover:opacity-70 transition-opacity"
                     >
                       {tFooter("replays")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/hall-of-fame"
+                      className="text-blanc text-base hover:opacity-70 transition-opacity"
+                    >
+                      {tFooter("hallOfFame")}
                     </Link>
                   </li>
                 </ul>

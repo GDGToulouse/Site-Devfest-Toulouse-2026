@@ -140,62 +140,6 @@ export default async function editionRoutes(app: FastifyInstance) {
     return links.map((link) => link.speaker);
   });
 
-  // GET /api/editions/:year/speakers/:slug — detail of one past speaker (#103).
-  //
-  // `/api/speakers/:slug` scopes to the featured edition, so a 2019 speaker
-  // answers 404 there. The slug is global since #351, but the year stays in the
-  // path: it selects which edition's sessions and which participation to show.
-  app.get<{ Params: { year: string; slug: string } }>("/editions/:year/speakers/:slug", {
-    schema: {
-      params: {
-        type: "object",
-        required: ["year", "slug"],
-        properties: { year: { type: "string" }, slug: { type: "string" } },
-      },
-    },
-  }, async (request, reply) => {
-    const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
-
-    const edition = await prisma.edition.findFirst({
-      where: { year: yearNum, ...notDeleted },
-      select: { id: true, year: true },
-    });
-    if (!edition) return reply.status(404).send({ error: "Edition not found" });
-
-    const speaker = await prisma.speaker.findFirst({
-      where: {
-        slug: request.params.slug,
-        ...notDeleted,
-        editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
-      },
-      include: {
-        // Nested filter again: a trashed talk must not ride along (#147), and
-        // the year scopes the sessions to that edition (#351).
-        talks: {
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-          select: { slug: true, title: true, format: true, videoUrl: true },
-          orderBy: { title: "asc" },
-        },
-      },
-    });
-
-    if (!speaker) return reply.status(404).send({ error: "Speaker not found" });
-
-    return {
-      slug: speaker.slug,
-      name: speaker.name,
-      photoUrl: speaker.photoUrl,
-      company: speaker.company,
-      city: speaker.city,
-      bioFr: speaker.bioFr,
-      bioEn: speaker.bioEn,
-      socialLinks: parseSocialLinks(speaker.socialLinks),
-      year: edition.year,
-      talks: speaker.talks,
-    };
-  });
-
   // GET /api/editions/:year/talks — published talks of any edition by year,
   // with speakers, category and replay video (issue #63).
   app.get<{ Params: { year: string } }>("/editions/:year/talks", {

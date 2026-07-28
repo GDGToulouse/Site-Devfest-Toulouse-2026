@@ -4,19 +4,18 @@ import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 
 interface EditionSpeakersGridProps {
   speakers: EditionSpeaker[];
-  // The edition being displayed: speaker pages are year-scoped (#103), since
-  // `/speakers/[slug]` only serves the featured edition.
-  year: number;
 }
 
-// Speaker grid for a past edition (#63), now linking to each detail page (#103).
-export default function EditionSpeakersGrid({ speakers, year }: EditionSpeakersGridProps) {
+// Speaker grid for a past edition (#63). The grid stays edition-scoped — it
+// answers "who spoke that year" — but each link now goes to the person's single
+// page (#352) rather than a year-scoped copy of it.
+export default function EditionSpeakersGrid({ speakers }: EditionSpeakersGridProps) {
   return (
     <ul className="grid grid-cols-2 gap-6 sm:grid-cols-3 lg:grid-cols-4">
       {speakers.map((s) => (
         <li key={s.slug} className="flex flex-col items-center text-center">
           <Link
-            href={`/editions/${year}/speakers/${s.slug}`}
+            href={`/speakers/${s.slug}`}
             className="group flex flex-col items-center"
           >
             <div className="relative h-24 w-24 overflow-hidden rounded-full bg-blanc-casse">

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { rotateFeaturedSpeakers } from "../../lib/featured-speakers.js";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateSpeakers } from "../../lib/revalidate.js";
+import { revalidateSpeakers, revalidateSpeaker } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
@@ -291,6 +291,10 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       where: { id: speaker.id },
       include: withEditions,
     });
+    // The person's own page (#352). Both slugs when a rename moved it, or the
+    // old URL would keep serving the previous name until its cache expired.
+    revalidateSpeaker(updated.slug);
+    if (speaker.slug !== updated.slug) revalidateSpeaker(speaker.slug);
     return serialize(updated);
   });
 
@@ -354,6 +358,9 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       data: { ...softDeleteData(), slug: parkUniqueValue(speaker.slug, speakerId) },
     });
     revalidateSpeakers();
+    // Purge the slug it had while live (#352) — the parked one was never served,
+    // and without this the trashed person's page stays up for an hour.
+    revalidateSpeaker(speaker.slug);
     return reply.code(204).send();
   });
 

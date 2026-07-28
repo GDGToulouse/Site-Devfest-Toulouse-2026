@@ -65,7 +65,7 @@ export default function ReplayCard({ replay, locale, current, labels }: ReplayCa
           without being a link itself, leaving dead spots in its own padding. */}
       {replay.speakers.length > 0 && (
         <div className="mt-3">
-          <SpeakerAvatars speakers={replay.speakers} year={replay.year} />
+          <SpeakerAvatars speakers={replay.speakers} />
         </div>
       )}
 
