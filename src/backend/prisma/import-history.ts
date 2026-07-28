@@ -14,6 +14,7 @@ import { dirname, resolve } from "node:path";
 
 import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
+import { resolveSpeakerPhoto } from "../src/lib/speaker-photo.js";
 import {
   buildSocialLinks,
   normalizeCategory,
@@ -34,6 +35,7 @@ interface Report {
   talks: { created: number; updated: number };
   links: number;
   categories: { linked: number; unmatched: number };
+  photos: { stored: number };
   warnings: string[];
 }
 
@@ -70,6 +72,7 @@ async function main() {
     talks: { created: 0, updated: 0 },
     links: 0,
     categories: { linked: 0, unmatched: 0 },
+    photos: { stored: 0 },
     warnings: [],
   };
 
@@ -108,10 +111,13 @@ async function main() {
     // year, so uniqueSlug would mint `ada-lovelace-2` and split the identity in
     // two — exactly what this model change removes.
     const existingSpeakers = await prisma.speaker.findMany({
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, photoUrl: true },
     });
     const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
     const speakerSlugToId = new Map(existingSpeakers.map((s) => [s.slug, s.id]));
+    // Read here so the photo already on file can be checked before downloading:
+    // a picture that is already local must never be fetched again (#356).
+    const photoUrlBySlug = new Map(existingSpeakers.map((s) => [s.slug, s.photoUrl]));
     const idByName = new Map<string, number>();
 
     for (const sp of ed.speakers) {
@@ -123,7 +129,18 @@ async function main() {
       const baseSlug = slugify(name);
       const social = buildSocialLinks(sp.socials);
       report.links += Object.keys(social).length;
-      const photoUrl = normalizePhotoUrl(sp.photoUrl);
+      // The history file points at Twitter, Gravatar, company sites… Those hosts
+      // rot and they watch our visitors, so the file is pulled into /uploads/
+      // (#356). normalizePhotoUrl still drops the 2016-2019 relative paths,
+      // which reference images this repo never shipped.
+      const remotePhotoUrl = normalizePhotoUrl(sp.photoUrl);
+      const photoUrl = await resolveSpeakerPhoto(
+        remotePhotoUrl,
+        photoUrlBySlug.get(baseSlug) ?? null,
+        name,
+        report.warnings,
+      );
+      if (photoUrl && photoUrl !== photoUrlBySlug.get(baseSlug)) report.photos.stored++;
       const bioFr = sp.bio?.trim() || null;
 
       const company = sp.company?.trim() || null;
@@ -152,6 +169,7 @@ async function main() {
             ...(current.socialLinks ? {} : { socialLinks }),
           },
         });
+        if (photoUrl) photoUrlBySlug.set(baseSlug, photoUrl);
         idByName.set(name.toLowerCase(), existingId);
         report.speakers.updated++;
       } else {
@@ -161,6 +179,10 @@ async function main() {
           data: { slug, name, company, city, bioFr, photoUrl, socialLinks },
         });
         speakerSlugToId.set(slug, created.id);
+        // Keep the photo map in step: the list is re-read per edition, but two
+        // entries sharing a name inside the SAME year would otherwise download
+        // the picture twice.
+        photoUrlBySlug.set(slug, photoUrl);
         idByName.set(name.toLowerCase(), created.id);
         speakerId = created.id;
         report.speakers.created++;
@@ -252,7 +274,8 @@ async function main() {
 
     console.log(
       `${year}: speakers +${report.speakers.created}/~${report.speakers.updated}, ` +
-        `talks +${report.talks.created}/~${report.talks.updated}`,
+        `talks +${report.talks.created}/~${report.talks.updated}, ` +
+        `photos ${report.photos.stored}`,
     );
   }
 
