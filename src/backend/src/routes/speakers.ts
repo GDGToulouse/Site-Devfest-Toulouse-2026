@@ -103,7 +103,17 @@ export default async function speakerRoutes(app: FastifyInstance) {
         // that it spans every year, a trashed edition would resurface.
         editions: {
           where: { publicationStatus: "PUBLISHED", edition: notDeleted },
-          select: { isFeatured: true, edition: { select: { year: true } } },
+          select: {
+            isFeatured: true,
+            edition: { select: { year: true } },
+            // Per-edition since #353: the employer of that year, not the latest
+            // one. publicationStatus/deletedAt come along so a trashed or
+            // unpublished sponsor can be filtered out below — a to-one relation
+            // takes no `where` in a select.
+            sponsor: {
+              select: { slug: true, name: true, publicationStatus: true, deletedAt: true },
+            },
+          },
           orderBy: { edition: { year: "desc" } },
         },
         talks: {
@@ -111,7 +121,6 @@ export default async function speakerRoutes(app: FastifyInstance) {
           select: { slug: true, title: true, format: true, videoUrl: true, edition: { select: { year: true } } },
           orderBy: { title: "asc" },
         },
-        sponsor: { select: { slug: true, name: true } },
       },
     });
 
@@ -135,12 +144,15 @@ export default async function speakerRoutes(app: FastifyInstance) {
       bioFr: speaker.bioFr,
       bioEn: speaker.bioEn,
       socialLinks: parseSocialLinks(speaker.socialLinks),
-      // Still on the identity, not the participation — see the debt noted in
-      // schema.prisma and tracked by #353.
-      sponsor: speaker.sponsor,
       participations: speaker.editions.map((link) => ({
         year: link.edition.year,
         isFeatured: link.isFeatured,
+        // The employer of that year (#353). Hidden unless the sponsor is itself
+        // published and out of the trash, like everywhere else on public pages.
+        sponsor:
+          link.sponsor && link.sponsor.publicationStatus === "PUBLISHED" && !link.sponsor.deletedAt
+            ? { slug: link.sponsor.slug, name: link.sponsor.name }
+            : null,
         talks: (byYear.get(link.edition.year) ?? []).map(({ edition, ...talk }) => talk),
       })),
     };

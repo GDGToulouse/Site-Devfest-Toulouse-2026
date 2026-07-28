@@ -524,11 +524,10 @@ async function seedDev() {
   // already exist from another edition, only the participation is this year's.
   const speakerMarie = await prisma.speaker.upsert({
     where: { slug: "marie-dupont" },
-    update: { sponsorId: sponsorOfMarie.id, company: sponsorOfMarie.name },
+    update: { company: sponsorOfMarie.name },
     create: {
       slug: "marie-dupont", name: "Marie Dupont", company: sponsorOfMarie.name, city: "Toulouse",
       bioFr: "Ingénieure cloud passionnée de Kubernetes.", bioEn: "Cloud engineer passionate about Kubernetes.",
-      sponsorId: sponsorOfMarie.id,
       socialLinks: JSON.stringify({ github: "https://github.com/example", linkedin: "https://linkedin.com/in/example" }),
     },
   });
@@ -549,15 +548,17 @@ async function seedDev() {
     },
   });
 
-  for (const [speakerId, isFeatured, publicationStatus] of [
-    [speakerMarie.id, true, "PUBLISHED"],
-    [speakerJean.id, true, "PUBLISHED"],
-    [speakerSophie.id, false, "DRAFT"],
+  // The sponsor association rides on the participation since #353 — it is true
+  // of a given year, and Sponsor is edition-scoped too.
+  for (const [speakerId, isFeatured, publicationStatus, sponsorId] of [
+    [speakerMarie.id, true, "PUBLISHED", sponsorOfMarie.id],
+    [speakerJean.id, true, "PUBLISHED", null],
+    [speakerSophie.id, false, "DRAFT", null],
   ] as const) {
     await prisma.speakerEdition.upsert({
       where: { speakerId_editionId: { speakerId, editionId: edition.id } },
-      update: { isFeatured, publicationStatus },
-      create: { speakerId, editionId: edition.id, isFeatured, publicationStatus },
+      update: { isFeatured, publicationStatus, sponsorId },
+      create: { speakerId, editionId: edition.id, isFeatured, publicationStatus, sponsorId },
     });
   }
   console.log("Speakers created: 3");

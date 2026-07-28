@@ -4,10 +4,12 @@ import { useState } from "react";
 
 import type { SpeakerEdition } from "@/lib/types";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ParticipationSponsorSelect from "@/components/admin/speakers/ParticipationSponsorSelect";
 
 // #351 — a speaker is a person taking part in several editions. Each row here is
 // one participation, carrying the state that used to sit on the speaker itself:
-// publication status and the featured flag are per-year decisions.
+// publication status and the featured flag are per-year decisions — and so is
+// the sponsor they worked for since #353.
 interface SpeakerEditionsPanelProps {
   editions: SpeakerEdition[];
   allEditions: { id: number; year: number }[];
@@ -15,7 +17,7 @@ interface SpeakerEditionsPanelProps {
   onDetach: (editionId: number) => Promise<void>;
   onUpdate: (
     editionId: number,
-    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean },
+    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
   ) => Promise<void>;
 }
 
@@ -54,6 +56,7 @@ export default function SpeakerEditionsPanel({
               <th className="py-1 font-medium">Année</th>
               <th className="py-1 font-medium">Statut</th>
               <th className="py-1 font-medium">À la une</th>
+              <th className="py-1 font-medium">Sponsor</th>
               <th className="py-1 font-medium sr-only">Actions</th>
             </tr>
           </thead>
@@ -94,6 +97,17 @@ export default function SpeakerEditionsPanel({
                       )
                     }
                     className="rounded border-gris/30 text-malachite focus:ring-malachite"
+                  />
+                </td>
+                <td className="py-2">
+                  <ParticipationSponsorSelect
+                    editionId={participation.id}
+                    year={participation.year}
+                    value={participation.sponsorId}
+                    disabled={busyId === participation.id}
+                    onChange={(sponsorId) =>
+                      run(participation.id, () => onUpdate(participation.id, { sponsorId }))
+                    }
                   />
                 </td>
                 <td className="py-2 text-right">

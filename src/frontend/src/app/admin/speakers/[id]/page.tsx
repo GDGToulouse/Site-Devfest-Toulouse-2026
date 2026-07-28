@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
-import type { Speaker, Sponsor } from "@/lib/types";
+import type { Speaker } from "@/lib/types";
 import EditLinkActions from "@/components/admin/EditLinkActions";
 import SpeakerForm, { emptySpeakerForm, type SpeakerFormValue } from "@/components/admin/speakers/SpeakerForm";
 import SpeakerEditionsPanel from "@/components/admin/speakers/SpeakerEditionsPanel";
@@ -29,7 +29,6 @@ export default function SpeakerEditorPage() {
   const [current, setCurrent] = useState<SpeakerData | null>(null);
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [editionId, setEditionId] = useState<number | null>(null);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -71,24 +70,14 @@ export default function SpeakerEditorPage() {
           github: data.socialLinks?.github || "",
           website: data.socialLinks?.website || "",
           locale: data.locale === "en" ? "en" : "fr",
-          sponsorId: data.sponsorId ? String(data.sponsorId) : "",
         });
-        // The sponsor select is edition-scoped: use the most recent
-        // participation, which the API returns first.
+        // Kept for the PUT payload, which still names a participation.
         setEditionId(data.editions[0]?.id ?? null);
         setIsLoading(false);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speakerId, isNew]);
-
-  // Sponsor list is edition-scoped (for the "sponsor associé" select).
-  useEffect(() => {
-    if (!editionId) return;
-    adminFetch<Sponsor[]>(`/sponsors?editionId=${editionId}`).then(({ data }) => {
-      if (data) setSponsors(data);
-    });
-  }, [editionId]);
 
   async function handleSave() {
     if (!form.name.trim() || !editionId) return;
@@ -114,7 +103,6 @@ export default function SpeakerEditorPage() {
       bioEn: form.bioEn || undefined,
       socialLinks,
       locale: form.locale,
-      sponsorId: form.sponsorId ? Number(form.sponsorId) : null,
     };
 
     if (isNew) {
@@ -177,7 +165,7 @@ export default function SpeakerEditorPage() {
 
   async function updateParticipation(
     targetEditionId: number,
-    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean },
+    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
   ) {
     // The attach endpoint upserts, so it doubles as the update for a
     // participation that already exists.
@@ -256,7 +244,7 @@ export default function SpeakerEditorPage() {
           </div>
         )}
 
-        <SpeakerForm value={form} onChange={setForm} sponsors={sponsors} />
+        <SpeakerForm value={form} onChange={setForm} />
 
         {!isNew && current && (
           <EditLinkActions

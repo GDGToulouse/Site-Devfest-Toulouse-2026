@@ -543,18 +543,12 @@ model Speaker {
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
 
-  // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
-  // DEBT (#351): Sponsor is edition-scoped, so a global speaker pointing at a
-  // single sponsor row is wrong the moment they come back a second year. Only
-  // one row carries a sponsorId today, so this moves to SpeakerEdition in a
-  // follow-up rather than widening an already destructive migration.
-  sponsorId Int?
-  sponsor   Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+  // The sponsor association moved to SpeakerEdition (#353): working for a
+  // sponsor is true of a given year, and Sponsor is itself edition-scoped.
 
   editions SpeakerEdition[]
   talks    Talk[]
 
-  @@index([sponsorId])
   @@index([deletedAt])
 }
 
@@ -575,9 +569,17 @@ model SpeakerEdition {
   editionId Int
   edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
+  // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
+  // Lives here rather than on Speaker since #353: both ends are now dated to the
+  // same year, so someone at Google in 2019 and OVHcloud in 2026 reads correctly
+  // on each edition instead of showing their latest employer everywhere.
+  sponsorId Int?
+  sponsor   Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+
   @@unique([speakerId, editionId])
   @@index([speakerId])
   @@index([editionId])
+  @@index([sponsorId])
 }
 
 // --- Talks / Sessions (RG-210 to RG-217) ---
@@ -683,8 +685,9 @@ model Sponsor {
   tierId Int
   tier   SponsorTier @relation(fields: [tierId], references: [id])
 
-  // Speakers working for this sponsor's company (RG-226).
-  speakers Speaker[]
+  // Speakers working for this sponsor's company (RG-226). Through the
+  // participation since #353 — the association is per-edition on both ends.
+  speakers SpeakerEdition[]
 
   // People allowed to edit this sponsor's page, each with their own
   // modification link (#250). Replaces the single editToken on Sponsor.

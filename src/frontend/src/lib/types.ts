@@ -280,6 +280,8 @@ export interface SpeakerTalkRef {
 export interface SpeakerParticipation {
   year: number;
   isFeatured: boolean;
+  // The employer of that year (#353), null unless the sponsor is published.
+  sponsor: { slug: string; name: string } | null;
   talks: SpeakerTalkRef[];
 }
 
@@ -293,7 +295,6 @@ export interface SpeakerDetail {
   bioFr: string | null;
   bioEn: string | null;
   socialLinks: Record<string, string>;
-  sponsor: { slug: string; name: string } | null;
   // Newest year first.
   participations: SpeakerParticipation[];
 }
@@ -422,6 +423,8 @@ export interface SpeakerEdition {
   year: number;
   isFeatured: boolean;
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // The sponsor this person worked for that year (#353).
+  sponsorId: number | null;
 }
 
 // Admin speaker entity (CRUD).
@@ -441,7 +444,6 @@ export interface Speaker {
   contactEmail: string | null;
   locale: string;
   editLinkLocked: boolean;
-  sponsorId: number | null;
   editions: SpeakerEdition[];
 }
 

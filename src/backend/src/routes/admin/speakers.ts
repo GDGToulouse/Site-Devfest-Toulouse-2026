@@ -52,6 +52,8 @@ const withEditions = {
       editionId: true,
       isFeatured: true,
       publicationStatus: true,
+      // Per-edition since #353 — the admin picks the employer year by year.
+      sponsorId: true,
       edition: { select: { id: true, year: true } },
     },
   },
@@ -63,6 +65,7 @@ interface SerializableSpeaker {
     editionId: number;
     isFeatured: boolean;
     publicationStatus: "DRAFT" | "PUBLISHED";
+    sponsorId: number | null;
     edition: { id: number; year: number };
   }[];
   [k: string]: unknown;
@@ -81,6 +84,7 @@ function serialize(s: SerializableSpeaker) {
               year: e.edition.year,
               isFeatured: e.isFeatured,
               publicationStatus: e.publicationStatus,
+              sponsorId: e.sponsorId,
             })),
         }
       : {}),
@@ -165,13 +169,14 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
-        sponsorId: body.sponsorId ?? null,
-        // The editorial state belongs to the participation, not the person.
+        // The editorial state belongs to the participation, not the person —
+        // and so does the sponsor since #353.
         editions: {
           create: {
             editionId: body.editionId,
             isFeatured: body.isFeatured ?? false,
             publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+            sponsorId: body.sponsorId ?? null,
           },
         },
       },
@@ -184,7 +189,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
   // POST /api/admin/speakers/:id/editions — attach an existing person to an
   // edition (#351). This is what the 409 above points the admin to.
-  app.post<{ Params: SpeakerIdParams; Body: { editionId: number; publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean } }>(
+  app.post<{ Params: SpeakerIdParams; Body: { editionId: number; publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null } }>(
     "/speakers/:id/editions",
     { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
     async (request, reply) => {
@@ -211,10 +216,12 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
           editionId,
           isFeatured: request.body.isFeatured ?? false,
           publicationStatus: request.body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+          sponsorId: request.body.sponsorId ?? null,
         },
         update: {
           ...(request.body.isFeatured !== undefined && { isFeatured: request.body.isFeatured }),
           ...(request.body.publicationStatus && { publicationStatus: request.body.publicationStatus }),
+          ...(request.body.sponsorId !== undefined && { sponsorId: request.body.sponsorId ?? null }),
         },
       });
 
@@ -269,19 +276,23 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
-        ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
       },
     });
 
-    // isFeatured and publicationStatus are per-edition since #351, so they need
-    // to say *which* edition. Sent without one, they are ignored rather than
-    // silently applied to every year the speaker took part in.
-    if (body.editionId && (body.isFeatured !== undefined || body.publicationStatus !== undefined)) {
+    // isFeatured, publicationStatus and sponsorId are per-edition (#351, #353),
+    // so they need to say *which* edition. Sent without one, they are ignored
+    // rather than silently applied to every year the speaker took part in.
+    const hasParticipationField =
+      body.isFeatured !== undefined ||
+      body.publicationStatus !== undefined ||
+      body.sponsorId !== undefined;
+    if (body.editionId && hasParticipationField) {
       await prisma.speakerEdition.updateMany({
         where: { speakerId: Number(id), editionId: body.editionId },
         data: {
           ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
           ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+          ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
         },
       });
     }
