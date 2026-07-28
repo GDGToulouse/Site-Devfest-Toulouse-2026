@@ -111,8 +111,11 @@ describe("Admin Categories API (#308)", () => {
 
   it("shares one category across several editions", async () => {
     const edition = await getSeededEdition();
+    // Seeded range only, like getSeededEdition itself (#292): other files create
+    // editions below 2016 and delete them on teardown, so picking one here raced
+    // with their cleanup and surfaced as a 500 on a foreign key.
     const other = await prisma.edition.findFirst({
-      where: { id: { not: edition.id }, deletedAt: null },
+      where: { id: { not: edition.id }, deletedAt: null, year: { gte: 2016 } },
     });
     if (!other) return; // single-edition seed: nothing to share with.
 
