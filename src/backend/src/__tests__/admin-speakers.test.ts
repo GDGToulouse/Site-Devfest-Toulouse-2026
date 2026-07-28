@@ -23,10 +23,14 @@ async function buildSpeakersApp(): Promise<FastifyInstance> {
 // endpoint only soft-deletes (#147), so a real purge at the end is required to
 // stop parked slugs from accumulating in the unique index across runs.
 const createdSpeakerIds: number[] = [];
+const createdEditionIds: number[] = [];
 
 afterAll(async () => {
   if (createdSpeakerIds.length > 0) {
     await prisma.speaker.deleteMany({ where: { id: { in: createdSpeakerIds } } });
+  }
+  if (createdEditionIds.length > 0) {
+    await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
   }
   // No `prisma.$disconnect()` here: the client is a shared singleton across all
   // test files, and Vitest runs them in parallel — disconnecting would cut the
@@ -239,10 +243,14 @@ describe("Admin Speakers API", () => {
   it("POST /speakers/:id/editions attaches an existing person to another edition", async () => {
     const app = await buildSpeakersApp();
     const current = await getSeededEdition();
-    const past = await prisma.edition.findFirstOrThrow({
-      where: { year: { lt: 2020 } },
-      orderBy: { year: "asc" },
+    // Created, not looked up: the seed only carries 2026 and 2025, so relying on
+    // the history being loaded passed locally and failed on a fresh CI database.
+    // The year sits in its own range, away from the other test files running in
+    // parallel (#292).
+    const past = await prisma.edition.create({
+      data: { year: 1611, status: "SEE_YOU_NEXT_YEAR" },
     });
+    createdEditionIds.push(past.id);
 
     const createRes = await app.inject({
       method: "POST",

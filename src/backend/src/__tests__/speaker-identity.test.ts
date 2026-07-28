@@ -15,6 +15,7 @@ async function buildApp() {
 }
 
 const createdIds: number[] = [];
+const createdEditionIds: number[] = [];
 const uniq = () => `${Date.now()}-${Math.round(performance.now())}`;
 
 afterEach(async () => {
@@ -23,16 +24,22 @@ afterEach(async () => {
     await prisma.speaker.deleteMany({ where: { id: { in: createdIds } } });
     createdIds.length = 0;
   }
+  if (createdEditionIds.length) {
+    await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
+    createdEditionIds.length = 0;
+  }
 });
 
-// A past edition to pair with the featured one. Older than every seeded year, so
-// it can never be mistaken for "the most recent" by a parallel test file (#292).
+// A past edition to pair with the featured one. Created rather than looked up:
+// the seed only carries 2026 and 2025, so relying on the history being loaded
+// made this pass locally and fail on a fresh CI database. The year stays far
+// below every seeded one, so it can never be mistaken for "the most recent" by a
+// parallel test file (#292).
 async function getPastEdition() {
-  const edition = await prisma.edition.findFirst({
-    where: { year: { lt: 2020 } },
-    orderBy: { year: "asc" },
+  const edition = await prisma.edition.create({
+    data: { year: 1601 + createdEditionIds.length, status: "SEE_YOU_NEXT_YEAR" },
   });
-  if (!edition) throw new Error("seed missing a past edition");
+  createdEditionIds.push(edition.id);
   return edition;
 }
 
