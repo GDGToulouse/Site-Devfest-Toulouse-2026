@@ -41,7 +41,11 @@ async function makeEdition(year: number) {
   return edition;
 }
 
-async function makeSponsor(editionId: number, name: string, { publicationStatus = "PUBLISHED" as const } = {}) {
+async function makeSponsor(
+  editionId: number,
+  name: string,
+  { publicationStatus }: { publicationStatus?: "DRAFT" | "PUBLISHED" } = {},
+) {
   // Sponsor needs a tier; reuse whichever the catalogue already holds.
   const tier = await prisma.sponsorTier.findFirstOrThrow();
   const sponsor = await prisma.sponsor.create({
@@ -50,7 +54,7 @@ async function makeSponsor(editionId: number, name: string, { publicationStatus 
       tierId: tier.id,
       name,
       slug: `sponsor-${name.toLowerCase().replace(/\W+/g, "-")}-${uniq()}`,
-      publicationStatus,
+      publicationStatus: publicationStatus ?? "PUBLISHED",
     },
   });
   createdSponsorIds.push(sponsor.id);
