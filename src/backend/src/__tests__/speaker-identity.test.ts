@@ -19,6 +19,15 @@ const createdEditionIds: number[] = [];
 const uniq = () => `${Date.now()}-${Math.round(performance.now())}`;
 
 afterEach(async () => {
+  // Participations first: /speakers/hall-of-fame reads every one of them, so a
+  // row still pointing at an edition being deleted breaks a parallel file (#292).
+  if (createdIds.length || createdEditionIds.length) {
+    await prisma.speakerEdition.deleteMany({
+      where: {
+        OR: [{ speakerId: { in: createdIds } }, { editionId: { in: createdEditionIds } }],
+      },
+    });
+  }
   if (createdIds.length) {
     await prisma.talk.deleteMany({ where: { speakers: { some: { id: { in: createdIds } } } } });
     await prisma.speaker.deleteMany({ where: { id: { in: createdIds } } });
