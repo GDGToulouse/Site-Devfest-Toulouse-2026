@@ -20,10 +20,9 @@ describe("GET /api/edit/:token — speaker sessions (#229)", () => {
       data: {
         name: "Sessions Test Speaker",
         slug: "sessions-test-speaker",
-        editionId,
         editToken: TOKEN,
         editTokenSentAt: new Date(),
-        publicationStatus: "PUBLISHED",
+        editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },
     });
     speakerId = speaker.id;

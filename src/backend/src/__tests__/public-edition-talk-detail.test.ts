@@ -73,8 +73,7 @@ describe("GET /api/editions/:year/talks/:slug", () => {
       data: {
         name: "Detail Speaker",
         slug: `detail-speaker-${uniq()}`,
-        editionId: edition.id,
-        publicationStatus: "PUBLISHED",
+        editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
       },
     });
     speakerIds.push(speaker.id);
