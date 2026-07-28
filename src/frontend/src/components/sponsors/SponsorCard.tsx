@@ -28,12 +28,9 @@ interface SponsorCardProps {
   sponsor: SponsorPublic;
   /** Size band, derived from the tier's logoScale (#323). */
   size?: SponsorCardSize;
-  /** On the homepage only the logo is shown, without the name (RG-223). */
-  logoOnly?: boolean;
 }
 
-export default function SponsorCard({ sponsor, size = "sm", logoOnly = false }: SponsorCardProps) {
-  const showName = !logoOnly || !sponsor.logoUrl;
+export default function SponsorCard({ sponsor, size = "sm" }: SponsorCardProps) {
   const b = BAND[size];
   return (
     <Link
@@ -44,6 +41,7 @@ export default function SponsorCard({ sponsor, size = "sm", logoOnly = false }: 
       {/* Banner colour comes from the tier (#321) — a hex value, not a class. */}
       <div className="h-2" style={{ backgroundColor: sponsor.tier.color }} />
       <div className="flex flex-col items-center justify-center gap-3 p-6">
+        {/* The name shows only as a fallback, when there is no logo to show (#355). */}
         <div className={`relative flex w-full items-center justify-center ${b.box}`}>
           {sponsor.logoUrl ? (
             <Image src={sponsor.logoUrl} alt={sponsor.name} fill className="object-contain" sizes={b.sizes} />
@@ -51,9 +49,6 @@ export default function SponsorCard({ sponsor, size = "sm", logoOnly = false }: 
             <span className={`font-bold text-noir ${b.name}`}>{sponsor.name}</span>
           )}
         </div>
-        {sponsor.logoUrl && showName && (
-          <span className={`font-bold text-noir ${b.name}`}>{sponsor.name}</span>
-        )}
       </div>
     </Link>
   );
