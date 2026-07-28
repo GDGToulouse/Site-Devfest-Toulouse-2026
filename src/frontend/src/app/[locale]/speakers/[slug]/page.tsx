@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getSpeakerBySlug } from "@/lib/api";
+import { getCurrentEdition, getSpeakerBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
@@ -49,9 +49,15 @@ export default async function SpeakerDetailPage({
   // Talk formats are translated under `replays` — the only namespace that owns
   // them. Named for what it does, so the two lookups stay legible.
   const tFormat = await getTranslations("replays");
-  const speaker = await getSpeakerBySlug(slug);
+  // The edition is only needed to name the current line-up in the footer link
+  // (#357); fetched alongside the speaker so the two calls do not serialize.
+  const [speaker, edition] = await Promise.all([getSpeakerBySlug(slug), getCurrentEdition()]);
 
   if (!speaker) notFound();
+
+  // Same fallback as the speakers list: with no featured edition the label must
+  // still read, so the current year stands in.
+  const currentYear = edition?.year ?? new Date().getFullYear();
 
   const bio = localizedField(speaker, "bio", locale);
 
@@ -162,12 +168,14 @@ export default async function SpeakerDetailPage({
           </section>
         )}
 
-        {/* Two ways out: the current line-up, and the whole archive. "All
-            speakers" alone would strand a 2018 speaker on a list they are not
-            part of. */}
+        {/* Two ways out: the current line-up, and the whole archive. The first
+            names its year (#357) — this page is reached from a replay, a talk
+            card or an external link just as often as from the list, so "all
+            speakers" promised a return trip that was rarely one, and would
+            strand a 2018 speaker on a list they are not part of. */}
         <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2">
           <Link href="/speakers" className="font-bold text-bleu hover:underline">
-            ← {t("backToList")}
+            {t("backToList", { year: currentYear })}
           </Link>
           <Link href="/hall-of-fame" className="font-bold text-bleu hover:underline">
             {t("backToHallOfFame")}
