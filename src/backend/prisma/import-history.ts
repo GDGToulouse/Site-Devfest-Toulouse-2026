@@ -36,6 +36,7 @@ interface Report {
   talks: { created: number; updated: number };
   links: number;
   categories: { linked: number; unmatched: number };
+  speakerRefs: { unresolved: number };
   photos: { stored: number };
   cachePurged: boolean;
   warnings: string[];
@@ -74,6 +75,7 @@ async function main() {
     talks: { created: 0, updated: 0 },
     links: 0,
     categories: { linked: 0, unmatched: 0 },
+    speakerRefs: { unresolved: 0 },
     photos: { stored: 0 },
     cachePurged: false,
     warnings: [],
@@ -217,9 +219,23 @@ async function main() {
       }
       const baseSlug = slugify(title);
       const description = s.description?.trim() ?? "";
-      const speakerDbIds = (s.speakers ?? [])
-        .map((n) => idByName.get(n.trim().toLowerCase()))
-        .filter((id): id is number => id !== undefined);
+      // A reference that matches no speaker used to be dropped by a .filter(),
+      // which is how 2017 ended up with 7 links for 38 talks: its sessions cited
+      // numeric ids the file never defined, and nothing said so (#361). Losing a
+      // reference is not fatal — the talk is still imported — but it must be
+      // said out loud.
+      const speakerDbIds: number[] = [];
+      for (const ref of s.speakers ?? []) {
+        const id = idByName.get(ref.trim().toLowerCase());
+        if (id === undefined) {
+          report.speakerRefs.unresolved++;
+          report.warnings.push(
+            `${year} — « ${title} » : intervenant « ${ref} » introuvable, session non rattachée.`,
+          );
+          continue;
+        }
+        speakerDbIds.push(id);
+      }
 
       // Track published by the edition itself, mapped onto the shared catalogue.
       const categoryName = normalizeCategory(s);

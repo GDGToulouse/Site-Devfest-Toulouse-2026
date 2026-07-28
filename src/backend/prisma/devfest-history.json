@@ -1214,7 +1214,7 @@
           "title": "CSS is Awesome !",
           "description": "Non, le CSS c'est pas du coloriage !\n\nLa puissance du CSS est souvent sous-estimée, cette session de Live-Coding sera l'occasion de montrer quantité de trucs et astuces utiles quotidiennement pour les développeurs web.\n\nAujourd'hui on entre dans l'ère post-IE et on peut utiliser beaucoup plus sereinement la puissance que nous offre le CSS; pourquoi passer à coté !\n\nEn mode 'no-javascript' venez découvrir des solutions pour faire des : collapsibles panels, accordions, popovers, modals, tabs, ...",
           "speakers": [
-            "2288"
+            "Igor Laborie"
           ],
           "language": "fr",
           "format": "conference",
@@ -1228,7 +1228,7 @@
           "title": "Modules ES6 & HTTP/2 - Va-t-on arrêter de packager notre code JavaScript ?",
           "description": "Les modules ES6 sont maintenant supportés par la majorité des navigateurs récents.\nEn les utilisant dès maintenant nous découpons notre code pour une meilleure architecture, et un support du tree-shaking par exemple.\nMais ce support natif des navigateurs peut-il nous simplifier la tâche lors de nos développements ?\nA-t-on encore besoin de livrer un seul bundle JavaScript ?\nL'utilisation combinée d'HTTP/2 va-t-elle encore plus simplifier les choses ?\nQu'en est-il pour les applications isomorphiques ?\nDécouvrons toutes les réponses à ces questions lors de ce talk 100% JavaScript !",
           "speakers": [
-            "810"
+            "Vincent Ogloblinsky"
           ],
           "language": "fr",
           "format": "conference",
@@ -1242,7 +1242,7 @@
           "title": "Deep learning for satellite image processing, lessons learned",
           "description": "We present in this talk the application of deep learning frameworks for satellite images. After a short introduction on deep learning, we start by presenting a couple of applications on which we are successful enough to embed the result in a production world - i.e. satellite ground segments. We then present the tools we are using (tensorflow, google cloud, spark, etc...) and point out three important aspects : the need for a new version control scheme, the need for a data visualisation tool, and the need for continuous integration. \n\nWe illustrate our talk with results on automatic cloud detection within satellite images, automatic target detection, automatic generation of maps, image denoising etc...",
           "speakers": [
-            "2317"
+            "Mathias Ortner"
           ],
           "language": "en",
           "format": "conference",
@@ -1270,7 +1270,7 @@
           "title": "Des portes logiques pneumatiques en bois",
           "description": "Les valves utilisées dans les orgues de barbarie utilisent un système de membrane mobile et de contre-réaction qui permet, en créant un petit débit d'air d'un côté grace aux trous perforés dans le carton, de contrôler un débit d'air plus important vers les flûtes.\nCe principe - contrôler un grand débit à partir d'un petit débit - est précisément celui des lampes utilisées dans les premiers ordinateur (Atanasoff–Berry, Colossus, puis l'ENIAC) et celui des transistors dont nous avons en général quelques millions dans nos poches.\nJe me suis posé la question de savoir s'il était donc possible de réaliser une calculatrice pneumatique avec des outils simples dans son garage.\n\nDans ce talk, je vous propose de montrer rapidement les questions sur lesquels j'ai travaillé, les sources, les prototype, où j'en suis, et ce qu'il reste à faire pour faire une machine qui compte sur les doigts, mais en binaire, quand on soufle dans des pailles.",
           "speakers": [
-            "2357"
+            "Fabien Tregan"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1284,7 +1284,7 @@
           "title": "Plus loin avec Kotlin !",
           "description": "Kotlin est le langage de JVM développé par Jetbrains. Les communautés Java & Android sont en ébullition depuis la sortie de sa première version “production ready”, début 2016. Google vient de le promouvoir “langage officiel pour Android”, à la Google IO 2017. Kotlin fait désormais parti des grands ! \n\nVous avez déjà commencé à développer en Kotlin ? Envie de voir les capacités du langage ? Cette session propose de faire un tour des API et concepts avancés : Collections & Séquences, Gestion des generics, Programmation fonctionnelle & gestion des lambdas, API Builder & DSL, Coroutines & zoom sur les nouveautés de la version 1.1. \n\nDe quoi booster vos développement d’applications Android et Java ou vous donner envie de développer en Kotlin ;)",
           "speakers": [
-            "275"
+            "Arnaud Giuliani"
           ],
           "language": "fr",
           "format": "conference",
@@ -1311,7 +1311,7 @@
           "title": "Introduction au marble testing Rx (Web, iOS, Android)",
           "description": "# Introduction au marble testing Rx (Web, iOS, Android)\n\nCe quicky est une introduction à une technique de test innovante et visuelle d'un flow de données Rx, encore méconnue des utilisateurs de Rx. \n\nCette technique, inspirée des diagrammes marble, facilite énormément l'écriture d'un test unitaire d'un système asynchrone tout en réduisant la verbosité du test.\n\nAppliquée à un MVVM réactif, où les entrées utilisateurs, appels à des services et sorties sont cablés sous forme d'un flow Rx, il devient possible de tester le comportement de l'interface (ViewModel) dans le temps, sans recourir à du test end to end.\n\nCe talk s'appuiera sur l'exemple d'une application météo simple, ou l'utlisateur rentre le nom de sa ville et voit apparaitre la météo dans sa ville.\n\nLe marble testing permettra de tester aisément des cas \"tordus\", mais réalistes, tel qu'un utilisateur qui tape une autre ville alors que la météo de la ville précédente est encore en cours de chargement.\n\nL'exemple live sera donné en RxJs, mais l'application sera déclinée en RxSwift (iOS) et RxJava (Android) sur des repositories fournis ultérieurement.",
           "speakers": [
-            "2417"
+            "Alexandre Delattre"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1339,7 +1339,7 @@
           "title": "BATTLESTAR GALACTICA: Saison 5 - Les Cylons passent dans le cloud avec Vert.x",
           "description": "Ne cherchez pas, cette saison n’existe pas. 😭 [BSG S5](https://www.rottentomatoes.com/tv/battlestar_galactica/s05/)\nDepuis la 1ère version de ce talk lors de [l’édition 2015 du JUG SummerCamp](http://www.jugsummercamp.org/edition/6/presentation/1118) les Cylons se sont mis à jour et ont décidé de \"passer au Cloud\"\n\n### Rappel:\n\nLes fonctions internes des \"Basestars\" (vaisseaux mères cylon) sont contrôlées par un système d'ordinateur central mi biologique, mi machine appelé l'Hybride. L'ensemble des 7 humanoïdes Cylons décidèrent lors du Plan (https://www.rottentomatoes.com/m/battlestar_galactica_the_plan/), de basculer l'ensemble des basestars en mode “microservices\" pour donner la possibilité à tous les Hybrides de calculer les positions de milliers de Raiders (chasseurs cylons) afin d'éviter qu'ils n'entrent en collision lors des attaques.\n\n### La mise en oeuvre du Plan consistera en ceci:\n\n- Microservices & Cloud-Native: Qu’est-ce c’est, bonnes pratiques, patterns, ...\n- Du code et de la démo: (Vert.x est polyglotte … donc il y aura plusieurs langages)\n  - Ecrire un microservice en Vert.x\n  - Gérer la partie “Discovery” (sinon personne ne va se parler) 📞\n  - Gérer la partie “Houston we have a problem” (health checks, failures …) 🙀\n  - Il y a toujours quelqu'un pour ne pas faire comme tout le monde 😡: \n    - \"j'avais pas lu les specs, j'ai fait un service en Node.js, je peux jouer quand même?\"\n- Du déploiement: si ça marche en local, ça doit se déployer (et si les 😇 dieux d’internet sont avec nous) \n  - déploiement \"en masse\" des hybrides et de quelques raiders sur une plateforme de cloud 😝\n\nA la fin de ce talk, vous aurez assez de matière pour être opérationnel rapidement sur le sujet",
           "speakers": [
-            "1772"
+            "Philippe Charrière"
           ],
           "language": "fr",
           "format": "conference",
@@ -1353,7 +1353,7 @@
           "title": "Un chatbot en 5 étapes avec api.ai",
           "description": "Avec api.ai il n'y a pas plus simple pour créer un chatbot. Je vous montrerai comment déployer un chatbot en 5 étapes au cours desquelles nous aborderons les concepts clés d'api.ai. \n\nAu cours de la session, nous verrons comment créer un agent conversationnel, avec des entities pour pouvoir extraire de l'information à partir de texte et des intents pour représenter les différentes réactions du chatbot.\nPuis nous verrons comment entraîner notre chatbot, pour qu'il s'améliore au cours du temps. Il ne restera plus qu'à l'intégrer!",
           "speakers": [
-            "333"
+            "Pauline Iogna"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1367,7 +1367,7 @@
           "title": "Quand nous avons emmené notre web app chez les Bisounours",
           "description": "Les Bisounours sont renommés pour avoir élu domicile dans les nuages. Mais depuis peu ils ne sont plus seul. \nAvec la popularité de plateformes comme Kubernetes, développer et déployer des applications \"cloud native\" devient un pré-requis. Démarrer \"from scratch\" avec des frameworks de type Spring Cloud est relativement aisé, mais adapter une application existante comporte des difficultés à surmonter.\n\nCette présentation technique détaille les changements entrepris pour faciliter le déploiement d'Artifactory 5 sur Kubernetes, Mesos sans toutefois tout re-écrire. \n\n- Pourquoi déployer sur Kubernetes et compagnie ?\n- Architecture Artifactory HA\n- Nouvelles exigences pour les nodes \"cloud native\"\n    * Stateless\n    * Immutable\n    * \"Network agnostic\"\n    * Stockage distribué\n- Comment remplir ces exigences ?\n    * Synchro des configs\n    * Stockage distribué \"maison\" avec redondance\n    * Working queue distribuée\n- Demo lancement d'un cluster Artifactory sur Kubernetes",
           "speakers": [
-            "224"
+            "Alexis Tual"
           ],
           "language": "fr",
           "format": "conference",
@@ -1381,7 +1381,7 @@
           "title": "Elastic : comment fonctionne une équipe d'ingénierie totalement distribuée de 250 personnes",
           "description": "La société Elastic, éditeur des logiciels Elasticsearch et Kibana, est en \"remote first\" : les 250 membres de l'équipe d'ingénierie sont tous en télétravail, ainsi qu'une partie des équipes commerciales et marketing, dans près de 30 pays et 18 fuseaux horaires.\n\nComment fonctionne cette équipe distribuée pour travailler et communiquer efficacement ? Quels outils et processus ont été mis en place au cours du temps ? Comment sont structurées les équipes, et comment est organisé le développement logiciel ? Quelles sont les valeurs communes que partagent les employés pour que ça fonctionne ? Comment créer du lien ? Comment s'opère le recrutement ?\n\nC'est ce que nous verrons à travers l'organisation et le fonctionnement de l'entreprise, et l'illustration du travail au quotidien d'un ingénieur de l'équipe Elastic Cloud. On verra quand utiliser les communications synchrones et asynchrones, la cohésion d'équipe à travers les revues de code, la nécessaire automatisation des processus, les \"all hands\" permettant de se retrouver physiquement, l'intégration des nouveaux arrivants, etc.",
           "speakers": [
-            "205"
+            "Sylvain Wallez"
           ],
           "language": "fr",
           "format": "conference",
@@ -1395,7 +1395,7 @@
           "title": "Il n'y a pas que Angular, React ou VueJS dans la vie",
           "description": "Nous connaissons tous les frameworks/librairies à la mode : de Angular à React, en passant par le tout dernier VueJS. Mais devons-nous nous limiter à ces trois solutions ? \nDurant cette conférence, nous allons aborder plutôt les projets les moins connus, mais pas les moins intéressants, et qui pourraient être sources\nd'idées pour les grands du Web. De Inferno à Marko, en passant par Preact, nous allons enfin pouvoir connaitre les avantages et inconvénients de ces solutions\nalternatives.",
           "speakers": [
-            "227"
+            "Emmanuel Demey"
           ],
           "language": "fr",
           "format": "conference",
@@ -1409,7 +1409,7 @@
           "title": "Make load-balancing great again with Traefik!",
           "description": "How to effectively manage inbound network traffic in your container based infrastructure? This talk will be a deep dive into Traefik, a modern reverse-proxy and load balancer made to deploy microservices with ease. You will learn how Traefik integrates with Docker, Kubernetes, Prometheus and a lot more!",
           "speakers": [
-            "1142"
+            "Emile Vauge"
           ],
           "language": "fr",
           "format": "conference",
@@ -1423,7 +1423,7 @@
           "title": "Comment être un développeur ethique et green ? Dilemne entre la course technologique et mon impact sur la société.",
           "description": "Le logiciel est partout. Il est clair que le logiciel a un impact réel sur le monde : uberisation, digitalisation... mais stoppons ici la buzzwordisation... Nous, développeurs sommes les architectes du monde virtuel au service du réel. Nos actions ont un effet bien réel. Bénéfique mais aussi néfaste. \nExclusion sociale, impact environnemental, obsolescence sont des effets bien réel de nos logiciels. Mais avons nous le choix face au demandes de nos utilisateurs et clients et aux contraintes associées (planning, sécurité...)\nEt bien oui, c'est le choix qui est fait par de nombreuses sociétés et développeurs : bénévolat comme code for America, Eco-conception de logiciel publique... Etre développeur ethique et green est possibles, nous verrons concretement comme faire cela au jour le jour.",
           "speakers": [
-            "1417"
+            "Olivier Philippot"
           ],
           "language": "fr",
           "format": "conference",
@@ -1437,7 +1437,7 @@
           "title": "Kubernetes et les containers pour votre application Web : step by step",
           "description": "L'objectif de cette présentation est de montrer un cas concret d'utilisation de Kubernetes et des containers pour le déploiement d'une application Web écrite en Java.\n\nAprès un bref rappel sur les containers et une introduction aux concepts clés de Kubernetes, on suivra étape par étape le développement, la configuration et le déploiement d’une application Web en Java avec Kubernetes sur Google Container Engine. (connection base de donnée, load balanceur, mises à jour, montée en charge…)\n\nLa présentation sera accompagnée de tips et de retours d’expérience.",
           "speakers": [
-            "236"
+            "Alain Regnier"
           ],
           "language": "fr",
           "format": "conference",
@@ -1451,7 +1451,7 @@
           "title": "Bonnes pratiques React en 15 diapos",
           "description": "`React` n'est pas un framework, c'est juste une librairie. Elle fait très bien son boulot, mais dans un projet sérieux, il faut lui ajouter d'autres briques. Si certaines se sont imposées comme des standards (redux, react-router), sur d'autres domaines il reste beaucoup d'effervescence, signe que le sujet n'est pas encore mûr (css-in-js, GraphQL...).\n\nComment dans ces conditions mettre en place une pile technique pérenne et de bonnes pratiques sur son projet ? Ces choix importants conditionnent la vitalité du projet, son évolutivité et le plaisir qu'on aura à le créer, donc sa qualité.\n\nJe n'ai bien-sûr pas de réponse définitive à ces questions, mais je me propose de présenter les choix que j'ai faits ou évalués sur les différents projets sur lesquels j'ai travaillé. Ça ne peut être qu'indicatif, mais j'espère susciter la discussion si vous avez un autre point de vue, et pourquoi pas vous faire découvrir de nouvelles choses que vous n'aviez pas envisagées.\n\nPour rendre l'exercice ludique, j'aurais 15 diapos en 15 minutes, un thème par diapo.\n\n[Et pour garantir la qualité du contenu, je compte sonder la communauté React toulousaine et plus, pour recueillir les idées et les avis et partager le résultat.]",
           "speakers": [
-            "207"
+            "Gilles Debunne"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1465,7 +1465,7 @@
           "title": "WebAssembly ? Web et assembleur ? WTF !",
           "description": "Petite présentation pour essayer de cerner ce qu'est cet OVNI dans l'univers des technos Web. Ce nouveau standard débarque dans les navigateurs et soulève pas mal de questions sur ses promesses (rapidité ! cible de compilation universelle !) et son positionnement par rapport aux autres technos, comme JavaScript que certains rêvent de voir disparaître (spoiler alert : non, WebAssembly n'a pas du tout vocation à remplacer JavaScript). Un peu d'histoire et de technique pour s'éclaircir les idées et pour voir comment on travaille avec cette techno émergente.",
           "speakers": [
-            "2545"
+            "Nicolas Decoster"
           ],
           "language": "fr",
           "format": "conference",
@@ -1479,8 +1479,8 @@
           "title": "Mixité dans le monde des Web Components",
           "description": "Ah, les web components, quelle belle idée ! Un nouveau standard, du développement web basé enfin sur une vraie architecture en composants, de la réutilisation, de la modularisation, de l'encapsulation... Des choses que les développeurs backend ont depuis plus de trente ans enfin disponibles pour les développeurs web… La version 1.0 du standard étant enfin sortie, il est temps de voir si la réalité des Web Components est à la hauteur des promesses.\n \nDans ce talk on va essayer de répondre à une des questions qu'on nous pose le plus souvent quand nous parlons de web components : \"OK, le futur sera beau, mais aujourd'hui, si je fais des componsants avec une bibliothèque X et mon pote en fait avec une bibliothèque Y, je peux les utiliser dans la même application ? Et ils marcheront dans mon framework favori ?\" \n \nPour répondre a cette question, nous allons mettre à profit ces 45 minutes pour intégrer et faire parler des composants web dans un maximum de technologies. Car face à la tendance à se polariser avec des querelles de chapelles type Angular vs React vs Aurelia vs Polymer vs Meteor nous préférons le slogan Let's work hand in hand and move the web forward",
           "speakers": [
-            "120",
-            "121"
+            "Horacio Gonzalez",
+            "Cyril Balit"
           ],
           "language": "fr",
           "format": "conference",
@@ -1494,8 +1494,8 @@
           "title": "Demain j'arrête le café, je me met au crabe !",
           "description": "Présentation du langage Rust et de son écosystème.\n\nLe but étant de faciliter le démarrage sur cette technologie pour des personnes utilisant des langages haut niveau comme Java. Dans cette présentation nous découvrirons: \n* Le Langage (3 piliers)\n    * Productivité : API fonctionnelle, pas de gestion manuelle de la mémoire, typage fort, inférence de type\n    * Performance : Compilation native avec LLVM, ∅GC, langage bas niveau\n    * Sûreté : sûreté de la mémoire, pas d’accès concurrent\n    * Features présentées (et animées !) :\n        * struct / trait / generics\n        * ownership / borrowing / lifetime\n        * memory guarantees : Box / Rc / Cell / Arc\n        * macro\n* L'Écosystème :\n    * IDE, tests, debugger, RLS (?)\n    * Build et packages manager (Cargo)\n    * Librairies phares (Iron, Mio, Nom, Piston)\n\nPuis nous terminerons sur une démo multi plateforme avec un backend tournant sur les différentes plateformes: Windows / Linux / ARM, puis un frontend en webassembly avec rust.",
           "speakers": [
-            "2497",
-            "2498"
+            "Logan Mauzaize",
+            "Alessio Coltellacci"
           ],
           "language": "fr",
           "format": "conference",
@@ -1509,7 +1509,7 @@
           "title": "Azure pour les développeurs",
           "description": "Que l'on soit développeur web ou développeur mobile, la question du Cloud se pose. Est-ce fait pour moi ? Qu'est-ce que cela va m'apporter ? Quelques sont les différentes options ? Nous échangerons sur l'impact du Cloud et d'Azure en particulier pour le métier de développeur, les bénéfices et les dangers, histoire que personne ne passe à côté de cette révolution en marche.",
           "speakers": [
-            "2548"
+            "Alex Danvy"
           ],
           "language": "fr",
           "format": "conference",
@@ -1523,7 +1523,7 @@
           "title": "Elm, est-ce si bien qu'on le dit",
           "description": "Elm est un language fonctionnel fortement typé qui compile vers JavaScript. Il offre une approche pure et immutable avec un compiler proposant des messages d'erreur extrêmement compréhensibles. Lorsque l'on lit des articles à son sujet sur internet, on peut voir des phrases fortes comme \"Aucune erreur au runtime\" ou \"Quand ça compile, ça marche\" ou encore \"Le compiler Elm est mon meilleur ami de pair-programming\".Après avoir utilisé ce language pendant plus d'un an en production, nous verrons si tout est si magique que cela et surtout, le cas échéant, quel est le prix à payer pour y parvenir. Nous aborderons également des points comme \"Quelle est la différence avec TypeScript ?\" ou \"Est-ce que cela marche aussi bien côté client que côté serveur ?\".",
           "speakers": [
-            "119"
+            "Paul Dijou"
           ],
           "language": "fr",
           "format": "conference",
@@ -1537,7 +1537,7 @@
           "title": "Stream processing avec Apache Flink",
           "description": "Les données sont au coeur de nos applications, et sont créées de façon continue sous forme de flux (stream). L'architecture orientée flux (Streaming Architecture) permet de réduire la latence entre l'émission d'un évènement et les décisions à prendre en fonction des évènements passés et en cours, tout en gardant une architecture globale simple et efficace. Apache Flink est un framework permettant de créer des application orientées flux, avec:\n\nUne API en Java et Scala qui facilite l'analyse et le traitement des flux\nIntégration avec l'ecosystème Big Data : Kafka, YARN, HDFS, MapR-FS, HBase, MapR-* * Des fonctionnalités avancées: Complex Event Processing, Machne Learning et Gestion des Graphes de données. DB, Cascading, Elasticsearch)\nLe tout déployé de façon distribuée et hautement disponible.\n\nCette présentation est l'occasion de découvrir Flink, son coeur, ses APIs et l'approche \"streaming first\" pour vos applications.\n\nFlink est utilisé en production par de nombreuses entreprises: Bouygues Telecom, Netflix, Alibaba, Ericsson, King, Zalando, et bien d'autres, supporté par la société Data Artisans et une communauté de plus de 140 contributeurs.",
           "speakers": [
-            "286"
+            "Tugdual Grall"
           ],
           "language": "fr",
           "format": "conference",
@@ -1551,8 +1551,8 @@
           "title": "A la découverte de Google Flutter et Fuchsia dans l’écosystème Dart",
           "description": "[Flutter](https://flutter.io/) est un nouveau framework créé par Google dont l’objectif est de nous proposer une **nouvelle approche “cross-platform” de développement mobile**.\nEn utilisant une seule base de code écrite en **Dart**, on construit des **applications natives Android & iOS**.\n\n[Fuchsia](https://github.com/fuchsia-mirror) est le nom de code du nouveau système d’exploitation développé par Google. \nCet OS n’utilise pas le noyau Linux et Flutter est utilisé pour construire son interface graphique. \n\nCe talk vous propose d’aller à la découverte de ces 2 nouvelles technologies. Création de widget, navigation, gestion de plugins et plein d'autres astuces en Flutter vous seront présentées.",
           "speakers": [
-            "351",
-            "352"
+            "Boris-Wilfried Nyasse",
+            "Kévin Segaud"
           ],
           "language": "fr",
           "format": "conference",
@@ -1566,8 +1566,8 @@
           "title": "Déploiement automatique d'app iOS et/ou Android",
           "description": "Pour tous dev mobile, que ce soit seul ou en équipe, le déploiement d'une app sur le store de Google ou d'Apple est un passage (quasi) obligatoire.\n\nAndroid et iOS sont différents jusque dans les IDE et les outils de build. Mais au delà de XCode, Android Studio, gradle... des libraries tels que fastlane vont tenter de réconcilier (un peu) les deux univers.\n\nNous allons voir comment intégrer la phase de publication dans le processus de build. Et cela via quelques lignes de script ou même directement dans les outils d'intégration continue tel que Jenkins.",
           "speakers": [
-            "2652",
-            "2653"
+            "Florian Chauveau",
+            "Cédric Gatay"
           ],
           "language": "fr",
           "format": "conference",
@@ -1581,8 +1581,8 @@
           "title": "L'UX a sauvé mon DevOps",
           "description": "Elle s’appelle UX, lui s’appelle Devops.  \nIls sont amoureux mais sont au coeur de disputes entre deux familles rivales tels les Capulet et les Montaigu.  \nElle partage beaucoup de points communs avec lui :\n- Ils ne voient jamais un projet dans son intégralité.\n- Les deux sont des concepts émergeants des années 2010 au sein de l’IT.\n- Ils sont tous les deux au centre des équipes et servent de liant entre les développeurs. Mais malgré tout, tout les sépare !\nCependant, les choses ont changé et les meurs ont évolué.  \n  \nUn jour, alors que notre Devops tentait en vain de convaincre sa hiérarchie, de désespoir, il se tourna vers UX et pria pour son assistance. Ce qu’il vit alors l’enchanta et il compris … Ses faiblesses étaient ses forces et il pouvait lui apporter autant.  \nSon idéation était semblable à son automatisation.  \nQuand il lui parlait de Scale, elle comprenait même si ce n’était pas la même chose (analytics scale) et leurs objectifs étaient beaucoup trop semblables pour que ce soit une coincidence …  \n  \nVenez voir l’histoire d’amour la plus improbable des ces 10 dernières années !",
           "speakers": [
-            "191",
-            "192"
+            "Francois Teychene",
+            "Estelle Landry"
           ],
           "language": "fr",
           "format": "conference",
@@ -1596,7 +1596,7 @@
           "title": "Faire du Machine Learning sans Data Scientist",
           "description": "Le succès du machine learning passera par une démocratisation de son utilisation. Ceci ne pourra pas se faire si les techniques actuelles ne deviennent pas plus accessibles et que ces technologies restent une affaire de spécialistes.\nCette présentation issus de nombreux retour d'expériences expliquera comment il faut s'y prendre pour repenser le métier de son entreprise en s'appuyant sur du machine learning sans pour autant sombrer dans les difficultés théoriques.",
           "speakers": [
-            "282"
+            "Didier Girard"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1610,7 +1610,7 @@
           "title": "Balade au pays de «Let's Encrypt»",
           "description": "*Let's Encrypt!* Le mot d'ordre est lancé. Ça semble tellement simple. Et pourtant l'arbre cache une forêt. Qu'est-ce qu'une signature numérique, un certificat, une chaîne ou une autorité de certification, une liste de révocation ? C'est à une balade à la découverte de ces concepts que je vous invite, avec pour destination la machinerie de *Let's Encrypt!*",
           "speakers": [
-            "189"
+            "Frederic Cabestre"
           ],
           "language": "fr",
           "format": "conference",
@@ -1624,7 +1624,7 @@
           "title": "Libérée! Délivrée! ou Comment devenir développeuse open source ?",
           "description": "On parle de diversité, un peu partout dans les communautés open source maintenant mais pour la plupart cela se résume à avoir un code of conduct. C’est loin d’être suffisant! Et si on regardait ce que l’on peut faire pour s’ouvrir aux gens de tous horizons ? Dans les entreprises ? Au sein des projets open source ? Et si vous veniez comprendre comment j’en suis arrivée à devenir développeuse de logiciels libres ? Ce talk est un retour d’expérience sur quand, pourquoi et comment je suis tombée dans l’open source. Et finalement pourquoi j’ai décidé de continuer dans cette voie.",
           "speakers": [
-            "2742"
+            "Mélanie Bats"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1638,7 +1638,7 @@
           "title": "ES2048",
           "description": "On le sait tous, JavaScript est partout : De l'IoT au serveur en passant par votre téléviseur !\nDans toutes les conférences, on nous présente de nouvelles évolutions exceptées la face cachée de l'iceberg : la publication annuelle pour les révisions de JavaScript.\nCe langage avec lequel on peut tout faire repose sur un ensemble de normes concernant les langages de script et est standardisé.\nQuel organisme s'occupe de ça ?\nComment sont sélectionnées les nouvelles fonctionnalités ?\nQuelles sont celles qui nous attendent pour les versions à venir ?\nVenez découvrir tout cela avec nous dans ce quickie.",
           "speakers": [
-            "819"
+            "Régis Marie-joseph"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1652,7 +1652,7 @@
           "title": "Les lois de la physique classique s'appliquent aussi au Big Data !",
           "description": "La révolution de l'électronique initiée à la fin de la seconde guerre mondiale est le principal vecteur de la révolution numérique que nous vivons aujourd'hui. Ceci n'a été rendu possible que grâce à l'étude & la compréhension des phénomènes naturels : la \"physique\". L'objectif de ce talk est donc d'expliciter les interactions possibles/envisageables dans le système  Big Data. Nous en ressortirons alors un ensemble de recommandations pour la définition d'une architecture Big Data suivant les lois fondamentales de la physique.",
           "speakers": [
-            "2805"
+            "Bill Metangmo Tsobze"
           ],
           "language": "fr",
           "format": "conference",
@@ -1666,7 +1666,7 @@
           "title": "Et après Développeur, chef de projet ?",
           "description": "Aujourd'hui, le parcours de carrière d'un développeur manque de modèles et d'idéaux. La réponse la plus courante reste \"Chef de Projet\" et pourtant, ce n'est pas ce qui fait rêver la majorité des développeurs :/\n\nJeChercheUnDev.fr a accompagné plus de 1000 développeurs dans leurs changements de carrière. Voici ce que nous avons appris.",
           "speakers": [
-            "840"
+            "Damien Cavaillès"
           ],
           "language": "fr",
           "format": "quickie",
@@ -1680,9 +1680,9 @@
           "title": "Apéro fonctionnel",
           "description": "Un jour, 4 devs un peu barés 🙋🐼🐥🦁 (attention les rôles peuvent changer au dernier moment 😜) un entrepreneur plein d'humour 🐨 (qui comprend le geek)  se retrouvent à une terrasse de café\n\n- 🙋 : N'empêche que le nom \"Scalafistes\" ça vous va super bien!  `#trollinside`\n- 🐼 : Non. 🙋, tu prends des raccourcis ...\n- 🐥 : Ah moi j'aime bien aussi, je revendique même!  Je suis un Scalafiste de l'extrême, et Play vaincra!!!\n- - 🐼 : depuis quand 🐥 tu fais du Scala? ...\n- 🦁 : Là, mecs,  vous \"vendez\" une vision totalement réductrice du paysage fonctionnel, Il n'y a pas que Scala dans la vie, prend Haskell et la beauté des théories mathématiques associées, l'intelligence du système de types de Rust qui te propose des monades Option en retour de fonction, le ...\n- 🐼 : Vous me faites marrer avec vos types, si tu sais coder, tu peux faire du fonctionnel en JavaScript `#trollinside` `#oupas`\n- 🐥 : MDR 🐼, je suis sûr que avec ton Node tu feras que de la 💩\n- 🐨 : `#defi` est-ce que vous vous croyez capables de m'expliquer ces concepts en termes simples?\n- 🙋 : Oh oui 🐨, dessine nous une monade!\n- 🐥 : Quelqu'un reprend un 🍷?\n- 🙋🐼🐥🐨🦁 👍",
           "speakers": [
-            "1772",
-            "1773",
-            "1136",
+            "Philippe Charrière",
+            "Didier Plaindoux",
+            "Charlotte Cavalier",
             "Alain Regnier",
             "Charlotte Cavalier"
           ],
@@ -1698,9 +1698,9 @@
           "title": "Big Data avec AWS : notre retour d'expérience sur l'utilisation des services managés",
           "description": "A partir d'une application concrète dans le monde de l'automobile (voitures connectées), cette présentation illustrera l'architecture AWS mise en place pour y répondre. \nNotre approche consiste à collecter et traiter les données des véhicules, en considérant à la fois une approche streaming et une approche batch.\nL'architecture mise en place comprend les services managés suivants:\n- IoT\n- Lambda\n- Kinesis Stream\n- Kinesis Firehose\n- Elastic Map Reduce (EMR)\n- Elastic Search Service (ESS)\n- S3\n- Cloudwatch \n\nPour chacun des services nous présenterons les avantages et les inconvénients rencontrés dans notre cas.",
           "speakers": [
-            "2691",
-            "2692",
-            "2693"
+            "Olivier Flebus",
+            "Fanny Martin",
+            "Matthieu Bernardin"
           ],
           "language": "fr",
           "format": "conference",
@@ -1714,7 +1714,7 @@
           "title": "Ici votre commandant de bord, on passe en mode avion !",
           "description": "Vous vous demandez comment améliorer l'expérience de vos utilisateurs web ? Et pourquoi ne pas leur permettre de lancer et d'interagir avec votre application web même lorsqu'il n'y a pas de réseau?\n\nNous verrons comment mettre en place une stratégie offline-first totale en utilisant des nouvelles APIs comme le **service worker**, **background-sync**, la **cache API** et **indexDB**.",
           "speakers": [
-            "255"
+            "Olivier Leplus"
           ],
           "language": "fr",
           "format": "conference",
@@ -1728,8 +1728,8 @@
           "title": "Interprétabilité des modèles de Machine Learning avec LIME",
           "description": "**Introduction pratique à LIME** (Local Interpretable Model-Agnostic Explanations), un pas supplémentaire vers l'interprétabilité des modèles de Machine Learning.\n___\nL'utilisation de modèles de Machine Learning (ML) dans la résolution d'une grande variété de problèmes est de plus en plus populaire. Ces modèles mathématiques sont pour certains (comme les régressions linéaires ou bien les arbres de décisions) facilement interprétables. Cependant, les modèles ML à la pointe de la technologie, permettant de répondre à des problèmes complexes, comme les réseaux de neurones profonds, sont de facto des boîtes noires, au fonctionnement interne inaccessible. Cela soulève une question primordiale : puis-je avoir confiance dans les résultats donnés par mon modèle ?\n\nEn prenant l'exemple concret d'un algorithme de classification d'images utilisant un réseau de neurones, nous introduirons LIME une technique novatrice permettant de visualiser les caractéristiques de l'image qui ont permis au modèle de prendre sa décision.",
           "speakers": [
-            "2823",
-            "2824"
+            "Samia Drappeau",
+            "Florent Pajot"
           ],
           "language": "fr",
           "format": "conference",
