@@ -118,7 +118,19 @@ export default async function speakerRoutes(app: FastifyInstance) {
         },
         talks: {
           where: { publicationStatus: "PUBLISHED", ...notDeleted, edition: notDeleted },
-          select: { slug: true, title: true, format: true, videoUrl: true, edition: { select: { year: true } } },
+          // level/language/category describe the session the same way the talk
+          // page does (#359). level is nullable — 42 of the imported talks carry
+          // none — so the client must treat it as optional.
+          select: {
+            slug: true,
+            title: true,
+            format: true,
+            level: true,
+            language: true,
+            videoUrl: true,
+            category: { select: { nameFr: true, nameEn: true, color: true } },
+            edition: { select: { year: true } },
+          },
           orderBy: { title: "asc" },
         },
       },

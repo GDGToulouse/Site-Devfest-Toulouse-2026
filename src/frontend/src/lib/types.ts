@@ -271,6 +271,11 @@ export interface SpeakerTalkRef {
   slug: string;
   title: string;
   format: TalkFormat;
+  // Null on 42 of the imported talks: the historical data never carried one, so
+  // the badge has to be conditional (#359).
+  level: TalkLevel | null;
+  language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
   videoUrl: string | null;
 }
 

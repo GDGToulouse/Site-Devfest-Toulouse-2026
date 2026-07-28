@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getSpeakerBySlug } from "@/lib/api";
+import { getCurrentEdition, getSpeakerBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
@@ -49,9 +49,18 @@ export default async function SpeakerDetailPage({
   // Talk formats are translated under `replays` — the only namespace that owns
   // them. Named for what it does, so the two lookups stay legible.
   const tFormat = await getTranslations("replays");
-  const speaker = await getSpeakerBySlug(slug);
+  // Levels are only spelled out under `conferences` — `replays` has no level.*
+  // key at all, so a third lookup is unavoidable here (#359).
+  const tLevel = await getTranslations("conferences");
+  // The edition is only needed to name the current line-up in the footer link
+  // (#357); fetched alongside the speaker so the two calls do not serialize.
+  const [speaker, edition] = await Promise.all([getSpeakerBySlug(slug), getCurrentEdition()]);
 
   if (!speaker) notFound();
+
+  // Same fallback as the speakers list: with no featured edition the label must
+  // still read, so the current year stands in.
+  const currentYear = edition?.year ?? new Date().getFullYear();
 
   const bio = localizedField(speaker, "bio", locale);
 
@@ -145,10 +154,39 @@ export default async function SpeakerDetailPage({
                             href={`/editions/${participation.year}/conferences/${talk.slug}`}
                             className="block rounded-xl bg-blanc p-4 shadow-card transition-transform hover:-translate-y-0.5"
                           >
-                            <span className="font-bold text-noir">{talk.title}</span>
-                            <span className="ml-2 text-sm text-gris">
-                              {tFormat(`format.${talk.format}`)}
-                            </span>
+                            {/* One line, truncated: titles range from three words
+                                to a full sentence, and letting them wrap made the
+                                cards ragged. The full wording is one click away,
+                                and on hover meanwhile. */}
+                            <p className="truncate font-bold text-noir" title={talk.title}>
+                              {talk.title}
+                            </p>
+                            {/* Same badges as the talk page, in the same order, so
+                                a session reads identically wherever it shows up. */}
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span className="rounded-full bg-bleu/10 px-3 py-1 text-sm font-bold text-bleu">
+                                {tFormat(`format.${talk.format}`)}
+                              </span>
+                              {talk.category && (
+                                <span
+                                  className="rounded-full px-3 py-1 text-sm font-bold"
+                                  style={{
+                                    backgroundColor: `${talk.category.color}20`,
+                                    color: talk.category.color,
+                                  }}
+                                >
+                                  {localizedField(talk.category, "name", locale)}
+                                </span>
+                              )}
+                              {talk.level && (
+                                <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">
+                                  {tLevel(`level.${talk.level}`)}
+                                </span>
+                              )}
+                              <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">
+                                {talk.language === "en" ? tFormat("language.en") : tFormat("language.fr")}
+                              </span>
+                            </div>
                           </Link>
                         </li>
                       ))}
@@ -162,12 +200,14 @@ export default async function SpeakerDetailPage({
           </section>
         )}
 
-        {/* Two ways out: the current line-up, and the whole archive. "All
-            speakers" alone would strand a 2018 speaker on a list they are not
-            part of. */}
+        {/* Two ways out: the current line-up, and the whole archive. The first
+            names its year (#357) — this page is reached from a replay, a talk
+            card or an external link just as often as from the list, so "all
+            speakers" promised a return trip that was rarely one, and would
+            strand a 2018 speaker on a list they are not part of. */}
         <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2">
           <Link href="/speakers" className="font-bold text-bleu hover:underline">
-            ← {t("backToList")}
+            {t("backToList", { year: currentYear })}
           </Link>
           <Link href="/hall-of-fame" className="font-bold text-bleu hover:underline">
             {t("backToHallOfFame")}

@@ -18,6 +18,21 @@ const createdEditionIds: number[] = [];
 const uniq = () => `${Date.now()}-${Math.round(performance.now())}`;
 
 afterEach(async () => {
+  // Participations go first, on purpose. Deleting speakers and editions as two
+  // separate statements leaves a window where a SpeakerEdition still points at
+  // a row that is on its way out, and /speakers/hall-of-fame reads every
+  // participation in the database — including this file's. A parallel test file
+  // hitting that window got an error instead of a list (#292 all over again).
+  if (createdSpeakerIds.length || createdEditionIds.length) {
+    await prisma.speakerEdition.deleteMany({
+      where: {
+        OR: [
+          { speakerId: { in: createdSpeakerIds } },
+          { editionId: { in: createdEditionIds } },
+        ],
+      },
+    });
+  }
   if (createdSpeakerIds.length) {
     await prisma.speaker.deleteMany({ where: { id: { in: createdSpeakerIds } } });
     createdSpeakerIds.length = 0;
@@ -89,6 +104,9 @@ describe("GET /api/speakers/hall-of-fame (#352)", () => {
 
     const res = await fetchHallOfFame();
 
+    // Asserted before reading the body: without it a failing route surfaced as
+    // "res.json(...).map is not a function", which says nothing about why.
+    expect(res.statusCode).toBe(200);
     const slugs = res.json().map((r: { slug: string }) => r.slug);
     expect(slugs).toContain(person.slug);
   });

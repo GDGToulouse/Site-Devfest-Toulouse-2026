@@ -17,9 +17,22 @@ async function buildApp() {
 
 const createdSpeakerIds: number[] = [];
 const createdEditionIds: number[] = [];
+const createdCategoryIds: number[] = [];
 const uniq = () => `${Date.now()}-${Math.round(performance.now())}`;
 
 afterEach(async () => {
+  // Participations first: /speakers/hall-of-fame reads every one of them, so a
+  // row still pointing at an edition being deleted breaks a parallel file (#292).
+  if (createdSpeakerIds.length || createdEditionIds.length) {
+    await prisma.speakerEdition.deleteMany({
+      where: {
+        OR: [
+          { speakerId: { in: createdSpeakerIds } },
+          { editionId: { in: createdEditionIds } },
+        ],
+      },
+    });
+  }
   if (createdSpeakerIds.length) {
     await prisma.talk.deleteMany({ where: { speakers: { some: { id: { in: createdSpeakerIds } } } } });
     await prisma.speaker.deleteMany({ where: { id: { in: createdSpeakerIds } } });
@@ -29,6 +42,13 @@ afterEach(async () => {
     await prisma.talk.deleteMany({ where: { editionId: { in: createdEditionIds } } });
     await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
     createdEditionIds.length = 0;
+  }
+  // Deleted last: a talk still pointing at one would block the delete. Category
+  // names are globally unique since #338, so leaving them behind would make a
+  // second run collide with the first.
+  if (createdCategoryIds.length) {
+    await prisma.category.deleteMany({ where: { id: { in: createdCategoryIds } } });
+    createdCategoryIds.length = 0;
   }
 });
 
@@ -64,7 +84,12 @@ async function makePerson(
   return speaker;
 }
 
-async function makeTalk(editionId: number, speakerId: number, title: string) {
+async function makeTalk(
+  editionId: number,
+  speakerId: number,
+  title: string,
+  extra: { level?: "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME"; language?: string; categoryId?: number } = {},
+) {
   return prisma.talk.create({
     data: {
       editionId,
@@ -72,7 +97,9 @@ async function makeTalk(editionId: number, speakerId: number, title: string) {
       title,
       description: "",
       format: "CONFERENCE",
-      language: "fr",
+      language: extra.language ?? "fr",
+      level: extra.level ?? null,
+      categoryId: extra.categoryId ?? null,
       publicationStatus: "PUBLISHED",
       speakers: { connect: { id: speakerId } },
     },
@@ -190,6 +217,46 @@ describe("GET /api/speakers/:slug — the person, not the edition (#352)", () =>
     await app.close();
 
     expect(res.statusCode).toBe(404);
+  });
+
+  it("describes each session with its level, language and category (#359)", async () => {
+    const edition = await makeEdition(1912);
+    const person = await makePerson("Session Metadata", [{ editionId: edition.id }]);
+    const category = await prisma.category.create({
+      data: { nameFr: `Cat ${uniq()}`, nameEn: `Cat ${uniq()}`, color: "#123456" },
+    });
+    createdCategoryIds.push(category.id);
+    await makeTalk(edition.id, person.id, "Une session décrite", {
+      level: "INTERMEDIAIRE",
+      language: "en",
+      categoryId: category.id,
+    });
+
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: `/api/speakers/${person.slug}` });
+    await app.close();
+
+    // The page cannot render a badge for a field the route never selects, and
+    // nothing in the types would catch the omission — hence this assertion.
+    const talk = res.json().participations[0].talks[0];
+    expect(talk.level).toBe("INTERMEDIAIRE");
+    expect(talk.language).toBe("en");
+    expect(talk.category).toMatchObject({ nameFr: category.nameFr, color: "#123456" });
+  });
+
+  it("leaves the level null when the talk carries none", async () => {
+    const edition = await makeEdition(1913);
+    const person = await makePerson("No Level", [{ editionId: edition.id }]);
+    // 42 imported talks have no level: the badge must stay conditional.
+    await makeTalk(edition.id, person.id, "Session sans niveau");
+
+    const app = await buildApp();
+    const res = await app.inject({ method: "GET", url: `/api/speakers/${person.slug}` });
+    await app.close();
+
+    const talk = res.json().participations[0].talks[0];
+    expect(talk.level).toBeNull();
+    expect(talk.category).toBeNull();
   });
 
   it("never leaks the private fields", async () => {

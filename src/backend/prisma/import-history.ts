@@ -14,6 +14,8 @@ import { dirname, resolve } from "node:path";
 
 import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
+import { resolveSpeakerPhoto } from "../src/lib/speaker-photo.js";
+import { revalidateAll } from "../src/lib/revalidate.js";
 import {
   buildSocialLinks,
   normalizeCategory,
@@ -34,6 +36,9 @@ interface Report {
   talks: { created: number; updated: number };
   links: number;
   categories: { linked: number; unmatched: number };
+  speakerRefs: { unresolved: number };
+  photos: { stored: number };
+  cachePurged: boolean;
   warnings: string[];
 }
 
@@ -70,6 +75,9 @@ async function main() {
     talks: { created: 0, updated: 0 },
     links: 0,
     categories: { linked: 0, unmatched: 0 },
+    speakerRefs: { unresolved: 0 },
+    photos: { stored: 0 },
+    cachePurged: false,
     warnings: [],
   };
 
@@ -108,10 +116,13 @@ async function main() {
     // year, so uniqueSlug would mint `ada-lovelace-2` and split the identity in
     // two — exactly what this model change removes.
     const existingSpeakers = await prisma.speaker.findMany({
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, photoUrl: true },
     });
     const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
     const speakerSlugToId = new Map(existingSpeakers.map((s) => [s.slug, s.id]));
+    // Read here so the photo already on file can be checked before downloading:
+    // a picture that is already local must never be fetched again (#356).
+    const photoUrlBySlug = new Map(existingSpeakers.map((s) => [s.slug, s.photoUrl]));
     const idByName = new Map<string, number>();
 
     for (const sp of ed.speakers) {
@@ -123,7 +134,18 @@ async function main() {
       const baseSlug = slugify(name);
       const social = buildSocialLinks(sp.socials);
       report.links += Object.keys(social).length;
-      const photoUrl = normalizePhotoUrl(sp.photoUrl);
+      // The history file points at Twitter, Gravatar, company sites… Those hosts
+      // rot and they watch our visitors, so the file is pulled into /uploads/
+      // (#356). normalizePhotoUrl still drops the 2016-2019 relative paths,
+      // which reference images this repo never shipped.
+      const remotePhotoUrl = normalizePhotoUrl(sp.photoUrl);
+      const photoUrl = await resolveSpeakerPhoto(
+        remotePhotoUrl,
+        photoUrlBySlug.get(baseSlug) ?? null,
+        name,
+        report.warnings,
+      );
+      if (photoUrl && photoUrl !== photoUrlBySlug.get(baseSlug)) report.photos.stored++;
       const bioFr = sp.bio?.trim() || null;
 
       const company = sp.company?.trim() || null;
@@ -152,6 +174,7 @@ async function main() {
             ...(current.socialLinks ? {} : { socialLinks }),
           },
         });
+        if (photoUrl) photoUrlBySlug.set(baseSlug, photoUrl);
         idByName.set(name.toLowerCase(), existingId);
         report.speakers.updated++;
       } else {
@@ -161,6 +184,10 @@ async function main() {
           data: { slug, name, company, city, bioFr, photoUrl, socialLinks },
         });
         speakerSlugToId.set(slug, created.id);
+        // Keep the photo map in step: the list is re-read per edition, but two
+        // entries sharing a name inside the SAME year would otherwise download
+        // the picture twice.
+        photoUrlBySlug.set(slug, photoUrl);
         idByName.set(name.toLowerCase(), created.id);
         speakerId = created.id;
         report.speakers.created++;
@@ -192,9 +219,23 @@ async function main() {
       }
       const baseSlug = slugify(title);
       const description = s.description?.trim() ?? "";
-      const speakerDbIds = (s.speakers ?? [])
-        .map((n) => idByName.get(n.trim().toLowerCase()))
-        .filter((id): id is number => id !== undefined);
+      // A reference that matches no speaker used to be dropped by a .filter(),
+      // which is how 2017 ended up with 7 links for 38 talks: its sessions cited
+      // numeric ids the file never defined, and nothing said so (#361). Losing a
+      // reference is not fatal — the talk is still imported — but it must be
+      // said out loud.
+      const speakerDbIds: number[] = [];
+      for (const ref of s.speakers ?? []) {
+        const id = idByName.get(ref.trim().toLowerCase());
+        if (id === undefined) {
+          report.speakerRefs.unresolved++;
+          report.warnings.push(
+            `${year} — « ${title} » : intervenant « ${ref} » introuvable, session non rattachée.`,
+          );
+          continue;
+        }
+        speakerDbIds.push(id);
+      }
 
       // Track published by the edition itself, mapped onto the shared catalogue.
       const categoryName = normalizeCategory(s);
@@ -252,13 +293,30 @@ async function main() {
 
     console.log(
       `${year}: speakers +${report.speakers.created}/~${report.speakers.updated}, ` +
-        `talks +${report.talks.created}/~${report.talks.updated}`,
+        `talks +${report.talks.created}/~${report.talks.updated}, ` +
+        `photos ${report.photos.stored}`,
     );
   }
 
   for (const name of [...missingCategories].sort()) {
     report.warnings.push(
       `Catégorie « ${name} » absente du catalogue : les talks concernés restent sans catégorie.`,
+    );
+  }
+
+  // The data is in, but every public page still serves what it cached before
+  // this run — for up to an hour (#358). Admin mutations revalidate as they go;
+  // a CLI script has to do it itself.
+  //
+  // A failure here is never fatal: the import succeeded in the database, and
+  // saying otherwise would invite a needless re-run. It is loud instead, because
+  // nothing else will tell the operator the site is showing stale pages.
+  const purge = await revalidateAll();
+  report.cachePurged = purge.ok;
+  if (!purge.ok) {
+    report.warnings.push(
+      `Cache non purgé (${purge.reason}) : les pages publiques serviront l'état précédent ` +
+        `jusqu'à expiration du cache. Purger depuis l'admin, ou redémarrer le frontend.`,
     );
   }
 

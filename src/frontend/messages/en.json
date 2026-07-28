@@ -315,7 +315,7 @@
     "empty": "Speakers will be announced soon.",
     "sessionsTitle": "Sessions",
     "noSessionThatYear": "No published session for this edition.",
-    "backToList": "All speakers",
+    "backToList": "{year} speakers",
     "backToHallOfFame": "See the hall of fame"
   },
   "hallOfFame": {

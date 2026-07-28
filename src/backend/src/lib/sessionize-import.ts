@@ -1,4 +1,4 @@
-import { fetchAndStoreImage } from "./image-store.js";
+import { resolveSpeakerPhoto } from "./speaker-photo.js";
 import { prisma } from "./prisma.js";
 import { slugify, uniqueSlug } from "./slug.js";
 import { validateWebhookUrl } from "./webhook-url.js";
@@ -131,34 +131,9 @@ export function categoryRole(c: SzCategory): "format" | "level" | "language" | "
   return "track";
 }
 
-export function isLocalUpload(url: string | null | undefined): boolean {
-  return !!url && url.startsWith("/uploads/");
-}
-
-// Sessionize serves speaker pictures from its own CDN, which next/image refuses
-// to load (host not in remotePatterns) — so we pull the file into /uploads/ and
-// store a local URL instead (#205). Re-imports keep an existing local photo
-// rather than downloading it again (RG-217 idempotence). A download failure is
-// never fatal: the speaker is imported without a photo and a warning is
-// reported.
-export async function resolveSpeakerPhoto(
-  remoteUrl: string | null | undefined,
-  currentPhotoUrl: string | null,
-  speakerName: string,
-  report: ImportReport,
-): Promise<string | null> {
-  if (isLocalUpload(currentPhotoUrl)) return currentPhotoUrl;
-  if (!remoteUrl?.trim()) return null;
-
-  try {
-    return await fetchAndStoreImage(remoteUrl.trim());
-  } catch (err) {
-    report.warnings.push(
-      `Photo de ${speakerName} non importée : ${(err as Error).message}.`,
-    );
-    return null;
-  }
-}
+// Both importers pull remote pictures into /uploads/, so these live in their own
+// module rather than in either importer (#356).
+export { isLocalUpload, resolveSpeakerPhoto } from "./speaker-photo.js";
 
 // Run the idempotent import. Speakers/talks are matched by their slug derived
 // from name/title within the edition (RG-206/RG-214); re-importing the same
@@ -277,7 +252,7 @@ export async function importSessionize(
       sz.profilePicture,
       photoUrlBySlug.get(baseSlug) ?? null,
       name,
-      report,
+      report.warnings,
     );
 
     let speakerId: number;
