@@ -103,8 +103,11 @@ async function main() {
     else report.editions.created++;
 
     // 2. Upsert speakers, keyed by slug; remember name -> db id for linking.
+    // Reconciled across every edition since #351: a speaker is one person. A
+    // lookup scoped to this edition would not see someone imported from another
+    // year, so uniqueSlug would mint `ada-lovelace-2` and split the identity in
+    // two — exactly what this model change removes.
     const existingSpeakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id },
       select: { id: true, slug: true },
     });
     const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
@@ -123,18 +126,30 @@ async function main() {
       const photoUrl = normalizePhotoUrl(sp.photoUrl);
       const bioFr = sp.bio?.trim() || null;
 
+      const company = sp.company?.trim() || null;
+      const city = sp.city?.trim() || null;
+      const socialLinks = Object.keys(social).length ? JSON.stringify(social) : null;
+
+      let speakerId: number;
       const existingId = speakerSlugToId.get(baseSlug);
       if (existingId) {
+        speakerId = existingId;
+        // Fill the gaps, never overwrite. Editions are imported oldest first,
+        // so a blanket update would let 2016 erase the profile 2025 filled in —
+        // and an admin's manual edit along with it.
+        const current = await prisma.speaker.findUniqueOrThrow({
+          where: { id: existingId },
+          select: { company: true, city: true, bioFr: true, photoUrl: true, socialLinks: true },
+        });
         await prisma.speaker.update({
           where: { id: existingId },
           data: {
             name,
-            company: sp.company?.trim() || null,
-            city: sp.city?.trim() || null,
-            bioFr,
-            photoUrl,
-            socialLinks: Object.keys(social).length ? JSON.stringify(social) : null,
-            publicationStatus: "PUBLISHED",
+            ...(current.company ? {} : { company }),
+            ...(current.city ? {} : { city }),
+            ...(current.bioFr ? {} : { bioFr }),
+            ...(current.photoUrl ? {} : { photoUrl }),
+            ...(current.socialLinks ? {} : { socialLinks }),
           },
         });
         idByName.set(name.toLowerCase(), existingId);
@@ -143,22 +158,22 @@ async function main() {
         const slug = uniqueSlug(baseSlug, takenSpeakerSlugs);
         takenSpeakerSlugs.add(slug);
         const created = await prisma.speaker.create({
-          data: {
-            editionId: edition.id,
-            slug,
-            name,
-            company: sp.company?.trim() || null,
-            city: sp.city?.trim() || null,
-            bioFr,
-            photoUrl,
-            socialLinks: Object.keys(social).length ? JSON.stringify(social) : null,
-            publicationStatus: "PUBLISHED",
-          },
+          data: { slug, name, company, city, bioFr, photoUrl, socialLinks },
         });
         speakerSlugToId.set(slug, created.id);
         idByName.set(name.toLowerCase(), created.id);
+        speakerId = created.id;
         report.speakers.created++;
       }
+
+      // The participation is what carries the year (#351). It must be recorded
+      // even for a speaker with no session at all: 31 of them have none, and
+      // their editions cannot be derived from talks.
+      await prisma.speakerEdition.upsert({
+        where: { speakerId_editionId: { speakerId, editionId: edition.id } },
+        create: { speakerId, editionId: edition.id, publicationStatus: "PUBLISHED" },
+        update: { publicationStatus: "PUBLISHED" },
+      });
     }
 
     // 3. Upsert sessions (talks), keyed by slug, linking speakers by name.

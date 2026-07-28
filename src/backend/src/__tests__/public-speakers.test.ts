@@ -23,14 +23,21 @@ afterEach(async () => {
   }
 });
 
-async function makeSpeaker(editionId: number, overrides: Record<string, unknown> = {}) {
+// #351 — publicationStatus and isFeatured moved to the participation, so the
+// helper splits its overrides: those two go to SpeakerEdition, the rest stay on
+// the identity. Callers keep the pre-#351 signature.
+async function makeSpeaker(
+  editionId: number,
+  { publicationStatus = "PUBLISHED" as const, isFeatured = false, ...identity }: Record<string, unknown> = {},
+) {
   const s = await prisma.speaker.create({
     data: {
       name: "Test Speaker",
       slug: `test-speaker-${Date.now()}-${Math.round(performance.now())}`,
-      editionId,
-      publicationStatus: "PUBLISHED",
-      ...overrides,
+      ...identity,
+      editions: {
+        create: [{ editionId, publicationStatus: publicationStatus as "PUBLISHED" | "DRAFT", isFeatured: isFeatured as boolean }],
+      },
     },
   });
   createdIds.push(s.id);

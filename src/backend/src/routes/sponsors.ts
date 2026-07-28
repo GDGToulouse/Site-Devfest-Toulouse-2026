@@ -68,7 +68,12 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live sponsor page.
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          // Published *for this edition* (#351) — the sponsor is edition-scoped,
+          // so its speakers are judged on the same year.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },

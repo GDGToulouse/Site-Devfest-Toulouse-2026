@@ -9,12 +9,19 @@ export default async function speakerRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
-    const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-      orderBy: { name: "asc" },
-      select: { id: true, slug: true, name: true, photoUrl: true, company: true, isFeatured: true },
+    // Read through the participations since #351, then project back to the
+    // exact same response shape: the public payload must not change.
+    const links = await prisma.speakerEdition.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
+      orderBy: { speaker: { name: "asc" } },
+      select: {
+        isFeatured: true,
+        speaker: {
+          select: { id: true, slug: true, name: true, photoUrl: true, company: true },
+        },
+      },
     });
-    return speakers;
+    return links.map((link) => ({ ...link.speaker, isFeatured: link.isFeatured }));
   });
 
   // GET /api/speakers/featured — published + featured speakers (home section, US-202).
@@ -22,13 +29,20 @@ export default async function speakerRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
-    const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", isFeatured: true, ...notDeleted },
-      orderBy: { name: "asc" },
+    const links = await prisma.speakerEdition.findMany({
+      where: {
+        editionId: edition.id,
+        publicationStatus: "PUBLISHED",
+        isFeatured: true,
+        speaker: notDeleted,
+      },
+      orderBy: { speaker: { name: "asc" } },
       take: 8,
-      select: { id: true, slug: true, name: true, photoUrl: true, company: true },
+      select: {
+        speaker: { select: { id: true, slug: true, name: true, photoUrl: true, company: true } },
+      },
     });
-    return speakers;
+    return links.map((link) => link.speaker);
   });
 
   // GET /api/speakers/:slug — detail of a published speaker + its published talks.
@@ -40,19 +54,22 @@ export default async function speakerRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
+    // The slug identifies the person (#351); the participation decides whether
+    // they are public on this edition.
     const speaker = await prisma.speaker.findFirst({
       where: {
-        editionId: edition.id,
         slug: request.params.slug,
-        publicationStatus: "PUBLISHED",
         ...notDeleted,
+        editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
       },
       include: {
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only), and a
         // trashed talk would otherwise still show up on a live speaker page.
+        // Scoped to the edition since #351, or a global identity would drag
+        // every past year's sessions onto this page.
         talks: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
           select: { slug: true, title: true, format: true },
           orderBy: { title: "asc" },
         },

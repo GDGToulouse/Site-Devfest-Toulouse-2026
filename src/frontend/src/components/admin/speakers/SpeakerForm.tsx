@@ -19,9 +19,7 @@ export interface SpeakerFormValue {
   github: string;
   website: string;
   locale: "fr" | "en";
-  isFeatured: boolean;
   sponsorId: string;
-  publicationStatus: "DRAFT" | "PUBLISHED";
 }
 
 export const emptySpeakerForm: SpeakerFormValue = {
@@ -37,9 +35,7 @@ export const emptySpeakerForm: SpeakerFormValue = {
   github: "",
   website: "",
   locale: "fr",
-  isFeatured: false,
   sponsorId: "",
-  publicationStatus: "DRAFT",
 };
 
 const inputClass =
@@ -158,27 +154,6 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
           Langue des emails envoyés à ce speaker et de sa page de modification.
         </span>
       </label>
-
-      <div className="flex flex-wrap items-center gap-6">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value.isFeatured}
-            onChange={(e) => onChange({ ...value, isFeatured: e.target.checked })}
-            className="rounded border-gris/30 text-malachite focus:ring-malachite"
-          />
-          <span className="text-sm text-noir">En vedette (page d&apos;accueil)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value.publicationStatus === "PUBLISHED"}
-            onChange={(e) => onChange({ ...value, publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT" })}
-            className="rounded border-gris/30 text-malachite focus:ring-malachite"
-          />
-          <span className="text-sm text-noir">Publié (visible sur le site)</span>
-        </label>
-      </div>
 
       <ImagePickerDialog
         open={isImagePickerOpen}

@@ -101,7 +101,9 @@ model Edition {
   articles     Article[]
   keyFigures   KeyFigure[]
   sponsorTiers EditionSponsorTier[]
-  speakers     Speaker[]
+  // The join since #351, like `categories` above: an edition's speakers are
+  // participations, not identities.
+  speakers     SpeakerEdition[]
   talks        Talk[]
   sponsors     Sponsor[]
   categories   EditionCategory[]
@@ -502,27 +504,32 @@ model FileMetadata {
 
 // --- Speakers (RG-200 to RG-208) ---
 
+// A person, not a per-edition row (#351). Someone who spoke at several editions
+// used to exist as several unlinked rows — the model confused *who this person
+// is* with *which editions they took part in*. Participations live on
+// SpeakerEdition, the same split as SponsorTier/EditionSponsorTier (#316) and
+// Category/EditionCategory (#338).
 model Speaker {
-  id                Int               @id @default(autoincrement())
-  // Slug derived from the full name, unique per edition (RG-206).
-  slug              String
-  name              String
-  photoUrl          String?
-  company           String?
-  city              String?
-  bioFr             String?
-  bioEn             String?
+  id           Int     @id @default(autoincrement())
+  // Globally unique since #351: a slug identifies a person, not a participation.
+  slug         String  @unique
+  name         String
+  photoUrl     String?
+  company      String?
+  city         String?
+  bioFr        String?
+  bioEn        String?
   // JSON object of social links, e.g. {"twitter":"...","github":"...","linkedin":"...","bluesky":"...","website":"..."}
-  socialLinks       String?
+  socialLinks  String?
   // Contact email used to send the modification link (RG-243). Optional.
-  contactEmail      String?
+  contactEmail String?
   // Language we write to this speaker in — "fr" | "en" (#224). Set in the
   // admin, defaults to French so existing rows keep today's behaviour. This is
   // NOT Talk.language: a French speaker may well present in English.
-  locale            String            @default("fr")
-  // Shown in the homepage "featured speakers" section (RG-202).
-  isFeatured        Boolean           @default(false)
-  publicationStatus PublicationStatus @default(DRAFT)
+  locale       String  @default("fr")
+
+  // isFeatured and publicationStatus moved to SpeakerEdition (#351): both are
+  // per-edition editorial decisions, like EditionSponsorTier.isVisible.
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
   // Stored now to avoid a second migration. editToken is a crypto-random
@@ -536,19 +543,41 @@ model Speaker {
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
 
-  editionId Int
-  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
-
   // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
+  // DEBT (#351): Sponsor is edition-scoped, so a global speaker pointing at a
+  // single sponsor row is wrong the moment they come back a second year. Only
+  // one row carries a sponsorId today, so this moves to SpeakerEdition in a
+  // follow-up rather than widening an already destructive migration.
   sponsorId Int?
   sponsor   Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
 
-  talks Talk[]
+  editions SpeakerEdition[]
+  talks    Talk[]
 
-  @@unique([editionId, slug])
-  @@index([editionId])
   @@index([sponsorId])
   @@index([deletedAt])
+}
+
+// Which editions a speaker took part in (#351), and how they were presented
+// that year. The 31 speakers with no talk at all are why participation is
+// carried explicitly: their editions cannot be derived from their sessions.
+// Pure join row — the trash operates on the Speaker identity, so no soft delete.
+model SpeakerEdition {
+  id                Int               @id @default(autoincrement())
+  // Shown in the homepage "featured speakers" section (RG-202), per edition.
+  isFeatured        Boolean           @default(false)
+  publicationStatus PublicationStatus @default(DRAFT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  speakerId Int
+  speaker   Speaker @relation(fields: [speakerId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  @@unique([speakerId, editionId])
+  @@index([speakerId])
+  @@index([editionId])
 }
 
 // --- Talks / Sessions (RG-210 to RG-217) ---

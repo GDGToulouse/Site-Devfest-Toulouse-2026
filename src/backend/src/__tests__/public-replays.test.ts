@@ -107,8 +107,7 @@ describe("Public replays (#102)", () => {
       data: {
         name: "Grace Hopper Replay",
         slug: `grace-replay-${uniq()}`,
-        editionId: edition.id,
-        publicationStatus: "PUBLISHED",
+        editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
       },
     });
     speakerIds.push(speaker.id);
@@ -181,9 +180,8 @@ describe("Public replays (#102)", () => {
       data: {
         name: "Trashed Speaker Replay",
         slug: `ghost-replay-${uniq()}`,
-        editionId: edition.id,
-        publicationStatus: "PUBLISHED",
         deletedAt: new Date(),
+        editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
       },
     });
     speakerIds.push(ghost.id);
