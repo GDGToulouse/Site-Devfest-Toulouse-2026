@@ -35,7 +35,11 @@ export default function SynthesisOverview({ editionId, year, counts }: Synthesis
     });
   }, [editionId]);
 
-  const publishedSpeakers = speakers.filter((s) => s.publicationStatus === "PUBLISHED");
+  // #351: the status belongs to the participation, and the list is already
+  // scoped to this edition — so read the one matching it, not the person.
+  const publishedSpeakers = speakers.filter((s) =>
+    s.editions.some((e) => e.id === editionId && e.publicationStatus === "PUBLISHED"),
+  );
 
   function openAllSocialCards() {
     for (const s of publishedSpeakers) {

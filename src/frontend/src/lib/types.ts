@@ -408,7 +408,21 @@ export interface Category {
   color: string;
 }
 
+// One year a speaker took part in, as exposed by the admin API (#351): the
+// editorial state is per-edition, so it lives here and not on the person.
+export interface SpeakerEdition {
+  // The edition's id — not the join row's. The attach/detach endpoints are keyed
+  // on (speakerId, editionId), so this is what they take.
+  id: number;
+  year: number;
+  isFeatured: boolean;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+}
+
 // Admin speaker entity (CRUD).
+// A person, shared across editions (#351) — same shape as Category since #338.
+// The edition binding, the publication status and the featured flag live on the
+// `editions` participations, newest year first.
 export interface Speaker {
   id: number;
   slug: string;
@@ -422,10 +436,8 @@ export interface Speaker {
   contactEmail: string | null;
   locale: string;
   editLinkLocked: boolean;
-  isFeatured: boolean;
   sponsorId: number | null;
-  publicationStatus: "DRAFT" | "PUBLISHED";
-  editionId: number;
+  editions: SpeakerEdition[];
 }
 
 export interface EditionDetail {
