@@ -15,6 +15,7 @@ import { dirname, resolve } from "node:path";
 import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
 import { resolveSpeakerPhoto } from "../src/lib/speaker-photo.js";
+import { revalidateAll } from "../src/lib/revalidate.js";
 import {
   buildSocialLinks,
   normalizeCategory,
@@ -36,6 +37,7 @@ interface Report {
   links: number;
   categories: { linked: number; unmatched: number };
   photos: { stored: number };
+  cachePurged: boolean;
   warnings: string[];
 }
 
@@ -73,6 +75,7 @@ async function main() {
     links: 0,
     categories: { linked: 0, unmatched: 0 },
     photos: { stored: 0 },
+    cachePurged: false,
     warnings: [],
   };
 
@@ -282,6 +285,22 @@ async function main() {
   for (const name of [...missingCategories].sort()) {
     report.warnings.push(
       `Catégorie « ${name} » absente du catalogue : les talks concernés restent sans catégorie.`,
+    );
+  }
+
+  // The data is in, but every public page still serves what it cached before
+  // this run — for up to an hour (#358). Admin mutations revalidate as they go;
+  // a CLI script has to do it itself.
+  //
+  // A failure here is never fatal: the import succeeded in the database, and
+  // saying otherwise would invite a needless re-run. It is loud instead, because
+  // nothing else will tell the operator the site is showing stale pages.
+  const purge = await revalidateAll();
+  report.cachePurged = purge.ok;
+  if (!purge.ok) {
+    report.warnings.push(
+      `Cache non purgé (${purge.reason}) : les pages publiques serviront l'état précédent ` +
+        `jusqu'à expiration du cache. Purger depuis l'admin, ou redémarrer le frontend.`,
     );
   }
 

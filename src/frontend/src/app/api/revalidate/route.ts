@@ -30,10 +30,21 @@ export async function POST(request: NextRequest) {
   }
 
   const body = await request.json();
-  const { secret, paths } = body;
+  const { secret, paths, all } = body;
 
+  // The secret is checked before anything else, `all` included: an unauthenticated
+  // global purge would be a denial-of-service by invalidation.
   if (typeof secret !== "string" || !constantTimeEqual(secret, REVALIDATE_SECRET)) {
     return NextResponse.json({ error: "Invalid secret" }, { status: 403 });
+  }
+
+  // Bulk writes that bypass the admin routes — the history import (#358) — touch
+  // the home page, every list and ~240 speaker pages at once. Enumerating them
+  // would be both long and easy to leave incomplete, so the root layout is
+  // revalidated instead: Next treats `/` + "layout" as "purge everything".
+  if (all === true) {
+    revalidatePath("/", "layout");
+    return NextResponse.json({ revalidated: true, all: true });
   }
 
   if (!paths || !Array.isArray(paths) || paths.length === 0) {

@@ -113,3 +113,33 @@ export function revalidateCfp(): Promise<void> {
     ...bilingualPaths("/proposer-un-talk"),
   ]);
 }
+
+/**
+ * Purge the whole Next cache (#358).
+ *
+ * For the bulk writes that happen outside the admin routes — the history import
+ * touches editions, speakers, talks, categories and photos in one go. Listing
+ * the affected paths would mean enumerating ~240 speaker pages plus every list,
+ * and any omission silently serves stale content for an hour.
+ *
+ * Unlike the helpers above, this one *reports* instead of swallowing: a CLI
+ * script has no user watching the logs, so it must be able to tell the operator
+ * that a manual purge is still needed. The caller decides what to do with that —
+ * an import that succeeded in the database must never be failed by a cache miss.
+ */
+export async function revalidateAll(): Promise<{ ok: boolean; reason?: string }> {
+  if (!REVALIDATE_SECRET) {
+    return { ok: false, reason: "REVALIDATE_SECRET absent" };
+  }
+  try {
+    const res = await fetch(`${FRONTEND_URL}/api/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: REVALIDATE_SECRET, all: true }),
+    });
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
+  }
+}
