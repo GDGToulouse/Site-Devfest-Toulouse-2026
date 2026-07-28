@@ -23,7 +23,10 @@ interface SpeakerCreateBody {
   publicationStatus?: "DRAFT" | "PUBLISHED";
 }
 
-type SpeakerUpdateBody = Partial<Omit<SpeakerCreateBody, "editionId">>;
+// `editionId` no longer moves the speaker (they belong to several editions
+// since #351): on an update it says which participation isFeatured and
+// publicationStatus apply to.
+type SpeakerUpdateBody = Partial<SpeakerCreateBody>;
 
 interface SpeakerIdParams {
   id: string;
@@ -35,12 +38,53 @@ interface SpeakerListQuery {
 
 interface SpeakerBulkBody {
   ids: number[];
+  // Which participation to act on (#351) — both actions are per-edition.
+  editionId: number;
   action: "setStatus" | "setFeatured";
   value: "DRAFT" | "PUBLISHED" | boolean;
 }
 
-function serialize(s: { socialLinks: string | null; [k: string]: unknown }) {
-  return { ...s, socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {} };
+// Participations, newest edition first — the admin reads a speaker's history
+// from the most recent year backwards.
+const withEditions = {
+  editions: {
+    select: {
+      editionId: true,
+      isFeatured: true,
+      publicationStatus: true,
+      edition: { select: { id: true, year: true } },
+    },
+  },
+} as const;
+
+interface SerializableSpeaker {
+  socialLinks: string | null;
+  editions?: {
+    editionId: number;
+    isFeatured: boolean;
+    publicationStatus: "DRAFT" | "PUBLISHED";
+    edition: { id: number; year: number };
+  }[];
+  [k: string]: unknown;
+}
+
+function serialize(s: SerializableSpeaker) {
+  return {
+    ...s,
+    socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
+    ...(s.editions
+      ? {
+          editions: [...s.editions]
+            .sort((a, b) => b.edition.year - a.edition.year)
+            .map((e) => ({
+              id: e.edition.id,
+              year: e.edition.year,
+              isFeatured: e.isFeatured,
+              publicationStatus: e.publicationStatus,
+            })),
+        }
+      : {}),
+  };
 }
 
 export default async function adminSpeakerRoutes(app: FastifyInstance) {
@@ -50,10 +94,16 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
   }, async (request) => {
     const { editionId } = request.query;
 
+    // Filtering goes through the participations since #351. Ordering is
+    // alphabetical in both cases: `edition.year` is no longer a to-one relation
+    // to sort on, and the admin table sorts client-side anyway.
     const speakers = await prisma.speaker.findMany({
-      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
-      include: editionId ? undefined : { edition: { select: { id: true, year: true } } },
-      orderBy: editionId ? { name: "asc" } : [{ edition: { year: "desc" } }, { name: "asc" }],
+      where: {
+        ...notDeleted,
+        ...(editionId ? { editions: { some: { editionId: Number(editionId) } } } : {}),
+      },
+      include: withEditions,
+      orderBy: { name: "asc" },
     });
     return speakers.map(serialize);
   });
@@ -66,7 +116,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     // top-level where, so it cannot carry the `deletedAt` filter (#147).
     const speaker = await prisma.speaker.findFirst({
       where: { id: Number(request.params.id), ...notDeleted },
-      include: { edition: { select: { id: true, year: true } } },
+      include: withEditions,
     });
     if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
     return serialize(speaker);
@@ -79,19 +129,32 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "editionId and name are required" });
     }
 
+    const baseSlug = slugify(body.name);
+
+    // A slug is a person since #351, so an existing one means "this person is
+    // already known" — not "derive ada-lovelace-2". Answer 409 with the id so
+    // the admin can attach them to this edition instead of forking the identity.
+    const live = await prisma.speaker.findFirst({
+      where: { slug: baseSlug, ...notDeleted },
+      select: { id: true, name: true },
+    });
+    if (live) {
+      return reply.code(409).send({
+        error: "Speaker already exists",
+        existingSpeakerId: live.id,
+        existingSpeakerName: live.name,
+      });
+    }
+
     // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
     // constraint, so a trashed speaker still owns its slug until purged. Parking
     // frees the readable form, but a row keeping an unparked slug (restored, or
     // trashed before #147) must still be counted or the create would collide.
-    const existing = await prisma.speaker.findMany({
-      where: { editionId: body.editionId },
-      select: { slug: true },
-    });
-    const slug = uniqueSlug(slugify(body.name), new Set(existing.map((e) => e.slug)));
+    const existing = await prisma.speaker.findMany({ select: { slug: true } });
+    const slug = uniqueSlug(baseSlug, new Set(existing.map((e) => e.slug)));
 
     const speaker = await prisma.speaker.create({
       data: {
-        editionId: body.editionId,
         slug,
         name: body.name.trim(),
         photoUrl: body.photoUrl || null,
@@ -102,15 +165,88 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
-        isFeatured: body.isFeatured ?? false,
         sponsorId: body.sponsorId ?? null,
-        publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        // The editorial state belongs to the participation, not the person.
+        editions: {
+          create: {
+            editionId: body.editionId,
+            isFeatured: body.isFeatured ?? false,
+            publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+          },
+        },
       },
+      include: withEditions,
     });
 
     revalidateSpeakers();
     return reply.code(201).send(serialize(speaker));
   });
+
+  // POST /api/admin/speakers/:id/editions — attach an existing person to an
+  // edition (#351). This is what the 409 above points the admin to.
+  app.post<{ Params: SpeakerIdParams; Body: { editionId: number; publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean } }>(
+    "/speakers/:id/editions",
+    { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
+    async (request, reply) => {
+      const speakerId = Number(request.params.id);
+      const { editionId } = request.body;
+      if (!editionId) return reply.code(400).send({ error: "editionId is required" });
+
+      const speaker = await prisma.speaker.findFirst({
+        where: { id: speakerId, ...notDeleted },
+        select: { id: true },
+      });
+      if (!speaker) return notFound(reply, "Speaker");
+
+      const edition = await prisma.edition.findFirst({
+        where: { id: editionId, ...notDeleted },
+        select: { id: true },
+      });
+      if (!edition) return reply.code(422).send({ error: "Invalid editionId: no such edition" });
+
+      await prisma.speakerEdition.upsert({
+        where: { speakerId_editionId: { speakerId, editionId } },
+        create: {
+          speakerId,
+          editionId,
+          isFeatured: request.body.isFeatured ?? false,
+          publicationStatus: request.body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+        },
+        update: {
+          ...(request.body.isFeatured !== undefined && { isFeatured: request.body.isFeatured }),
+          ...(request.body.publicationStatus && { publicationStatus: request.body.publicationStatus }),
+        },
+      });
+
+      revalidateSpeakers();
+      const updated = await prisma.speaker.findUniqueOrThrow({
+        where: { id: speakerId },
+        include: withEditions,
+      });
+      return serialize(updated);
+    },
+  );
+
+  // DELETE /api/admin/speakers/:id/editions/:editionId — detach. Idempotent.
+  app.delete<{ Params: { id: string; editionId: string } }>(
+    "/speakers/:id/editions/:editionId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id", "editionId"],
+          properties: { id: { type: "string" }, editionId: { type: "string" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      await prisma.speakerEdition.deleteMany({
+        where: { speakerId: Number(request.params.id), editionId: Number(request.params.editionId) },
+      });
+      revalidateSpeakers();
+      return reply.code(204).send();
+    },
+  );
 
   // PUT /api/admin/speakers/:id
   app.put<{ Params: SpeakerIdParams; Body: SpeakerUpdateBody }>("/speakers/:id", {
@@ -133,14 +269,29 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
-        ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
         ...(body.sponsorId !== undefined && { sponsorId: body.sponsorId ?? null }),
-        ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
       },
     });
 
+    // isFeatured and publicationStatus are per-edition since #351, so they need
+    // to say *which* edition. Sent without one, they are ignored rather than
+    // silently applied to every year the speaker took part in.
+    if (body.editionId && (body.isFeatured !== undefined || body.publicationStatus !== undefined)) {
+      await prisma.speakerEdition.updateMany({
+        where: { speakerId: Number(id), editionId: body.editionId },
+        data: {
+          ...(body.isFeatured !== undefined && { isFeatured: body.isFeatured }),
+          ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+        },
+      });
+    }
+
     revalidateSpeakers();
-    return serialize(speaker);
+    const updated = await prisma.speaker.findUniqueOrThrow({
+      where: { id: speaker.id },
+      include: withEditions,
+    });
+    return serialize(updated);
   });
 
   // POST /api/admin/speakers/bulk — apply one action to several speakers at once.
@@ -152,9 +303,15 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Body: SpeakerBulkBody }>("/speakers/bulk", async (request, reply) => {
-    const { ids, action, value } = request.body;
+    const { ids, action, value, editionId } = request.body;
     if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
       return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
+    }
+    // Both actions target a participation since #351, so the edition has to be
+    // explicit. Applying to every year a speaker took part in would publish
+    // people on editions the admin was not even looking at.
+    if (!Number.isInteger(editionId)) {
+      return reply.code(400).send({ error: "editionId is required" });
     }
 
     let data: { publicationStatus: "DRAFT" | "PUBLISHED" } | { isFeatured: boolean };
@@ -172,8 +329,8 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "unknown action" });
     }
 
-    const { count } = await prisma.speaker.updateMany({
-      where: { id: { in: ids }, ...notDeleted },
+    const { count } = await prisma.speakerEdition.updateMany({
+      where: { speakerId: { in: ids }, editionId, speaker: notDeleted },
       data,
     });
     revalidateSpeakers();

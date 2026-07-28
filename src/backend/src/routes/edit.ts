@@ -255,7 +255,16 @@ async function resolveToken(token: string) {
   const speaker = await prisma.speaker.findUnique({
     where: { editToken: token },
     include: {
-      edition: { select: { startDate: true } },
+      // The 48h freeze (RG-246) keys on an event date, and a global identity no
+      // longer has one (#351). The link is sent for the upcoming edition, so the
+      // most recent participation is the one that gates editing. No
+      // participation at all leaves startDate null, which isEditingFrozen reads
+      // as "not frozen" — a speaker must not be locked out by our modelling.
+      editions: {
+        orderBy: { edition: { year: "desc" } },
+        take: 1,
+        select: { edition: { select: { startDate: true } } },
+      },
       // Sessions the speaker sees from the link (#260). Only published ones are
       // surfaced. Format, level and language are read-only (#289) but still
       // selected: the speaker needs to see how their session is programmed.
@@ -276,7 +285,15 @@ async function resolveToken(token: string) {
       },
     },
   });
-  if (speaker) return { kind: "speaker" as const, entity: speaker };
+  if (speaker) {
+    // Flatten back to the { edition: { startDate } } shape the rest of the route
+    // and editingBlockedReason expect, so the join stays contained here.
+    const { editions, ...rest } = speaker;
+    return {
+      kind: "speaker" as const,
+      entity: { ...rest, edition: editions[0]?.edition ?? { startDate: null } },
+    };
+  }
 
   // Sponsors resolve through their contacts (#250): the token lives on a
   // SponsorContact, and the lock/send-date are per-contact. We flatten the

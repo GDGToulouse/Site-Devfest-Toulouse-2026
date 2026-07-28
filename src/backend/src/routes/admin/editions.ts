@@ -109,7 +109,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
             select: {
               ticketTiers: { where: notDeleted },
               articles: { where: notDeleted },
-              speakers: { where: notDeleted },
+              // `speakers` is the SpeakerEdition join since #351, same as
+              // `categories` below: the join row has no deletedAt of its own.
+              speakers: { where: { speaker: notDeleted } },
               talks: { where: notDeleted },
               sponsors: { where: notDeleted },
               // `categories` is the EditionCategory join since #338: the join
@@ -270,7 +272,8 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
             select: {
               articles: { where: notDeleted },
               talks: { where: notDeleted },
-              speakers: { where: notDeleted },
+              // The SpeakerEdition join since #351 — no deletedAt of its own.
+              speakers: { where: { speaker: notDeleted } },
               sponsors: { where: notDeleted },
               // `categories` is the EditionCategory join since #338: the join
               // row carries no deletedAt, so the filter targets the track.

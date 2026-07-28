@@ -63,8 +63,14 @@ export default async function replayRoutes(app: FastifyInstance) {
       include: {
         edition: { select: { year: true } },
         // Nested filter: a trashed speaker must not ride along a live talk (#147).
+        // The list spans every edition, so there is no single year to judge the
+        // participation against (#351): published on *any* edition is the right
+        // test here — such a person already has a public page of their own.
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          where: {
+            ...notDeleted,
+            editions: { some: { publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true },
           orderBy: { name: "asc" },
         },
