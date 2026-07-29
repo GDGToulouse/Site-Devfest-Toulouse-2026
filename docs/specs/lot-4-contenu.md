@@ -63,7 +63,7 @@
 | RG-430 | La page À propos / Historique présente le GDG Toulouse et l'histoire du DevFest. |
 | RG-431 | Une frise chronologique affiche les éditions passées (2016 à 2025). Composant custom en CSS (liste verticale avec points et ligne de connexion), sans librairie externe. |
 | RG-432 | Chaque entrée de la frise affiche : année, lieu, nombre de participants, nombre de sessions, lien vers le site archivé. |
-| RG-433 | La frise utilise les données de `data/devfest-history.json` (speakers et sessions) et les métadonnées des éditions (nombre de participants, lieu, etc. stockés comme données admin-éditables dans l'entité édition — ces informations ne sont pas dans devfest-history.json). |
+| RG-433 | La frise utilise les données en base (speakers et sessions, importées depuis `src/backend/prisma/devfest-history.json`) et les métadonnées des éditions (nombre de participants, lieu, etc. stockés comme données admin-éditables dans l'entité édition — ces informations ne sont pas dans le fichier d'historique). |
 | RG-434 | Des liens vers les sites archivés des éditions précédentes sont fournis (ex. `2019.devfesttoulouse.fr`). |
 | RG-435 | Le contenu textuel de présentation du GDG est bilingue (FR + EN). |
 
@@ -72,7 +72,7 @@
 | # | Règle |
 |---|-------|
 | RG-440 | Le Hall of replays affiche l'historique de toutes les conférences de toutes les éditions ayant des vidéos. |
-| RG-441 | Les données proviennent de `data/devfest-history.json` (champ `youtube` des sessions). |
+| RG-441 | Les données proviennent de la base, via `/api/replays` (champ `videoUrl` des conférences, alimenté à l'import depuis le champ `youtube` du fichier d'historique). |
 | RG-442 | Les sessions sont groupées par édition (année), de la plus récente à la plus ancienne. |
 | RG-443 | Chaque session avec vidéo affiche : titre, speaker(s), édition (année), player YouTube intégré (lazy loading) et lien « Regarder sur YouTube ». |
 | RG-444 | Un filtre par édition (année) est disponible. |
@@ -201,7 +201,7 @@
 - [ ] Filtre par édition (dropdown ou onglets) (RG-444).
 - [ ] Recherche texte sur titre et speaker (RG-445).
 - [ ] Clic sur le lien YouTube → ouverture dans un nouvel onglet (ou player intégré).
-- [ ] Les données proviennent de `data/devfest-history.json` (RG-441).
+- [ ] Les données proviennent de la base, via `/api/replays` (RG-441).
 - [ ] `<title>` : « Hall of replays — DevFest Toulouse 2026 ».
 - [ ] La page est bilingue FR/EN.
 - [ ] Pagination ou lazy loading si le nombre de vidéos est important (7 éditions, potentiellement 100+ vidéos).

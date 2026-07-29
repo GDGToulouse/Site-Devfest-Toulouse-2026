@@ -1,4 +1,4 @@
-// Normalization helpers for importing data/devfest-history.json into the
+// Normalization helpers for importing prisma/devfest-history.json into the
 // Speaker/Talk models (issue #63). The historical JSON has inconsistent shapes
 // across editions (old 2016-2019 vs WordPress 2023-2025), so everything funnels
 // through these pure mappers before hitting the database.
