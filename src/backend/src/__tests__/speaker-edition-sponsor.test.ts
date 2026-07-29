@@ -165,6 +165,39 @@ describe("Speaker sponsor per edition (#353)", () => {
     expect(res.json().participations[0].sponsor).toBeNull();
   });
 
+  it("publishes per participation, not per identity — one sponsor, two years", async () => {
+    // The decision this task implements: `publicationStatus` left the identity
+    // for EditionSponsor (#129), so "published" means published for THAT
+    // year's participation. A wrong reading — e.g. "published on any year" —
+    // would leak this sponsor's name onto the draft year too.
+    const older = await makeEdition(1708);
+    const newer = await makeEdition(1709);
+    const tierId = await tierIdByKey("gold");
+
+    const sponsor = await createSponsorFixture({
+      name: "Mixed Status Sponsor",
+      slug: `mixed-status-sponsor-${uniq()}`,
+      editionId: older.id,
+      tierId,
+      publicationStatus: "DRAFT",
+    });
+    createdSponsorIds.push(sponsor.id);
+    await prisma.editionSponsor.create({
+      data: { sponsorId: sponsor.id, editionId: newer.id, tierId, publicationStatus: "PUBLISHED" },
+    });
+
+    const person = await makePerson("Mixed Status Employee", [
+      { editionId: older.id, sponsorId: sponsor.id },
+      { editionId: newer.id, sponsorId: sponsor.id },
+    ]);
+
+    const res = await fetchSpeaker(person.slug);
+
+    const participations = res.json().participations;
+    expect(participations.find((p: { year: number }) => p.year === 1708).sponsor).toBeNull();
+    expect(participations.find((p: { year: number }) => p.year === 1709).sponsor.name).toBe("Mixed Status Sponsor");
+  });
+
   it("keeps the participation when the sponsor is deleted", async () => {
     const edition = await makeEdition(1707);
     const sponsor = await makeSponsor(edition.id, "Doomed Sponsor");

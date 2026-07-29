@@ -1,5 +1,18 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, afterEach } from "vitest";
 import { buildAdminApp } from "./test-admin-app.js";
+import { prisma } from "../lib/prisma.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
+
+// Below the seeded range (2016+, #292) so a parallel file can never pick this
+// edition up as "the most recent one" mid-test.
+const createdEditionIds: number[] = [];
+
+afterEach(async () => {
+  if (createdEditionIds.length) {
+    await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
+    createdEditionIds.length = 0;
+  }
+});
 
 describe("Admin Editions API", () => {
   it("GET /api/admin/editions should list editions", async () => {
@@ -101,5 +114,27 @@ describe("Admin Editions API", () => {
       })),
     });
     await app.close();
+  });
+
+  // The 409 body is admin-facing text, not a Prisma internal: `editionSponsors`
+  // is the join's relation name since #129, but an organiser reading the
+  // refusal should see "sponsors", not the schema's own vocabulary.
+  it("DELETE refuses with a human label, not the Prisma relation name", async () => {
+    const edition = await prisma.edition.create({ data: { year: 1850, status: "SEE_YOU_NEXT_YEAR" } });
+    createdEditionIds.push(edition.id);
+    await createSponsorFixture({
+      name: "Blocking Sponsor",
+      slug: `blocking-sponsor-${Date.now()}`,
+      editionId: edition.id,
+      tierId: await tierIdByKey("gold"),
+    });
+
+    const app = await buildAdminApp();
+    const res = await app.inject({ method: "DELETE", url: `/api/admin/editions/${edition.id}` });
+    await app.close();
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toContain("sponsors (1)");
+    expect(res.json().error).not.toContain("editionSponsors");
   });
 });

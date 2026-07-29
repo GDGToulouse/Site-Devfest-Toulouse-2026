@@ -296,9 +296,15 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       // trashed *by* the cascade — otherwise it resurrects what should stay
       // gone. The article check below already worked this way; the other
       // children now follow the same rule.
+      //
+      // `_count` keys are Prisma relation names, not user-facing labels: since
+      // #129 the sponsor relation is `editionSponsors`, which reads as an
+      // internal implementation detail to an admin reading a 409. Map the one
+      // relation whose name diverges from what the organiser expects.
+      const RELATION_LABELS: Record<string, string> = { editionSponsors: "sponsors" };
       const blocking = Object.entries(existing._count)
         .filter(([, count]) => count > 0)
-        .map(([relation, count]) => `${relation} (${count})`);
+        .map(([relation, count]) => `${RELATION_LABELS[relation] ?? relation} (${count})`);
 
       if (blocking.length > 0) {
         return reply.status(409).send({
