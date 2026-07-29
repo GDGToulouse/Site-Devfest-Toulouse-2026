@@ -91,6 +91,13 @@ export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Logo</span>
+        {/* Same guidance as the sponsor's own edit form (#340). Lives here
+            rather than in ImagePickerDialog, which speakers and articles
+            share. */}
+        <p className="mb-2 text-xs text-gris">
+          Logo en haute définition (largeur ≥ 1000 px), sans marge autour du logo. PNG ou WebP à
+          fond transparent de préférence.
+        </p>
         <div className="flex items-center gap-4">
           <button
             type="button"

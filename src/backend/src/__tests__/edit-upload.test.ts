@@ -62,6 +62,45 @@ describe("POST /api/edit/:token/upload", () => {
     await app.close();
   });
 
+  // #346 — a sponsor may now send a vector logo through their magic link. This
+  // endpoint is unauthenticated, so what lands on disk has to be inert: the
+  // file is served same-origin from /uploads/.
+  it("stores a sponsor SVG with its script stripped", async () => {
+    const app = await buildEditApp();
+    const svg = Buffer.from(
+      '<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><path d="M0 0h24v24H0z"/></svg>',
+    );
+    const { payload, headers } = multipartBody("logo.svg", "image/svg+xml", svg);
+
+    const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
+
+    expect(res.statusCode).toBe(200);
+    const url = res.json().url as string;
+    expect(url).toMatch(/^\/uploads\/.+\.svg$/);
+
+    const { UPLOADS_DIR } = await import("../lib/image-store.js");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const stored = await fs.promises.readFile(path.join(UPLOADS_DIR, path.basename(url)), "utf8");
+    expect(stored).not.toMatch(/<script/i);
+    expect(stored).not.toContain("alert(1)");
+    expect(stored).toContain("<path");
+
+    await fs.promises.unlink(path.join(UPLOADS_DIR, path.basename(url))).catch(() => {});
+    await app.close();
+  });
+
+  it("rejects an SVG that carries nothing but a script", async () => {
+    const app = await buildEditApp();
+    const { payload, headers } = multipartBody("evil.svg", "image/svg+xml", Buffer.from("<script>alert(1)</script>"));
+
+    const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("invalid_file_type");
+    await app.close();
+  });
+
   it("returns 404 for an unknown token", async () => {
     const app = await buildEditApp();
     const { payload, headers } = multipartBody("logo.png", "image/png", PNG_1x1);

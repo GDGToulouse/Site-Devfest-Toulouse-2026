@@ -67,8 +67,23 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/talks/:path*`,
       },
       {
+        source: "/api/replays/:path*",
+        destination: `${backendUrl}/api/replays/:path*`,
+      },
+      {
+        source: "/api/replays",
+        destination: `${backendUrl}/api/replays`,
+      },
+      {
         source: "/api/me/:path*",
         destination: `${backendUrl}/api/me/:path*`,
+      },
+      {
+        // The trash purge is triggered from the back-office (#335). Without
+        // this rewrite the browser hits Next.js instead of the API and gets a
+        // 404 HTML page, since maintenance routes sit under /api, not /api/admin.
+        source: "/api/maintenance/:path*",
+        destination: `${backendUrl}/api/maintenance/:path*`,
       },
       {
         source: "/api/health",
@@ -104,7 +119,17 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "s-maxage=300, stale-while-revalidate=60" },
         ],
       },
-      // Cache-Control: all other public pages — 1 hour
+      // Cache-Control: all other public pages — 1 hour.
+      //
+      // `headers()` matches on path only: it cannot tell a rendered page from a
+      // failed one, so a 500 leaves with this header too. Harmless as things
+      // stand — `s-maxage` addresses shared caches, browsers ignore it, and
+      // Traefik does not cache in front of us (verified: no `age`/`x-cache` on
+      // production responses). Next re-renders the page as soon as the backend
+      // answers again, so recovery is immediate (#345).
+      //
+      // Putting a CDN in front would change that: the error would then be
+      // cached for an hour. Serve 5xx with `no-store` at that layer.
       {
         source: "/:locale(fr|en)/:path+",
         headers: [

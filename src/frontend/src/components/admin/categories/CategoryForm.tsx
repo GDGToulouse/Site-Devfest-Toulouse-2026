@@ -8,14 +8,16 @@ export interface CategoryFormValue {
   nameFr: string;
   nameEn: string;
   color: string;
-  sortOrder: string;
+  // Editions proposing this track (#338). A category is global; this is what
+  // binds it to a given year.
+  editionIds: number[];
 }
 
 export const emptyCategoryForm: CategoryFormValue = {
   nameFr: "",
   nameEn: "",
   color: "#109E6E",
-  sortOrder: "0",
+  editionIds: [],
 };
 
 const inputClass =
@@ -24,9 +26,18 @@ const inputClass =
 interface CategoryFormProps {
   value: CategoryFormValue;
   onChange: (value: CategoryFormValue) => void;
+  /** Editions offered for selection, newest first. */
+  editions?: { id: number; year: number }[];
 }
 
-export default function CategoryForm({ value, onChange }: CategoryFormProps) {
+export default function CategoryForm({ value, onChange, editions = [] }: CategoryFormProps) {
+  function toggleEdition(id: number) {
+    const next = value.editionIds.includes(id)
+      ? value.editionIds.filter((e) => e !== id)
+      : [...value.editionIds, id];
+    onChange({ ...value, editionIds: next });
+  }
+
   return (
     <div className="space-y-4">
       <BilingualTabs
@@ -64,15 +75,36 @@ export default function CategoryForm({ value, onChange }: CategoryFormProps) {
         </div>
       </div>
 
-      <label className="block max-w-[160px]">
-        <span className="block text-sm font-medium text-noir mb-1">Ordre</span>
-        <input
-          type="number"
-          value={value.sortOrder}
-          onChange={(e) => onChange({ ...value, sortOrder: e.target.value })}
-          className={inputClass}
-        />
-      </label>
+      <div>
+        <span className="block text-sm font-medium text-noir mb-1">Éditions</span>
+        <p className="mb-2 text-sm text-gris">
+          Une catégorie est partagée : cochez les éditions qui la proposent.
+        </p>
+        {editions.length === 0 ? (
+          <p className="text-sm text-gris">Aucune édition disponible.</p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {editions.map((edition) => {
+              const isSelected = value.editionIds.includes(edition.id);
+              return (
+                <button
+                  key={edition.id}
+                  type="button"
+                  onClick={() => toggleEdition(edition.id)}
+                  aria-pressed={isSelected}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                    isSelected
+                      ? "bg-bismarck text-blanc"
+                      : "bg-blanc text-noir shadow-card hover:bg-blanc-casse"
+                  }`}
+                >
+                  {edition.year}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

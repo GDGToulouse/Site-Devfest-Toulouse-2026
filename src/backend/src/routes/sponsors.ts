@@ -67,10 +67,16 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live sponsor page.
+        // Participations since #353, so the association is already dated: no
+        // need to re-scope on the edition, the join row *is* the year. Still
+        // filtered on the publication of that participation and on the person
+        // not being in the trash.
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
-          select: { slug: true, name: true, photoUrl: true, company: true },
-          orderBy: { name: "asc" },
+          where: { publicationStatus: "PUBLISHED", speaker: notDeleted },
+          select: {
+            speaker: { select: { slug: true, name: true, photoUrl: true, company: true } },
+          },
+          orderBy: { speaker: { name: "asc" } },
         },
         jobOffers: {
           select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
@@ -101,7 +107,8 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       descriptionFr: sponsor.descriptionFr,
       descriptionEn: sponsor.descriptionEn,
       socialLinks: parseSocial(sponsor.socialLinks),
-      speakers: sponsor.speakers,
+      // Projected back to the pre-#353 shape: the payload must not change.
+      speakers: sponsor.speakers.map((link) => link.speaker),
       jobOffers,
     };
   });

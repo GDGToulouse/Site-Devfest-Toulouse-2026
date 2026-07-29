@@ -168,8 +168,11 @@ Sans migration, cette étape est facultative.
 
 ## Étape 5 — Déployer + vérifier
 
-Le déploiement Coolify se déclenche sur le push `main`. Rappeler la config prod
-critique (détails : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §3) :
+Le déploiement prod n'est **pas** automatique : contrairement à la beta (push `dev` →
+déploiement auto), un push sur `main` ne déploie rien tout seul. Rappeler à
+l'utilisateur de lancer le **Redeploy** dans Coolify sur la ressource prod (souvent
+« without cache »), puis attendre sa confirmation avant de sonder la version. Rappeler la
+config prod critique (détails : [`docs/mise-en-production.md`](../../../docs/mise-en-production.md) §3) :
 
 - `ENV_NAME=prod`, `BASE_URL`, `BACKEND_URL`, `NEXT_PUBLIC_PLAUSIBLE_SRC` → **Available at Buildtime** cochés.
 - `SESSION_SECRET` runtime **obligatoire** en prod (sinon Better Auth crashe au boot).
@@ -222,6 +225,38 @@ Fermer à la main celles qui seraient restées ouvertes.
 
 ---
 
+## Étape 6 bis — Redescendre la version vers la ligne `dev`
+
+Le bump vit **uniquement sur `main`** (la PR de promotion est squashée). Sans
+redescente, `dev` continue d'annoncer l'ancien numéro et **la bêta affiche une
+version antérieure à la prod** — c'est arrivé en juillet (#288, corrigé par #284/#286).
+
+**C'est désormais automatique** : le push du tag déclenche
+[`version-backport.yml`](../../workflows/version-backport.yml), qui ouvre une PR
+`chore/backport-version-X.Y.Z-beta` vers `dev` avec le CHANGELOG publié et les
+3 fichiers de version repositionnés.
+
+Le rôle ici est donc de **vérifier que la PR est bien apparue**, puis de la faire
+relire et merger :
+
+```bash
+gh pr list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --base dev --search "chore(version)"
+```
+
+- **PR absente** (workflow non déclenché, tag poussé avant la mise en place) →
+  la rejouer à la main : `gh workflow run version-backport.yml -f version=X.Y.Z`.
+- **Bump à ajuster** : le workflow propose un **patch** (`1.5.0` → `1.5.1-beta`).
+  Si le prochain périmètre est une feature ou une rupture, corriger le numéro
+  dans la PR avant de merger (`1.6.0-beta`, `2.0.0-beta`).
+- Après merge sur `dev`, penser à **remonter vers les branches `dev-{initiale}`**
+  (merge classique) pour qu'elles ne repartent pas sur l'ancien numéro.
+
+> Le job CI `Version — Consistency Guard` échoue sur toute PR vers `dev` dont la
+> version ne serait pas un `-beta` strictement supérieur à celle de `main` : la
+> dérive ne peut plus passer inaperçue.
+
+---
+
 ## Étape 7 — Migrer les données — **à la demande UNIQUEMENT**
 
 > 🚫 **N'est PAS une étape systématique.** Un déploiement de prod ne migre **jamais**
@@ -259,6 +294,7 @@ Ne pas improviser. Voir [`docs/mise-en-production.md`](../../../docs/mise-en-pro
 - [ ] Déploiement Coolify OK, `/api/health` renvoie la **nouvelle** version
 - [ ] **Smoke tests** passés (home, login, billetterie, article, contact, images)
 - [ ] Tag `vX.Y.Z` poussé (après vérif tag==APP_VERSION) + release GitHub publiée
+- [ ] **PR de redescente vers `dev`** ouverte par le workflow, relue et mergée (#288), puis remontée sur les branches `dev-{initiale}`
 - [ ] (à la demande seulement) Données migrées beta → prod, uploads compris
 
 ## What NOT to do

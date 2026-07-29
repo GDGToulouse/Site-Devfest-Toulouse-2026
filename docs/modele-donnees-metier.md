@@ -17,6 +17,7 @@ Vision fonctionnelle des entités du site, de leurs informations et de leurs rel
 Lieu ──── Salle (1 à N)
 Édition ──── Lieu (réutilisable d'une année sur l'autre)
 
+Speaker ──── Édition (participations, 1 à N — la personne traverse les éditions)
 Speaker ──── Lien social (1 à N)
 Sponsor ──┬── Lien social (1 à N)
           └── Speaker (employés du sponsor)
@@ -97,7 +98,11 @@ Chaque édition définit sa propre liste de catégories, qui constituent les « 
 
 ## Speaker (conférencier)
 
-Personne intervenant dans une ou plusieurs sessions d'une édition.
+**Une personne, pas une ligne par édition.** Un speaker existe une seule fois et
+participe à une ou plusieurs éditions : quelqu'un venu parler en 2019 puis en 2026
+garde la même fiche, avec une biographie et une photo à jour. Sa participation à
+chaque édition est explicite — elle ne se déduit pas de ses sessions, puisqu'une
+personne peut être annoncée avant que son programme soit publié.
 
 | Information | Description | Exemple |
 |-------------|-------------|---------|
@@ -107,10 +112,22 @@ Personne intervenant dans une ou plusieurs sessions d'une édition.
 | Ville | Localisation | Toulouse, France |
 | Biographie | Présentation du speaker (FR + EN) | Texte libre |
 | Liens sociaux | Profils sur les réseaux et sites | Twitter, GitHub, LinkedIn, site personnel |
+| Éditions | Années auxquelles la personne a participé | 2019, 2024, 2026 |
 | Sessions | Sessions associées à ce speaker | Liste de sessions |
-| Mis en vedette | Affiché sur la page d'accueil | Oui / Non |
+
+L'état éditorial dépend de l'édition, pas de la personne :
+
+| Information | Description | Exemple |
+|-------------|-------------|---------|
+| Statut de publication | Visible sur le site pour cette édition-là | Publié / Brouillon |
+| Mis en vedette | Affiché sur la page d'accueil de cette édition | Oui / Non |
+
+Une personne peut donc être publiée sur une édition et rester en brouillon sur une
+autre. En administration, saisir quelqu'un qui existe déjà propose de le rattacher à
+l'édition en cours plutôt que de créer un doublon.
 
 Un speaker peut éditer sa propre fiche (bio, photo, liens sociaux) via un espace dédié après authentification.
+Cette fiche étant partagée, une mise à jour vaut pour toutes ses éditions.
 
 ---
 
@@ -326,6 +343,7 @@ Session ──── N:1 ──── Catégorie (parmi celles de l'édition)
 Session ──── N:1 ──── Salle (parmi celles du lieu de l'édition)
 Session ──── N:1 ──── Créneau horaire
 
+Speaker ──── N:M ──── Édition (participation : statut de publication, mise en vedette)
 Speaker ──── 1:N ──── Lien social
 Speaker ──── N:1 ──── Sponsor (via l'entreprise, si le sponsor est partenaire)
 

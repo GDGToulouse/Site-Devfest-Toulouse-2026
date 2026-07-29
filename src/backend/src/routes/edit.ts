@@ -7,9 +7,12 @@ import {
   revalidateConferences,
   revalidateJobOffers,
   revalidateSpeakers,
+  revalidateSpeaker,
+  revalidateSponsor,
   revalidateSponsors,
+  revalidateTalk,
 } from "../lib/revalidate.js";
-import { storeImageBuffer } from "../lib/image-store.js";
+import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
@@ -23,13 +26,23 @@ const TEXT_MAX = 5_000;
 const SHORT_MAX = 200;
 const URL_MAX = 2_048;
 
-// Logo/photo upload through a token (#241). Unlike the admin uploader, this
-// endpoint is unauthenticated (the token is the only credential), so it is
-// deliberately narrower: raster images only — SVG is excluded because it can
-// carry inline scripts and /uploads/ serves files with their native
-// content-type, which would let a submitted logo run JS in a visitor's browser.
+// Logo/photo upload through a token (#241). This endpoint is unauthenticated —
+// the token is the only credential — so it long refused SVG outright: an
+// uploaded one is served same-origin with its native content-type and would run
+// JS in a visitor's browser.
+//
+// Allowed again since #346, because storeImageBuffer strips scripts, handlers
+// and remote references before the file reaches the disk, and .svg is served
+// under a sandbox CSP. A vector logo is exactly what a sponsor has to hand, so
+// the narrower rule cost more than it protected once the payload was neutered.
 const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
-const UPLOAD_MIMES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+const UPLOAD_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
 
 const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
 
@@ -245,7 +258,16 @@ async function resolveToken(token: string) {
   const speaker = await prisma.speaker.findUnique({
     where: { editToken: token },
     include: {
-      edition: { select: { startDate: true } },
+      // The 48h freeze (RG-246) keys on an event date, and a global identity no
+      // longer has one (#351). The link is sent for the upcoming edition, so the
+      // most recent participation is the one that gates editing. No
+      // participation at all leaves startDate null, which isEditingFrozen reads
+      // as "not frozen" — a speaker must not be locked out by our modelling.
+      editions: {
+        orderBy: { edition: { year: "desc" } },
+        take: 1,
+        select: { edition: { select: { startDate: true } } },
+      },
       // Sessions the speaker sees from the link (#260). Only published ones are
       // surfaced. Format, level and language are read-only (#289) but still
       // selected: the speaker needs to see how their session is programmed.
@@ -261,12 +283,23 @@ async function resolveToken(token: string) {
           level: true,
           language: true,
           isSpeakerEditable: true,
+          // Needed to purge the dated URL when the speaker edits their session
+          // (#360) — a talk answers on two paths.
+          edition: { select: { year: true } },
         },
         orderBy: { title: "asc" },
       },
     },
   });
-  if (speaker) return { kind: "speaker" as const, entity: speaker };
+  if (speaker) {
+    // Flatten back to the { edition: { startDate } } shape the rest of the route
+    // and editingBlockedReason expect, so the join stays contained here.
+    const { editions, ...rest } = speaker;
+    return {
+      kind: "speaker" as const,
+      entity: { ...rest, edition: editions[0]?.edition ?? { startDate: null } },
+    };
+  }
 
   // Sponsors resolve through their contacts (#250): the token lives on a
   // SponsorContact, and the lock/send-date are per-contact. We flatten the
@@ -520,6 +553,9 @@ export default async function editRoutes(app: FastifyInstance) {
         },
       });
       revalidateSpeakers();
+      // Their own page too (#352), or the bio they just fixed stays stale for an
+      // hour on the very page the link is meant to update.
+      revalidateSpeaker(entity.slug);
     } else {
       const body = request.body as SponsorEditBody;
       await prisma.sponsor.update({
@@ -556,7 +592,12 @@ export default async function editRoutes(app: FastifyInstance) {
         body.websiteUrl !== undefined ||
         body.logoUrl !== undefined ||
         body.socialLinks !== undefined;
-      if (touchesPublic) revalidateSponsors();
+      if (touchesPublic) {
+        revalidateSponsors();
+        // The company's own page too (#360) — editing from the magic link is
+        // precisely when someone watches for their change to appear.
+        revalidateSponsor(entity.slug);
+      }
     }
 
     return { saved: true };
@@ -625,8 +666,10 @@ export default async function editRoutes(app: FastifyInstance) {
         },
       });
 
-      // Direct publication: the change is public right away.
+      // Direct publication: the change is public right away — including on the
+      // session's own two pages (#360), which is what the speaker will reload.
       revalidateConferences();
+      revalidateTalk(talk.slug, talk.edition.year);
 
       // Notify the organizers (best-effort: a mail failure must not fail the
       // save the speaker just made).
@@ -803,7 +846,16 @@ export default async function editRoutes(app: FastifyInstance) {
     const buffer = await data.toBuffer();
     if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
 
-    const url = await storeImageBuffer(buffer, data.mimetype);
-    return { url };
+    try {
+      const url = await storeImageBuffer(buffer, data.mimetype);
+      return { url };
+    } catch (err) {
+      // An SVG whose only content was executable leaves nothing to render —
+      // tell the sponsor their file was refused rather than return a 500.
+      if (err instanceof UnsafeSvgError) {
+        return reply.code(400).send({ error: "invalid_file_type" });
+      }
+      throw err;
+    }
   });
 }

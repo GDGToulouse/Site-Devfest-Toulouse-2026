@@ -270,7 +270,24 @@ export interface SpeakerPublic {
 export interface SpeakerTalkRef {
   slug: string;
   title: string;
-  format: string;
+  format: TalkFormat;
+  // Null on 42 of the imported talks: the historical data never carried one, so
+  // the badge has to be conditional (#359).
+  level: TalkLevel | null;
+  language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  videoUrl: string | null;
+}
+
+// One year a person took part in (#352). Carries its own talks so the page can
+// section them by edition — and so a year with no published session still shows,
+// which a flat talk list could not express.
+export interface SpeakerParticipation {
+  year: number;
+  isFeatured: boolean;
+  // The employer of that year (#353), null unless the sponsor is published.
+  sponsor: { slug: string; name: string } | null;
+  talks: SpeakerTalkRef[];
 }
 
 export interface SpeakerDetail {
@@ -283,8 +300,18 @@ export interface SpeakerDetail {
   bioFr: string | null;
   bioEn: string | null;
   socialLinks: Record<string, string>;
-  sponsor: { slug: string; name: string } | null;
-  talks: SpeakerTalkRef[];
+  // Newest year first.
+  participations: SpeakerParticipation[];
+}
+
+// A row of /hall-of-fame (#352): every person who ever spoke. Deliberately lean
+// — 239 of these ship in one payload, so no bio and no social links.
+export interface HallOfFameEntry {
+  slug: string;
+  name: string;
+  photoUrl: string | null;
+  company: string | null;
+  years: number[];
 }
 
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
@@ -310,6 +337,28 @@ export interface EditionTalk {
   speakers: { slug: string; name: string; photoUrl: string | null }[];
 }
 
+// Hall of replays (#102): a filmed talk, carrying the edition it was given in
+// so the visitor can place it without opening each edition page.
+export interface Replay {
+  slug: string;
+  title: string;
+  format: TalkFormat;
+  language: string;
+  videoUrl: string;
+  year: number;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null }[];
+}
+
+// The filter values that actually have replays behind them, so the UI never
+// offers a choice leading to an empty list.
+export interface ReplayFilters {
+  years: number[];
+  formats: TalkFormat[];
+  categories: { nameFr: string; nameEn: string }[];
+  total: number;
+}
+
 // Public talk detail.
 export interface TalkDetail {
   id: number;
@@ -319,6 +368,22 @@ export interface TalkDetail {
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
+  category: { nameFr: string; nameEn: string; color: string } | null;
+  speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
+}
+
+// Detail of a past talk (#343). `/api/talks/:slug` only serves the featured
+// edition, so replays of past years need this year-scoped shape — it carries
+// the recording and the edition it belongs to.
+export interface EditionTalkDetail {
+  slug: string;
+  title: string;
+  description: string;
+  format: TalkFormat;
+  level: TalkLevel | null;
+  language: string;
+  videoUrl: string | null;
+  year: number;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }
@@ -344,16 +409,33 @@ export interface Talk {
 }
 
 // Session category / track.
+// A track, shared across editions (#338). The edition binding — and the display
+// order for that year — lives on the EditionCategory join, exposed as
+// `editions` by the admin API.
 export interface Category {
   id: number;
   nameFr: string;
   nameEn: string;
   color: string;
-  sortOrder: number;
-  editionId: number;
+}
+
+// One year a speaker took part in, as exposed by the admin API (#351): the
+// editorial state is per-edition, so it lives here and not on the person.
+export interface SpeakerEdition {
+  // The edition's id — not the join row's. The attach/detach endpoints are keyed
+  // on (speakerId, editionId), so this is what they take.
+  id: number;
+  year: number;
+  isFeatured: boolean;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  // The sponsor this person worked for that year (#353).
+  sponsorId: number | null;
 }
 
 // Admin speaker entity (CRUD).
+// A person, shared across editions (#351) — same shape as Category since #338.
+// The edition binding, the publication status and the featured flag live on the
+// `editions` participations, newest year first.
 export interface Speaker {
   id: number;
   slug: string;
@@ -367,10 +449,7 @@ export interface Speaker {
   contactEmail: string | null;
   locale: string;
   editLinkLocked: boolean;
-  isFeatured: boolean;
-  sponsorId: number | null;
-  publicationStatus: "DRAFT" | "PUBLISHED";
-  editionId: number;
+  editions: SpeakerEdition[];
 }
 
 export interface EditionDetail {

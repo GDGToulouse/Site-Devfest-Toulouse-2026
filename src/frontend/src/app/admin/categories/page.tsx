@@ -7,8 +7,10 @@ import { adminFetch } from "@/lib/admin-api";
 import type { Category } from "@/lib/types";
 import DataTable from "@/components/admin/DataTable";
 
+// A track is shared across editions since #338, so a row carries the list of
+// years proposing it rather than a single edition.
 interface CategoryRow extends Category {
-  edition?: { id: number; year: number };
+  editions: { id: number; year: number; sortOrder: number }[];
 }
 
 export default function CategoriesDataPage() {
@@ -27,14 +29,16 @@ export default function CategoriesDataPage() {
   }, []);
 
   const years = useMemo(
-    () => [...new Set(categories.map((c) => c.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
+    () =>
+      [...new Set(categories.flatMap((c) => c.editions.map((e) => e.year)))].sort((a, b) => b - a),
     [categories],
   );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return categories.filter((c) => {
-      if (year && String(c.edition?.year) !== year) return false;
+      // A track matches the year filter as soon as one of its editions does.
+      if (year && !c.editions.some((e) => String(e.year) === year)) return false;
       if (q && !c.nameFr.toLowerCase().includes(q) && !c.nameEn.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -52,8 +56,12 @@ export default function CategoriesDataPage() {
         </span>
       ),
     },
-    { key: "sortOrder", label: "Ordre", render: (c: CategoryRow) => c.sortOrder },
-    { key: "edition", label: "Édition", render: (c: CategoryRow) => c.edition?.year ?? "—" },
+    {
+      key: "editions",
+      label: "Éditions",
+      render: (c: CategoryRow) =>
+        c.editions.length > 0 ? c.editions.map((e) => e.year).join(", ") : "—",
+    },
   ];
 
   return (

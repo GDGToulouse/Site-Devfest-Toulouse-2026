@@ -12,8 +12,8 @@
 
 | Branche | Environnement | URL | Rôle |
 |---------|---------------|-----|------|
-| `main` | Production | `https://devfesttoulouse.fr` | Code en production, toujours stable et déployable. |
-| `dev` | Bêta | `https://beta.site.devfesttoulouse.fr` | Intégration des développements. Les features terminées y sont mergées pour être testées ensemble avant la mise en production. |
+| `main` | Production | `https://devfesttoulouse.fr` | Code en production, toujours stable et déployable. **Déploiement manuel** : un push sur `main` ne déploie **pas** tout seul — le Redeploy Coolify est lancé à la main. |
+| `dev` | Bêta | `https://beta.site.devfesttoulouse.fr` | Intégration des développements. Les features terminées y sont mergées pour être testées ensemble avant la mise en production. **Déploiement automatique** : tout push/merge sur `dev` déclenche le build + déploiement Coolify sans geste manuel (~5 min ; vérifier via `/api/health`). |
 
 ### Branches de développeur
 

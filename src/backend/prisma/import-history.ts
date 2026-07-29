@@ -14,8 +14,11 @@ import { dirname, resolve } from "node:path";
 
 import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
+import { resolveSpeakerPhoto } from "../src/lib/speaker-photo.js";
+import { revalidateAll } from "../src/lib/revalidate.js";
 import {
   buildSocialLinks,
+  normalizeCategory,
   normalizeFormat,
   normalizeLevel,
   normalizeLanguage,
@@ -32,7 +35,31 @@ interface Report {
   speakers: { created: number; updated: number };
   talks: { created: number; updated: number };
   links: number;
+  categories: { linked: number; unmatched: number };
+  speakerRefs: { unresolved: number };
+  photos: { stored: number };
+  cachePurged: boolean;
   warnings: string[];
+}
+
+/**
+ * Resolve a category name to its id in the shared catalogue (#338), and make
+ * sure it is offered on this edition — otherwise the talk keeps a category the
+ * public filters cannot show.
+ *
+ * Categories are never created here: the catalogue is curated in the admin, and
+ * a typo in the history file should surface as a warning, not as a new track.
+ */
+async function linkCategory(name: string, editionId: number) {
+  const category = await prisma.category.findUnique({ where: { nameFr: name } });
+  if (!category) return null;
+
+  await prisma.editionCategory.upsert({
+    where: { editionId_categoryId: { editionId, categoryId: category.id } },
+    create: { editionId, categoryId: category.id },
+    update: {},
+  });
+  return category.id;
 }
 
 async function main() {
@@ -47,8 +74,14 @@ async function main() {
     speakers: { created: 0, updated: 0 },
     talks: { created: 0, updated: 0 },
     links: 0,
+    categories: { linked: 0, unmatched: 0 },
+    speakerRefs: { unresolved: 0 },
+    photos: { stored: 0 },
+    cachePurged: false,
     warnings: [],
   };
+
+  const missingCategories = new Set<string>();
 
   for (const [yearStr, ed] of Object.entries(data.editions)) {
     const year = Number(yearStr);
@@ -78,12 +111,18 @@ async function main() {
     else report.editions.created++;
 
     // 2. Upsert speakers, keyed by slug; remember name -> db id for linking.
+    // Reconciled across every edition since #351: a speaker is one person. A
+    // lookup scoped to this edition would not see someone imported from another
+    // year, so uniqueSlug would mint `ada-lovelace-2` and split the identity in
+    // two — exactly what this model change removes.
     const existingSpeakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id },
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, photoUrl: true },
     });
     const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
     const speakerSlugToId = new Map(existingSpeakers.map((s) => [s.slug, s.id]));
+    // Read here so the photo already on file can be checked before downloading:
+    // a picture that is already local must never be fetched again (#356).
+    const photoUrlBySlug = new Map(existingSpeakers.map((s) => [s.slug, s.photoUrl]));
     const idByName = new Map<string, number>();
 
     for (const sp of ed.speakers) {
@@ -95,45 +134,73 @@ async function main() {
       const baseSlug = slugify(name);
       const social = buildSocialLinks(sp.socials);
       report.links += Object.keys(social).length;
-      const photoUrl = normalizePhotoUrl(sp.photoUrl);
+      // The history file points at Twitter, Gravatar, company sites… Those hosts
+      // rot and they watch our visitors, so the file is pulled into /uploads/
+      // (#356). normalizePhotoUrl still drops the 2016-2019 relative paths,
+      // which reference images this repo never shipped.
+      const remotePhotoUrl = normalizePhotoUrl(sp.photoUrl);
+      const photoUrl = await resolveSpeakerPhoto(
+        remotePhotoUrl,
+        photoUrlBySlug.get(baseSlug) ?? null,
+        name,
+        report.warnings,
+      );
+      if (photoUrl && photoUrl !== photoUrlBySlug.get(baseSlug)) report.photos.stored++;
       const bioFr = sp.bio?.trim() || null;
 
+      const company = sp.company?.trim() || null;
+      const city = sp.city?.trim() || null;
+      const socialLinks = Object.keys(social).length ? JSON.stringify(social) : null;
+
+      let speakerId: number;
       const existingId = speakerSlugToId.get(baseSlug);
       if (existingId) {
+        speakerId = existingId;
+        // Fill the gaps, never overwrite. Editions are imported oldest first,
+        // so a blanket update would let 2016 erase the profile 2025 filled in —
+        // and an admin's manual edit along with it.
+        const current = await prisma.speaker.findUniqueOrThrow({
+          where: { id: existingId },
+          select: { company: true, city: true, bioFr: true, photoUrl: true, socialLinks: true },
+        });
         await prisma.speaker.update({
           where: { id: existingId },
           data: {
             name,
-            company: sp.company?.trim() || null,
-            city: sp.city?.trim() || null,
-            bioFr,
-            photoUrl,
-            socialLinks: Object.keys(social).length ? JSON.stringify(social) : null,
-            publicationStatus: "PUBLISHED",
+            ...(current.company ? {} : { company }),
+            ...(current.city ? {} : { city }),
+            ...(current.bioFr ? {} : { bioFr }),
+            ...(current.photoUrl ? {} : { photoUrl }),
+            ...(current.socialLinks ? {} : { socialLinks }),
           },
         });
+        if (photoUrl) photoUrlBySlug.set(baseSlug, photoUrl);
         idByName.set(name.toLowerCase(), existingId);
         report.speakers.updated++;
       } else {
         const slug = uniqueSlug(baseSlug, takenSpeakerSlugs);
         takenSpeakerSlugs.add(slug);
         const created = await prisma.speaker.create({
-          data: {
-            editionId: edition.id,
-            slug,
-            name,
-            company: sp.company?.trim() || null,
-            city: sp.city?.trim() || null,
-            bioFr,
-            photoUrl,
-            socialLinks: Object.keys(social).length ? JSON.stringify(social) : null,
-            publicationStatus: "PUBLISHED",
-          },
+          data: { slug, name, company, city, bioFr, photoUrl, socialLinks },
         });
         speakerSlugToId.set(slug, created.id);
+        // Keep the photo map in step: the list is re-read per edition, but two
+        // entries sharing a name inside the SAME year would otherwise download
+        // the picture twice.
+        photoUrlBySlug.set(slug, photoUrl);
         idByName.set(name.toLowerCase(), created.id);
+        speakerId = created.id;
         report.speakers.created++;
       }
+
+      // The participation is what carries the year (#351). It must be recorded
+      // even for a speaker with no session at all: 31 of them have none, and
+      // their editions cannot be derived from talks.
+      await prisma.speakerEdition.upsert({
+        where: { speakerId_editionId: { speakerId, editionId: edition.id } },
+        create: { speakerId, editionId: edition.id, publicationStatus: "PUBLISHED" },
+        update: { publicationStatus: "PUBLISHED" },
+      });
     }
 
     // 3. Upsert sessions (talks), keyed by slug, linking speakers by name.
@@ -152,9 +219,37 @@ async function main() {
       }
       const baseSlug = slugify(title);
       const description = s.description?.trim() ?? "";
-      const speakerDbIds = (s.speakers ?? [])
-        .map((n) => idByName.get(n.trim().toLowerCase()))
-        .filter((id): id is number => id !== undefined);
+      // A reference that matches no speaker used to be dropped by a .filter(),
+      // which is how 2017 ended up with 7 links for 38 talks: its sessions cited
+      // numeric ids the file never defined, and nothing said so (#361). Losing a
+      // reference is not fatal — the talk is still imported — but it must be
+      // said out loud.
+      const speakerDbIds: number[] = [];
+      for (const ref of s.speakers ?? []) {
+        const id = idByName.get(ref.trim().toLowerCase());
+        if (id === undefined) {
+          report.speakerRefs.unresolved++;
+          report.warnings.push(
+            `${year} — « ${title} » : intervenant « ${ref} » introuvable, session non rattachée.`,
+          );
+          continue;
+        }
+        speakerDbIds.push(id);
+      }
+
+      // Track published by the edition itself, mapped onto the shared catalogue.
+      const categoryName = normalizeCategory(s);
+      let categoryId: number | null = null;
+      if (categoryName) {
+        categoryId = await linkCategory(categoryName, edition.id);
+        if (categoryId) report.categories.linked++;
+        else {
+          report.categories.unmatched++;
+          // One line per missing category, not per talk: on an instance without
+          // the catalogue that would be 279 identical warnings burying the rest.
+          missingCategories.add(categoryName);
+        }
+      }
 
       const talkData = {
         title,
@@ -163,14 +258,22 @@ async function main() {
         level: normalizeLevel(s.complexity),
         language: normalizeLanguage(s.language),
         videoUrl: s.youtube?.trim() || null,
+        categoryId,
         publicationStatus: "PUBLISHED" as const,
       };
 
       const existingId = talkSlugToId.get(baseSlug);
       if (existingId) {
+        // Never blank out a category set in the admin: on a re-run the file may
+        // have nothing to say about a talk that was curated by hand since.
+        const { categoryId: _, ...rest } = talkData;
         await prisma.talk.update({
           where: { id: existingId },
-          data: { ...talkData, speakers: { set: speakerDbIds.map((id) => ({ id })) } },
+          data: {
+            ...rest,
+            ...(categoryId ? { categoryId } : {}),
+            speakers: { set: speakerDbIds.map((id) => ({ id })) },
+          },
         });
         report.talks.updated++;
       } else {
@@ -190,7 +293,30 @@ async function main() {
 
     console.log(
       `${year}: speakers +${report.speakers.created}/~${report.speakers.updated}, ` +
-        `talks +${report.talks.created}/~${report.talks.updated}`,
+        `talks +${report.talks.created}/~${report.talks.updated}, ` +
+        `photos ${report.photos.stored}`,
+    );
+  }
+
+  for (const name of [...missingCategories].sort()) {
+    report.warnings.push(
+      `Catégorie « ${name} » absente du catalogue : les talks concernés restent sans catégorie.`,
+    );
+  }
+
+  // The data is in, but every public page still serves what it cached before
+  // this run — for up to an hour (#358). Admin mutations revalidate as they go;
+  // a CLI script has to do it itself.
+  //
+  // A failure here is never fatal: the import succeeded in the database, and
+  // saying otherwise would invite a needless re-run. It is loud instead, because
+  // nothing else will tell the operator the site is showing stale pages.
+  const purge = await revalidateAll();
+  report.cachePurged = purge.ok;
+  if (!purge.ok) {
+    report.warnings.push(
+      `Cache non purgé (${purge.reason}) : les pages publiques serviront l'état précédent ` +
+        `jusqu'à expiration du cache. Purger depuis l'admin, ou redémarrer le frontend.`,
     );
   }
 

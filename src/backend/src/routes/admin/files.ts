@@ -9,17 +9,20 @@ import {
   COMPRESSIBLE_MIMES,
   COMPRESS_MAX_WIDTH,
   COMPRESS_QUALITY,
+  SVG_MIME,
   UPLOADS_DIR,
 } from "../../lib/image-store.js";
+import { sanitizeSvg } from "../../lib/svg-sanitize.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 
 const ALLOWED_MIMES = [
-  // Images. SVG is deliberately excluded (#306): served same-origin from
-  // /uploads/ with its native content-type, an SVG carrying <script> executes
-  // in our origin (the CSP allows inline scripts). The magic-link uploader
-  // (edit.ts) already excludes it for this reason; the admin uploader now
-  // matches. No SVG is used anywhere in the product, so nothing regresses.
+  // Images. SVG was excluded outright by #306 — served same-origin from
+  // /uploads/, an SVG carrying <script> executes in our origin. It is allowed
+  // again since #346, but only because storeImageBuffer strips scripts,
+  // handlers and remote references before writing, and index.ts serves .svg
+  // under a sandbox CSP. Removing either of those brings the hole back.
   "image/jpeg", "image/png", "image/webp", "image/gif",
+  "image/svg+xml",
   "image/x-icon", "image/vnd.microsoft.icon",
   // Documents
   "application/pdf",
@@ -65,10 +68,23 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     // Buffer the upload first so we can either write it as-is, or send it
     // through sharp for compression. We already cap the stream at 20 MB via
     // limits, so memory usage is bounded.
-    const buffer = await data.toBuffer();
+    let buffer = await data.toBuffer();
 
     if (data.file.truncated) {
       return reply.code(413).send({ error: "File too large (max 20 MB)" });
+    }
+
+    // This route writes to disk itself rather than going through
+    // storeImageBuffer, so the SVG guard has to be repeated here — an admin
+    // account is not a reason to store executable markup under /uploads/ (#346).
+    if (data.mimetype === SVG_MIME) {
+      const safe = sanitizeSvg(buffer.toString("utf8"));
+      if (!safe) {
+        return reply.code(400).send({
+          error: "Invalid SVG: nothing renderable left once scripts were removed",
+        });
+      }
+      buffer = Buffer.from(safe, "utf8");
     }
 
     let finalBuffer = buffer;

@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
-import { notDeleted, visibleCategory } from "../lib/admin-helpers.js";
+import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -132,12 +132,12 @@ export default async function editionRoutes(app: FastifyInstance) {
     const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
-    const speakers = await prisma.speaker.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-      orderBy: { name: "asc" },
-      select: { slug: true, name: true, photoUrl: true, company: true },
+    const links = await prisma.speakerEdition.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
+      orderBy: { speaker: { name: "asc" } },
+      select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
     });
-    return speakers;
+    return links.map((link) => link.speaker);
   });
 
   // GET /api/editions/:year/talks — published talks of any edition by year,
@@ -158,7 +158,13 @@ export default async function editionRoutes(app: FastifyInstance) {
         // Nested: the filter does not reach here on its own, and a trashed
         // speaker would keep appearing under a live talk (#147).
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          // Since #351 the question is not "is this person published" but "is
+          // this person published *for this edition*" — the status lives on the
+          // participation, and the talk tells us which edition to look at.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true },
           orderBy: { name: "asc" },
         },
@@ -179,6 +185,68 @@ export default async function editionRoutes(app: FastifyInstance) {
       category: visibleCategory(t.category),
       speakers: t.speakers,
     }));
+  });
+
+  // GET /api/editions/:year/talks/:slug — detail of one past talk (#343).
+  //
+  // `/api/talks/:slug` cannot serve this: it scopes to the featured edition, so
+  // a 2019 talk answers 404. The year also disambiguates — Talk.slug is unique
+  // per edition, not globally, so a title reused across years would collide.
+  app.get<{ Params: { year: string; slug: string } }>("/editions/:year/talks/:slug", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["year", "slug"],
+        properties: { year: { type: "string" }, slug: { type: "string" } },
+      },
+    },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findFirst({
+      where: { year: yearNum, ...notDeleted },
+      select: { id: true, year: true },
+    });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    const talk = await prisma.talk.findFirst({
+      where: {
+        editionId: edition.id,
+        slug: request.params.slug,
+        publicationStatus: "PUBLISHED",
+        ...notDeleted,
+      },
+      include: {
+        // Nested reads carry their own filter: a trashed speaker would keep
+        // showing up under a live talk otherwise (#147).
+        speakers: {
+          // Published *for this edition* (#351), same reasoning as the list above.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
+          select: { slug: true, name: true, photoUrl: true, company: true },
+          orderBy: { name: "asc" },
+        },
+        category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
+      },
+    });
+
+    if (!talk) return reply.status(404).send({ error: "Talk not found" });
+
+    return {
+      slug: talk.slug,
+      title: talk.title,
+      description: talk.description,
+      format: talk.format,
+      level: talk.level,
+      language: talk.language,
+      videoUrl: talk.videoUrl,
+      year: edition.year,
+      category: visibleCategory(talk.category),
+      speakers: talk.speakers,
+    };
   });
 
   // GET /api/editions/current — returns the featured edition
@@ -225,8 +293,10 @@ export default async function editionRoutes(app: FastifyInstance) {
             ...notDeleted,
           },
         }),
-        prisma.speaker.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+        // Counted on the participations (#351): the identity is not what makes
+        // a speaker part of this edition.
+        prisma.speakerEdition.count({
+          where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
         }),
         prisma.sponsor.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },

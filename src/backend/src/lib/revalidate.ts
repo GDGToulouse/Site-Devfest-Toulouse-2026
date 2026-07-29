@@ -83,6 +83,20 @@ export function revalidateSpeakers(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/speakers"),
+    // The archive lists everyone, so it goes stale on any speaker change (#352).
+    ...bilingualPaths("/hall-of-fame"),
+  ]);
+}
+
+// One person's page (#352). Separate from revalidateSpeakers because there are
+// ~240 of these: purging them all on every edit would be absurd, and never
+// purging them means a speaker who fixes their bio from their magic link sees
+// nothing change for an hour.
+export function revalidateSpeaker(slug: string): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(`/speakers/${slug}`),
+    // The OG image is its own route — same reason as the home page (#183).
+    ...bilingualPaths(`/speakers/${slug}/opengraph-image`),
   ]);
 }
 
@@ -93,9 +107,65 @@ export function revalidateConferences(): Promise<void> {
   ]);
 }
 
+/**
+ * One talk's own pages (#360).
+ *
+ * A talk is reachable by two URLs: the current-edition one, and the dated one a
+ * past edition links to (#343). Both cache separately, so both have to go, or
+ * an edit shows up on one page and not the other.
+ *
+ * Only the undated route carries an OG image — `editions/[year]/conferences`
+ * has none.
+ */
+export function revalidateTalk(slug: string, year: number): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(`/conferences/${slug}`),
+    ...bilingualPaths(`/conferences/${slug}/opengraph-image`),
+    ...bilingualPaths(`/editions/${year}/conferences/${slug}`),
+  ]);
+}
+
+/**
+ * One sponsor's own page (#360). No OG image on this route, unlike speakers and
+ * talks — nothing else to purge.
+ */
+export function revalidateSponsor(slug: string): Promise<void> {
+  return revalidatePaths([...bilingualPaths(`/sponsors/${slug}`)]);
+}
+
 export function revalidateCfp(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/proposer-un-talk"),
   ]);
+}
+
+/**
+ * Purge the whole Next cache (#358).
+ *
+ * For the bulk writes that happen outside the admin routes — the history import
+ * touches editions, speakers, talks, categories and photos in one go. Listing
+ * the affected paths would mean enumerating ~240 speaker pages plus every list,
+ * and any omission silently serves stale content for an hour.
+ *
+ * Unlike the helpers above, this one *reports* instead of swallowing: a CLI
+ * script has no user watching the logs, so it must be able to tell the operator
+ * that a manual purge is still needed. The caller decides what to do with that —
+ * an import that succeeded in the database must never be failed by a cache miss.
+ */
+export async function revalidateAll(): Promise<{ ok: boolean; reason?: string }> {
+  if (!REVALIDATE_SECRET) {
+    return { ok: false, reason: "REVALIDATE_SECRET absent" };
+  }
+  try {
+    const res = await fetch(`${FRONTEND_URL}/api/revalidate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ secret: REVALIDATE_SECRET, all: true }),
+    });
+    if (!res.ok) return { ok: false, reason: `HTTP ${res.status}` };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: (err as Error).message };
+  }
 }

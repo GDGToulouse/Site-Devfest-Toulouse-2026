@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateConferences } from "../../lib/revalidate.js";
+import { revalidateConferences, revalidateTalk } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -132,10 +132,13 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
       },
-      include: { speakers: { select: { id: true, name: true } } },
+      // The year comes along so the dated URL can be purged too (#360): a talk
+      // answers on both /conferences/<slug> and /editions/<year>/conferences/<slug>.
+      include: { speakers: { select: { id: true, name: true } }, edition: { select: { year: true } } },
     });
 
     revalidateConferences();
+    revalidateTalk(talk.slug, talk.edition.year);
     return reply.code(201).send(serialize(talk));
   });
 
@@ -169,10 +172,15 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),
       },
-      include: { speakers: { select: { id: true, name: true } } },
+      // The year comes along so the dated URL can be purged too (#360): a talk
+      // answers on both /conferences/<slug> and /editions/<year>/conferences/<slug>.
+      include: { speakers: { select: { id: true, name: true } }, edition: { select: { year: true } } },
     });
 
     revalidateConferences();
+    // No second slug to purge, unlike speakers (#351): a talk's slug is computed
+    // once at creation and never recomputed on update.
+    revalidateTalk(talk.slug, talk.edition.year);
     return serialize(talk);
   });
 
@@ -200,7 +208,10 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
     const talkId = Number(request.params.id);
-    const talk = await prisma.talk.findFirst({ where: { id: talkId, ...notDeleted } });
+    const talk = await prisma.talk.findFirst({
+      where: { id: talkId, ...notDeleted },
+      include: { edition: { select: { year: true } } },
+    });
     if (!talk) return notFound(reply, "Talk");
 
     // The slug is unique per edition and a trashed row keeps its slot, so park
@@ -211,6 +222,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       data: { ...softDeleteData(), slug: parkUniqueValue(talk.slug, talkId) },
     });
     revalidateConferences();
+    // The slug it had while public — its pages must stop answering from cache.
+    revalidateTalk(talk.slug, talk.edition.year);
     return reply.code(204).send();
   });
 }

@@ -82,11 +82,19 @@
     "followUs": "Suivez l'aventure en ligne :",
     "legalNotice": "Mentions légales",
     "codeOfConduct": "Code de conduite",
-    "sitemap": "Plan du site"
+    "sitemap": "Plan du site",
+    "replays": "Replays",
+    "hallOfFame": "Hall of fame"
   },
   "notFound": {
     "title": "Page introuvable",
     "description": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "backHome": "Retour à l'accueil"
+  },
+  "error": {
+    "title": "Page temporairement indisponible",
+    "description": "Cette page n'a pas pu être chargée. Le problème vient de chez nous, pas de vous — réessayez dans un instant.",
+    "retry": "Réessayer",
     "backHome": "Retour à l'accueil"
   },
   "header": {
@@ -306,7 +314,20 @@
     "home": "Accueil",
     "empty": "Les conférenciers seront annoncés prochainement.",
     "sessionsTitle": "Sessions",
-    "backToList": "Tous les conférenciers"
+    "noSessionThatYear": "Aucune session publiée pour cette édition.",
+    "backToList": "Conférenciers de {year}",
+    "backToHallOfFame": "Voir le hall of fame"
+  },
+  "hallOfFame": {
+    "title": "Hall of fame",
+    "description": "Tous les conférenciers du DevFest Toulouse depuis 2016 : {count} personnes, toutes éditions confondues.",
+    "heading": "Hall of fame",
+    "intro": "{count} personnes ont pris la parole au DevFest Toulouse depuis 2016.",
+    "home": "Accueil",
+    "empty": "Aucun conférencier pour le moment.",
+    "allYears": "Toutes les éditions",
+    "filterLabel": "Filtrer par édition",
+    "countLabel": "{count} conférenciers"
   },
   "sponsors": {
     "title": "Sponsors",
@@ -340,5 +361,42 @@
     "directions": "Itinéraire",
     "transports": "Accès & transports",
     "parking": "Parking"
+  },
+  "replays": {
+    "title": "Replays",
+    "pageTitle": "Replays — toutes les conférences filmées | DevFest Toulouse",
+    "heading": "Replays",
+    "description": "Revoyez les conférences filmées du DevFest Toulouse, toutes éditions confondues.",
+    "home": "Accueil",
+    "intro": "Retrouvez {count, plural, one {# conférence filmée} other {# conférences filmées}} depuis 2017, toutes éditions confondues. Cherchez par titre ou par speaker, filtrez par année ou par format.",
+    "results": "{count, plural, one {# conférence} other {# conférences}}",
+    "watch": "Revoir",
+    "empty": "Les replays ne sont pas encore disponibles.",
+    "noResults": "Aucune conférence ne correspond à votre recherche.",
+    "backToReplays": "Tous les replays",
+    "editionLabel": "Édition {year}",
+    "abstract": "Résumé",
+    "speakersLabel": "Speakers",
+    "filterBy": "Filtrer sur {value}",
+    "language": {
+      "fr": "Français",
+      "en": "Anglais"
+    },
+    "filters": {
+      "search": "Rechercher",
+      "searchPlaceholder": "Titre ou nom de speaker…",
+      "year": "Année",
+      "format": "Format",
+      "category": "Catégorie",
+      "all": "Toutes",
+      "submit": "Filtrer",
+      "reset": "Réinitialiser"
+    },
+    "format": {
+      "CONFERENCE": "Conférence",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote",
+      "WORKSHOP": "Workshop"
+    }
   }
 }

@@ -1,14 +1,18 @@
 import type { EditionTalk } from "@/lib/types";
+import { Link } from "@/i18n/navigation";
 
 interface EditionTalksListProps {
   talks: EditionTalk[];
   replayLabel: string;
+  // Talk pages are year-scoped (#343): `/conferences/[slug]` only serves the
+  // featured edition and would 404 here.
+  year: number;
 }
 
 // Read-only session list for a past edition (issue #63): title, speakers,
 // category badge and a replay link when a recording is available. Takes no
 // locale: a talk's title is not translated (#293).
-export default function EditionTalksList({ talks, replayLabel }: EditionTalksListProps) {
+export default function EditionTalksList({ talks, replayLabel, year }: EditionTalksListProps) {
   return (
     <ul className="space-y-4">
       {talks.map((talk) => {
@@ -29,7 +33,14 @@ export default function EditionTalksList({ talks, replayLabel }: EditionTalksLis
                     aria-hidden="true"
                   />
                 )}
-                <h3 className="font-bold text-noir">{title}</h3>
+                <h3 className="font-bold text-noir">
+                  <Link
+                    href={`/editions/${year}/conferences/${talk.slug}`}
+                    className="hover:text-bleu hover:underline"
+                  >
+                    {title}
+                  </Link>
+                </h3>
               </div>
               {speakerNames && <p className="mt-1 text-sm text-gris">{speakerNames}</p>}
             </div>

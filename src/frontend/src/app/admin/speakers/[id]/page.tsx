@@ -4,13 +4,18 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
-import type { Speaker, Sponsor } from "@/lib/types";
+import type { Speaker } from "@/lib/types";
 import EditLinkActions from "@/components/admin/EditLinkActions";
 import SpeakerForm, { emptySpeakerForm, type SpeakerFormValue } from "@/components/admin/speakers/SpeakerForm";
+import SpeakerEditionsPanel from "@/components/admin/speakers/SpeakerEditionsPanel";
 
-interface SpeakerData extends Speaker {
-  slug: string;
-  edition?: { id: number; year: number };
+type SpeakerData = Speaker;
+
+// The create endpoint answers 409 when the name resolves to a person who already
+// exists (#351), rather than forking the identity into `ada-lovelace-2`.
+interface ExistingSpeaker {
+  existingSpeakerId: number;
+  existingSpeakerName: string;
 }
 
 export default function SpeakerEditorPage() {
@@ -24,23 +29,28 @@ export default function SpeakerEditorPage() {
   const [current, setCurrent] = useState<SpeakerData | null>(null);
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [editionId, setEditionId] = useState<number | null>(null);
-  const [editionYear, setEditionYear] = useState<number | null>(null);
-  const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [duplicate, setDuplicate] = useState<ExistingSpeaker | null>(null);
+
+  // The editions list is needed in both modes now: to pick the first
+  // participation on create, and to offer the ones left to attach on edit.
+  useEffect(() => {
+    adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
+      if (!data) return;
+      setEditions(data);
+      if (isNew) {
+        const preset = Number(searchParams.get("editionId"));
+        const chosen = data.find((e) => e.id === preset) ?? data[0];
+        if (chosen) setEditionId(chosen.id);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isNew]);
 
   useEffect(() => {
-    if (isNew) {
-      adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
-        if (data) {
-          setEditions(data);
-          const preset = Number(searchParams.get("editionId"));
-          const chosen = data.find((e) => e.id === preset) ?? data[0];
-          if (chosen) setEditionId(chosen.id);
-        }
-      });
-    } else if (speakerId) {
+    if (!isNew && speakerId) {
       adminFetch<SpeakerData>(`/speakers/${speakerId}`).then(({ data, status }) => {
         if (status === 404 || !data) {
           router.push("/admin/speakers");
@@ -60,25 +70,14 @@ export default function SpeakerEditorPage() {
           github: data.socialLinks?.github || "",
           website: data.socialLinks?.website || "",
           locale: data.locale === "en" ? "en" : "fr",
-          isFeatured: data.isFeatured,
-          sponsorId: data.sponsorId ? String(data.sponsorId) : "",
-          publicationStatus: data.publicationStatus,
         });
-        setEditionId(data.editionId);
-        setEditionYear(data.edition?.year ?? null);
+        // Kept for the PUT payload, which still names a participation.
+        setEditionId(data.editions[0]?.id ?? null);
         setIsLoading(false);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [speakerId, isNew]);
-
-  // Sponsor list is edition-scoped (for the "sponsor associé" select).
-  useEffect(() => {
-    if (!editionId) return;
-    adminFetch<Sponsor[]>(`/sponsors?editionId=${editionId}`).then(({ data }) => {
-      if (data) setSponsors(data);
-    });
-  }, [editionId]);
 
   async function handleSave() {
     if (!form.name.trim() || !editionId) return;
@@ -92,6 +91,9 @@ export default function SpeakerEditorPage() {
     if (form.website.trim()) socialLinks.website = form.website.trim();
 
     const payload = {
+      // On create this is the first participation. On update it only tells the
+      // API which participation a status change would apply to — the panel below
+      // handles those, so this payload carries identity fields only.
       editionId,
       name: form.name.trim(),
       photoUrl: form.photoUrl || undefined,
@@ -101,14 +103,23 @@ export default function SpeakerEditorPage() {
       bioEn: form.bioEn || undefined,
       socialLinks,
       locale: form.locale,
-      isFeatured: form.isFeatured,
-      sponsorId: form.sponsorId ? Number(form.sponsorId) : null,
-      publicationStatus: form.publicationStatus,
     };
 
     if (isNew) {
-      const { data, status } = await adminFetch<{ id: number }>("/speakers", { method: "POST", body: JSON.stringify(payload) });
+      const { data, status } = await adminFetch<{ id: number } & Partial<ExistingSpeaker>>("/speakers", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
       setIsSaving(false);
+      // 409 means the person already exists (#351): offer to attach them to this
+      // edition instead of creating a duplicate identity.
+      if (status === 409 && data?.existingSpeakerId) {
+        setDuplicate({
+          existingSpeakerId: data.existingSpeakerId,
+          existingSpeakerName: data.existingSpeakerName ?? form.name.trim(),
+        });
+        return;
+      }
       if (status >= 400 || !data) {
         setError("Échec de la création.");
         return;
@@ -125,6 +136,50 @@ export default function SpeakerEditorPage() {
     }
   }
 
+  // Participations are saved on the spot rather than with the identity form:
+  // attaching someone to an edition is its own action, not a draft edit.
+  async function attachEdition(targetEditionId: number) {
+    const { data, status } = await adminFetch<SpeakerData>(`/speakers/${speakerId}/editions`, {
+      method: "POST",
+      body: JSON.stringify({ editionId: targetEditionId }),
+    });
+    if (status >= 400 || !data) {
+      setError("Impossible de rattacher cette édition.");
+      return;
+    }
+    setCurrent(data);
+  }
+
+  async function detachEdition(targetEditionId: number) {
+    const { status } = await adminFetch(`/speakers/${speakerId}/editions/${targetEditionId}`, {
+      method: "DELETE",
+    });
+    if (status !== 204) {
+      setError("Impossible de retirer cette édition.");
+      return;
+    }
+    setCurrent((prev) =>
+      prev ? { ...prev, editions: prev.editions.filter((e) => e.id !== targetEditionId) } : prev,
+    );
+  }
+
+  async function updateParticipation(
+    targetEditionId: number,
+    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
+  ) {
+    // The attach endpoint upserts, so it doubles as the update for a
+    // participation that already exists.
+    const { data, status } = await adminFetch<SpeakerData>(`/speakers/${speakerId}/editions`, {
+      method: "POST",
+      body: JSON.stringify({ editionId: targetEditionId, ...patch }),
+    });
+    if (status >= 400 || !data) {
+      setError("Impossible de mettre à jour cette édition.");
+      return;
+    }
+    setCurrent(data);
+  }
+
   if (isLoading) return <p className="text-gris">Chargement...</p>;
 
   return (
@@ -134,7 +189,7 @@ export default function SpeakerEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouveau speaker" : "Modifier le speaker"}</h1>
-        {!isNew && current?.publicationStatus === "PUBLISHED" && (
+        {!isNew && current?.editions.some((e) => e.publicationStatus === "PUBLISHED") && (
           <a
             href={`/speakers/${current.slug}/social-card`}
             target="_blank"
@@ -161,10 +216,35 @@ export default function SpeakerEditorPage() {
             </select>
           </label>
         ) : (
-          <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
+          current && (
+            <SpeakerEditionsPanel
+              editions={current.editions}
+              allEditions={editions}
+              onAttach={attachEdition}
+              onDetach={detachEdition}
+              onUpdate={updateParticipation}
+            />
+          )
         )}
 
-        <SpeakerForm value={form} onChange={setForm} sponsors={sponsors} />
+        {duplicate && (
+          <div role="alert" className="rounded-lg bg-jaune/10 px-4 py-3 text-sm text-noir">
+            <p className="mb-2">
+              <span className="font-medium">{duplicate.existingSpeakerName}</span> existe déjà. Une
+              personne n&apos;a qu&apos;une fiche : rattachez-la à cette édition plutôt que de créer
+              un doublon.
+            </p>
+            <button
+              type="button"
+              onClick={() => router.push(`/admin/speakers/${duplicate.existingSpeakerId}`)}
+              className="px-3 py-1.5 text-sm rounded-lg bg-malachite text-blanc hover:bg-malachite/90"
+            >
+              Ouvrir sa fiche
+            </button>
+          </div>
+        )}
+
+        <SpeakerForm value={form} onChange={setForm} />
 
         {!isNew && current && (
           <EditLinkActions

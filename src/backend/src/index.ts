@@ -22,6 +22,7 @@ import sponsorRoutes from "./routes/sponsors.js";
 import speakerRoutes from "./routes/speakers.js";
 import categoryRoutes from "./routes/categories.js";
 import talkRoutes from "./routes/talks.js";
+import replayRoutes from "./routes/replays.js";
 import editRoutes from "./routes/edit.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
@@ -140,6 +141,18 @@ await app.register(fastifyStatic, {
   // on every visit (#197).
   maxAge: "365d",
   immutable: true,
+  // Defence in depth for SVG (#346). Uploads are sanitized before storage, but
+  // a file predating that — or a case the allowlist misses — must still be
+  // inert when opened directly: served same-origin with its native
+  // content-type, an SVG runs script in our origin. `sandbox` drops it into an
+  // opaque origin with scripts disabled; `nosniff` stops a mislabelled file
+  // from being reinterpreted as something executable.
+  setHeaders: (reply, filePath) => {
+    reply.setHeader("X-Content-Type-Options", "nosniff");
+    if (filePath.toLowerCase().endsWith(".svg")) {
+      reply.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+    }
+  },
 });
 
 // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
@@ -276,6 +289,7 @@ await app.register(sponsorRoutes, { prefix: "/api" });
 await app.register(speakerRoutes, { prefix: "/api" });
 await app.register(categoryRoutes, { prefix: "/api" });
 await app.register(talkRoutes, { prefix: "/api" });
+await app.register(replayRoutes, { prefix: "/api" });
 await app.register(editRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)

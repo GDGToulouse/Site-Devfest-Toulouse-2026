@@ -9,7 +9,7 @@ vi.mock("./prisma.js", () => ({
   prisma: {
     $queryRaw: vi.fn(),
     $transaction: vi.fn().mockResolvedValue([]),
-    speaker: { updateMany: vi.fn() },
+    speakerEdition: { updateMany: vi.fn() },
   },
 }));
 vi.mock("./revalidate.js", () => ({ revalidateSpeakers: vi.fn().mockResolvedValue(undefined) }));

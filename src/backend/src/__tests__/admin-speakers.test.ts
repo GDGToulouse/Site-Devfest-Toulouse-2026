@@ -23,10 +23,14 @@ async function buildSpeakersApp(): Promise<FastifyInstance> {
 // endpoint only soft-deletes (#147), so a real purge at the end is required to
 // stop parked slugs from accumulating in the unique index across runs.
 const createdSpeakerIds: number[] = [];
+const createdEditionIds: number[] = [];
 
 afterAll(async () => {
   if (createdSpeakerIds.length > 0) {
     await prisma.speaker.deleteMany({ where: { id: { in: createdSpeakerIds } } });
+  }
+  if (createdEditionIds.length > 0) {
+    await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
   }
   // No `prisma.$disconnect()` here: the client is a shared singleton across all
   // test files, and Vitest runs them in parallel — disconnecting would cut the
@@ -60,13 +64,19 @@ describe("Admin Speakers API", () => {
 
     // Assert against the stored row, not just the HTTP status: the values must
     // have actually persisted, and the slug must be derived from the name.
-    const stored = await prisma.speaker.findUnique({ where: { id } });
+    const stored = await prisma.speaker.findUnique({
+      where: { id },
+      include: { editions: true },
+    });
     expect(stored).not.toBeNull();
     expect(stored!.name).toBe(name);
-    expect(stored!.editionId).toBe(edition.id);
     expect(stored!.company).toBe("Analytical Engine");
     expect(stored!.slug).toContain("ada-lovelace");
-    expect(stored!.publicationStatus).toBe("DRAFT");
+    // #351: the create attaches the person to the posted edition through a
+    // participation, which is what now carries the publication status.
+    expect(stored!.editions).toHaveLength(1);
+    expect(stored!.editions[0].editionId).toBe(edition.id);
+    expect(stored!.editions[0].publicationStatus).toBe("DRAFT");
 
     await app.close();
   });
@@ -111,14 +121,19 @@ describe("Admin Speakers API", () => {
     const updateRes = await app.inject({
       method: "PUT",
       url: `/api/admin/speakers/${id}`,
-      payload: { company: "Eindhoven University", publicationStatus: "PUBLISHED" },
+      // #351: publicationStatus targets a participation, so the edition must be
+      // named. company stays on the identity.
+      payload: { editionId: edition.id, company: "Eindhoven University", publicationStatus: "PUBLISHED" },
     });
     expect(updateRes.statusCode).toBe(200);
 
     // Read straight from the DB: a 200 alone wouldn't prove the write landed.
-    const stored = await prisma.speaker.findUnique({ where: { id } });
+    const stored = await prisma.speaker.findUnique({
+      where: { id },
+      include: { editions: { where: { editionId: edition.id } } },
+    });
     expect(stored!.company).toBe("Eindhoven University");
-    expect(stored!.publicationStatus).toBe("PUBLISHED");
+    expect(stored!.editions[0].publicationStatus).toBe("PUBLISHED");
 
     await app.close();
   });
@@ -197,6 +212,75 @@ describe("Admin Speakers API", () => {
     await app.close();
   });
 
+  it("POST answers 409 with the existing person instead of forking the identity (#351)", async () => {
+    const app = await buildSpeakersApp();
+    const edition = await getSeededEdition();
+    const name = `Barbara Liskov ${Date.now()}`;
+
+    const first = await app.inject({
+      method: "POST",
+      url: "/api/admin/speakers",
+      payload: { editionId: edition.id, name },
+    });
+    expect(first.statusCode).toBe(201);
+    createdSpeakerIds.push(first.json().id);
+
+    // Before #351 this derived `barbara-liskov-2` and created a second person.
+    // The slug now identifies a human, so the same name must be reported as an
+    // existing identity the admin can attach to another edition.
+    const second = await app.inject({
+      method: "POST",
+      url: "/api/admin/speakers",
+      payload: { editionId: edition.id, name },
+    });
+    expect(second.statusCode).toBe(409);
+    expect(second.json().existingSpeakerId).toBe(first.json().id);
+    expect(second.json().existingSpeakerName).toBe(name);
+
+    await app.close();
+  });
+
+  it("POST /speakers/:id/editions attaches an existing person to another edition", async () => {
+    const app = await buildSpeakersApp();
+    const current = await getSeededEdition();
+    // Created, not looked up: the seed only carries 2026 and 2025, so relying on
+    // the history being loaded passed locally and failed on a fresh CI database.
+    // The year sits in its own range, away from the other test files running in
+    // parallel (#292).
+    const past = await prisma.edition.create({
+      data: { year: 1611, status: "SEE_YOU_NEXT_YEAR" },
+    });
+    createdEditionIds.push(past.id);
+
+    const createRes = await app.inject({
+      method: "POST",
+      url: "/api/admin/speakers",
+      payload: { editionId: current.id, name: `Radia Perlman ${Date.now()}` },
+    });
+    const { id } = createRes.json();
+    createdSpeakerIds.push(id);
+
+    const attachRes = await app.inject({
+      method: "POST",
+      url: `/api/admin/speakers/${id}/editions`,
+      payload: { editionId: past.id, publicationStatus: "PUBLISHED" },
+    });
+    expect(attachRes.statusCode).toBe(200);
+
+    // One person, two participations — the answer the 409 above points to.
+    const years = attachRes.json().editions.map((e: { year: number }) => e.year);
+    expect(years).toContain(current.year);
+    expect(years).toContain(past.year);
+
+    // Detaching is idempotent: the second call must not 404.
+    const first = await app.inject({ method: "DELETE", url: `/api/admin/speakers/${id}/editions/${past.id}` });
+    const again = await app.inject({ method: "DELETE", url: `/api/admin/speakers/${id}/editions/${past.id}` });
+    expect(first.statusCode).toBe(204);
+    expect(again.statusCode).toBe(204);
+
+    await app.close();
+  });
+
   it("POST /api/admin/speakers/bulk rejects an empty ids array with 400", async () => {
     const app = await buildSpeakersApp();
 
@@ -225,13 +309,16 @@ describe("Admin Speakers API", () => {
     const bulkRes = await app.inject({
       method: "POST",
       url: "/api/admin/speakers/bulk",
-      payload: { ids: [id], action: "setStatus", value: "PUBLISHED" },
+      payload: { ids: [id], editionId: edition.id, action: "setStatus", value: "PUBLISHED" },
     });
     expect(bulkRes.statusCode).toBe(200);
     expect(bulkRes.json().count).toBe(1);
 
-    const stored = await prisma.speaker.findUnique({ where: { id } });
-    expect(stored!.publicationStatus).toBe("PUBLISHED");
+    const stored = await prisma.speaker.findUnique({
+      where: { id },
+      include: { editions: { where: { editionId: edition.id } } },
+    });
+    expect(stored!.editions[0].publicationStatus).toBe("PUBLISHED");
 
     await app.close();
   });

@@ -1,4 +1,4 @@
-import { fetchAndStoreImage } from "./image-store.js";
+import { resolveSpeakerPhoto } from "./speaker-photo.js";
 import { prisma } from "./prisma.js";
 import { slugify, uniqueSlug } from "./slug.js";
 import { validateWebhookUrl } from "./webhook-url.js";
@@ -131,34 +131,9 @@ export function categoryRole(c: SzCategory): "format" | "level" | "language" | "
   return "track";
 }
 
-export function isLocalUpload(url: string | null | undefined): boolean {
-  return !!url && url.startsWith("/uploads/");
-}
-
-// Sessionize serves speaker pictures from its own CDN, which next/image refuses
-// to load (host not in remotePatterns) — so we pull the file into /uploads/ and
-// store a local URL instead (#205). Re-imports keep an existing local photo
-// rather than downloading it again (RG-217 idempotence). A download failure is
-// never fatal: the speaker is imported without a photo and a warning is
-// reported.
-export async function resolveSpeakerPhoto(
-  remoteUrl: string | null | undefined,
-  currentPhotoUrl: string | null,
-  speakerName: string,
-  report: ImportReport,
-): Promise<string | null> {
-  if (isLocalUpload(currentPhotoUrl)) return currentPhotoUrl;
-  if (!remoteUrl?.trim()) return null;
-
-  try {
-    return await fetchAndStoreImage(remoteUrl.trim());
-  } catch (err) {
-    report.warnings.push(
-      `Photo de ${speakerName} non importée : ${(err as Error).message}.`,
-    );
-    return null;
-  }
-}
+// Both importers pull remote pictures into /uploads/, so these live in their own
+// module rather than in either importer (#356).
+export { isLocalUpload, resolveSpeakerPhoto } from "./speaker-photo.js";
 
 // Run the idempotent import. Speakers/talks are matched by their slug derived
 // from name/title within the edition (RG-206/RG-214); re-importing the same
@@ -212,32 +187,50 @@ export async function importSessionize(
     }
   }
 
-  // 2. Upsert track categories, keyed by nameFr within the edition.
+  // 2. Upsert track categories, keyed by nameFr — globally since #338, not per
+  // edition: a track already declared by another year is reused rather than
+  // duplicated, and only its binding to this edition is created.
   // Deliberately NOT filtered on deletedAt (#147): these lookups drive upserts,
   // so they must see trashed rows. Skipping them would recreate a category that
-  // already exists in the trash, and the slug sets below would hand out names
-  // still held by trashed rows — the create would then hit the unique index.
+  // already exists in the trash and hit the unique index on nameFr.
   const existingCategories = await prisma.category.findMany({
-    where: { editionId },
     select: { id: true, nameFr: true },
   });
   const categoryIdByName = new Map(existingCategories.map((c) => [c.nameFr, c.id]));
-  let sortOrder = existingCategories.length;
+  const existingLinks = await prisma.editionCategory.findMany({
+    where: { editionId },
+    select: { categoryId: true },
+  });
+  const linkedCategoryIds = new Set(existingLinks.map((l) => l.categoryId));
+  let sortOrder = existingLinks.length;
+
   for (const name of new Set(trackByItemId.values())) {
-    if (categoryIdByName.has(name)) {
+    let categoryId = categoryIdByName.get(name);
+
+    if (categoryId === undefined) {
+      const created = await prisma.category.create({
+        data: { nameFr: name, nameEn: name, color: "#109E6E" },
+      });
+      categoryId = created.id;
+      categoryIdByName.set(name, categoryId);
+      report.categories.created++;
+    } else {
       report.categories.reused++;
-      continue;
     }
-    const created = await prisma.category.create({
-      data: { editionId, nameFr: name, nameEn: name, color: "#109E6E", sortOrder: sortOrder++ },
-    });
-    categoryIdByName.set(name, created.id);
-    report.categories.created++;
+
+    // The track may exist globally without this edition proposing it yet.
+    if (!linkedCategoryIds.has(categoryId)) {
+      await prisma.editionCategory.create({
+        data: { editionId, categoryId, sortOrder: sortOrder++ },
+      });
+      linkedCategoryIds.add(categoryId);
+    }
   }
 
   // 3. Upsert speakers, keyed by slug. Track the resulting db id per Sessionize id.
+  // Reconciled across every edition since #351: someone who already spoke a
+  // previous year must be reused, not duplicated under `ada-lovelace-2`.
   const existingSpeakers = await prisma.speaker.findMany({
-    where: { editionId },
     select: { id: true, slug: true, photoUrl: true },
   });
   const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
@@ -259,9 +252,10 @@ export async function importSessionize(
       sz.profilePicture,
       photoUrlBySlug.get(baseSlug) ?? null,
       name,
-      report,
+      report.warnings,
     );
 
+    let speakerId: number;
     const existingId = speakerSlugToId.get(baseSlug);
     if (existingId) {
       const updated = await prisma.speaker.update({
@@ -274,6 +268,7 @@ export async function importSessionize(
           socialLinks: count > 0 ? JSON.stringify(social) : null,
         },
       });
+      speakerId = updated.id;
       dbIdBySzSpeakerId.set(sz.id, updated.id);
       report.speakers.updated++;
     } else {
@@ -281,20 +276,28 @@ export async function importSessionize(
       takenSpeakerSlugs.add(slug);
       const created = await prisma.speaker.create({
         data: {
-          editionId,
           slug,
           name,
           company: sz.tagLine?.trim() || null,
           bioFr: sz.bio?.trim() || null,
           photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
-          publicationStatus: "DRAFT",
         },
       });
       speakerSlugToId.set(slug, created.id);
+      speakerId = created.id;
       dbIdBySzSpeakerId.set(sz.id, created.id);
       report.speakers.created++;
     }
+
+    // The participation starts as a draft even when the person is already
+    // published on another edition (#351): being announced for 2024 must not
+    // put someone live on the edition being prepared.
+    await prisma.speakerEdition.upsert({
+      where: { speakerId_editionId: { speakerId, editionId } },
+      create: { speakerId, editionId, publicationStatus: "DRAFT" },
+      update: {},
+    });
   }
 
   // 4. Upsert sessions (talks), keyed by slug, linking speakers + category.

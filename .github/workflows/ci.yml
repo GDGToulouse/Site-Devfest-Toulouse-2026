@@ -7,6 +7,41 @@ on:
     branches: [main, dev]
 
 jobs:
+  # Guards the versioning invariant (#288). The release bump lives only on
+  # `main`, so nothing carries it back down: in July `main` shipped 1.3.0 while
+  # `dev` still said 1.1.3 and the beta advertised an older version than prod.
+  version:
+    name: Version — Consistency Guard
+    runs-on: ubuntu-latest
+    steps:
+      # Full history: the guard reads the version file from `main`.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Fetch main
+        run: git fetch origin main --depth=1
+
+      # Compare with production only on the dev line. A PR into `main` carries
+      # the bump that drops the `-beta` suffix, so the rule is inverted there —
+      # only the files-agree check applies.
+      - name: Check version consistency
+        # Branch names reach the runner through env vars, never interpolated
+        # into the script: a `${{ }}` is substituted textually before the shell
+        # runs, so a ref named `$(...)` would execute on the runner.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          if [ "$BASE_REF" = "dev" ] || [ "$REF_NAME" = "dev" ]; then
+            node scripts/check-version-consistency.mjs --against-main
+          else
+            node scripts/check-version-consistency.mjs
+          fi
+
   frontend:
     name: Frontend — Lint, Test & Build
     runs-on: ubuntu-latest

@@ -82,11 +82,19 @@
     "followUs": "Follow the adventure online:",
     "legalNotice": "Legal notice",
     "codeOfConduct": "Code of conduct",
-    "sitemap": "Sitemap"
+    "sitemap": "Sitemap",
+    "replays": "Replays",
+    "hallOfFame": "Hall of fame"
   },
   "notFound": {
     "title": "Page not found",
     "description": "The page you are looking for does not exist or has been moved.",
+    "backHome": "Back to home"
+  },
+  "error": {
+    "title": "Page temporarily unavailable",
+    "description": "This page could not be loaded. The problem is on our side, not yours — please try again in a moment.",
+    "retry": "Try again",
     "backHome": "Back to home"
   },
   "header": {
@@ -306,7 +314,20 @@
     "home": "Home",
     "empty": "Speakers will be announced soon.",
     "sessionsTitle": "Sessions",
-    "backToList": "All speakers"
+    "noSessionThatYear": "No published session for this edition.",
+    "backToList": "{year} speakers",
+    "backToHallOfFame": "See the hall of fame"
+  },
+  "hallOfFame": {
+    "title": "Hall of fame",
+    "description": "Every DevFest Toulouse speaker since 2016: {count} people, across all editions.",
+    "heading": "Hall of fame",
+    "intro": "{count} people have spoken at DevFest Toulouse since 2016.",
+    "home": "Home",
+    "empty": "No speaker yet.",
+    "allYears": "All editions",
+    "filterLabel": "Filter by edition",
+    "countLabel": "{count} speakers"
   },
   "sponsors": {
     "title": "Sponsors",
@@ -340,5 +361,42 @@
     "directions": "Directions",
     "transports": "Getting there",
     "parking": "Parking"
+  },
+  "replays": {
+    "title": "Replays",
+    "pageTitle": "Replays — every recorded talk | DevFest Toulouse",
+    "heading": "Replays",
+    "description": "Watch again the recorded talks from DevFest Toulouse, across all editions.",
+    "home": "Home",
+    "intro": "Browse {count, plural, one {# recorded talk} other {# recorded talks}} since 2017, across every edition. Search by title or speaker, filter by year or format.",
+    "results": "{count, plural, one {# talk} other {# talks}}",
+    "watch": "Watch again",
+    "empty": "Replays are not available yet.",
+    "noResults": "No talk matches your search.",
+    "backToReplays": "All replays",
+    "editionLabel": "{year} edition",
+    "abstract": "Abstract",
+    "speakersLabel": "Speakers",
+    "filterBy": "Filter on {value}",
+    "language": {
+      "fr": "French",
+      "en": "English"
+    },
+    "filters": {
+      "search": "Search",
+      "searchPlaceholder": "Title or speaker name…",
+      "year": "Year",
+      "format": "Format",
+      "category": "Category",
+      "all": "All",
+      "submit": "Filter",
+      "reset": "Reset"
+    },
+    "format": {
+      "CONFERENCE": "Talk",
+      "QUICKIE": "Quickie",
+      "KEYNOTE": "Keynote",
+      "WORKSHOP": "Workshop"
+    }
   }
 }

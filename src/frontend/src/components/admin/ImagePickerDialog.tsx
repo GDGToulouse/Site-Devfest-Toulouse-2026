@@ -328,6 +328,8 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
               >
                 Choisir un fichier
               </button>
+              {/* SVG is accepted again since #346: the backend strips scripts,
+                  handlers and remote references before storing it. */}
               <input
                 ref={fileInputRef}
                 type="file"

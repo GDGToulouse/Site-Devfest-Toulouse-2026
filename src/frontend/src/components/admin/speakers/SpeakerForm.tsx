@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import type { Sponsor } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 
@@ -19,9 +18,6 @@ export interface SpeakerFormValue {
   github: string;
   website: string;
   locale: "fr" | "en";
-  isFeatured: boolean;
-  sponsorId: string;
-  publicationStatus: "DRAFT" | "PUBLISHED";
 }
 
 export const emptySpeakerForm: SpeakerFormValue = {
@@ -37,9 +33,6 @@ export const emptySpeakerForm: SpeakerFormValue = {
   github: "",
   website: "",
   locale: "fr",
-  isFeatured: false,
-  sponsorId: "",
-  publicationStatus: "DRAFT",
 };
 
 const inputClass =
@@ -48,10 +41,9 @@ const inputClass =
 interface SpeakerFormProps {
   value: SpeakerFormValue;
   onChange: (value: SpeakerFormValue) => void;
-  sponsors: Sponsor[];
 }
 
-export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormProps) {
+export default function SpeakerForm({ value, onChange }: SpeakerFormProps) {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
 
   return (
@@ -67,21 +59,12 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
         </label>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Ville</span>
-          <input value={value.city} onChange={(e) => onChange({ ...value, city: e.target.value })} className={inputClass} />
-        </label>
-        <label className="block">
-          <span className="block text-sm font-medium text-noir mb-1">Sponsor associé</span>
-          <select value={value.sponsorId} onChange={(e) => onChange({ ...value, sponsorId: e.target.value })} className={inputClass}>
-            <option value="">— Aucun —</option>
-            {sponsors.map((sp) => (
-              <option key={sp.id} value={sp.id}>{sp.name}</option>
-            ))}
-          </select>
-        </label>
-      </div>
+      {/* The sponsor select moved to the participations panel (#353): the
+          employer is a per-year fact, so it belongs next to the year. */}
+      <label className="block md:w-1/2 md:pr-2">
+        <span className="block text-sm font-medium text-noir mb-1">Ville</span>
+        <input value={value.city} onChange={(e) => onChange({ ...value, city: e.target.value })} className={inputClass} />
+      </label>
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Photo</span>
@@ -158,27 +141,6 @@ export default function SpeakerForm({ value, onChange, sponsors }: SpeakerFormPr
           Langue des emails envoyés à ce speaker et de sa page de modification.
         </span>
       </label>
-
-      <div className="flex flex-wrap items-center gap-6">
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value.isFeatured}
-            onChange={(e) => onChange({ ...value, isFeatured: e.target.checked })}
-            className="rounded border-gris/30 text-malachite focus:ring-malachite"
-          />
-          <span className="text-sm text-noir">En vedette (page d&apos;accueil)</span>
-        </label>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={value.publicationStatus === "PUBLISHED"}
-            onChange={(e) => onChange({ ...value, publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT" })}
-            className="rounded border-gris/30 text-malachite focus:ring-malachite"
-          />
-          <span className="text-sm text-noir">Publié (visible sur le site)</span>
-        </label>
-      </div>
 
       <ImagePickerDialog
         open={isImagePickerOpen}

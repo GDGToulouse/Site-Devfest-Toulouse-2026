@@ -1,3 +1,5 @@
+import { jsonLdScript } from "@/lib/seo";
+
 type BreadcrumbItem = {
   label: string;
   href: string;
@@ -21,7 +23,7 @@ export default function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(jsonLd) }}
       />
       <nav aria-label="Breadcrumb" className="text-sm text-gris">
         <ol className="flex items-center gap-2">

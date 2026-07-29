@@ -23,12 +23,19 @@ export async function rotateFeaturedSpeakers(): Promise<RotationResult> {
   const edition = await getFeaturedEdition();
   if (!edition) return { edition: null, featured: [] };
 
-  // Draw in the database rather than loading every speaker into memory.
+  // Draw in the database rather than loading every speaker into memory. The
+  // draw runs on the participations since #351: being featured is a per-edition
+  // decision, so `id` here is a SpeakerEdition id, not a Speaker one.
+  //
+  // `deletedAt IS NULL` is new: the previous query drew from Speaker without it,
+  // so a trashed speaker could be picked and put on the home page.
   const picked = await prisma.$queryRaw<{ id: number; name: string }[]>`
-    SELECT id, name
-    FROM "Speaker"
-    WHERE "editionId" = ${edition.id}
-      AND "publicationStatus" = 'PUBLISHED'
+    SELECT se."id", s."name"
+    FROM "SpeakerEdition" se
+    JOIN "Speaker" s ON s."id" = se."speakerId"
+    WHERE se."editionId" = ${edition.id}
+      AND se."publicationStatus" = 'PUBLISHED'
+      AND s."deletedAt" IS NULL
     ORDER BY random()
     LIMIT ${FEATURED_SPEAKERS_COUNT}
   `;
@@ -36,15 +43,16 @@ export async function rotateFeaturedSpeakers(): Promise<RotationResult> {
   const ids = picked.map((s) => s.id);
 
   // Clear then set, in one transaction: a half-applied rotation would leave the
-  // home page with the wrong line-up.
+  // home page with the wrong line-up. Scoped to this edition, so a speaker
+  // featured on a past edition keeps that flag.
   await prisma.$transaction([
-    prisma.speaker.updateMany({
+    prisma.speakerEdition.updateMany({
       where: { editionId: edition.id, isFeatured: true },
       data: { isFeatured: false },
     }),
     ...(ids.length > 0
       ? [
-          prisma.speaker.updateMany({
+          prisma.speakerEdition.updateMany({
             where: { id: { in: ids } },
             data: { isFeatured: true },
           }),

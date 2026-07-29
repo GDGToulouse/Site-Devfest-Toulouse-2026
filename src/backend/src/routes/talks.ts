@@ -26,7 +26,12 @@ export default async function talkRoutes(app: FastifyInstance) {
         // them (Prisma applies those to the top-level operation only), and a
         // trashed speaker would otherwise still show up on a live talk page.
         speakers: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted },
+          // Published *for this edition* (#351): the status moved onto the
+          // participation, so the filter goes through it.
+          where: {
+            ...notDeleted,
+            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+          },
           select: { slug: true, name: true, photoUrl: true, company: true },
           orderBy: { name: "asc" },
         },

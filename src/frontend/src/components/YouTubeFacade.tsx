@@ -27,7 +27,22 @@ export default function YouTubeFacade({ videoUrl, title = "Video" }: YouTubeFaca
     setIsPlaying(true);
   }, []);
 
-  if (!videoId) return null;
+  // An URL we cannot parse still points at a real video — an admin may have
+  // pasted a form we don't know. Dropping the block would make the talk look as
+  // if it had never been filmed (#348), so fall back to the plain link.
+  if (!videoId) {
+    return (
+      <a
+        href={videoUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex w-fit items-center gap-2 rounded-lg bg-terre-cuite px-4 py-2 text-sm font-medium text-blanc transition-colors hover:bg-terre-cuite/90"
+      >
+        <span aria-hidden="true">▶</span>
+        {title}
+      </a>
+    );
+  }
 
   const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
 

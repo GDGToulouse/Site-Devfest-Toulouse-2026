@@ -101,10 +101,12 @@ model Edition {
   articles     Article[]
   keyFigures   KeyFigure[]
   sponsorTiers EditionSponsorTier[]
-  speakers     Speaker[]
+  // The join since #351, like `categories` above: an edition's speakers are
+  // participations, not identities.
+  speakers     SpeakerEdition[]
   talks        Talk[]
   sponsors     Sponsor[]
-  categories   Category[]
+  categories   EditionCategory[]
 
   @@index([deletedAt])
 }
@@ -502,27 +504,32 @@ model FileMetadata {
 
 // --- Speakers (RG-200 to RG-208) ---
 
+// A person, not a per-edition row (#351). Someone who spoke at several editions
+// used to exist as several unlinked rows — the model confused *who this person
+// is* with *which editions they took part in*. Participations live on
+// SpeakerEdition, the same split as SponsorTier/EditionSponsorTier (#316) and
+// Category/EditionCategory (#338).
 model Speaker {
-  id                Int               @id @default(autoincrement())
-  // Slug derived from the full name, unique per edition (RG-206).
-  slug              String
-  name              String
-  photoUrl          String?
-  company           String?
-  city              String?
-  bioFr             String?
-  bioEn             String?
+  id           Int     @id @default(autoincrement())
+  // Globally unique since #351: a slug identifies a person, not a participation.
+  slug         String  @unique
+  name         String
+  photoUrl     String?
+  company      String?
+  city         String?
+  bioFr        String?
+  bioEn        String?
   // JSON object of social links, e.g. {"twitter":"...","github":"...","linkedin":"...","bluesky":"...","website":"..."}
-  socialLinks       String?
+  socialLinks  String?
   // Contact email used to send the modification link (RG-243). Optional.
-  contactEmail      String?
+  contactEmail String?
   // Language we write to this speaker in — "fr" | "en" (#224). Set in the
   // admin, defaults to French so existing rows keep today's behaviour. This is
   // NOT Talk.language: a French speaker may well present in English.
-  locale            String            @default("fr")
-  // Shown in the homepage "featured speakers" section (RG-202).
-  isFeatured        Boolean           @default(false)
-  publicationStatus PublicationStatus @default(DRAFT)
+  locale       String  @default("fr")
+
+  // isFeatured and publicationStatus moved to SpeakerEdition (#351): both are
+  // per-edition editorial decisions, like EditionSponsorTier.isVisible.
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
   // Stored now to avoid a second migration. editToken is a crypto-random
@@ -536,19 +543,43 @@ model Speaker {
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
 
+  // The sponsor association moved to SpeakerEdition (#353): working for a
+  // sponsor is true of a given year, and Sponsor is itself edition-scoped.
+
+  editions SpeakerEdition[]
+  talks    Talk[]
+
+  @@index([deletedAt])
+}
+
+// Which editions a speaker took part in (#351), and how they were presented
+// that year. The 31 speakers with no talk at all are why participation is
+// carried explicitly: their editions cannot be derived from their sessions.
+// Pure join row — the trash operates on the Speaker identity, so no soft delete.
+model SpeakerEdition {
+  id                Int               @id @default(autoincrement())
+  // Shown in the homepage "featured speakers" section (RG-202), per edition.
+  isFeatured        Boolean           @default(false)
+  publicationStatus PublicationStatus @default(DRAFT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  speakerId Int
+  speaker   Speaker @relation(fields: [speakerId], references: [id], onDelete: Cascade)
   editionId Int
   edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
 
   // Manual association to a sponsor via the speaker's company (RG-204, RG-226).
+  // Lives here rather than on Speaker since #353: both ends are now dated to the
+  // same year, so someone at Google in 2019 and OVHcloud in 2026 reads correctly
+  // on each edition instead of showing their latest employer everywhere.
   sponsorId Int?
   sponsor   Sponsor? @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
 
-  talks Talk[]
-
-  @@unique([editionId, slug])
+  @@unique([speakerId, editionId])
+  @@index([speakerId])
   @@index([editionId])
   @@index([sponsorId])
-  @@index([deletedAt])
 }
 
 // --- Talks / Sessions (RG-210 to RG-217) ---
@@ -654,8 +685,9 @@ model Sponsor {
   tierId Int
   tier   SponsorTier @relation(fields: [tierId], references: [id])
 
-  // Speakers working for this sponsor's company (RG-226).
-  speakers Speaker[]
+  // Speakers working for this sponsor's company (RG-226). Through the
+  // participation since #353 — the association is per-edition on both ends.
+  speakers SpeakerEdition[]
 
   // People allowed to edit this sponsor's page, each with their own
   // modification link (#250). Replaces the single editToken on Sponsor.
@@ -719,23 +751,43 @@ model SponsorJobOffer {
 
 // --- Categories / Tracks (RG-213, US-246) ---
 
+// A track, shared across editions (#338). Tracks recur year after year, so the
+// category is a global entity and each edition opts in through EditionCategory
+// — same split as SponsorTier / EditionSponsorTier (#316).
 model Category {
   id        Int       @id @default(autoincrement())
-  nameFr    String
+  // Unique globally, not per edition: two tracks with the same name would be
+  // the same track, and the point here is to stop duplicating them.
+  nameFr    String    @unique
   nameEn    String
   // Track colour used to tint the talk cards (hex string).
   color     String    @default("#109E6E")
-  sortOrder Int       @default(0)
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
 
-  editionId Int
-  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  editions EditionCategory[]
+  talks    Talk[]
 
-  talks Talk[]
-
-  @@index([editionId])
   @@index([deletedAt])
+}
+
+// Which editions propose a given track, and in which order for that year
+// (#338). `sortOrder` lives here rather than on Category: the display order is
+// a per-edition editorial choice, exactly like EditionSponsorTier.sortOrder.
+model EditionCategory {
+  id        Int      @id @default(autoincrement())
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId  Int
+  edition    Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([editionId, categoryId])
+  @@index([editionId])
+  @@index([categoryId])
 }

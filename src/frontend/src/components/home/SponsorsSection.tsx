@@ -64,7 +64,7 @@ export default async function SponsorsSection({ sponsors, surface = "blanc" }: S
                 <TierHeader title={title} color={tier.color} size={size} />
                 <div className="mt-5 flex flex-wrap items-stretch justify-center gap-[18px]">
                   {items.map((s) => (
-                    <SponsorCard key={s.id} sponsor={s} size={size} logoOnly />
+                    <SponsorCard key={s.id} sponsor={s} size={size} />
                   ))}
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getArticles, getContentPage, getEditions } from "@/lib/api";
+import { getArticles, getContentPage, getEditions, getHallOfFame } from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -41,7 +41,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/actualites",
     "/billetterie",
     "/conferences",
+    "/replays",
     "/speakers",
+    "/hall-of-fame",
     "/sponsors",
     "/proposer-un-talk",
     "/contact",
@@ -86,6 +88,27 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const editions = await getEditions();
   for (const edition of editions) {
     const path = `/editions/${edition.year}`;
+    for (const locale of ["fr", "en"] as Locale[]) {
+      entries.push(
+        buildEntry(
+          `${BASE_URL}/${locale}${path}`,
+          ["fr", "en"],
+          path,
+          new Date(),
+          "yearly",
+          0.5,
+        ),
+      );
+    }
+  }
+
+  // Every speaker who ever spoke (#352). Reading the same endpoint as the hall
+  // of fame page means the two can never list different people. Bilingual with
+  // no gating: the page falls back to the FR bio when there is no EN one, so it
+  // is structurally translated either way.
+  const speakers = await getHallOfFame();
+  for (const person of speakers) {
+    const path = `/speakers/${person.slug}`;
     for (const locale of ["fr", "en"] as Locale[]) {
       entries.push(
         buildEntry(

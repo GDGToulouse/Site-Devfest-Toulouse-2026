@@ -317,15 +317,32 @@ async function seedDev() {
   // --- Lot 2: Categories, Sponsors, Speakers, Talks (dev sample data) ---
   // Wipe in dependency order so re-running the dev seed is idempotent.
   await prisma.talk.deleteMany({ where: { editionId: edition.id } });
-  await prisma.speaker.deleteMany({ where: { editionId: edition.id } });
+  // Speakers are people since #351, shared across editions like categories
+  // below: deleting them would wipe identities other editions still point at.
+  // Only this edition's participations go; the identities are upserted by slug.
+  await prisma.speakerEdition.deleteMany({ where: { editionId: edition.id } });
   await prisma.sponsor.deleteMany({ where: { editionId: edition.id } });
-  await prisma.category.deleteMany({ where: { editionId: edition.id } });
+  // Categories are shared across editions since #338, so they are upserted by
+  // name and merely re-bound to this edition rather than wiped and recreated —
+  // deleting them would take other editions' bindings down with them.
+  await prisma.editionCategory.deleteMany({ where: { editionId: edition.id } });
 
-  const catCloud = await prisma.category.create({
-    data: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#509EE3", sortOrder: 0, editionId: edition.id },
+  const catCloud = await prisma.category.upsert({
+    where: { nameFr: "Cloud & DevOps" },
+    update: { nameEn: "Cloud & DevOps", color: "#509EE3" },
+    create: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#509EE3" },
   });
-  const catWeb = await prisma.category.create({
-    data: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839", sortOrder: 1, editionId: edition.id },
+  const catWeb = await prisma.category.upsert({
+    where: { nameFr: "Web & Mobile" },
+    update: { nameEn: "Web & Mobile", color: "#EC6839" },
+    create: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839" },
+  });
+  await prisma.editionCategory.createMany({
+    data: [
+      { editionId: edition.id, categoryId: catCloud.id, sortOrder: 0 },
+      { editionId: edition.id, categoryId: catWeb.id, sortOrder: 1 },
+    ],
+    skipDuplicates: true,
   });
   console.log("Categories created: 2");
 
@@ -503,28 +520,47 @@ async function seedDev() {
     where: { editionId: edition.id, slug: "garonne-digital" },
   });
 
-  const speakerMarie = await prisma.speaker.create({
-    data: {
+  // Upserted by slug, with the participation nested (#351): the identity may
+  // already exist from another edition, only the participation is this year's.
+  const speakerMarie = await prisma.speaker.upsert({
+    where: { slug: "marie-dupont" },
+    update: { company: sponsorOfMarie.name },
+    create: {
       slug: "marie-dupont", name: "Marie Dupont", company: sponsorOfMarie.name, city: "Toulouse",
       bioFr: "Ingénieure cloud passionnée de Kubernetes.", bioEn: "Cloud engineer passionate about Kubernetes.",
-      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id, sponsorId: sponsorOfMarie.id,
       socialLinks: JSON.stringify({ github: "https://github.com/example", linkedin: "https://linkedin.com/in/example" }),
     },
   });
-  const speakerJean = await prisma.speaker.create({
-    data: {
+  const speakerJean = await prisma.speaker.upsert({
+    where: { slug: "jean-martin" },
+    update: {},
+    create: {
       slug: "jean-martin", name: "Jean Martin", company: "Freelance", city: "Bordeaux",
       bioFr: "Développeur web fullstack.", bioEn: "Fullstack web developer.",
-      isFeatured: true, publicationStatus: "PUBLISHED", editionId: edition.id,
     },
   });
-  await prisma.speaker.create({
-    data: {
+  const speakerSophie = await prisma.speaker.upsert({
+    where: { slug: "sophie-bernard" },
+    update: {},
+    create: {
       slug: "sophie-bernard", name: "Sophie Bernard", company: "Google", city: "Paris",
       bioFr: "Developer advocate.", bioEn: "Developer advocate.",
-      publicationStatus: "DRAFT", editionId: edition.id,
     },
   });
+
+  // The sponsor association rides on the participation since #353 — it is true
+  // of a given year, and Sponsor is edition-scoped too.
+  for (const [speakerId, isFeatured, publicationStatus, sponsorId] of [
+    [speakerMarie.id, true, "PUBLISHED", sponsorOfMarie.id],
+    [speakerJean.id, true, "PUBLISHED", null],
+    [speakerSophie.id, false, "DRAFT", null],
+  ] as const) {
+    await prisma.speakerEdition.upsert({
+      where: { speakerId_editionId: { speakerId, editionId: edition.id } },
+      update: { isFeatured, publicationStatus, sponsorId },
+      create: { speakerId, editionId: edition.id, isFeatured, publicationStatus, sponsorId },
+    });
+  }
   console.log("Speakers created: 3");
 
   await prisma.talk.create({

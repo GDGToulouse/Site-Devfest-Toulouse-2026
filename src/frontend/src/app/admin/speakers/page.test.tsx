@@ -16,13 +16,12 @@ vi.mock("@/lib/admin-api", () => ({
 
 const { default: SpeakersDataPage } = await import("./page");
 
+// #351: the editorial state hangs off the participations, not the person.
 const speaker = {
   id: 7,
   name: "Ada Lovelace",
   company: "Analytical Engine",
-  publicationStatus: "PUBLISHED",
-  isFeatured: false,
-  edition: { id: 1, year: 2026 },
+  editions: [{ id: 1, year: 2026, isFeatured: false, publicationStatus: "PUBLISHED" }],
 };
 
 beforeEach(() => {
@@ -76,6 +75,30 @@ describe("SpeakersDataPage delete (#300)", () => {
     // Only the initial list load happened — no DELETE.
     expect(adminFetch).not.toHaveBeenCalledWith("/speakers/7", { method: "DELETE" });
     expect(screen.getByText("Ada Lovelace")).toBeInTheDocument();
+  });
+
+  it("shows every edition of a multi-edition speaker on a single row (#351)", async () => {
+    adminFetch.mockResolvedValue({
+      status: 200,
+      data: [
+        {
+          id: 9,
+          name: "Grace Hopper",
+          company: null,
+          editions: [
+            { id: 2, year: 2025, isFeatured: false, publicationStatus: "PUBLISHED" },
+            { id: 1, year: 2019, isFeatured: false, publicationStatus: "PUBLISHED" },
+          ],
+        },
+      ],
+    });
+    render(<SpeakersDataPage />);
+
+    // Before #351 the same person appeared once per edition. One row now, with
+    // both years on it.
+    const rows = await screen.findAllByText("Grace Hopper");
+    expect(rows).toHaveLength(1);
+    expect(screen.getByText("2025, 2019")).toBeInTheDocument();
   });
 
   it("surfaces a backend error instead of dropping the row silently", async () => {
