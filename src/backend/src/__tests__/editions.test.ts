@@ -2,7 +2,7 @@ import { describe, it, expect, afterAll } from "vitest";
 import { buildApp } from "./test-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { tierIdByKey } from "./sponsor-test-helpers.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
 describe("GET /api/editions/current", () => {
   it("should return the current edition", async () => {
@@ -28,14 +28,15 @@ describe("GET /api/editions/current", () => {
     expect(before.json().hasJobOffers).toBe(false);
     await app.close();
 
-    const sponsor = await prisma.sponsor.create({
-      data: {
-        name: "Nav Offers", slug: `nav-offers-${Date.now()}`, editionId: edition.id,
-        tierId: await tierIdByKey("gold"), publicationStatus: "PUBLISHED",
-      },
+    const sponsor = await createSponsorFixture({
+      name: "Nav Offers", slug: `nav-offers-${Date.now()}`, editionId: edition.id,
+      tierId: await tierIdByKey("gold"), publicationStatus: "PUBLISHED",
+    });
+    const editionSponsor = await prisma.editionSponsor.findUniqueOrThrow({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
     });
     await prisma.sponsorJobOffer.create({
-      data: { sponsorId: sponsor.id, title: "Dev", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
+      data: { editionSponsorId: editionSponsor.id, title: "Dev", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
     });
 
     const app2 = await buildApp();

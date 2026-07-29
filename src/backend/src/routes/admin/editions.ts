@@ -113,7 +113,10 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               // `categories` below: the join row has no deletedAt of its own.
               speakers: { where: { speaker: notDeleted } },
               talks: { where: notDeleted },
-              sponsors: { where: notDeleted },
+              // `editionSponsors` is the EditionSponsor join since #129, same as
+              // `speakers` and `categories`: the join row has no deletedAt, so
+              // the filter targets the company.
+              editionSponsors: { where: { sponsor: notDeleted } },
               // `categories` is the EditionCategory join since #338: the join
               // row carries no deletedAt, so the filter targets the track.
               categories: { where: { category: notDeleted } },
@@ -151,7 +154,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         articlesCount: edition._count.articles,
         speakersCount: edition._count.speakers,
         talksCount: edition._count.talks,
-        sponsorsCount: edition._count.sponsors,
+        sponsorsCount: edition._count.editionSponsors,
         categoriesCount: edition._count.categories,
       };
     }
@@ -274,7 +277,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               talks: { where: notDeleted },
               // The SpeakerEdition join since #351 — no deletedAt of its own.
               speakers: { where: { speaker: notDeleted } },
-              sponsors: { where: notDeleted },
+              // `editionSponsors` is the EditionSponsor join since #129: the join
+              // row has no deletedAt, so the filter targets the company.
+              editionSponsors: { where: { sponsor: notDeleted } },
               // `categories` is the EditionCategory join since #338: the join
               // row carries no deletedAt, so the filter targets the track.
               categories: { where: { category: notDeleted } },

@@ -3,6 +3,7 @@ import Fastify from "fastify";
 
 import speakerRoutes from "../routes/speakers.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // #353 — the sponsor association moved from Speaker to SpeakerEdition. Working
 // for a sponsor is true of a given year, and Sponsor is edition-scoped itself,
@@ -59,15 +60,12 @@ async function makeSponsor(
   { publicationStatus }: { publicationStatus?: "DRAFT" | "PUBLISHED" } = {},
 ) {
   // Sponsor needs a tier; reuse whichever the catalogue already holds.
-  const tier = await prisma.sponsorTier.findFirstOrThrow();
-  const sponsor = await prisma.sponsor.create({
-    data: {
-      editionId,
-      tierId: tier.id,
-      name,
-      slug: `sponsor-${name.toLowerCase().replace(/\W+/g, "-")}-${uniq()}`,
-      publicationStatus: publicationStatus ?? "PUBLISHED",
-    },
+  const sponsor = await createSponsorFixture({
+    editionId,
+    tierId: await tierIdByKey("gold"),
+    name,
+    slug: `sponsor-${name.toLowerCase().replace(/\W+/g, "-")}-${uniq()}`,
+    publicationStatus: publicationStatus ?? "PUBLISHED",
   });
   createdSponsorIds.push(sponsor.id);
   return sponsor;
