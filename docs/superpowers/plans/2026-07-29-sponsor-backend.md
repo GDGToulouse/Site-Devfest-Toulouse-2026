@@ -546,6 +546,24 @@ editionSponsors: { where: { sponsor: notDeleted } },
 
 And at each readback site, `edition._count.sponsors` becomes `edition._count.editionSponsors`. **Keep the emitted field name `sponsorsCount`** — that is the admin API contract and the frontend reads it.
 
+**The relation name also reaches an admin-facing string.** The DELETE handler builds its 409 message straight from the `_count` keys:
+
+```ts
+const blocking = Object.entries(existing._count)
+  .filter(([, count]) => count > 0)
+  .map(([relation, count]) => `${relation} (${count})`);
+```
+
+So renaming the relation silently changes what an organiser reads from "sponsors (12)" to "editionSponsors (12)" — a Prisma internal leaking into the UI. Map it back, scoped to this handler:
+
+```ts
+// The 409 message is built from relation keys, so a renamed relation would
+// surface as "editionSponsors (12)". Label it for humans.
+const RELATION_LABELS: Record<string, string> = { editionSponsors: "sponsors" };
+```
+
+and use `RELATION_LABELS[relation] ?? relation` in the `.map()`. Add a test asserting the 409 body says "sponsors" — nothing pinned this string before, which is exactly why the regression would have shipped silently.
+
 - [ ] **Step 4: `admin/sponsor-tiers.ts` — the tier-in-use check**
 
 Line ~143 asks whether any sponsor uses a tier, via `where: { tierId }` on `Sponsor`. The tier is on the participation now:
