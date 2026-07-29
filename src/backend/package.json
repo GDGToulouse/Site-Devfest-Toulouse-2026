@@ -1,6 +1,6 @@
 {
   "name": "devfest-toulouse-backend",
-  "version": "1.6.0-beta",
+  "version": "1.6.1-beta",
   "description": "DevFest Toulouse 2026 — REST API backend",
   "type": "module",
   "scripts": {
