@@ -66,16 +66,28 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       where: {
         slug: request.params.slug,
         ...notDeleted,
-        editions: { some: { publicationStatus: "PUBLISHED" } },
+        editions: { some: { publicationStatus: "PUBLISHED", edition: notDeleted } },
       },
       include: {
-        editions: {
-          where: { publicationStatus: "PUBLISHED" },
-          select: { editionId: true, edition: { select: { year: true } } },
-          orderBy: { edition: { year: "desc" } },
-        },
         // Nested reads need their own filter: a query extension would not reach
         // them (Prisma applies those to the top-level operation only).
+        //
+        // `edition: notDeleted` is required here since #352: the route used to
+        // resolve getFeaturedEdition(), which already filtered the trash. Now
+        // that it spans every year, a trashed edition would resurface.
+        editions: {
+          where: { publicationStatus: "PUBLISHED", edition: notDeleted },
+          select: {
+            editionId: true,
+            edition: { select: { year: true } },
+            tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+            jobOffers: {
+              select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+          orderBy: { edition: { year: "desc" } },
+        },
         speakers: {
           where: { publicationStatus: "PUBLISHED", speaker: notDeleted },
           select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
@@ -92,33 +104,18 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     const current = edition ? sponsor.editions.find((e) => e.editionId === edition.id) : undefined;
 
-    let tier = null;
-    let jobOffers: Array<{ id: number; title: string; descriptionFr: string; descriptionEn: string; url: string }> = [];
-
-    if (edition && current) {
-      const live = await prisma.editionSponsor.findUnique({
-        where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
-        include: {
-          tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
-          jobOffers: {
-            select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
-            orderBy: { createdAt: "asc" },
-          },
-        },
-      });
-      if (live) {
-        tier = {
-          key: live.tier.key,
-          rank: live.tier.rank,
-          nameFr: live.tier.nameFr,
-          nameEn: live.tier.nameEn,
-          logoScale: live.tier.logoScale,
-          color: live.tier.color,
-        };
-        // Offers disappear one month after the event (#251).
-        jobOffers = areOffersVisible(edition) ? live.jobOffers : [];
-      }
-    }
+    const tier = current
+      ? {
+          key: current.tier.key,
+          rank: current.tier.rank,
+          nameFr: current.tier.nameFr,
+          nameEn: current.tier.nameEn,
+          logoScale: current.tier.logoScale,
+          color: current.tier.color,
+        }
+      : null;
+    // Offers disappear one month after the event (#251).
+    const jobOffers = current && edition && areOffersVisible(edition) ? current.jobOffers : [];
 
     return {
       id: sponsor.id,

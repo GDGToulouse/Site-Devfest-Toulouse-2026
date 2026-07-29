@@ -64,9 +64,13 @@ describe("Public sponsors carry the tier (#321)", () => {
   });
 });
 
+// Years 1760 and 1761 are reserved for this file's past-edition fixtures.
+// Both sit below getSeededEdition()'s 2016 floor, so parallel test files
+// cannot pick them up as "the current edition" (#292).
 describe("Sponsor detail spans editions (#129)", () => {
-  it("serves a sponsor of a past edition with no tier and no offers", async () => {
+  it("serves a sponsor of a past edition with no tier and no offers, even if it had one", async () => {
     const past = await prisma.edition.create({ data: { year: 1760 } });
+    const pastAgain = await prisma.edition.create({ data: { year: 1761 } });
     const tierId = await tierIdByKey("gold");
     const sponsor = await createSponsorFixture({
       name: "Past Only Co",
@@ -76,7 +80,23 @@ describe("Sponsor detail spans editions (#129)", () => {
       publicationStatus: "PUBLISHED",
     });
     createdSponsorIds.push(sponsor.id);
-    createdEditionIds.push(past.id);
+    createdEditionIds.push(past.id, pastAgain.id);
+
+    // A second past participation, ordered newest-first below.
+    await prisma.editionSponsor.create({
+      data: { sponsorId: sponsor.id, editionId: pastAgain.id, tierId, publicationStatus: "PUBLISHED" },
+    });
+
+    // Even a past edition can carry a job offer in the data (e.g. never
+    // cleaned up) — the rule is "no past offer is ever shown", not "past
+    // sponsors never had offers". Prove the filter actually holds.
+    const pastParticipation = await prisma.editionSponsor.findUniqueOrThrow({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: past.id } },
+      select: { id: true },
+    });
+    await prisma.sponsorJobOffer.create({
+      data: { editionSponsorId: pastParticipation.id, title: "Old role", url: "https://example.org/old-job" },
+    });
 
     const app = await buildPublicApp();
     const res = await app.inject({ method: "GET", url: `/api/sponsors/${sponsor.slug}` });
@@ -87,7 +107,8 @@ describe("Sponsor detail spans editions (#129)", () => {
     // Not sponsoring the featured edition: highlight is empty, history remains.
     expect(body.tier).toBeNull();
     expect(body.jobOffers).toEqual([]);
-    expect(body.editions).toEqual([1760]);
+    // Newest first, unpinned by fixture insertion order.
+    expect(body.editions).toEqual([1761, 1760]);
   });
 
   it("highlights the tier of the featured edition", async () => {
@@ -108,7 +129,15 @@ describe("Sponsor detail spans editions (#129)", () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.tier.key).toBe("platinum");
+    // Full tier shape (RG-221 banner colour / logo size), not just the key.
+    expect(body.tier).toMatchObject({
+      key: "platinum",
+      nameFr: expect.any(String),
+      nameEn: expect.any(String),
+      color: expect.any(String),
+    });
+    expect(typeof body.tier.logoScale).toBe("number");
+    expect(typeof body.tier.rank).toBe("number");
     expect(body.editions).toContain(edition.year);
   });
 });
