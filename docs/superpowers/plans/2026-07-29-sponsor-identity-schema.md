@@ -579,15 +579,30 @@ git commit -m "test(sponsor): lock the identity and participation invariants"
 
 Read `src/backend/prisma/seed-dev.ts` around the `DEMO_SPONSORS` loop (the `prisma.sponsor.create` call near line 487) and the teardown (`prisma.sponsor.deleteMany({ where: { editionId: edition.id } })` near line 324).
 
-- [ ] **Step 2: Rewrite the creation to nest the participation**
+- [ ] **Step 2: Rewrite the creation as an upsert keyed on slug**
 
-The `prisma.sponsor.create` call currently passes `editionId`, `tierId` and `publicationStatus` at the top level. Move those three into a nested `editions.create`, keeping every identity field where it is:
+Steps 2 and 3 are one change in two halves — read both before editing either.
+
+The identity must now SURVIVE a re-seed, exactly like speakers (#351) and categories (#338) already do in this same file. That means the teardown drops only the participation (Step 3), which in turn means the creation can no longer be a `create`: `Sponsor.slug` is globally `@unique` since Task 1, so the second run would throw on a duplicate slug.
+
+Convert `prisma.sponsor.create` to an `upsert` keyed on `slug`, identity fields in both branches, participation nested. Follow the shape the speaker seeding further down this same file already uses (upsert the identity by slug, then upsert the participation on `speakerId_editionId`):
 
 ```ts
-await prisma.sponsor.create({
-  data: {
-    // ...identity fields unchanged: name, slug, logoUrl, websiteUrl,
-    // descriptionFr, descriptionEn, socialLinks, contactEmail...
+await prisma.sponsor.upsert({
+  where: { slug: s.slug },
+  // ...identity fields unchanged in BOTH create and update: name, logoUrl,
+  // websiteUrl, descriptionFr, descriptionEn, socialLinks, contactEmail...
+  create: {
+    slug: s.slug,
+    editions: {
+      create: [{
+        editionId: edition.id,
+        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
+        publicationStatus: "PUBLISHED",
+      }],
+    },
+  },
+  update: {
     editions: {
       create: [{
         editionId: edition.id,
@@ -599,12 +614,17 @@ await prisma.sponsor.create({
 });
 ```
 
-- [ ] **Step 3: Fix the teardown**
+- [ ] **Step 3: Fix the teardown — participation only, never the identity**
 
-`prisma.sponsor.deleteMany({ where: { editionId: edition.id } })` no longer compiles — `editionId` is not a field of `Sponsor`. Replace with:
+`prisma.sponsor.deleteMany({ where: { editionId: edition.id } })` no longer compiles — `editionId` is not a field of `Sponsor`.
+
+Do **not** replace it with `sponsor.deleteMany({ where: { editions: { some: { editionId } } } })`. That compiles, but it deletes the company identity, and `EditionSponsor.sponsor` is `onDelete: Cascade` — so it would silently destroy that company's participations in every OTHER edition. The two lines around it in the same block (speakers at ~line 320, categories at ~line 325) both carry comments explaining why identities must survive; this line must follow the same rule.
 
 ```ts
-await prisma.sponsor.deleteMany({ where: { editions: { some: { editionId: edition.id } } } });
+// Sponsors are companies since #129, shared across editions like speakers and
+// categories: deleting them would wipe identities other editions still point
+// at. Only this edition's participations go; the identities are upserted by slug.
+await prisma.editionSponsor.deleteMany({ where: { editionId: edition.id } });
 ```
 
 - [ ] **Step 4: Fix any remaining sponsor lookups**
@@ -627,13 +647,16 @@ pnpm typecheck
 
 Expected: errors in `src/routes/**` about `editionId`, `tierId` and `publicationStatus` on `Sponsor` — **those are expected and belong to #130**. There must be no error in `prisma/seed-dev.ts`.
 
-- [ ] **Step 6: Run the seed against a clean database**
+- [ ] **Step 6: Run the seed TWICE in a row**
 
 ```bash
 pnpm exec tsx prisma/seed-dev.ts
+pnpm exec tsx prisma/seed-dev.ts
 ```
 
-Expected: completes without error, logging the sponsor count as before.
+Both runs must complete without error, logging the sponsor count as before.
+
+Twice, not once: the seed is re-run routinely and in CI, and the identity/participation split moved where the idempotency comes from. A single green run does not prove it — an upsert bug or a teardown that leaves the identity behind only shows up on the second pass, as a unique-constraint violation on `slug`.
 
 - [ ] **Step 7: Verify the seeded shape**
 
@@ -641,7 +664,7 @@ Expected: completes without error, logging the sponsor count as before.
 docker compose -f docker-compose.local.yml exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"EditionSponsor\") AS participations;"
 ```
 
-Expected: both counts equal and non-zero.
+Expected: both counts equal and non-zero, and **identical after the first and second run** — a climbing participation count means the teardown is not clearing what the upsert re-creates.
 
 - [ ] **Step 8: Commit**
 
