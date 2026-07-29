@@ -51,7 +51,9 @@ backend/                       # REST API
 │   ├── schema.prisma
 │   ├── migrations/
 │   ├── seed.ts                # Base seed (idempotent, runs on boot)
-│   └── seed-dev.ts            # Dev-only test accounts + sample data
+│   ├── seed-dev.ts            # Dev-only test accounts + sample data
+│   ├── devfest-history.json   # Past editions 2016-2025 (327 speakers, 279 sessions)
+│   └── import-history.ts      # Imports the above (run manually, idempotent)
 ├── prisma.config.ts           # Prisma 7 config (schema, migrations, datasource URL)
 ├── package.json
 └── Dockerfile
@@ -67,9 +69,6 @@ docs/                          # Specification documents (in French)
 ├── variables-environnement.md # Environment variables reference (Docker Compose)
 ├── maquettes/                 # SVG exports of all Figma mockups
 └── assets/                    # Logo files, sketch illustrations (3 colors)
-
-data/
-└── devfest-history.json       # Historical data: speakers & sessions (2016-2025)
 
 docker-compose.yml             # Dev environment: frontend + backend + db + mailhog
 .env.example                   # Environment variables template
@@ -94,7 +93,7 @@ Always consult these documents before making assumptions about features or archi
 - **`docs/fonctionnalites-2026.md`** — Complete feature list (pages, components, user roles)
 - **`docs/objectifs-techniques.md`** — Technical objectives: SSR + cache strategy, Lighthouse targets (≥90), Core Web Vitals, SEO, accessibility (WCAG 2.1 AA), i18n readiness, security headers
 - **`docs/historique-sites.md`** — Evolution of past sites (stacks, features per year)
-- **`docs/modele-donnees-historique.md`** — Schema for `data/devfest-history.json` (327 speakers, 282 sessions across 7 editions)
+- **`docs/modele-donnees-historique.md`** — Schema for `src/backend/prisma/devfest-history.json` (327 speakers, 279 sessions across 7 editions)
 - **`docs/modele-donnees-metier.md`** — Business data model: all domain entities, attributes, relationships and bilingual strategy
 - **`docs/maquettes-figma.md`** — Figma mockups: pages designed, shared components, structure ([Figma file](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499))
 - **`docs/design-system.md`** — Design system: brand guidelines, color palette (Google Sans), design tokens, UI kit (Font Awesome icons), content style guide

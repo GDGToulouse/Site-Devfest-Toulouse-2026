@@ -19,7 +19,7 @@ Les spécifications du projet sont dans le dossier `docs/` :
 | [fonctionnalites-2026.md](docs/fonctionnalites-2026.md) | Liste complète des fonctionnalités |
 | [objectifs-techniques.md](docs/objectifs-techniques.md) | Objectifs techniques (rendu, performance, SEO, accessibilité) |
 | [historique-sites.md](docs/historique-sites.md) | Analyse des sites des éditions passées (2016–2025) |
-| [modele-donnees-historique.md](docs/modele-donnees-historique.md) | Modèle de données de `data/devfest-history.json` |
+| [modele-donnees-historique.md](docs/modele-donnees-historique.md) | Modèle de données de `src/backend/prisma/devfest-history.json` |
 | [modele-donnees-metier.md](docs/modele-donnees-metier.md) | Modèle de données métier (entités, relations, bilingue) |
 | [maquettes-figma.md](docs/maquettes-figma.md) | Inventaire des maquettes Figma et structure des pages |
 | [design-system.md](docs/design-system.md) | Design system complet (charte, couleurs, typos, tokens, UI kit) |
@@ -36,7 +36,7 @@ Le backend expose une API REST documentée via OpenAPI :
 
 ## Données historiques
 
-Le fichier `data/devfest-history.json` contient les données de 7 éditions (2016–2019, 2023–2025) : 327 speakers et 282 sessions.
+Le fichier `src/backend/prisma/devfest-history.json` contient les données de 7 éditions (2016–2019, 2023–2025) : 327 speakers et 279 sessions. Il est la source du script d'import `prisma/import-history.ts`, à rejouer sur un environnement neuf ou après correction des données.
 
 ## Licence
 
