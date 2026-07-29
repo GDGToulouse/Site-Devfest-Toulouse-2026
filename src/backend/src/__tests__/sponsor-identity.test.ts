@@ -42,11 +42,15 @@ describe("Sponsor identity (#129)", () => {
 
     // year is the only required field on Edition, and it is @unique.
     //
-    // 1900, NOT a future year: getSeededEdition() picks the most recent edition
+    // 1750, NOT a future year: getSeededEdition() picks the most recent edition
     // at or after 2016, so a 2999 row would be handed to whichever parallel
     // test file asked for an edition while this one still existed — exactly the
     // #292 race that helper was written to close. Below 2016 it is invisible.
-    const other = await prisma.edition.create({ data: { year: 1900 } });
+    //
+    // Test files each own a year block so two of them never collide on the
+    // @unique year: 16xx and 1990 are taken, 19xx by the speaker files. 17xx
+    // is this file's.
+    const other = await prisma.edition.create({ data: { year: 1750 } });
     createdEditionIds.push(other.id);
 
     const sponsor = await prisma.sponsor.create({
@@ -70,7 +74,13 @@ describe("Sponsor identity (#129)", () => {
       where: { sponsorId: sponsor.id },
       select: { edition: { select: { year: true } }, publicationStatus: true },
     });
-    expect(years.map((p) => p.edition.year).sort()).toEqual([edition.year, 1900].sort());
+    expect(years.map((p) => p.edition.year).sort()).toEqual([edition.year, 1750].sort());
+
+    // Publication is per participation, not per company: the same sponsor is
+    // live on one edition and still a draft on the other.
+    const byYear = new Map(years.map((p) => [p.edition.year, p.publicationStatus]));
+    expect(byYear.get(edition.year)).toBe("PUBLISHED");
+    expect(byYear.get(1750)).toBe("DRAFT");
   });
 
   it("refuses two participations of one company on the same edition", async () => {

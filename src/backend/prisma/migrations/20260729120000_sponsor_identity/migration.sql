@@ -24,6 +24,14 @@
 --    This cannot happen with today's data (every sponsor is on one edition).
 --    It is checked rather than assumed: the #351 migration's hardest bug came
 --    from a cascade nobody had verified.
+--
+--    Scope: the guard reads the stored slug, so trashed rows are invisible to
+--    it — the trash parks them as "__trash_<id>__<slug>" (#146). That is
+--    deliberate, not an oversight: a parked slug cannot collide with the new
+--    index either, and if two trashed sponsors from different editions did
+--    share an original slug, restoring the second already answers 409
+--    restore_conflict (routes/admin/trash.ts). Nothing is lost, and the admin
+--    is told. There are 0 trashed sponsors at migration time.
 -- ---------------------------------------------------------------------------
 DO $$
 DECLARE
