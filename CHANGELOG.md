@@ -12,6 +12,13 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.6.0] - 2026-07-29
+
+Le fonds historique du DevFest devient consultable : **dix éditions de conférences
+et d'intervenants** accessibles depuis le site, avec les vidéos quand elles
+existent. Pour y arriver, un speaker cesse d'être une ligne par édition pour
+devenir une **personne** suivie d'année en année.
+
 ### Modifié
 
 - **Un speaker est une personne, plus une ligne par édition** : `Speaker` porte
@@ -24,11 +31,49 @@ _Changements mergés sur `dev` (beta), pas encore en production._
 - **Le sponsor employeur est rattaché à l'année**, plus à la personne : quelqu'un
   ayant changé d'entreprise entre deux éditions affiche le bon employeur sur
   chacune (#353).
+- **Les catégories sont partagées entre éditions** : une même thématique traverse
+  les années au lieu d'être recréée à chaque fois (#338).
+- **Fiche conférence** : le lecteur vidéo est intégré à la page, à la place du
+  bouton « Revoir » qui envoyait ailleurs (#348).
+- **Sponsors** : le nom n'est plus répété sous le logo ; il ne s'affiche qu'en
+  l'absence de logo (#355).
+- **Fiche speaker** : chaque session indique son niveau, sa langue et sa
+  catégorie ; le lien de retour nomme l'année vers laquelle il mène (#357, #359).
 
 ### Ajouté
 
 - **Hall of fame** (`/hall-of-fame`) : toutes les personnes ayant parlé au DevFest
   Toulouse, toutes éditions confondues, filtrables par année (#352).
+- **Hall of replays** (`/replays`) : toutes les conférences filmées, toutes
+  éditions, avec filtres et cartes entièrement cliquables (#102, #344, #350).
+- **Fiches des éditions passées** : conférences et intervenants des années
+  précédentes sont navigables, replays compris (#343).
+- **Import de l'historique** : les photos des intervenants sont rapatriées sur le
+  site au lieu de pointer vers des URL tierces, et le cache est purgé
+  automatiquement en fin d'import (#356, #358).
+- **Purge du cache par fiche** : modifier un sponsor ou une conférence met sa page
+  publique à jour immédiatement (#360).
+- **Admin** : bouton de purge manuelle de la corbeille, sans dépendre d'une tâche
+  planifiée (#335).
+- **CI** : audit Lighthouse avec seuils de performance sur les pages clés (#238),
+  et redescente automatique du numéro de version vers `dev` après le tag (#288).
+
+### Corrigé
+
+- **2017 — les sessions n'étaient rattachées à aucun intervenant** : 44 références
+  numériques ont été résolues, et l'import signale désormais toute référence qu'il
+  ne sait pas résoudre au lieu de l'ignorer en silence (#361).
+- **Une panne du backend devenait une 404 mise en cache** : l'erreur est
+  désormais distinguée d'une ressource absente (#345).
+- **Admin** : le sélecteur d'images proposait le SVG alors que le backend le
+  refusait (#341).
+- **Upload de logo sponsor** : les consignes (HD, sans marge, fond transparent)
+  sont indiquées à l'endroit où le logo est demandé (#340).
+
+### Sécurité
+
+- **SVG autorisé sans risque** : assainissement des fichiers envoyés et
+  durcissement du service de `/uploads/` (#346).
 
 ## [1.5.0] - 2026-07-23
 
