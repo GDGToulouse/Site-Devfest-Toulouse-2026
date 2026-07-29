@@ -712,7 +712,7 @@ Run these and paste the real output into the PR description. Do not claim a step
 - [ ] Invariants: `count(Sponsor) == count(EditionSponsor)`, offers and contacts unchanged
 - [ ] `pnpm exec vitest run src/__tests__/sponsor-identity.test.ts` — 5 passed
 - [ ] `pnpm exec tsx prisma/seed-dev.ts` — completes clean
-- [ ] `pnpm typecheck` — fails **only** in `src/routes/**`, per Task 5
+- [ ] `pnpm typecheck` — no error in `prisma/**`; the remaining errors are the #130 worklist below
 
 The fresh-database run matters: CI applies migrations from zero on every push, so a migration that only works against the dev database breaks the pipeline.
 
@@ -720,8 +720,50 @@ The fresh-database run matters: CI applies migrations from zero on every push, s
 
 ## Status
 
-_Filled in by Task 5._
+**PR 1 (#129) complete.** Schema split, migration applied, invariants locked, seed ported. Verified on the local Docker stack (`docker-compose.local.yml`, Postgres on `localhost:5432`):
+
+| Check | Result |
+|---|---|
+| `prisma validate` | valid |
+| `prisma migrate deploy` | applied `20260729120000_sponsor_identity` |
+| `prisma migrate status` | "Database schema is up to date!" — no drift |
+| Invariants | Sponsor 28 → EditionSponsor 28; offers 0, contacts 0 unchanged; all participations on year 2026 |
+| Step-0 guard | passed without firing (0 duplicate slugs) |
+| `sponsor-identity.test.ts` | 5 passed, twice consecutively |
+| `seed-dev.ts` | runs twice consecutively, counts stable at 28/28 |
+| `prisma/**` typecheck | clean |
+
+Two defects came out of the reviews, **both traced to this plan's own text**, both fixed here and in the shipped code:
+
+1. Task 3 deleted its throwaway `Edition` inline at the end of a test, so a failing assertion would leak a row that `Edition.year @unique` then made permanent. Now cleaned in `afterEach`.
+2. Task 4's teardown deleted the sponsor **identity**, which cascades away other editions' participations. Now deletes only the participation — which forced the creation to become an `upsert`, since the surviving identity would collide on the globally-unique slug.
 
 ### #130 consumer worklist
 
-_To be captured from the typecheck output._
+`pnpm typecheck` reports ~90 errors across 20 files. This is the expected end state of PR 1 — the API consumers are #130's scope. The errors fall into five families:
+
+| Family | What to do |
+|---|---|
+| `'editionId' does not exist on Sponsor…` (21×) — creates, wheres, updates | Route through `editions` (`editions: { some: { editionId } }` to filter, nested create to write) |
+| `Property 'tier' does not exist on Sponsor` (12×) + `'tier' not in SponsorInclude` (5×) | The tier now hangs off the participation: include `editions: { include: { tier: true } }` |
+| `platinumPromoIdea` / `comKit*` / `publicationStatus` not on `Sponsor` | Read and write them on `EditionSponsor` |
+| `'sponsorId' does not exist on SponsorJobOfferCreateInput` (3×) | Offers attach to `editionSponsorId` |
+| `Property '_count' does not exist on Edition` (7×), implicit `any` on `o` / `link` params | Fallout of the above — the shapes change once the includes are fixed |
+
+**Backend routes** (the substance of #130):
+
+| File | Errors |
+|---|---|
+| `src/routes/sponsors.ts` | 21 |
+| `src/routes/speakers.ts` | 10 |
+| `src/routes/admin/sponsors.ts` | 10 |
+| `src/routes/admin/editions.ts` | 10 |
+| `src/routes/edit.ts` | 7 |
+| `src/routes/editions.ts` | 2 |
+| `src/routes/admin/sponsor-tiers.ts` | 1 |
+
+**Test files** — 15 files, ~22 errors, mostly fixtures building a sponsor with `editionId`/`tierId` at the top level. Chief among them: `edit-sponsor-platinum.test.ts` (5), `sponsor-job-offers.test.ts` (4), `edit-sponsor-private.test.ts` (3), plus `public-sponsors`, `editions`, `admin-sponsor-contacts` (2 each) and 9 files with one apiece.
+
+`sponsor-test-helpers.ts` is the highest-leverage fix: `createSponsorWithToken()` takes a `Prisma.SponsorUncheckedCreateInput`, so porting it once should clear several call sites at a stroke.
+
+**Do not** port these by making the types happy field-by-field. The point of #130 is that the API response shapes stay identical while the queries move to the participation — the existing tests are the contract that proves it.
