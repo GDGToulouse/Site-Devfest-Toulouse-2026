@@ -222,12 +222,29 @@ const sponsor = await prisma.sponsor.findFirst({
   where: {
     slug: request.params.slug,
     ...notDeleted,
-    editions: { some: { publicationStatus: "PUBLISHED" } },
+    // `edition: notDeleted` is required in BOTH positions, exactly as
+    // speakers.ts does since #352: the route used to resolve
+    // getFeaturedEdition(), which filtered the trash for free. Now that it
+    // spans every year, a trashed edition would resurface — as a dead year tag
+    // linking to a 404, or as a live page for a sponsor whose only
+    // participations are in withdrawn editions.
+    editions: { some: { publicationStatus: "PUBLISHED", edition: notDeleted } },
   },
   include: {
+    // One query, not two: tier and jobOffers are read here rather than by a
+    // second findUnique on the participation. The row is already being touched,
+    // and a second read would open a skew window for no gain.
     editions: {
-      where: { publicationStatus: "PUBLISHED" },
-      select: { editionId: true, edition: { select: { year: true } } },
+      where: { publicationStatus: "PUBLISHED", edition: notDeleted },
+      select: {
+        editionId: true,
+        edition: { select: { year: true } },
+        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+        jobOffers: {
+          select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
+          orderBy: { createdAt: "asc" },
+        },
+      },
       orderBy: { edition: { year: "desc" } },
     },
     // Nested reads need their own filter: a query extension would not reach
@@ -248,33 +265,24 @@ if (!sponsor) return reply.status(404).send({ error: "Sponsor not found" });
 const edition = await getFeaturedEdition();
 const current = edition ? sponsor.editions.find((e) => e.editionId === edition.id) : undefined;
 
-let tier = null;
-let jobOffers: Array<{ id: number; title: string; descriptionFr: string; descriptionEn: string; url: string }> = [];
+// `current` already carries the tier and the offers — no second query. Do NOT
+// re-fetch the participation with findUnique: it reads a row the query above
+// already touched, and a guard on its result would be unreachable (current is
+// non-undefined only when that exact participation exists).
+const tier = current
+  ? {
+      key: current.tier.key,
+      rank: current.tier.rank,
+      nameFr: current.tier.nameFr,
+      nameEn: current.tier.nameEn,
+      logoScale: current.tier.logoScale,
+      color: current.tier.color,
+    }
+  : null;
 
-if (edition && current) {
-  const live = await prisma.editionSponsor.findUnique({
-    where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
-    include: {
-      tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
-      jobOffers: {
-        select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
-        orderBy: { createdAt: "asc" },
-      },
-    },
-  });
-  if (live) {
-    tier = {
-      key: live.tier.key,
-      rank: live.tier.rank,
-      nameFr: live.tier.nameFr,
-      nameEn: live.tier.nameEn,
-      logoScale: live.tier.logoScale,
-      color: live.tier.color,
-    };
-    // Offers disappear one month after the event (#251).
-    jobOffers = areOffersVisible(edition) ? live.jobOffers : [];
-  }
-}
+// Offers disappear one month after the event (#251). `edition` is the featured
+// one, the only edition whose offers may ever be shown.
+const jobOffers = current && edition && areOffersVisible(edition) ? current.jobOffers : [];
 
 return {
   id: sponsor.id,
@@ -341,18 +349,37 @@ Append to `src/backend/src/__tests__/public-sponsors.test.ts`. These are new beh
 
 ```ts
 describe("Sponsor detail spans editions (#129)", () => {
-  it("serves a sponsor of a past edition with no tier and no offers", async () => {
-    const past = await prisma.edition.create({ data: { year: 1760 } });
+  it("serves a past-edition sponsor with no tier, and hides its offers", async () => {
+    // Two past editions, newest first in the response: pins the sort order.
+    // 176x is this file's block — every year stays below getSeededEdition()'s
+    // 2016 floor so no parallel file can pick these up (#292).
+    const older = await prisma.edition.create({ data: { year: 1760 } });
+    const newer = await prisma.edition.create({ data: { year: 1761 } });
     const tierId = await tierIdByKey("gold");
     const sponsor = await createSponsorFixture({
       name: "Past Only Co",
       slug: `past-only-${Date.now()}`,
-      editionId: past.id,
+      editionId: older.id,
       tierId,
       publicationStatus: "PUBLISHED",
     });
     createdSponsorIds.push(sponsor.id);
-    createdEditionIds.push(past.id);
+    createdEditionIds.push(older.id, newer.id);
+
+    await prisma.editionSponsor.create({
+      data: { sponsorId: sponsor.id, editionId: newer.id, tierId, publicationStatus: "PUBLISHED" },
+    });
+
+    // An offer on a PAST participation. The governing rule is "no past offer is
+    // ever shown", so this must not surface — asserting [] on a sponsor with no
+    // offers at all would hold even with the filter removed.
+    const pastParticipation = await prisma.editionSponsor.findUniqueOrThrow({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: newer.id } },
+      select: { id: true },
+    });
+    await prisma.sponsorJobOffer.create({
+      data: { editionSponsorId: pastParticipation.id, title: "Stale Job", url: "https://example.org/stale" },
+    });
 
     const app = await buildPublicApp();
     const res = await app.inject({ method: "GET", url: `/api/sponsors/${sponsor.slug}` });
@@ -363,7 +390,8 @@ describe("Sponsor detail spans editions (#129)", () => {
     // Not sponsoring the featured edition: highlight is empty, history remains.
     expect(body.tier).toBeNull();
     expect(body.jobOffers).toEqual([]);
-    expect(body.editions).toEqual([1760]);
+    // Newest first, exact — `toContain` would let a reversed sort pass.
+    expect(body.editions).toEqual([1761, 1760]);
   });
 
   it("highlights the tier of the featured edition", async () => {
@@ -384,13 +412,22 @@ describe("Sponsor detail spans editions (#129)", () => {
 
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    expect(body.tier.key).toBe("platinum");
+    // The WHOLE tier object, not just its key: rank, logoScale and color drive
+    // the banner colour and logo size, so dropping one must fail the test.
+    expect(body.tier).toMatchObject({
+      key: "platinum",
+      nameFr: expect.any(String),
+      nameEn: expect.any(String),
+      color: expect.any(String),
+    });
+    expect(typeof body.tier.rank).toBe("number");
+    expect(typeof body.tier.logoScale).toBe("number");
     expect(body.editions).toContain(edition.year);
   });
 });
 ```
 
-Add `createdEditionIds` tracking and an `afterEach` edition cleanup to this file if it has none, following `sponsor-identity.test.ts`: delete sponsors first, then editions, both unconditionally. Year 1760 sits in this plan's 17xx block, below `getSeededEdition()`'s 2016 floor, so parallel files cannot pick it up (#292).
+Add `createdEditionIds` tracking and an `afterEach` edition cleanup to this file if it has none, following `sponsor-identity.test.ts`: delete sponsors first, then editions, both unconditionally. Years 1760 and 1761 sit in this file's 176x block, below `getSeededEdition()`'s 2016 floor, so parallel files cannot pick them up (#292).
 
 - [ ] **Step 5: Port the existing fixtures in both test files**
 
