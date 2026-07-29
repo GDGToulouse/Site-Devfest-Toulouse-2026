@@ -321,7 +321,7 @@ async function seedDev() {
   // below: deleting them would wipe identities other editions still point at.
   // Only this edition's participations go; the identities are upserted by slug.
   await prisma.speakerEdition.deleteMany({ where: { editionId: edition.id } });
-  await prisma.sponsor.deleteMany({ where: { editionId: edition.id } });
+  await prisma.sponsor.deleteMany({ where: { editions: { some: { editionId: edition.id } } } });
   // Categories are shared across editions since #338, so they are upserted by
   // name and merely re-bound to this edition rather than wiped and recreated —
   // deleting them would take other editions' bindings down with them.
@@ -488,7 +488,6 @@ async function seedDev() {
       data: {
         slug: s.slug,
         name: s.name,
-        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
         logoUrl: `/images/sponsors/${s.slug}.svg`,
         websiteUrl: s.websiteUrl,
         descriptionFr: s.descriptionFr,
@@ -499,8 +498,13 @@ async function seedDev() {
           github: `https://github.com/${s.slug}`,
         }),
         contactEmail: `contact@${s.slug}.example.com`,
-        publicationStatus: "PUBLISHED",
-        editionId: edition.id,
+        editions: {
+          create: [{
+            editionId: edition.id,
+            tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
+            publicationStatus: "PUBLISHED",
+          }],
+        },
       },
     });
   }
@@ -517,7 +521,7 @@ async function seedDev() {
   // The featured speaker below works for a sponsor, which exercises the
   // speaker↔sponsor link (RG-204/RG-226) — her company must match its name.
   const sponsorOfMarie = await prisma.sponsor.findFirstOrThrow({
-    where: { editionId: edition.id, slug: "garonne-digital" },
+    where: { slug: "garonne-digital" },
   });
 
   // Upserted by slug, with the participation nested (#351): the identity may
