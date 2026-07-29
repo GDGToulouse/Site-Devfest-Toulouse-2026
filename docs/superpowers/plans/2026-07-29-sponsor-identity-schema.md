@@ -419,12 +419,21 @@ import { tierIdByKey } from "./sponsor-test-helpers.js";
 // the sponsor work (#130, #131, #132) is allowed to assume.
 
 const createdSponsorIds: number[] = [];
+const createdEditionIds: number[] = [];
 
 afterEach(async () => {
   if (createdSponsorIds.length) {
     // EditionSponsor and SponsorJobOffer cascade from Sponsor.
     await prisma.sponsor.deleteMany({ where: { id: { in: createdSponsorIds } } });
     createdSponsorIds.length = 0;
+  }
+  // Editions go after sponsors, so participations cascade away first and no FK
+  // blocks the delete. Cleaned up here rather than inline at the end of a test:
+  // an assertion failure would skip an inline delete, and Edition.year is
+  // @unique, so the leaked row would break every later run of the file.
+  if (createdEditionIds.length) {
+    await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
+    createdEditionIds.length = 0;
   }
 });
 
@@ -450,6 +459,7 @@ describe("Sponsor identity (#129)", () => {
     // test file asked for an edition while this one still existed — exactly the
     // #292 race that helper was written to close. Below 2016 it is invisible.
     const other = await prisma.edition.create({ data: { year: 1900 } });
+    createdEditionIds.push(other.id);
 
     const sponsor = await prisma.sponsor.create({
       data: {
@@ -473,8 +483,6 @@ describe("Sponsor identity (#129)", () => {
       select: { edition: { select: { year: true } }, publicationStatus: true },
     });
     expect(years.map((p) => p.edition.year).sort()).toEqual([edition.year, 1900].sort());
-
-    await prisma.edition.delete({ where: { id: other.id } });
   });
 
   it("refuses two participations of one company on the same edition", async () => {
