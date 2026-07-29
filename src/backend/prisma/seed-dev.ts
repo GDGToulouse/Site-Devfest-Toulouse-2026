@@ -321,7 +321,11 @@ async function seedDev() {
   // below: deleting them would wipe identities other editions still point at.
   // Only this edition's participations go; the identities are upserted by slug.
   await prisma.speakerEdition.deleteMany({ where: { editionId: edition.id } });
-  await prisma.sponsor.deleteMany({ where: { editions: { some: { editionId: edition.id } } } });
+  // Sponsors are companies since #129, shared across editions like speakers
+  // above: deleting the identity would cascade-delete its participations in
+  // OTHER editions too. Only this edition's participation goes; the identity
+  // is upserted by slug.
+  await prisma.editionSponsor.deleteMany({ where: { editionId: edition.id } });
   // Categories are shared across editions since #338, so they are upserted by
   // name and merely re-bound to this edition rather than wiped and recreated —
   // deleting them would take other editions' bindings down with them.
@@ -484,8 +488,25 @@ async function seedDev() {
   };
 
   for (const s of DEMO_SPONSORS) {
-    await prisma.sponsor.create({
-      data: {
+    // Upserted by slug, with the participation upserted separately (#129): the
+    // identity may already exist from another edition, only the participation
+    // is this year's — mirrors the speaker identity/participation split above.
+    const sponsor = await prisma.sponsor.upsert({
+      where: { slug: s.slug },
+      update: {
+        name: s.name,
+        logoUrl: `/images/sponsors/${s.slug}.svg`,
+        websiteUrl: s.websiteUrl,
+        descriptionFr: s.descriptionFr,
+        descriptionEn: s.descriptionEn,
+        socialLinks: JSON.stringify({
+          linkedin: `https://www.linkedin.com/company/${s.slug}`,
+          twitter: `https://x.com/${s.slug.replace(/-/g, "")}`,
+          github: `https://github.com/${s.slug}`,
+        }),
+        contactEmail: `contact@${s.slug}.example.com`,
+      },
+      create: {
         slug: s.slug,
         name: s.name,
         logoUrl: `/images/sponsors/${s.slug}.svg`,
@@ -498,13 +519,17 @@ async function seedDev() {
           github: `https://github.com/${s.slug}`,
         }),
         contactEmail: `contact@${s.slug}.example.com`,
-        editions: {
-          create: [{
-            editionId: edition.id,
-            tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
-            publicationStatus: "PUBLISHED",
-          }],
-        },
+      },
+    });
+
+    await prisma.editionSponsor.upsert({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
+      update: { tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id, publicationStatus: "PUBLISHED" },
+      create: {
+        sponsorId: sponsor.id,
+        editionId: edition.id,
+        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
+        publicationStatus: "PUBLISHED",
       },
     });
   }
