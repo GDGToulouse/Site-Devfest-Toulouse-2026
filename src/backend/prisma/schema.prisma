@@ -544,7 +544,9 @@ model Speaker {
   deletedAt DateTime?
 
   // The sponsor association moved to SpeakerEdition (#353): working for a
-  // sponsor is true of a given year, and Sponsor is itself edition-scoped.
+  // sponsor is true of a given year, so the link is dated on the speaker's
+  // side. Sponsor itself is a company identity since #129 — the year lives
+  // on EditionSponsor, not on Sponsor.
 
   editions SpeakerEdition[]
   talks    Talk[]
