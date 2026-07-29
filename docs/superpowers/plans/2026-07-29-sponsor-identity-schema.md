@@ -12,7 +12,9 @@
 
 ## Global Constraints
 
-- **Scope is PR 1 of 4.** This plan delivers the schema and migration only. Rewriting the API consumers is #130, admin front #131, public front #132. At the end of this plan the app must still build and all existing tests must pass.
+- **Scope is PR 1 of 4.** This plan delivers the schema and migration only. Rewriting the API consumers is #130, admin front #131, public front #132.
+- **This PR does NOT compile on its own, by design.** Dropping `Sponsor.editionId` breaks `src/backend/src/routes/sponsors.ts` and `routes/admin/sponsors.ts`, and the existing tests that build sponsors with `editionId`. That breakage is #130's worklist, captured in Task 5. What MUST hold at the end of this plan: the migration applies cleanly, the invariants hold, `sponsor-identity.test.ts` passes, `seed-dev.ts` runs, and `prisma/**` typechecks. Do **not** "fix" `src/routes/**` to make the build green — that is out of scope and belongs to #130.
+- **CI will be red on this branch until #130 lands.** Expected. Do not merge this branch to `dev` alone.
 - **Language:** code, comments and commit messages in **English**. Communication with the user in French.
 - **Commits:** Conventional Commits, subject under 72 chars. Stage named files only — never `git add .` or `git add -A`. One git command per Bash call, never chained with `&&`, never `git -C`.
 - **Branch:** work on `feature/us-129-sponsor-identity` (already created, holds the design doc commit).
@@ -352,7 +354,7 @@ CREATE UNIQUE INDEX "Sponsor_slug_key" ON "Sponsor"("slug");
 Run against the dev database and write the four numbers down — they are the invariants:
 
 ```bash
-docker compose exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"SponsorJobOffer\") AS offers, (SELECT count(*) FROM \"SponsorContact\") AS contacts;"
+docker compose -f docker-compose.local.yml exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"SponsorJobOffer\") AS offers, (SELECT count(*) FROM \"SponsorContact\") AS contacts;"
 ```
 
 If the container or credentials differ, read `docker-compose.yml` for the service name and `POSTGRES_USER`/`POSTGRES_DB` rather than guessing.
@@ -372,7 +374,7 @@ If it fails on the step-0 guard, that is the guard doing its job: two sponsors s
 - [ ] **Step 4: Verify the invariants**
 
 ```bash
-docker compose exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"EditionSponsor\") AS participations, (SELECT count(*) FROM \"SponsorJobOffer\") AS offers, (SELECT count(*) FROM \"SponsorContact\") AS contacts;"
+docker compose -f docker-compose.local.yml exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"EditionSponsor\") AS participations, (SELECT count(*) FROM \"SponsorJobOffer\") AS offers, (SELECT count(*) FROM \"SponsorContact\") AS contacts;"
 ```
 
 Expected: `sponsors` = `participations` = the pre-migration sponsor count; `offers` and `contacts` unchanged from Step 2.
@@ -628,7 +630,7 @@ Expected: completes without error, logging the sponsor count as before.
 - [ ] **Step 7: Verify the seeded shape**
 
 ```bash
-docker compose exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"EditionSponsor\") AS participations;"
+docker compose -f docker-compose.local.yml exec -T db psql -U devfest -d devfest -c "SELECT (SELECT count(*) FROM \"Sponsor\") AS sponsors, (SELECT count(*) FROM \"EditionSponsor\") AS participations;"
 ```
 
 Expected: both counts equal and non-zero.
