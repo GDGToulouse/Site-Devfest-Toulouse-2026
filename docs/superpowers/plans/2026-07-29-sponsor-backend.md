@@ -901,6 +901,10 @@ git commit -m "feat(admin): edit a sponsor identity and its participations"
 - Modify: `src/backend/src/__tests__/edit-social-bluesky.test.ts`
 - Modify: `src/backend/src/__tests__/edit-upload.test.ts`
 - Modify: `src/backend/src/__tests__/edit-talk-update.test.ts`
+- Modify: `src/frontend/src/app/edit/[token]/SponsorPrivateSection.tsx` — **the consumer of the contract this task changes**
+- Modify: `src/frontend/src/app/edit/[token]/page.tsx` — handles the new 422
+
+> **This task changes a public API contract, so its consumer moves with it.** Making `private.tier` nullable while the frontend still declares it non-nullable does not fail `typecheck` — the two sides are compiled separately, so the stale frontend type hides the mismatch until a real sponsor hits it at runtime. That is why these two frontend files are in scope here and not left to Task 6: a contract change and its consumer belong in the same commit.
 
 **Interfaces:**
 - Consumes: `createSponsorWithToken` from Task 1.
@@ -927,6 +931,8 @@ const participation = edition
   : null;
 ```
 
+> **The job-offer routes (`POST`/`PUT`/`DELETE /edit/:token/job-offers*`) need the same rework** — they read `entity.tier` and `entity.jobOffers` too. Load the offers through the resolved participation, so the list a handler searches is already scoped to this sponsor AND this year. That scoping IS the authorization check: `find(o => o.id === offerId)` over a pre-filtered list makes both cross-sponsor and cross-year writes impossible, and no unvalidated `offerId` ever reaches Prisma. **Keep that `select` narrow.** Widening it later — say, hoisting `jobOffers` up to a `sponsor.editions` include — silently reopens cross-year writes, and no current test would catch it.
+
 - [ ] **Step 3: Read and write the per-year fields through the participation**
 
 Where the GET projected `sponsor.platinumPromoIdea` / `comKit*`, read them from `participation`. Where the PUT wrote them via `prisma.sponsor.update`, write them with `prisma.editionSponsor.update({ where: { id: participation.id }, data: { ... } })`. Identity fields keep using `prisma.sponsor.update`.
@@ -934,6 +940,13 @@ Where the GET projected `sponsor.platinumPromoIdea` / `comKit*`, read them from 
 The Platinum block is conditional on the tier (#252): read the tier from `participation.tier.key`, not from the sponsor.
 
 If `participation` is null — no featured edition, or the company does not sponsor it — the per-year fields read as empty and a write to them answers `422`. There is no year to write to, and silently writing to last year's participation would be worse.
+
+**Both halves of that null case need a frontend counterpart**, and neither is optional:
+
+- **`tier` becomes nullable.** `SponsorPrivateSection.tsx` declares it non-nullable and dereferences it bare (`initial.tier.allowsPromoIdeas`). Widen the type and use `initial.tier?.allowsPromoIdeas ?? false`. Without this, a sponsor of a past edition clicking a still-valid link gets a `TypeError` that kills the entire page — including the identity fields the route would have served and saved perfectly well.
+- **The `422` needs a handler.** `page.tsx` maps unknown error codes to `"blocked"`, which replaces the form with "les modifications sont clôturées" and discards whatever was typed. Handle `no_current_participation` explicitly, with a message saying the per-year fields are unavailable because the company does not sponsor the current edition — and **do not destroy the form or the entered values**.
+
+Only write per-year fields when the body actually carries one. An identity-only save with a non-null participation would otherwise run `editionSponsor.update` with `data: {}`, bumping `@updatedAt` and costing a round-trip for nothing.
 
 - [ ] **Step 4: Port the six test files' fixtures**
 
