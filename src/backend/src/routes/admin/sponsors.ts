@@ -414,7 +414,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     }
 
     const { count } = await prisma.editionSponsor.updateMany({
-      where: { sponsorId: { in: ids }, editionId },
+      where: { sponsorId: { in: ids }, editionId, sponsor: notDeleted },
       data: { publicationStatus: value },
     });
     revalidateSponsors();
