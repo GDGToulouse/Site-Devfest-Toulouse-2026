@@ -11,7 +11,9 @@ interface StandContact {
 
 export interface SponsorPrivate {
   // The sponsoring tier: `allowsPromoIdeas` gates the promo fields (#321).
-  tier: { allowsPromoIdeas: boolean };
+  // Null when the company has no participation on the featured edition (#129)
+  // — a past sponsor's link still opens, just without the per-year sections.
+  tier: { allowsPromoIdeas: boolean } | null;
   standContacts: StandContact[];
   comKitReceived: boolean;
   comKitLogoWebUrl: string | null;
@@ -33,6 +35,7 @@ interface Labels {
   saving: string;
   saved: string;
   rejected: string;
+  noCurrentParticipation: string;
   privateSection: string;
   privateHint: string;
   standContacts: string;
@@ -83,7 +86,7 @@ export default function SponsorPrivateSection({
   const [comKitNotes, setComKitNotes] = useState(initial.comKitNotes ?? "");
   const [platinumPromoIdea, setPlatinumPromoIdea] = useState(initial.platinumPromoIdea ?? "");
   const [platinumCoBuildIdea, setPlatinumCoBuildIdea] = useState(initial.platinumCoBuildIdea ?? "");
-  const isPlatinum = initial.tier.allowsPromoIdeas;
+  const isPlatinum = initial.tier?.allowsPromoIdeas ?? false;
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
@@ -119,6 +122,13 @@ export default function SponsorPrivateSection({
     setSaving(false);
     if (res.ok) {
       setSaved(true);
+      return;
+    }
+    // No participation on the featured edition (#129): the identity fields
+    // save separately and are unaffected, but this section has nothing to
+    // attach its fields to. Say so without wiping what was typed.
+    if (res.status === 422) {
+      setError(t.noCurrentParticipation);
       return;
     }
     setError(t.rejected);

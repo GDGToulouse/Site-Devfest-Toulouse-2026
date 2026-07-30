@@ -614,7 +614,11 @@ export default async function editRoutes(app: FastifyInstance) {
         },
       });
 
-      if (participation) {
+      // Skip the write entirely when no per-year field was sent: EditionSponsor
+      // has @updatedAt, so an empty `data: {}` would still bump the
+      // participation's timestamp — and cost a round-trip — on every
+      // identity-only save (description, logo, socials).
+      if (participation && writesYearField) {
         await prisma.editionSponsor.update({
           where: { id: participation.id },
           data: {
