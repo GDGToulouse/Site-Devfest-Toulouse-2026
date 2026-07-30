@@ -46,8 +46,11 @@ describe("Sponsor private section (#249)", () => {
     expect(res.statusCode).toBe(200);
 
     const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
-    expect(sponsor?.comKitReceived).toBe(true);
-    expect(sponsor?.comKitLogoWebUrl).toBe("https://example.org/logo-web.png");
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId, editionId } },
+    });
+    expect(participation?.comKitReceived).toBe(true);
+    expect(participation?.comKitLogoWebUrl).toBe("https://example.org/logo-web.png");
     // The empty contact row is dropped; only Alice remains.
     const stand = JSON.parse(sponsor?.standContacts ?? "[]");
     expect(stand).toHaveLength(1);
