@@ -39,12 +39,26 @@ export default function SponsorsDataPage() {
   }, []);
 
   async function applyBulk(value: "DRAFT" | "PUBLISHED") {
+    // publicationStatus lives on the participation (#129), so an edition has to
+    // be picked: applying to every edition a sponsor appears in would publish
+    // it on a year the admin was not even looking at (the guard #351
+    // established for speakers).
+    const editionId = selectedEditionId;
+    if (!editionId) {
+      setError("Choisissez une édition avant d'appliquer une action groupée.");
+      return;
+    }
+
+    setError(null);
     const ids = [...selectedIds];
-    const { status } = await adminFetch("/sponsors/bulk", {
+    const { status, error: apiError } = await adminFetch("/sponsors/bulk", {
       method: "POST",
-      body: JSON.stringify({ ids, action: "setStatus", value }),
+      body: JSON.stringify({ ids, action: "setStatus", value, editionId }),
     });
-    if (status !== 200) return;
+    if (status !== 200) {
+      setError(apiError ?? "Action groupée impossible.");
+      return;
+    }
     setSponsors((prev) =>
       prev.map((s) => (selectedIds.has(s.id) ? { ...s, publicationStatus: value } : s)),
     );
@@ -73,6 +87,13 @@ export default function SponsorsDataPage() {
     () => [...new Set(sponsors.map((s) => s.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
     [sponsors],
   );
+
+  // The edition the bulk actions apply to, read off the year filter. A
+  // sponsor row carries a single edition here (unlike speakers), so the
+  // lookup is a plain find over `sponsors`.
+  const selectedEditionId = year
+    ? (sponsors.find((s) => String(s.edition?.year) === year)?.edition?.id ?? null)
+    : null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -154,7 +175,14 @@ export default function SponsorsDataPage() {
             <span className="text-sm text-gris">{filtered.length} sponsor{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && !selectedEditionId && (
+            <div role="status" className="mb-4 rounded-lg bg-jaune/10 px-4 py-3 text-sm text-noir">
+              Les actions groupées s&apos;appliquent à une édition : choisissez une année dans le
+              filtre ci-dessus.
+            </div>
+          )}
+
+          {selectedIds.size > 0 && selectedEditionId && (
             <BulkActionBar
               count={selectedIds.size}
               entitySingular="sponsor"
