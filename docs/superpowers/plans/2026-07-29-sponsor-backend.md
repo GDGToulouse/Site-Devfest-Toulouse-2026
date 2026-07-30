@@ -684,6 +684,8 @@ const sponsors = await prisma.sponsor.findMany({
 
 Read what the current handler emits and keep the admin frontend's field names working. Where it emitted a flat `tier`/`publicationStatus`/`edition`, emit them from the participation the admin is looking at — the most recent one when no `editionId` filter is given.
 
+**On the ordering:** the old handler sorted by tier rank descending, then name (RG-221). Sorting by name alone is the accepted behaviour here — a deliberate call, not an oversight: RG-221 governs how sponsors are *displayed to visitors*, and the public wall in `routes/sponsors.ts` still applies it. The admin list is a working list; filters and sort controls can come later if the need appears. Do not reintroduce the rank ordering.
+
 - [ ] **Step 3: `GET /sponsors/:id` — identity plus its participations**
 
 `include: { edition, tier, jobOffers }` no longer resolves. Replace with:
@@ -780,7 +782,9 @@ const target = body.editionId
     });
 ```
 
-Then update each side only with the fields the body actually carries, preserving the existing "only touch what was sent" behaviour. If a per-year field is sent and `target` is null, answer `422` — there is no year to write it to.
+Then update each side only with the fields the body actually carries, preserving the existing "only touch what was sent" behaviour.
+
+**Resolve `target` only when the body actually carries a per-year field.** An identity-only edit — renaming a company, swapping its logo — must succeed even on a sponsor with no participation at all; refusing it because no edition is attached yet would be nonsense. The `422` then fires exactly where it should: a per-year value was sent and there is no year to write it to.
 
 - [ ] **Step 6: `POST /sponsors/bulk` — target participations**
 
@@ -800,10 +804,15 @@ if (!body.editionId) {
   return reply.code(400).send({ error: "editionId is required: status is per edition" });
 }
 const { count } = await prisma.editionSponsor.updateMany({
-  where: { sponsorId: { in: body.ids }, editionId: body.editionId },
+  // `sponsor: notDeleted` matters: without it a trashed company caught in a
+  // bulk selection gets published. The sibling endpoint already guards this —
+  // see admin/speakers.ts, `speaker: notDeleted` on its own bulk updateMany.
+  where: { sponsorId: { in: body.ids }, editionId: body.editionId, sponsor: notDeleted },
   data: { publicationStatus: body.value },
 });
 ```
+
+Cover it with a test that bites: two sponsors on one edition, one trashed, bulk-publish both ids, assert the live one is `PUBLISHED` and the trashed one still `DRAFT`. Removing the guard must fail that test.
 
 - [ ] **Step 7: Add attach / detach endpoints**
 
