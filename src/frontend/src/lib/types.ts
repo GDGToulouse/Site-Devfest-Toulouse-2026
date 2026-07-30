@@ -237,7 +237,12 @@ export interface SponsorDetail {
   slug: string;
   name: string;
   logoUrl: string | null;
-  tier: SponsorTierRef;
+  // Null unless the company sponsors the featured edition (#129): the tier is
+  // a per-year fact. Shown on the sponsor wall, not on this page.
+  tier: SponsorTierRef | null;
+  // Years the company sponsored, newest first. Rendered as tags linking to
+  // each edition's page.
+  editions: number[];
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;

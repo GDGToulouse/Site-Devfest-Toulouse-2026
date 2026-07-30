@@ -86,6 +86,23 @@ export default async function SponsorDetailPage({
 
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">{sponsor.name}</h1>
 
+        {/* Years sponsored (#129): the tier is a per-year fact shown on the
+            wall, not here — past editions are just tags linking to that year. */}
+        {sponsor.editions.length > 0 && (
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {sponsor.editions.map((year) => (
+              <li key={year}>
+                <Link
+                  href={`/editions/${year}`}
+                  className="rounded-[12px] bg-blanc-casse px-3 py-1 text-sm text-gris hover:text-noir transition-colors"
+                >
+                  {year}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
           {/* Left: description. Rich-text HTML for new content (#270); older
               plain-text descriptions keep their line breaks via pre-line. */}
