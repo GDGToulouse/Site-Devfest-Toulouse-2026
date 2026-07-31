@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { AdminSponsorTier } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import FilePickerDialog from "@/components/admin/FilePickerDialog";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 
@@ -59,8 +60,13 @@ interface SponsorFormProps {
   tiers: AdminSponsorTier[];
 }
 
+// Which field a picker was opened for. One dialog serves several fields, so
+// the open state has to name its target rather than be a bare boolean (#374).
+type ImageTarget = "logoUrl" | "comKitLogoWebUrl" | "comKitLogoPrintUrl";
+
 export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps) {
-  const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
+  const [imageTarget, setImageTarget] = useState<ImageTarget | null>(null);
+  const [isCharterPickerOpen, setIsCharterPickerOpen] = useState(false);
 
   // The promo-idea fields (#252) are gated on the selected tier, not on a
   // hard-coded Platinum level (#318).
@@ -101,7 +107,7 @@ export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps
         <div className="flex items-center gap-4">
           <button
             type="button"
-            onClick={() => setIsImagePickerOpen(true)}
+            onClick={() => setImageTarget("logoUrl")}
             className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
           >
             {value.logoUrl ? "Changer le logo" : "Choisir un logo"}
@@ -208,19 +214,31 @@ export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps
           />
           <span className="text-sm text-noir">Kit de com reçu</span>
         </label>
+        {/* Files, not free-form URLs (#374): these are assets the sponsor
+            hands over, so they get the same picker + preview as the logo
+            above. The charter is usually a PDF, hence the file picker. */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="block">
-            <span className="block text-sm font-medium text-noir mb-1">Logo (version Web)</span>
-            <input type="url" value={value.comKitLogoWebUrl} onChange={(e) => onChange({ ...value, comKitLogoWebUrl: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="block text-sm font-medium text-noir mb-1">Logo (version Print)</span>
-            <input type="url" value={value.comKitLogoPrintUrl} onChange={(e) => onChange({ ...value, comKitLogoPrintUrl: e.target.value })} className={inputClass} />
-          </label>
-          <label className="block">
-            <span className="block text-sm font-medium text-noir mb-1">Charte graphique</span>
-            <input type="url" value={value.comKitCharterUrl} onChange={(e) => onChange({ ...value, comKitCharterUrl: e.target.value })} className={inputClass} />
-          </label>
+          <PickedAsset
+            label="Logo (version Web)"
+            url={value.comKitLogoWebUrl}
+            preview="image"
+            onPick={() => setImageTarget("comKitLogoWebUrl")}
+            onClear={() => onChange({ ...value, comKitLogoWebUrl: "" })}
+          />
+          <PickedAsset
+            label="Logo (version Print)"
+            url={value.comKitLogoPrintUrl}
+            preview="image"
+            onPick={() => setImageTarget("comKitLogoPrintUrl")}
+            onClear={() => onChange({ ...value, comKitLogoPrintUrl: "" })}
+          />
+          <PickedAsset
+            label="Charte graphique"
+            url={value.comKitCharterUrl}
+            preview="file"
+            onPick={() => setIsCharterPickerOpen(true)}
+            onClear={() => onChange({ ...value, comKitCharterUrl: "" })}
+          />
         </div>
         <label className="block mt-4">
           <span className="block text-sm font-medium text-noir mb-1">Notes / autres supports</span>
@@ -244,10 +262,73 @@ export default function SponsorForm({ value, onChange, tiers }: SponsorFormProps
       </fieldset>
 
       <ImagePickerDialog
-        open={isImagePickerOpen}
-        onClose={() => setIsImagePickerOpen(false)}
-        onSelect={(url) => onChange({ ...value, logoUrl: url })}
+        open={imageTarget !== null}
+        onClose={() => setImageTarget(null)}
+        onSelect={(url) => {
+          if (imageTarget) onChange({ ...value, [imageTarget]: url });
+        }}
       />
+
+      <FilePickerDialog
+        open={isCharterPickerOpen}
+        onClose={() => setIsCharterPickerOpen(false)}
+        onSelect={(url) => onChange({ ...value, comKitCharterUrl: url })}
+      />
+    </div>
+  );
+}
+
+// One com-kit asset: pick / preview / remove. Mirrors the logo block above,
+// which stays inline because it carries its own sizing guidance (#340).
+function PickedAsset({
+  label,
+  url,
+  preview,
+  onPick,
+  onClear,
+}: {
+  label: string;
+  url: string;
+  preview: "image" | "file";
+  onPick: () => void;
+  onClear: () => void;
+}) {
+  return (
+    <div className="block">
+      <span className="block text-sm font-medium text-noir mb-1">{label}</span>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={onPick}
+          className="px-3 py-2 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+        >
+          {url ? "Changer" : "Choisir un fichier"}
+        </button>
+        {url && (
+          <>
+            {preview === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={url} alt={label} className="h-10 rounded object-contain" />
+            ) : (
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-bleu hover:underline truncate max-w-[12rem]"
+              >
+                {url.split("/").pop()}
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={onClear}
+              className="text-sm text-terre-cuite hover:underline"
+            >
+              Retirer
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -124,6 +124,14 @@ const T = {
     uploadError: "Envoi impossible : vérifiez que le fichier est une image de moins de 5 Mo.",
     currentImage: "Aperçu",
     orUrl: "ou collez l'adresse d'une image en ligne",
+    // Com-kit assets (#374): a file to send, not a URL to type. The charter is
+    // usually a PDF, hence its own wording.
+    comKitUpload: "Choisir un fichier…",
+    comKitUploadHintImage: "PNG, JPEG, WebP ou SVG — 5 Mo max.",
+    comKitUploadHintDoc: "PDF, PNG ou JPEG — 5 Mo max.",
+    comKitUploadError: "Envoi impossible : vérifiez le format et que le fichier fait moins de 5 Mo.",
+    comKitRemove: "Retirer",
+    comKitOpenFile: "Voir le fichier",
     rejected:
       "Une valeur est invalide : les liens doivent commencer par http:// ou https://, et les textes rester sous 5 000 caractères.",
     errors: {
@@ -213,6 +221,12 @@ const T = {
     uploadError: "Upload failed: make sure the file is an image under 5 MB.",
     currentImage: "Preview",
     orUrl: "or paste the address of an online image",
+    comKitUpload: "Choose a file…",
+    comKitUploadHintImage: "PNG, JPEG, WebP or SVG — 5 MB max.",
+    comKitUploadHintDoc: "PDF, PNG or JPEG — 5 MB max.",
+    comKitUploadError: "Upload failed: check the format and that the file is under 5 MB.",
+    comKitRemove: "Remove",
+    comKitOpenFile: "View file",
     rejected:
       "A value is invalid: links must start with http:// or https://, and text must stay under 5,000 characters.",
     errors: {

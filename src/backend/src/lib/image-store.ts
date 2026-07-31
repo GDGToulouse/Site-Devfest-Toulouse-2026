@@ -33,6 +33,7 @@ const EXT_BY_MIME: Record<string, string> = {
 };
 
 export const SVG_MIME = "image/svg+xml";
+export const PDF_MIME = "application/pdf";
 
 /** Raised when an SVG carries nothing renderable once stripped of scripts. */
 export class UnsafeSvgError extends Error {
@@ -83,6 +84,12 @@ export async function storeImageBuffer(buffer: Buffer, mimetype: string): Promis
     const safe = sanitizeSvg(buffer.toString("utf8"));
     if (!safe) throw new UnsafeSvgError();
     return writeBuffer(Buffer.from(safe, "utf8"), ".svg");
+  }
+
+  // A PDF is not pixels either (#374): sharp would fail on it and the
+  // EXT_BY_MIME fallback would store it as .jpg. Write it through untouched.
+  if (mimetype === PDF_MIME) {
+    return writeBuffer(buffer, ".pdf");
   }
 
   const finalBuffer = await compress(buffer, mimetype);
