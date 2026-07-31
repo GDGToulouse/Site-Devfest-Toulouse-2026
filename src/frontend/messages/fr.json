@@ -340,6 +340,7 @@
     "home": "Accueil",
     "empty": "Les sponsors seront annoncés prochainement.",
     "visitWebsite": "Visiter le site",
+    "currentTier": "Sponsor {tier} de l'édition en cours",
     "speakersOf": "Speakers de {name}",
     "jobOffersTitle": "Offres d'emploi",
     "jobOfferCta": "Voir l'offre"

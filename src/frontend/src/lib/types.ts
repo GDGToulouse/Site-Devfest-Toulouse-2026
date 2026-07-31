@@ -238,7 +238,7 @@ export interface SponsorDetail {
   name: string;
   logoUrl: string | null;
   // Null unless the company sponsors the featured edition (#129): the tier is
-  // a per-year fact. Shown on the sponsor wall, not on this page.
+  // a per-year fact, so it describes this year's participation only.
   tier: SponsorTierRef | null;
   // Years the company sponsored, newest first. Rendered as tags linking to
   // each edition's page.

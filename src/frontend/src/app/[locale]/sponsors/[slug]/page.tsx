@@ -86,8 +86,18 @@ export default async function SponsorDetailPage({
 
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">{sponsor.name}</h1>
 
-        {/* Years sponsored (#129): the tier is a per-year fact shown on the
-            wall, not here — past editions are just tags linking to that year. */}
+        {/* Sponsoring this year is the headline fact (#129), so the tier gets a
+            badge in the tier's own colour. Past editions stay plain tags below:
+            their tier belongs to that year's wall, not to the company today. */}
+        {sponsor.tier && (
+          <p
+            className="mt-4 inline-block rounded-[12px] px-3 py-1 text-sm font-bold text-blanc"
+            style={{ backgroundColor: sponsor.tier.color }}
+          >
+            {t("currentTier", { tier: localizedField(sponsor.tier, "name", locale) })}
+          </p>
+        )}
+
         {sponsor.editions.length > 0 && (
           <ul className="mt-6 flex flex-wrap gap-2">
             {sponsor.editions.map((year) => (
