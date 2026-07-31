@@ -42,6 +42,9 @@ const UPLOAD_MIMES = new Set([
   "image/webp",
   "image/gif",
   "image/svg+xml",
+  // The com-kit charter is a document, not an image (#374). Stored as-is —
+  // storeImageBuffer has a dedicated branch so it never reaches sharp.
+  "application/pdf",
 ]);
 
 const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
