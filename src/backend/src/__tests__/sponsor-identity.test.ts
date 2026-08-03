@@ -11,6 +11,7 @@ import { tierIdByKey } from "./sponsor-test-helpers.js";
 
 const createdSponsorIds: number[] = [];
 const createdEditionIds: number[] = [];
+const createdTierIds: number[] = [];
 
 afterEach(async () => {
   if (createdSponsorIds.length) {
@@ -22,6 +23,11 @@ afterEach(async () => {
   if (createdEditionIds.length) {
     await prisma.edition.deleteMany({ where: { id: { in: createdEditionIds } } });
     createdEditionIds.length = 0;
+  }
+  // Last: EditionSponsor.tierId holds a tier until its participations are gone.
+  if (createdTierIds.length) {
+    await prisma.sponsorTier.deleteMany({ where: { id: { in: createdTierIds } } });
+    createdTierIds.length = 0;
   }
 });
 
@@ -123,6 +129,76 @@ describe("Sponsor identity (#129)", () => {
 
     expect(sponsor.editions[0].jobOffers).toHaveLength(1);
     expect(sponsor.editions[0].jobOffers[0].title).toBe("Dev");
+  });
+
+  // #375 — the identity/participation split moved the logo off the year it
+  // belonged to. What an edition displayed is frozen on its participation, so
+  // neither the company nor the shared tier catalogue can rewrite an archive.
+
+  it("keeps a past edition's logo when the company changes its own", async () => {
+    const tierId = await tierIdByKey("gold");
+    const past = await prisma.edition.create({ data: { year: 1751 } });
+    createdEditionIds.push(past.id);
+
+    const sponsor = await prisma.sponsor.create({
+      data: {
+        name: "Rebranding Co",
+        slug: `archive-logo-${Date.now()}`,
+        logoUrl: "/logos/old.svg",
+        editions: { create: [{ editionId: past.id, tierId, logoUrl: "/logos/old.svg" }] },
+      },
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    await prisma.sponsor.update({
+      where: { id: sponsor.id },
+      data: { logoUrl: "/logos/new.svg" },
+    });
+
+    const participation = await prisma.editionSponsor.findFirstOrThrow({
+      where: { sponsorId: sponsor.id, editionId: past.id },
+    });
+    expect(participation.logoUrl).toBe("/logos/old.svg");
+  });
+
+  it("keeps a past edition's tier label when the catalogue is renamed", async () => {
+    const past = await prisma.edition.create({ data: { year: 1752 } });
+    createdEditionIds.push(past.id);
+
+    // A throwaway tier: renaming a seeded one would leak into other test files.
+    const tier = await prisma.sponsorTier.create({
+      data: { key: `archive-tier-${Date.now()}`, nameFr: "Or", nameEn: "Gold", color: "#d4af37" },
+    });
+    createdTierIds.push(tier.id);
+
+    const sponsor = await prisma.sponsor.create({
+      data: {
+        name: "Frozen Tier Co",
+        slug: `archive-tier-${Date.now()}`,
+        editions: {
+          create: [{
+            editionId: past.id,
+            tierId: tier.id,
+            tierNameFr: tier.nameFr,
+            tierNameEn: tier.nameEn,
+            tierColor: tier.color,
+          }],
+        },
+      },
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    await prisma.sponsorTier.update({
+      where: { id: tier.id },
+      data: { nameFr: "Platine", nameEn: "Platinum", color: "#e5e4e2" },
+    });
+
+    const participation = await prisma.editionSponsor.findFirstOrThrow({
+      where: { sponsorId: sponsor.id, editionId: past.id },
+    });
+    expect(participation.tierNameFr).toBe("Or");
+    expect(participation.tierNameEn).toBe("Gold");
+    expect(participation.tierColor).toBe("#d4af37");
   });
 
   it("keeps contacts on the company, shared across its editions", async () => {

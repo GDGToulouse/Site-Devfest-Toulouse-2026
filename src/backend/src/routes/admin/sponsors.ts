@@ -70,6 +70,8 @@ const TIER_SELECT = { id: true, key: true, nameFr: true, nameEn: true, rank: tru
 interface ParticipationLike {
   id: number;
   publicationStatus: "DRAFT" | "PUBLISHED";
+  // Frozen per edition (#375) — absent from the queries that don't select it.
+  logoUrl?: string | null;
   comKitReceived?: boolean;
   comKitLogoWebUrl?: string | null;
   comKitLogoPrintUrl?: string | null;
@@ -105,6 +107,9 @@ function serialize(s: {
       edition: current.edition,
       tierId: current.tier.id,
       tier: current.tier,
+      // The edition's own logo (#375) shadows the identity's, so the admin
+      // form edits the year it is looking at. Null until one is set.
+      ...(current.logoUrl !== undefined && { logoUrl: current.logoUrl ?? s.logoUrl }),
       publicationStatus: current.publicationStatus,
       comKitReceived: current.comKitReceived,
       comKitLogoWebUrl: current.comKitLogoWebUrl,
@@ -147,6 +152,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           select: {
             id: true,
             publicationStatus: true,
+            logoUrl: true,
             comKitReceived: true,
             comKitLogoWebUrl: true,
             comKitLogoPrintUrl: true,
@@ -180,6 +186,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           select: {
             id: true,
             publicationStatus: true,
+            logoUrl: true,
             comKitReceived: true,
             comKitLogoWebUrl: true,
             comKitLogoPrintUrl: true,
@@ -209,9 +216,12 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     if (!body.editionId || !body.name?.trim() || !body.tierId) {
       return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
+    // The display attributes come along: the participation freezes them (#375)
+    // so renaming or recolouring the shared catalogue later leaves this
+    // edition's wall untouched.
     const tier = await prisma.sponsorTier.findFirst({
       where: { id: body.tierId, ...notDeleted },
-      select: { id: true },
+      select: { id: true, nameFr: true, nameEn: true, color: true, logoScale: true },
     });
     if (!tier) {
       return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
@@ -235,6 +245,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           select: {
             id: true,
             publicationStatus: true,
+            logoUrl: true,
             comKitReceived: true,
             comKitLogoWebUrl: true,
             comKitLogoPrintUrl: true,
@@ -265,6 +276,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           create: [{
             editionId: body.editionId,
             tierId: body.tierId,
+            // Frozen for the archive (#375): the logo this edition shows, and
+            // the tier as it reads today.
+            logoUrl: body.logoUrl || null,
+            tierNameFr: tier.nameFr,
+            tierNameEn: tier.nameEn,
+            tierColor: tier.color,
+            tierLogoScale: tier.logoScale,
             publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
             comKitReceived: body.comKitReceived ?? false,
             comKitLogoWebUrl: body.comKitLogoWebUrl || null,
@@ -292,10 +310,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     const body = request.body;
 
+    // Changing tier re-freezes the appearance (#375): the participation must
+    // show the tier it was actually moved to, not the one it left.
+    let tier = null;
     if (body.tierId !== undefined) {
-      const tier = await prisma.sponsorTier.findFirst({
+      tier = await prisma.sponsorTier.findFirst({
         where: { id: body.tierId, ...notDeleted },
-        select: { id: true },
+        select: { id: true, nameFr: true, nameEn: true, color: true, logoScale: true },
       });
       if (!tier) {
         return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
@@ -306,6 +327,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     // `body.editionId`, falling back to the most recent one.
     const participationFieldsSent =
       body.tierId !== undefined ||
+      body.logoUrl !== undefined ||
       body.publicationStatus !== undefined ||
       body.comKitReceived !== undefined ||
       body.comKitLogoWebUrl !== undefined ||
@@ -336,7 +358,16 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       await prisma.editionSponsor.update({
         where: { id: target.id },
         data: {
-          ...(body.tierId !== undefined && { tierId: body.tierId }),
+          // Re-freeze the appearance alongside the tier itself (#375).
+          ...(tier && {
+            tierId: tier.id,
+            tierNameFr: tier.nameFr,
+            tierNameEn: tier.nameEn,
+            tierColor: tier.color,
+            tierLogoScale: tier.logoScale,
+          }),
+          // The logo this edition displays, kept off the other years.
+          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
           ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
           ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
           ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
@@ -357,6 +388,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           select: {
             id: true,
             publicationStatus: true,
+            logoUrl: true,
             comKitReceived: true,
             comKitLogoWebUrl: true,
             comKitLogoPrintUrl: true,

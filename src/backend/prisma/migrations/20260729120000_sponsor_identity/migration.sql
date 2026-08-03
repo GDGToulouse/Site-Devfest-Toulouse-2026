@@ -66,7 +66,14 @@ CREATE TABLE "EditionSponsor" (
   "comKitCharterUrl" TEXT,
   "comKitNotes" TEXT,
   "platinumPromoIdea" TEXT,
-  "platinumCoBuildIdea" TEXT
+  "platinumCoBuildIdea" TEXT,
+  -- What the edition displayed, frozen so later edits never rewrite an
+  -- archive (#375). Nullable: null reads through to the live tier / identity.
+  "logoUrl" TEXT,
+  "tierNameFr" TEXT,
+  "tierNameEn" TEXT,
+  "tierColor" TEXT,
+  "tierLogoScale" DOUBLE PRECISION
 );
 
 CREATE UNIQUE INDEX "EditionSponsor_sponsorId_editionId_key" ON "EditionSponsor"("sponsorId", "editionId");
@@ -86,18 +93,29 @@ ALTER TABLE "EditionSponsor"
 --    Trashed sponsors included: the trash lives on the identity, and restoring
 --    one must restore a company that still belongs to its edition.
 -- ---------------------------------------------------------------------------
+--    The logo and the tier's appearance are frozen here (#375): the split
+--    moves logoUrl onto the identity, which would otherwise let a 2027 logo
+--    change repaint 2026's wall. Sponsor.logoUrl stays as the company's
+--    current logo and the fallback for a participation that has none.
+--
+--    The JOIN cannot drop a sponsor: Sponsor.tierId is NOT NULL behind
+--    Sponsor_tierId_fkey (ON DELETE RESTRICT, 20260723084347), so every row
+--    has a live tier. Step 3's SET NOT NULL would catch it anyway.
 INSERT INTO "EditionSponsor" (
   "sponsorId", "editionId", "tierId", "publicationStatus",
   "comKitReceived", "comKitLogoWebUrl", "comKitLogoPrintUrl",
   "comKitCharterUrl", "comKitNotes", "platinumPromoIdea",
-  "platinumCoBuildIdea", "updatedAt"
+  "platinumCoBuildIdea", "updatedAt",
+  "logoUrl", "tierNameFr", "tierNameEn", "tierColor", "tierLogoScale"
 )
 SELECT
   s."id", s."editionId", s."tierId", s."publicationStatus",
   s."comKitReceived", s."comKitLogoWebUrl", s."comKitLogoPrintUrl",
   s."comKitCharterUrl", s."comKitNotes", s."platinumPromoIdea",
-  s."platinumCoBuildIdea", CURRENT_TIMESTAMP
-FROM "Sponsor" s;
+  s."platinumCoBuildIdea", CURRENT_TIMESTAMP,
+  s."logoUrl", t."nameFr", t."nameEn", t."color", t."logoScale"
+FROM "Sponsor" s
+JOIN "SponsorTier" t ON t."id" = s."tierId";
 
 -- ---------------------------------------------------------------------------
 -- 3. Job offers hang off the participation. The column is added nullable,

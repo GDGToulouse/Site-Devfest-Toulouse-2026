@@ -646,6 +646,9 @@ model Sponsor {
   // participation. Same rule as Speaker.slug (#351).
   slug          String  @unique
   name          String
+  // The company's current logo. Falls back for an edition that has none of its
+  // own (#375) — a new participation starts from it instead of being resaisi.
+  // What a past edition shows is EditionSponsor.logoUrl, never this one.
   logoUrl       String?
   websiteUrl    String?
   descriptionFr String?
@@ -687,6 +690,8 @@ model Sponsor {
 //
 // The tier is bought per edition, and so is everything the organisers track
 // while preparing it: the communication kit and the Platinum promo ideas.
+// It also carries what the edition displayed — logo and tier appearance —
+// frozen so an archive stays true to its year (#375).
 // standContacts deliberately stays on Sponsor — the booth team only matters
 // for scanning during the event, so its history has no value.
 // Pure join row: the trash operates on the Sponsor identity, so no soft delete.
@@ -704,6 +709,16 @@ model EditionSponsor {
   // Sponsoring tier from the shared catalogue (#317), bought for this edition.
   tierId Int
   tier   SponsorTier @relation(fields: [tierId], references: [id])
+
+  // What this edition displayed, frozen so later edits never rewrite an
+  // archive (#375). The catalogue is shared and mutable: renaming "Gold" or
+  // recolouring it would otherwise repaint every past edition's sponsor wall.
+  // Null means "not frozen yet" — read through to the live tier / identity.
+  logoUrl       String?
+  tierNameFr    String?
+  tierNameEn    String?
+  tierColor     String?
+  tierLogoScale Float?
 
   // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
   comKitReceived      Boolean @default(false)

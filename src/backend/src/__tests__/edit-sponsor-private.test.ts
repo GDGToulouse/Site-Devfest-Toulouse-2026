@@ -58,6 +58,26 @@ describe("Sponsor private section (#249)", () => {
     await app.close();
   });
 
+  // #375 — a new logo belongs to the edition being edited. It also refreshes
+  // the company's current logo, so a later participation starts from it.
+  it("writes the logo onto the participation and the identity", async () => {
+    const app = await buildEditApp();
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/edit/${TOKEN}`,
+      payload: { logoUrl: "https://example.org/logo-2026.png" },
+    });
+    expect(res.statusCode).toBe(200);
+    await app.close();
+
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId, editionId } },
+    });
+    const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
+    expect(participation?.logoUrl).toBe("https://example.org/logo-2026.png");
+    expect(sponsor?.logoUrl).toBe("https://example.org/logo-2026.png");
+  });
+
   it("returns the private block to the token holder (GET)", async () => {
     const app = await buildEditApp();
     const res = await app.inject({ method: "GET", url: `/api/edit/${TOKEN}` });

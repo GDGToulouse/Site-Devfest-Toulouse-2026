@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { archivedLogoUrl, archivedTier } from "../lib/sponsor-archive.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -36,15 +37,10 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         id: link.sponsor.id,
         slug: link.sponsor.slug,
         name: link.sponsor.name,
-        logoUrl: link.sponsor.logoUrl,
-        tier: {
-          key: link.tier.key,
-          rank: link.tier.rank,
-          nameFr: link.tier.nameFr,
-          nameEn: link.tier.nameEn,
-          logoScale: link.tier.logoScale,
-          color: link.tier.color,
-        },
+        // Frozen per edition (#375) so the wall keeps showing what this year
+        // displayed, whatever the company or the catalogue does later.
+        logoUrl: archivedLogoUrl(link, link.sponsor),
+        tier: archivedTier(link),
         websiteUrl: link.sponsor.websiteUrl,
       }))
       // Higher rank = more prominent (RG-221), so sort descending.
@@ -81,6 +77,12 @@ export default async function sponsorRoutes(app: FastifyInstance) {
             editionId: true,
             edition: { select: { year: true } },
             tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+            // What this edition displayed (#375), preferred over the live values.
+            logoUrl: true,
+            tierNameFr: true,
+            tierNameEn: true,
+            tierColor: true,
+            tierLogoScale: true,
             jobOffers: {
               select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
               orderBy: { createdAt: "asc" },
@@ -104,16 +106,10 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     const current = edition ? sponsor.editions.find((e) => e.editionId === edition.id) : undefined;
 
-    const tier = current
-      ? {
-          key: current.tier.key,
-          rank: current.tier.rank,
-          nameFr: current.tier.nameFr,
-          nameEn: current.tier.nameEn,
-          logoScale: current.tier.logoScale,
-          color: current.tier.color,
-        }
-      : null;
+    // As the featured edition displayed it (#375), not as the catalogue reads
+    // today. The logo below stays the identity's: this is the company's page,
+    // so it shows the company as it is now — the archive lives on the wall.
+    const tier = current ? archivedTier(current) : null;
     // Offers disappear one month after the event (#251).
     const jobOffers = current && edition && areOffersVisible(edition) ? current.jobOffers : [];
 
@@ -155,6 +151,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
         editions: {
           where: { editionId: edition.id },
           select: {
+            logoUrl: true,
             jobOffers: {
               select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
               orderBy: { createdAt: "asc" },
@@ -170,7 +167,8 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     return sponsors.map((s) => ({
       slug: s.slug,
       name: s.name,
-      logoUrl: s.logoUrl,
+      // The where above pins editions to the featured one, so at most one row.
+      logoUrl: s.editions[0] ? archivedLogoUrl(s.editions[0], s) : s.logoUrl,
       jobOffers: s.editions.flatMap((e) => e.jobOffers),
     }));
   });

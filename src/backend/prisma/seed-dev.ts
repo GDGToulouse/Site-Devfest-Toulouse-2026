@@ -288,7 +288,11 @@ async function seedDev() {
       color: "#507BBD", logoScale: 0.5, rank: 10, jobOfferQuota: 1, allowsPromoIdeas: false,
     },
   ];
-  const sponsorTiers: Record<string, { id: number }> = {};
+  // Display attributes kept alongside the id: participations freeze them (#375).
+  const sponsorTiers: Record<
+    string,
+    { id: number; nameFr: string; nameEn: string; color: string; logoScale: number }
+  > = {};
   for (const t of TIER_CATALOG) {
     sponsorTiers[t.key] = await prisma.sponsorTier.upsert({
       where: { key: t.key },
@@ -522,15 +526,22 @@ async function seedDev() {
       },
     });
 
+    // Freeze what this edition displays (#375), like the admin does on create:
+    // the demo data then exercises the archive path rather than the fallback.
+    const tier = sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]];
+    const frozen = {
+      logoUrl: `/images/sponsors/${s.slug}.svg`,
+      tierId: tier.id,
+      tierNameFr: tier.nameFr,
+      tierNameEn: tier.nameEn,
+      tierColor: tier.color,
+      tierLogoScale: tier.logoScale,
+      publicationStatus: "PUBLISHED" as const,
+    };
     await prisma.editionSponsor.upsert({
       where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
-      update: { tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id, publicationStatus: "PUBLISHED" },
-      create: {
-        sponsorId: sponsor.id,
-        editionId: edition.id,
-        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
-        publicationStatus: "PUBLISHED",
-      },
+      update: frozen,
+      create: { sponsorId: sponsor.id, editionId: edition.id, ...frozen },
     });
   }
 

@@ -64,6 +64,69 @@ describe("Public sponsors carry the tier (#321)", () => {
   });
 });
 
+// #375 — the wall serves what the edition displayed, not what the company and
+// the shared catalogue look like today.
+describe("The sponsor wall serves the edition's frozen values (#375)", () => {
+  it("prefers the participation's logo and tier label over the live ones", async () => {
+    const edition = await getSeededEdition();
+    const goldId = await tierIdByKey("gold");
+
+    const sponsor = await createSponsorFixture({
+      name: "Frozen Wall Co",
+      slug: `pub-frozen-${Date.now()}`,
+      editionId: edition.id,
+      tierId: goldId,
+      publicationStatus: "PUBLISHED",
+      // The company's current logo — what the wall must NOT show.
+      logoUrl: "/logos/current.svg",
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    await prisma.editionSponsor.updateMany({
+      where: { sponsorId: sponsor.id, editionId: edition.id },
+      data: { logoUrl: "/logos/that-year.svg", tierNameFr: "Or de 2026", tierColor: "#d4af37" },
+    });
+
+    const app = await buildPublicApp();
+    const res = await app.inject({ method: "GET", url: "/api/sponsors" });
+    await app.close();
+
+    expect(res.statusCode).toBe(200);
+    const mine = res.json().find((s: { id: number }) => s.id === sponsor.id);
+    expect(mine.logoUrl).toBe("/logos/that-year.svg");
+    expect(mine.tier.nameFr).toBe("Or de 2026");
+    expect(mine.tier.color).toBe("#d4af37");
+    // Not frozen: key and rank drive grouping and ordering, so they stay live.
+    expect(mine.tier.key).toBe("gold");
+  });
+
+  it("falls back to the company's logo when the edition froze none", async () => {
+    const edition = await getSeededEdition();
+    const goldId = await tierIdByKey("gold");
+
+    // createSponsorFixture sets logoUrl on the identity only, so the
+    // participation carries null — a row created before #375 looks like this.
+    const sponsor = await createSponsorFixture({
+      name: "Fallback Wall Co",
+      slug: `pub-fallback-${Date.now()}`,
+      editionId: edition.id,
+      tierId: goldId,
+      publicationStatus: "PUBLISHED",
+      logoUrl: "/logos/identity.svg",
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    const app = await buildPublicApp();
+    const res = await app.inject({ method: "GET", url: "/api/sponsors" });
+    await app.close();
+
+    const live = await prisma.sponsorTier.findUniqueOrThrow({ where: { id: goldId } });
+    const mine = res.json().find((s: { id: number }) => s.id === sponsor.id);
+    expect(mine.logoUrl).toBe("/logos/identity.svg");
+    expect(mine.tier.nameFr).toBe(live.nameFr);
+  });
+});
+
 // Years 1760 and 1761 are reserved for this file's past-edition fixtures.
 // Both sit below getSeededEdition()'s 2016 floor, so parallel test files
 // cannot pick them up as "the current edition" (#292).

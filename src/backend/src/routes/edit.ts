@@ -328,6 +328,8 @@ async function resolveToken(token: string) {
           where: { sponsorId: contact.sponsor.id, editionId: edition.id, edition: notDeleted },
           select: {
             id: true,
+            // The logo this edition shows (#375) — what the form must edit.
+            logoUrl: true,
             platinumPromoIdea: true,
             platinumCoBuildIdea: true,
             comKitReceived: true,
@@ -484,7 +486,9 @@ export default async function editRoutes(app: FastifyInstance) {
         descriptionFr: entity.descriptionFr,
         descriptionEn: entity.descriptionEn,
         websiteUrl: entity.websiteUrl,
-        logoUrl: entity.logoUrl,
+        // The featured edition's logo (#375), falling back to the company's
+        // current one — the sponsor edits this year, not the archive.
+        logoUrl: participation?.logoUrl ?? entity.logoUrl,
         socialLinks: parseSocial(entity.socialLinks),
       },
       // Private fields (#249) — served to the token holder so they can edit
@@ -586,12 +590,15 @@ export default async function editRoutes(app: FastifyInstance) {
       const body = request.body as SponsorEditBody;
       const { participation } = entity;
 
-      // Per-year fields (#129): comKit* and platinum* live on the
+      // Per-year fields (#129): logoUrl, comKit* and platinum* live on the
       // participation. Writing one with no participation on the featured
       // edition has no year to land on — there is nothing sane to write to,
       // and silently writing to last year's participation would be worse
       // (#252, #249).
+      // logoUrl joined them in #375: what an edition displayed is frozen on its
+      // participation, so a new logo must not rewrite the years already past.
       const writesYearField =
+        body.logoUrl !== undefined ||
         body.comKitReceived !== undefined ||
         body.comKitLogoWebUrl !== undefined ||
         body.comKitLogoPrintUrl !== undefined ||
@@ -610,6 +617,9 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
           ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
           ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
+          // The company's current logo tracks the latest one it sent (#375),
+          // so a future participation starts from it. What each edition shows
+          // is the copy frozen on its own participation, just below.
           ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
           ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
           // Private field (#249) — stand staffing isn't per-year, stays on the identity.
@@ -625,6 +635,10 @@ export default async function editRoutes(app: FastifyInstance) {
         await prisma.editionSponsor.update({
           where: { id: participation.id },
           data: {
+            // The logo this edition displays (#375). Editing is already
+            // confined to the featured edition, and isEditingFrozen closes it
+            // once the event starts — so past years cannot be rewritten.
+            ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
             // Private per-year fields (#249).
             ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
             ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
