@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 interface StandContact {
   name?: string;
@@ -49,6 +49,13 @@ interface Labels {
   comKitLogoPrint: string;
   comKitCharter: string;
   comKitNotes: string;
+  comKitUpload: string;
+  comKitUploadHintImage: string;
+  comKitUploadHintDoc: string;
+  comKitUploadError: string;
+  comKitRemove: string;
+  comKitOpenFile: string;
+  uploading: string;
   comKitEmailIntro: string;
   comKitEmailButton: string;
   comKitEmailSubject: string;
@@ -189,10 +196,34 @@ export default function SponsorPrivateSection({
           />
           <span className="text-sm text-noir">{t.comKitReceived}</span>
         </label>
+        {/* Files the sponsor hands over, not URLs to type (#374). Uploads go
+            through the magic-link endpoint, never the admin media library:
+            this page is reachable without authentication. */}
         <div className="grid gap-4 md:grid-cols-2">
-          <Field label={t.comKitLogoWeb} value={comKitLogoWebUrl} onChange={setComKitLogoWebUrl} />
-          <Field label={t.comKitLogoPrint} value={comKitLogoPrintUrl} onChange={setComKitLogoPrintUrl} />
-          <Field label={t.comKitCharter} value={comKitCharterUrl} onChange={setComKitCharterUrl} />
+          <ComKitFileField
+            label={t.comKitLogoWeb}
+            token={token}
+            value={comKitLogoWebUrl}
+            onChange={setComKitLogoWebUrl}
+            kind="image"
+            t={t}
+          />
+          <ComKitFileField
+            label={t.comKitLogoPrint}
+            token={token}
+            value={comKitLogoPrintUrl}
+            onChange={setComKitLogoPrintUrl}
+            kind="image"
+            t={t}
+          />
+          <ComKitFileField
+            label={t.comKitCharter}
+            token={token}
+            value={comKitCharterUrl}
+            onChange={setComKitCharterUrl}
+            kind="doc"
+            t={t}
+          />
         </div>
         <label className="mt-4 block">
           <span className="mb-1 block text-sm font-medium text-noir">{t.comKitNotes}</span>
@@ -267,5 +298,112 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
       <span className="mb-1 block text-sm font-medium text-noir">{label}</span>
       <input value={value} onChange={(e) => onChange(e.target.value)} className={inputClass} />
     </label>
+  );
+}
+
+// A com-kit asset (#374): upload with preview and remove. Deliberately
+// does NOT reuse the admin ImagePicker/FilePicker — those read the whole media
+// library through adminFetch, and this page is open to anyone holding the link.
+// Uploads go to /api/edit/:token/upload, which is scoped to that one sponsor.
+function ComKitFileField({
+  label,
+  token,
+  value,
+  onChange,
+  kind,
+  t,
+}: {
+  label: string;
+  token: string;
+  value: string;
+  onChange: (v: string) => void;
+  kind: "image" | "doc";
+  t: Labels;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const accept =
+    kind === "image"
+      ? "image/jpeg,image/png,image/webp,image/svg+xml"
+      : "application/pdf,image/jpeg,image/png";
+
+  async function handleFile(file: File) {
+    setUploading(true);
+    setFailed(false);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch(`/api/edit/${token}/upload`, { method: "POST", body: fd });
+      if (!res.ok) throw new Error("upload failed");
+      const { url } = (await res.json()) as { url: string };
+      onChange(url);
+    } catch {
+      setFailed(true);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  const isImagePreview = kind === "image" && value && !value.toLowerCase().endsWith(".pdf");
+
+  return (
+    <div className="block">
+      <span className="mb-1 block text-sm font-medium text-noir">{label}</span>
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="rounded-lg border border-gris/30 bg-blanc px-3 py-2 text-sm font-medium text-noir hover:bg-blanc-casse disabled:opacity-50"
+        >
+          {uploading ? t.uploading : t.comKitUpload}
+        </button>
+        <input
+          ref={inputRef}
+          type="file"
+          accept={accept}
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) void handleFile(file);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+        />
+        {value && (
+          <>
+            {isImagePreview ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={value} alt={label} className="h-10 rounded object-contain" />
+            ) : (
+              <a
+                href={value}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="truncate text-sm text-bleu hover:underline"
+              >
+                {t.comKitOpenFile}
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => onChange("")}
+              className="text-sm text-terre-cuite hover:underline"
+            >
+              {t.comKitRemove}
+            </button>
+          </>
+        )}
+      </div>
+      <p className="mt-1 text-xs text-gris">
+        {kind === "image" ? t.comKitUploadHintImage : t.comKitUploadHintDoc}
+      </p>
+      {failed && (
+        <p role="alert" className="mt-1 text-sm font-medium text-terre-cuite">
+          {t.comKitUploadError}
+        </p>
+      )}
+    </div>
   );
 }

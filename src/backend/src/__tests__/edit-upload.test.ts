@@ -101,6 +101,31 @@ describe("POST /api/edit/:token/upload", () => {
     await app.close();
   });
 
+  // #374 — the com-kit charter is a PDF. storeImageBuffer compresses anything
+  // that isn't SVG and falls back to ".jpg" for unknown mimetypes, so a PDF
+  // would reach sharp and be stored under the wrong extension without its own
+  // branch. Assert the bytes survive untouched.
+  it("stores a PDF charter as-is, with a .pdf extension", async () => {
+    const app = await buildEditApp();
+    const pdf = Buffer.from("%PDF-1.4\n1 0 obj\n<</Type/Catalog>>\nendobj\ntrailer\n%%EOF\n");
+    const { payload, headers } = multipartBody("charte.pdf", "application/pdf", pdf);
+
+    const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
+
+    expect(res.statusCode).toBe(200);
+    const url = res.json().url as string;
+    expect(url).toMatch(/^\/uploads\/.+\.pdf$/);
+
+    const { UPLOADS_DIR } = await import("../lib/image-store.js");
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const stored = await fs.promises.readFile(path.join(UPLOADS_DIR, path.basename(url)));
+    expect(stored.equals(pdf)).toBe(true);
+
+    await fs.promises.unlink(path.join(UPLOADS_DIR, path.basename(url))).catch(() => {});
+    await app.close();
+  });
+
   it("returns 404 for an unknown token", async () => {
     const app = await buildEditApp();
     const { payload, headers } = multipartBody("logo.png", "image/png", PNG_1x1);
