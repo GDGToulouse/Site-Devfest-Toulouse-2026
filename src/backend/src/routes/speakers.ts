@@ -105,13 +105,21 @@ export default async function speakerRoutes(app: FastifyInstance) {
           where: { publicationStatus: "PUBLISHED", edition: notDeleted },
           select: {
             isFeatured: true,
+            editionId: true,
             edition: { select: { year: true } },
             // Per-edition since #353: the employer of that year, not the latest
-            // one. publicationStatus/deletedAt come along so a trashed or
-            // unpublished sponsor can be filtered out below — a to-one relation
-            // takes no `where` in a select.
+            // one. publicationStatus left the identity for the participation
+            // (#129), so "published" now means published for THAT year, not any
+            // year — a sponsor in draft for 2019 must not surface on a 2019 card
+            // merely because it is published in 2026. A to-one relation takes no
+            // `where` in a select, hence the nested participation list here.
             sponsor: {
-              select: { slug: true, name: true, publicationStatus: true, deletedAt: true },
+              select: {
+                slug: true,
+                name: true,
+                deletedAt: true,
+                editions: { select: { editionId: true, publicationStatus: true } },
+              },
             },
           },
           orderBy: { edition: { year: "desc" } },
@@ -159,12 +167,16 @@ export default async function speakerRoutes(app: FastifyInstance) {
       participations: speaker.editions.map((link) => ({
         year: link.edition.year,
         isFeatured: link.isFeatured,
-        // The employer of that year (#353). Hidden unless the sponsor is itself
-        // published and out of the trash, like everywhere else on public pages.
-        sponsor:
-          link.sponsor && link.sponsor.publicationStatus === "PUBLISHED" && !link.sponsor.deletedAt
+        // The employer of that year (#353). Hidden unless the sponsor is out of
+        // the trash and published for THIS year specifically — not "published on
+        // any year" (#129 moved publicationStatus off the identity).
+        sponsor: (() => {
+          if (!link.sponsor || link.sponsor.deletedAt) return null;
+          const thatYear = link.sponsor.editions.find((e) => e.editionId === link.editionId);
+          return thatYear?.publicationStatus === "PUBLISHED"
             ? { slug: link.sponsor.slug, name: link.sponsor.name }
-            : null,
+            : null;
+        })(),
         talks: (byYear.get(link.edition.year) ?? []).map(({ edition, ...talk }) => talk),
       })),
     };

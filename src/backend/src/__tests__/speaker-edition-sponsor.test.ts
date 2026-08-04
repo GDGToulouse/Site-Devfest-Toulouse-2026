@@ -3,6 +3,7 @@ import Fastify from "fastify";
 
 import speakerRoutes from "../routes/speakers.js";
 import { prisma } from "../lib/prisma.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // #353 — the sponsor association moved from Speaker to SpeakerEdition. Working
 // for a sponsor is true of a given year, and Sponsor is edition-scoped itself,
@@ -59,15 +60,12 @@ async function makeSponsor(
   { publicationStatus }: { publicationStatus?: "DRAFT" | "PUBLISHED" } = {},
 ) {
   // Sponsor needs a tier; reuse whichever the catalogue already holds.
-  const tier = await prisma.sponsorTier.findFirstOrThrow();
-  const sponsor = await prisma.sponsor.create({
-    data: {
-      editionId,
-      tierId: tier.id,
-      name,
-      slug: `sponsor-${name.toLowerCase().replace(/\W+/g, "-")}-${uniq()}`,
-      publicationStatus: publicationStatus ?? "PUBLISHED",
-    },
+  const sponsor = await createSponsorFixture({
+    editionId,
+    tierId: await tierIdByKey("gold"),
+    name,
+    slug: `sponsor-${name.toLowerCase().replace(/\W+/g, "-")}-${uniq()}`,
+    publicationStatus: publicationStatus ?? "PUBLISHED",
   });
   createdSponsorIds.push(sponsor.id);
   return sponsor;
@@ -165,6 +163,39 @@ describe("Speaker sponsor per edition (#353)", () => {
     const res = await fetchSpeaker(person.slug);
 
     expect(res.json().participations[0].sponsor).toBeNull();
+  });
+
+  it("publishes per participation, not per identity — one sponsor, two years", async () => {
+    // The decision this task implements: `publicationStatus` left the identity
+    // for EditionSponsor (#129), so "published" means published for THAT
+    // year's participation. A wrong reading — e.g. "published on any year" —
+    // would leak this sponsor's name onto the draft year too.
+    const older = await makeEdition(1708);
+    const newer = await makeEdition(1709);
+    const tierId = await tierIdByKey("gold");
+
+    const sponsor = await createSponsorFixture({
+      name: "Mixed Status Sponsor",
+      slug: `mixed-status-sponsor-${uniq()}`,
+      editionId: older.id,
+      tierId,
+      publicationStatus: "DRAFT",
+    });
+    createdSponsorIds.push(sponsor.id);
+    await prisma.editionSponsor.create({
+      data: { sponsorId: sponsor.id, editionId: newer.id, tierId, publicationStatus: "PUBLISHED" },
+    });
+
+    const person = await makePerson("Mixed Status Employee", [
+      { editionId: older.id, sponsorId: sponsor.id },
+      { editionId: newer.id, sponsorId: sponsor.id },
+    ]);
+
+    const res = await fetchSpeaker(person.slug);
+
+    const participations = res.json().participations;
+    expect(participations.find((p: { year: number }) => p.year === 1708).sponsor).toBeNull();
+    expect(participations.find((p: { year: number }) => p.year === 1709).sponsor.name).toBe("Mixed Status Sponsor");
   });
 
   it("keeps the participation when the sponsor is deleted", async () => {

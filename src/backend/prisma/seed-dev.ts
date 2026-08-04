@@ -288,7 +288,11 @@ async function seedDev() {
       color: "#507BBD", logoScale: 0.5, rank: 10, jobOfferQuota: 1, allowsPromoIdeas: false,
     },
   ];
-  const sponsorTiers: Record<string, { id: number }> = {};
+  // Display attributes kept alongside the id: participations freeze them (#375).
+  const sponsorTiers: Record<
+    string,
+    { id: number; nameFr: string; nameEn: string; color: string; logoScale: number }
+  > = {};
   for (const t of TIER_CATALOG) {
     sponsorTiers[t.key] = await prisma.sponsorTier.upsert({
       where: { key: t.key },
@@ -321,7 +325,11 @@ async function seedDev() {
   // below: deleting them would wipe identities other editions still point at.
   // Only this edition's participations go; the identities are upserted by slug.
   await prisma.speakerEdition.deleteMany({ where: { editionId: edition.id } });
-  await prisma.sponsor.deleteMany({ where: { editionId: edition.id } });
+  // Sponsors are companies since #129, shared across editions like speakers
+  // above: deleting the identity would cascade-delete its participations in
+  // OTHER editions too. Only this edition's participation goes; the identity
+  // is upserted by slug.
+  await prisma.editionSponsor.deleteMany({ where: { editionId: edition.id } });
   // Categories are shared across editions since #338, so they are upserted by
   // name and merely re-bound to this edition rather than wiped and recreated —
   // deleting them would take other editions' bindings down with them.
@@ -484,11 +492,13 @@ async function seedDev() {
   };
 
   for (const s of DEMO_SPONSORS) {
-    await prisma.sponsor.create({
-      data: {
-        slug: s.slug,
+    // Upserted by slug, with the participation upserted separately (#129): the
+    // identity may already exist from another edition, only the participation
+    // is this year's — mirrors the speaker identity/participation split above.
+    const sponsor = await prisma.sponsor.upsert({
+      where: { slug: s.slug },
+      update: {
         name: s.name,
-        tierId: sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]].id,
         logoUrl: `/images/sponsors/${s.slug}.svg`,
         websiteUrl: s.websiteUrl,
         descriptionFr: s.descriptionFr,
@@ -499,9 +509,39 @@ async function seedDev() {
           github: `https://github.com/${s.slug}`,
         }),
         contactEmail: `contact@${s.slug}.example.com`,
-        publicationStatus: "PUBLISHED",
-        editionId: edition.id,
       },
+      create: {
+        slug: s.slug,
+        name: s.name,
+        logoUrl: `/images/sponsors/${s.slug}.svg`,
+        websiteUrl: s.websiteUrl,
+        descriptionFr: s.descriptionFr,
+        descriptionEn: s.descriptionEn,
+        socialLinks: JSON.stringify({
+          linkedin: `https://www.linkedin.com/company/${s.slug}`,
+          twitter: `https://x.com/${s.slug.replace(/-/g, "")}`,
+          github: `https://github.com/${s.slug}`,
+        }),
+        contactEmail: `contact@${s.slug}.example.com`,
+      },
+    });
+
+    // Freeze what this edition displays (#375), like the admin does on create:
+    // the demo data then exercises the archive path rather than the fallback.
+    const tier = sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]];
+    const frozen = {
+      logoUrl: `/images/sponsors/${s.slug}.svg`,
+      tierId: tier.id,
+      tierNameFr: tier.nameFr,
+      tierNameEn: tier.nameEn,
+      tierColor: tier.color,
+      tierLogoScale: tier.logoScale,
+      publicationStatus: "PUBLISHED" as const,
+    };
+    await prisma.editionSponsor.upsert({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition.id } },
+      update: frozen,
+      create: { sponsorId: sponsor.id, editionId: edition.id, ...frozen },
     });
   }
 
@@ -517,7 +557,7 @@ async function seedDev() {
   // The featured speaker below works for a sponsor, which exercises the
   // speaker↔sponsor link (RG-204/RG-226) — her company must match its name.
   const sponsorOfMarie = await prisma.sponsor.findFirstOrThrow({
-    where: { editionId: edition.id, slug: "garonne-digital" },
+    where: { slug: "garonne-digital" },
   });
 
   // Upserted by slug, with the participation nested (#351): the identity may

@@ -134,6 +134,11 @@ const T = {
     comKitOpenFile: "Voir le fichier",
     rejected:
       "Une valeur est invalide : les liens doivent commencer par http:// ou https://, et les textes rester sous 5 000 caractères.",
+    // Sent instead of "rejected" when a per-year field (kit com, idées
+    // Platinum) has no participation to attach to (#129) — the form must not
+    // be wiped, only this section's save is refused.
+    noCurrentParticipation:
+      "Votre entreprise ne sponsorise pas l'édition en cours : ces informations propres à l'édition ne peuvent pas être enregistrées.",
     errors: {
       invalid: "Ce lien de modification est invalide ou a été révoqué.",
       expired:
@@ -229,6 +234,8 @@ const T = {
     comKitOpenFile: "View file",
     rejected:
       "A value is invalid: links must start with http:// or https://, and text must stay under 5,000 characters.",
+    noCurrentParticipation:
+      "Your company does not sponsor the current edition: this edition-specific information cannot be saved.",
     errors: {
       invalid: "This modification link is invalid or has been revoked.",
       expired:

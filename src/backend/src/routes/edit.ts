@@ -3,6 +3,8 @@ import { prisma } from "../lib/prisma.js";
 import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
+import { notDeleted } from "../lib/admin-helpers.js";
+import { getFeaturedEdition } from "./editions.js";
 import {
   revalidateConferences,
   revalidateJobOffers,
@@ -306,32 +308,50 @@ async function resolveToken(token: string) {
 
   // Sponsors resolve through their contacts (#250): the token lives on a
   // SponsorContact, and the lock/send-date are per-contact. We flatten the
-  // contact's token fields onto the sponsor so the rest of the route (which
-  // reads entity.tier, entity.standContacts, entity.id, entity.editLinkLocked,
-  // …) keeps working unchanged, and expose contactId/contactEmail for the
+  // contact's token fields onto the sponsor identity so the rest of the route
+  // (which reads entity.id, entity.editLinkLocked, entity.standContacts, …)
+  // keeps working unchanged, and expose contactId/contactEmail for the
   // notification Reply-To.
   const contact = await prisma.sponsorContact.findUnique({
     where: { editToken: token },
-    include: {
-      sponsor: {
-        include: {
-          edition: { select: { startDate: true, endDate: true } },
-          // Tier drives the job-offer quota and the promo-ideas gating (#317).
-          tier: { select: { key: true, nameFr: true, nameEn: true, jobOfferQuota: true, allowsPromoIdeas: true } },
-          // Job offers the sponsor can manage from the link (#251).
-          jobOffers: { orderBy: { createdAt: "asc" } },
-        },
-      },
-    },
+    include: { sponsor: true },
   });
   if (contact) {
+    // Per-year fields live on the participation since #129 (RG-317/#252). A
+    // modification link edits the current edition: that is the year the
+    // sponsor was contacted about. No featured edition, or the company not
+    // sponsoring it, leaves `participation` null — see editingBlockedReason
+    // and the per-year field handling below.
+    const edition = await getFeaturedEdition();
+    const participation = edition
+      ? await prisma.editionSponsor.findFirst({
+          where: { sponsorId: contact.sponsor.id, editionId: edition.id, edition: notDeleted },
+          select: {
+            id: true,
+            // The logo this edition shows (#375) — what the form must edit.
+            logoUrl: true,
+            platinumPromoIdea: true,
+            platinumCoBuildIdea: true,
+            comKitReceived: true,
+            comKitLogoWebUrl: true,
+            comKitLogoPrintUrl: true,
+            comKitCharterUrl: true,
+            comKitNotes: true,
+            tier: { select: { key: true, nameFr: true, nameEn: true, jobOfferQuota: true, allowsPromoIdeas: true } },
+            jobOffers: { orderBy: { createdAt: "asc" } },
+          },
+        })
+      : null;
+
     const entity = {
       ...contact.sponsor,
+      edition: { startDate: edition?.startDate ?? null },
       editLinkLocked: contact.editLinkLocked,
       editTokenSentAt: contact.editTokenSentAt,
       contactId: contact.id,
       // The link recipient's own address wins over the sponsor's default.
       contactEmail: contact.email || contact.sponsor.contactEmail,
+      participation,
     };
     return { kind: "sponsor" as const, entity };
   }
@@ -457,6 +477,7 @@ export default async function editRoutes(app: FastifyInstance) {
     // Where the sponsor should email complements that don't fit as links (#271):
     // the sponsoring contact address, so the client can build a mailto: link.
     const sponsorContactEmail = (await getSponsorContactRecipients())[0];
+    const { participation } = entity;
     return {
       kind,
       locale,
@@ -465,7 +486,9 @@ export default async function editRoutes(app: FastifyInstance) {
         descriptionFr: entity.descriptionFr,
         descriptionEn: entity.descriptionEn,
         websiteUrl: entity.websiteUrl,
-        logoUrl: entity.logoUrl,
+        // The featured edition's logo (#375), falling back to the company's
+        // current one — the sponsor edits this year, not the archive.
+        logoUrl: participation?.logoUrl ?? entity.logoUrl,
         socialLinks: parseSocial(entity.socialLinks),
       },
       // Private fields (#249) — served to the token holder so they can edit
@@ -474,37 +497,41 @@ export default async function editRoutes(app: FastifyInstance) {
       private: {
         // The sponsoring tier: drives the promo-idea gating and the label shown
         // to the sponsor. Replaces the former legacy `level` string (#321).
-        tier: {
-          key: entity.tier.key,
-          nameFr: entity.tier.nameFr,
-          nameEn: entity.tier.nameEn,
-          allowsPromoIdeas: entity.tier.allowsPromoIdeas,
-        },
+        // No participation on the featured edition means no tier to show.
+        tier: participation
+          ? {
+              key: participation.tier.key,
+              nameFr: participation.tier.nameFr,
+              nameEn: participation.tier.nameEn,
+              allowsPromoIdeas: participation.tier.allowsPromoIdeas,
+            }
+          : null,
         standContacts: parseStandContacts(entity.standContacts),
-        comKitReceived: entity.comKitReceived,
-        comKitLogoWebUrl: entity.comKitLogoWebUrl,
-        comKitLogoPrintUrl: entity.comKitLogoPrintUrl,
-        comKitCharterUrl: entity.comKitCharterUrl,
-        comKitNotes: entity.comKitNotes,
+        comKitReceived: participation?.comKitReceived ?? false,
+        comKitLogoWebUrl: participation?.comKitLogoWebUrl ?? null,
+        comKitLogoPrintUrl: participation?.comKitLogoPrintUrl ?? null,
+        comKitCharterUrl: participation?.comKitCharterUrl ?? null,
+        comKitNotes: participation?.comKitNotes ?? null,
         // Promo-idea fields (#252). Sent for every sponsor; the UI shows them
         // only when the tier allows promo ideas.
-        platinumPromoIdea: entity.platinumPromoIdea,
-        platinumCoBuildIdea: entity.platinumCoBuildIdea,
+        platinumPromoIdea: participation?.platinumPromoIdea ?? null,
+        platinumCoBuildIdea: participation?.platinumCoBuildIdea ?? null,
         // Address the sponsor should email complements to (#271). The UI builds
         // a mailto: link from it — no server-side send for this case anymore.
         sponsorContactEmail,
       },
       // Job offers (#251): the sponsor's offers plus its tier quota, so the
-      // UI can disable "add" at the cap.
+      // UI can disable "add" at the cap. No participation this year means no
+      // offers to manage and no quota.
       jobOffers: {
-        items: entity.jobOffers.map((o) => ({
+        items: (participation?.jobOffers ?? []).map((o) => ({
           id: o.id,
           title: o.title,
           descriptionFr: o.descriptionFr,
           descriptionEn: o.descriptionEn,
           url: o.url,
         })),
-        quota: entity.tier.jobOfferQuota,
+        quota: participation?.tier.jobOfferQuota ?? 0,
       },
     };
   });
@@ -561,6 +588,28 @@ export default async function editRoutes(app: FastifyInstance) {
       revalidateSpeaker(entity.slug);
     } else {
       const body = request.body as SponsorEditBody;
+      const { participation } = entity;
+
+      // Per-year fields (#129): logoUrl, comKit* and platinum* live on the
+      // participation. Writing one with no participation on the featured
+      // edition has no year to land on — there is nothing sane to write to,
+      // and silently writing to last year's participation would be worse
+      // (#252, #249).
+      // logoUrl joined them in #375: what an edition displayed is frozen on its
+      // participation, so a new logo must not rewrite the years already past.
+      const writesYearField =
+        body.logoUrl !== undefined ||
+        body.comKitReceived !== undefined ||
+        body.comKitLogoWebUrl !== undefined ||
+        body.comKitLogoPrintUrl !== undefined ||
+        body.comKitCharterUrl !== undefined ||
+        body.comKitNotes !== undefined ||
+        body.platinumPromoIdea !== undefined ||
+        body.platinumCoBuildIdea !== undefined;
+      if (writesYearField && !participation) {
+        return reply.code(422).send({ error: "no_current_participation" });
+      }
+
       await prisma.sponsor.update({
         where: { id: entity.id },
         data: {
@@ -568,25 +617,46 @@ export default async function editRoutes(app: FastifyInstance) {
           ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
           ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
           ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
+          // The company's current logo tracks the latest one it sent (#375),
+          // so a future participation starts from it. What each edition shows
+          // is the copy frozen on its own participation, just below.
           ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
           ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
-          // Private fields (#249).
+          // Private field (#249) — stand staffing isn't per-year, stays on the identity.
           ...(body.standContacts !== undefined && { standContacts: cleanStandContacts(body.standContacts) }),
-          ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
-          ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
-          ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
-          ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
-          ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
-          // Promo-idea fields (#252): silently ignored for tiers that don't
-          // allow them, so the field can't be set by tampering with the payload.
-          ...(entity.tier.allowsPromoIdeas && body.platinumPromoIdea !== undefined && {
-            platinumPromoIdea: body.platinumPromoIdea || null,
-          }),
-          ...(entity.tier.allowsPromoIdeas && body.platinumCoBuildIdea !== undefined && {
-            platinumCoBuildIdea: body.platinumCoBuildIdea || null,
-          }),
         },
       });
+
+      // Skip the write entirely when no per-year field was sent: EditionSponsor
+      // has @updatedAt, so an empty `data: {}` would still bump the
+      // participation's timestamp — and cost a round-trip — on every
+      // identity-only save (description, logo, socials).
+      if (participation && writesYearField) {
+        await prisma.editionSponsor.update({
+          where: { id: participation.id },
+          data: {
+            // The logo this edition displays (#375). Editing is already
+            // confined to the featured edition, and isEditingFrozen closes it
+            // once the event starts — so past years cannot be rewritten.
+            ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
+            // Private per-year fields (#249).
+            ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
+            ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
+            ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
+            ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
+            ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
+            // Promo-idea fields (#252): silently ignored for tiers that don't
+            // allow them, so the field can't be set by tampering with the payload.
+            ...(participation.tier.allowsPromoIdeas && body.platinumPromoIdea !== undefined && {
+              platinumPromoIdea: body.platinumPromoIdea || null,
+            }),
+            ...(participation.tier.allowsPromoIdeas && body.platinumCoBuildIdea !== undefined && {
+              platinumCoBuildIdea: body.platinumCoBuildIdea || null,
+            }),
+          },
+        });
+      }
+
       // Only public-facing changes need cache revalidation; a private-only
       // save (com kit, stand contacts) changes nothing on the public pages.
       const touchesPublic =
@@ -717,20 +787,26 @@ export default async function editRoutes(app: FastifyInstance) {
       const blocked = editingBlockedReason(entity);
       if (blocked) return reply.code(403).send({ error: blocked });
 
+      // Job offers hang off this year's participation (#251, #129). No
+      // participation on the featured edition means no year to publish an
+      // offer for.
+      const { participation } = entity;
+      if (!participation) return reply.code(422).send({ error: "no_current_participation" });
+
       const { title, url } = request.body;
       if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
       if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
 
       // Quota is per tier (#251). Count what's already there; a lowered tier
       // keeps existing offers but blocks new ones beyond the new cap.
-      const quota = entity.tier.jobOfferQuota;
-      if (entity.jobOffers.length >= quota) {
+      const quota = participation.tier.jobOfferQuota;
+      if (participation.jobOffers.length >= quota) {
         return reply.code(409).send({ error: "quota_reached", quota });
       }
 
       const offer = await prisma.sponsorJobOffer.create({
         data: {
-          sponsorId: entity.id,
+          editionSponsorId: participation.id,
           title: title.trim(),
           descriptionFr: sanitizeRichHtml(request.body.descriptionFr),
           descriptionEn: sanitizeRichHtml(request.body.descriptionEn),
@@ -770,9 +846,9 @@ export default async function editRoutes(app: FastifyInstance) {
       const blocked = editingBlockedReason(entity);
       if (blocked) return reply.code(403).send({ error: blocked });
 
-      // Ownership: only offers already attached to this sponsor.
+      // Ownership: only offers already attached to this year's participation.
       const offerId = Number(request.params.offerId);
-      const offer = entity.jobOffers.find((o) => o.id === offerId);
+      const offer = entity.participation?.jobOffers.find((o) => o.id === offerId);
       if (!offer) return reply.code(404).send({ error: "offer_not_found" });
 
       const body = request.body;
@@ -815,7 +891,7 @@ export default async function editRoutes(app: FastifyInstance) {
       if (blocked) return reply.code(403).send({ error: blocked });
 
       const offerId = Number(request.params.offerId);
-      const offer = entity.jobOffers.find((o) => o.id === offerId);
+      const offer = entity.participation?.jobOffers.find((o) => o.id === offerId);
       if (!offer) return reply.code(404).send({ error: "offer_not_found" });
 
       await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });

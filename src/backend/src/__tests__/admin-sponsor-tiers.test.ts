@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { buildAdminApp } from "./test-admin-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { tierIdByKey } from "./sponsor-test-helpers.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // #318 — CRUD of the global sponsoring-tier catalogue. Teardown is scoped to the
 // rows this file created (its keys are prefixed so they never clash with the
@@ -144,8 +144,8 @@ describe("Admin Sponsor Tiers API (#318)", () => {
   it("refuses to delete a tier still used by a live sponsor (409)", async () => {
     const edition = await getSeededEdition();
     const { id } = (await createTier({ key: `used-${Date.now()}` })).json();
-    const sponsor = await prisma.sponsor.create({
-      data: { name: "Tier User", slug: `tier-user-${Date.now()}`, editionId: edition.id, tierId: id },
+    const sponsor = await createSponsorFixture({
+      name: "Tier User", slug: `tier-user-${Date.now()}`, editionId: edition.id, tierId: id,
     });
 
     const app = await buildAdminApp();

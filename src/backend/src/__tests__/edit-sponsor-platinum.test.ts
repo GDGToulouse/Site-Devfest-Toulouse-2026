@@ -45,9 +45,11 @@ describe("Sponsor Platinum promo content (#252)", () => {
     });
     expect(res.statusCode).toBe(200);
 
-    const sponsor = await prisma.sponsor.findUnique({ where: { id: platinumId } });
-    expect(sponsor?.platinumPromoIdea).toBe("Une vidéo produit");
-    expect(sponsor?.platinumCoBuildIdea).toBe("Un live technique");
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId: platinumId, editionId } },
+    });
+    expect(participation?.platinumPromoIdea).toBe("Une vidéo produit");
+    expect(participation?.platinumCoBuildIdea).toBe("Un live technique");
     await app.close();
   });
 
@@ -61,8 +63,10 @@ describe("Sponsor Platinum promo content (#252)", () => {
     // The request itself is valid (field is allowlisted); it's just not written.
     expect(res.statusCode).toBe(200);
 
-    const sponsor = await prisma.sponsor.findUnique({ where: { id: goldId } });
-    expect(sponsor?.platinumPromoIdea).toBeNull();
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId: goldId, editionId } },
+    });
+    expect(participation?.platinumPromoIdea).toBeNull();
     await app.close();
   });
 

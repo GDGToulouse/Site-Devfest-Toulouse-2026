@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
-import { slugify, uniqueSlug } from "../../lib/slug.js";
+import { slugify } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
@@ -14,10 +14,9 @@ interface StandContact {
   bluesky?: string;
 }
 
-interface SponsorCreateBody {
-  editionId: number;
+// Identity — shared across every edition the company sponsors.
+interface SponsorIdentityFields {
   name: string;
-  tierId: number;
   logoUrl?: string;
   websiteUrl?: string;
   descriptionFr?: string;
@@ -25,9 +24,15 @@ interface SponsorCreateBody {
   socialLinks?: Record<string, string>;
   contactEmail?: string;
   locale?: string;
-  publicationStatus?: "DRAFT" | "PUBLISHED";
   // Private fields (#249) — organizers only.
   standContacts?: StandContact[];
+}
+
+// Participation — bought or tracked for one edition (#129).
+interface SponsorParticipationFields {
+  tierId: number;
+  publicationStatus?: "DRAFT" | "PUBLISHED";
+  // Private fields (#249) — organizers only.
   comKitReceived?: boolean;
   comKitLogoWebUrl?: string;
   comKitLogoPrintUrl?: string;
@@ -37,7 +42,13 @@ interface SponsorCreateBody {
   platinumCoBuildIdea?: string;
 }
 
-type SponsorUpdateBody = Partial<Omit<SponsorCreateBody, "editionId">>;
+interface SponsorCreateBody extends SponsorIdentityFields, SponsorParticipationFields {
+  editionId: number;
+}
+
+// `editionId` says which participation the per-year fields target (defaults to
+// the most recent one when omitted).
+type SponsorUpdateBody = Partial<Omit<SponsorCreateBody, "editionId">> & { editionId?: number };
 
 interface SponsorIdParams {
   id: string;
@@ -51,17 +62,70 @@ interface SponsorBulkBody {
   ids: number[];
   action: "setStatus";
   value: "DRAFT" | "PUBLISHED";
+  editionId: number;
 }
 
+const TIER_SELECT = { id: true, key: true, nameFr: true, nameEn: true, rank: true } as const;
+
+interface ParticipationLike {
+  id: number;
+  publicationStatus: "DRAFT" | "PUBLISHED";
+  // Frozen per edition (#375) — absent from the queries that don't select it.
+  logoUrl?: string | null;
+  comKitReceived?: boolean;
+  comKitLogoWebUrl?: string | null;
+  comKitLogoPrintUrl?: string | null;
+  comKitCharterUrl?: string | null;
+  comKitNotes?: string | null;
+  platinumPromoIdea?: string | null;
+  platinumCoBuildIdea?: string | null;
+  editionId: number;
+  edition: { id: number; year: number };
+  tier: { id: number; key: string; nameFr: string; nameEn: string; rank: number };
+  jobOffers?: unknown[];
+}
+
+// Flatten identity + the participation the admin is looking at (the most
+// recent one, unless the list/detail query narrowed to a single edition) into
+// the shape the admin frontend already expects: flat `tier`, `tierId`,
+// `publicationStatus`, `edition`, `editionId`.
 function serialize(s: {
   socialLinks: string | null;
   standContacts?: string | null;
+  editions?: ParticipationLike[];
   [k: string]: unknown;
 }) {
+  const { editions, ...rest } = s;
+  const current = editions?.[0];
   return {
-    ...s,
+    ...rest,
     socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
     standContacts: s.standContacts ? JSON.parse(s.standContacts) : [],
+    ...(current && {
+      participationId: current.id,
+      editionId: current.editionId,
+      edition: current.edition,
+      tierId: current.tier.id,
+      tier: current.tier,
+      // The edition's own logo (#375) shadows the identity's, so the admin
+      // form edits the year it is looking at. Null until one is set.
+      ...(current.logoUrl !== undefined && { logoUrl: current.logoUrl ?? s.logoUrl }),
+      publicationStatus: current.publicationStatus,
+      comKitReceived: current.comKitReceived,
+      comKitLogoWebUrl: current.comKitLogoWebUrl,
+      comKitLogoPrintUrl: current.comKitLogoPrintUrl,
+      comKitCharterUrl: current.comKitCharterUrl,
+      comKitNotes: current.comKitNotes,
+      platinumPromoIdea: current.platinumPromoIdea,
+      platinumCoBuildIdea: current.platinumCoBuildIdea,
+      ...(current.jobOffers && { jobOffers: current.jobOffers }),
+    }),
+    editions: editions?.map((e) => ({
+      editionId: e.editionId,
+      edition: e.edition,
+      tier: e.tier,
+      publicationStatus: e.publicationStatus,
+    })),
   };
 }
 
@@ -72,18 +136,38 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       querystring: { type: "object", properties: { editionId: { type: "string" } } },
     },
   }, async (request) => {
-    const { editionId } = request.query;
+    const editionId = request.query.editionId ? Number(request.query.editionId) : undefined;
 
+    // One row per company (#129): the list moves onto the join, mirroring the
+    // admin speakers list. `editions` carries every participation so the row
+    // can flatten to the one the admin is looking at.
     const sponsors = await prisma.sponsor.findMany({
-      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
-      include: {
-        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
-        ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
+      where: {
+        ...notDeleted,
+        ...(editionId ? { editions: { some: { editionId } } } : {}),
       },
-      // Higher tier rank first (RG-221), then name.
-      orderBy: editionId
-        ? [{ tier: { rank: "desc" } }, { name: "asc" }]
-        : [{ edition: { year: "desc" } }, { tier: { rank: "desc" } }, { name: "asc" }],
+      include: {
+        editions: {
+          where: { ...(editionId ? { editionId } : {}), edition: notDeleted },
+          select: {
+            id: true,
+            publicationStatus: true,
+            logoUrl: true,
+            comKitReceived: true,
+            comKitLogoWebUrl: true,
+            comKitLogoPrintUrl: true,
+            comKitCharterUrl: true,
+            comKitNotes: true,
+            platinumPromoIdea: true,
+            platinumCoBuildIdea: true,
+            editionId: true,
+            edition: { select: { id: true, year: true } },
+            tier: { select: TIER_SELECT },
+          },
+          orderBy: { edition: { year: "desc" } },
+        },
+      },
+      orderBy: { name: "asc" },
     });
     return sponsors.map(serialize);
   });
@@ -97,10 +181,28 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const sponsor = await prisma.sponsor.findFirst({
       where: { id: Number(request.params.id), ...notDeleted },
       include: {
-        edition: { select: { id: true, year: true } },
-        tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } },
-        // Job offers for admin consultation/moderation (#251).
-        jobOffers: { orderBy: { createdAt: "asc" } },
+        editions: {
+          where: { edition: notDeleted },
+          select: {
+            id: true,
+            publicationStatus: true,
+            logoUrl: true,
+            comKitReceived: true,
+            comKitLogoWebUrl: true,
+            comKitLogoPrintUrl: true,
+            comKitCharterUrl: true,
+            comKitNotes: true,
+            platinumPromoIdea: true,
+            platinumCoBuildIdea: true,
+            editionId: true,
+            edition: { select: { id: true, year: true } },
+            tier: { select: TIER_SELECT },
+            // Job offers for admin consultation/moderation (#251), now per
+            // participation since they are dated by the year's tier quota.
+            jobOffers: { orderBy: { createdAt: "asc" } },
+          },
+          orderBy: { edition: { year: "desc" } },
+        },
       },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
@@ -114,32 +216,52 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     if (!body.editionId || !body.name?.trim() || !body.tierId) {
       return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
+    // The display attributes come along: the participation freezes them (#375)
+    // so renaming or recolouring the shared catalogue later leaves this
+    // edition's wall untouched.
     const tier = await prisma.sponsorTier.findFirst({
       where: { id: body.tierId, ...notDeleted },
-      select: { id: true },
+      select: { id: true, nameFr: true, nameEn: true, color: true, logoScale: true },
     });
     if (!tier) {
       return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
     }
 
-    // Build a slug unique within the edition. Deliberately NOT filtered on
-    // deletedAt: uniqueness is a database-wide constraint, so a trashed sponsor
-    // still owns its slug until purged. Parking frees the readable form, but a
-    // row keeping an unparked slug (restored, or trashed before #147) must still
-    // be counted or the create would collide.
-    const existing = await prisma.sponsor.findMany({
-      where: { editionId: body.editionId },
-      select: { slug: true },
-    });
-    const slug = uniqueSlug(slugify(body.name), new Set(existing.map((e) => e.slug)));
+    const slug = slugify(body.name);
+
+    // Globally unique since #129. A taken slug means the company already
+    // exists: offer to attach a participation rather than minting acme-2 and
+    // recreating the duplicates the model was changed to remove. Deliberately
+    // NOT filtered on deletedAt — a trashed company still owns its slug until
+    // purged.
+    const clash = await prisma.sponsor.findUnique({ where: { slug }, select: { id: true } });
+    if (clash) {
+      return reply.code(409).send({ error: "sponsor_exists", id: clash.id });
+    }
 
     const sponsor = await prisma.sponsor.create({
-      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
+      include: {
+        editions: {
+          select: {
+            id: true,
+            publicationStatus: true,
+            logoUrl: true,
+            comKitReceived: true,
+            comKitLogoWebUrl: true,
+            comKitLogoPrintUrl: true,
+            comKitCharterUrl: true,
+            comKitNotes: true,
+            platinumPromoIdea: true,
+            platinumCoBuildIdea: true,
+            editionId: true,
+            edition: { select: { id: true, year: true } },
+            tier: { select: TIER_SELECT },
+          },
+        },
+      },
       data: {
-        editionId: body.editionId,
         slug,
         name: body.name.trim(),
-        tierId: body.tierId,
         logoUrl: body.logoUrl || null,
         websiteUrl: body.websiteUrl || null,
         // Rich-text HTML (#270): sanitized on write, like article content.
@@ -148,16 +270,29 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         socialLinks: body.socialLinks ? JSON.stringify(body.socialLinks) : null,
         contactEmail: body.contactEmail || null,
         locale: normalizeLocale(body.locale),
-        publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
         // Private fields (#249).
         standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
-        comKitReceived: body.comKitReceived ?? false,
-        comKitLogoWebUrl: body.comKitLogoWebUrl || null,
-        comKitLogoPrintUrl: body.comKitLogoPrintUrl || null,
-        comKitCharterUrl: body.comKitCharterUrl || null,
-        comKitNotes: body.comKitNotes || null,
-        platinumPromoIdea: body.platinumPromoIdea || null,
-        platinumCoBuildIdea: body.platinumCoBuildIdea || null,
+        editions: {
+          create: [{
+            editionId: body.editionId,
+            tierId: body.tierId,
+            // Frozen for the archive (#375): the logo this edition shows, and
+            // the tier as it reads today.
+            logoUrl: body.logoUrl || null,
+            tierNameFr: tier.nameFr,
+            tierNameEn: tier.nameEn,
+            tierColor: tier.color,
+            tierLogoScale: tier.logoScale,
+            publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
+            comKitReceived: body.comKitReceived ?? false,
+            comKitLogoWebUrl: body.comKitLogoWebUrl || null,
+            comKitLogoPrintUrl: body.comKitLogoPrintUrl || null,
+            comKitCharterUrl: body.comKitCharterUrl || null,
+            comKitNotes: body.comKitNotes || null,
+            platinumPromoIdea: body.platinumPromoIdea || null,
+            platinumCoBuildIdea: body.platinumCoBuildIdea || null,
+          }],
+        },
       },
     });
 
@@ -172,25 +307,104 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       params: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
     },
   }, async (request, reply) => {
-    const { id } = request.params;
+    const id = Number(request.params.id);
     const body = request.body;
 
+    // Changing tier re-freezes the appearance (#375): the participation must
+    // show the tier it was actually moved to, not the one it left.
+    let tier = null;
     if (body.tierId !== undefined) {
-      const tier = await prisma.sponsorTier.findFirst({
+      tier = await prisma.sponsorTier.findFirst({
         where: { id: body.tierId, ...notDeleted },
-        select: { id: true },
+        select: { id: true, nameFr: true, nameEn: true, color: true, logoScale: true },
       });
       if (!tier) {
         return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
       }
     }
 
+    // Per-year fields need a participation to land on. Resolve it from
+    // `body.editionId`, falling back to the most recent one.
+    const participationFieldsSent =
+      body.tierId !== undefined ||
+      body.logoUrl !== undefined ||
+      body.publicationStatus !== undefined ||
+      body.comKitReceived !== undefined ||
+      body.comKitLogoWebUrl !== undefined ||
+      body.comKitLogoPrintUrl !== undefined ||
+      body.comKitCharterUrl !== undefined ||
+      body.comKitNotes !== undefined ||
+      body.platinumPromoIdea !== undefined ||
+      body.platinumCoBuildIdea !== undefined;
+
+    const target = participationFieldsSent
+      ? body.editionId
+        ? await prisma.editionSponsor.findUnique({
+            where: { sponsorId_editionId: { sponsorId: id, editionId: body.editionId } },
+            select: { id: true },
+          })
+        : await prisma.editionSponsor.findFirst({
+            where: { sponsorId: id },
+            orderBy: { edition: { year: "desc" } },
+            select: { id: true },
+          })
+      : null;
+
+    if (participationFieldsSent && !target) {
+      return reply.code(422).send({ error: "No participation found to update" });
+    }
+
+    if (target) {
+      await prisma.editionSponsor.update({
+        where: { id: target.id },
+        data: {
+          // Re-freeze the appearance alongside the tier itself (#375).
+          ...(tier && {
+            tierId: tier.id,
+            tierNameFr: tier.nameFr,
+            tierNameEn: tier.nameEn,
+            tierColor: tier.color,
+            tierLogoScale: tier.logoScale,
+          }),
+          // The logo this edition displays, kept off the other years.
+          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
+          ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
+          ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
+          ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
+          ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
+          ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
+          ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
+          ...(body.platinumPromoIdea !== undefined && { platinumPromoIdea: body.platinumPromoIdea || null }),
+          ...(body.platinumCoBuildIdea !== undefined && { platinumCoBuildIdea: body.platinumCoBuildIdea || null }),
+        },
+      });
+    }
+
     const sponsor = await prisma.sponsor.update({
-      where: { id: Number(id) },
-      include: { tier: { select: { key: true, nameFr: true, nameEn: true, rank: true } } },
+      where: { id },
+      include: {
+        editions: {
+          where: target ? { id: target.id } : {},
+          select: {
+            id: true,
+            publicationStatus: true,
+            logoUrl: true,
+            comKitReceived: true,
+            comKitLogoWebUrl: true,
+            comKitLogoPrintUrl: true,
+            comKitCharterUrl: true,
+            comKitNotes: true,
+            platinumPromoIdea: true,
+            platinumCoBuildIdea: true,
+            editionId: true,
+            edition: { select: { id: true, year: true } },
+            tier: { select: TIER_SELECT },
+          },
+          orderBy: { edition: { year: "desc" } },
+        },
+      },
       data: {
         ...(body.name !== undefined && { name: body.name.trim() }),
-        ...(body.tierId !== undefined && { tierId: body.tierId }),
         ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
         ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
         // Rich-text HTML (#270): sanitized on write, like article content.
@@ -201,18 +415,10 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         }),
         ...(body.contactEmail !== undefined && { contactEmail: body.contactEmail || null }),
         ...(body.locale !== undefined && { locale: normalizeLocale(body.locale) }),
-        ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
         // Private fields (#249).
         ...(body.standContacts !== undefined && {
           standContacts: body.standContacts?.length ? JSON.stringify(body.standContacts) : null,
         }),
-        ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
-        ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
-        ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
-        ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
-        ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
-        ...(body.platinumPromoIdea !== undefined && { platinumPromoIdea: body.platinumPromoIdea || null }),
-        ...(body.platinumCoBuildIdea !== undefined && { platinumCoBuildIdea: body.platinumCoBuildIdea || null }),
       },
     });
 
@@ -225,16 +431,22 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
 
   // POST /api/admin/sponsors/bulk — apply one action to several sponsors at once.
   app.post<{ Body: SponsorBulkBody }>("/sponsors/bulk", async (request, reply) => {
-    const { ids, action, value } = request.body;
+    const { ids, action, value, editionId } = request.body;
     if (!Array.isArray(ids) || ids.length === 0 || !ids.every((id) => Number.isInteger(id))) {
       return reply.code(400).send({ error: "ids must be a non-empty array of integers" });
     }
     if (action !== "setStatus" || (value !== "DRAFT" && value !== "PUBLISHED")) {
       return reply.code(400).send({ error: "unsupported action or value" });
     }
+    // publicationStatus now lives on the participation (#129): require the
+    // edition so the action cannot silently touch a year the admin isn't
+    // looking at (the guard #351 established for speakers).
+    if (!editionId) {
+      return reply.code(400).send({ error: "editionId is required: status is per edition" });
+    }
 
-    const { count } = await prisma.sponsor.updateMany({
-      where: { id: { in: ids }, ...notDeleted },
+    const { count } = await prisma.editionSponsor.updateMany({
+      where: { sponsorId: { in: ids }, editionId, sponsor: notDeleted },
       data: { publicationStatus: value },
     });
     revalidateSponsors();
@@ -252,9 +464,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const sponsor = await prisma.sponsor.findFirst({ where: { id: sponsorId, ...notDeleted } });
     if (!sponsor) return notFound(reply, "Sponsor");
 
-    // The slug is unique per edition and a trashed row keeps its slot, so park
-    // it out of the live namespace — otherwise re-creating a sponsor under the
-    // same name would hit the constraint (#146).
+    // The slug is globally unique (#129) and a trashed row keeps its slot, so
+    // park it out of the live namespace — otherwise re-creating a sponsor
+    // under the same name would hit the constraint (#146).
     await prisma.sponsor.update({
       where: { id: sponsorId },
       data: { ...softDeleteData(), slug: parkUniqueValue(sponsor.slug, sponsorId) },
@@ -265,6 +477,50 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     revalidateSponsor(sponsor.slug);
     return reply.code(204).send();
   });
+
+  // POST /api/admin/sponsors/:id/editions — attach a participation (#129).
+  app.post<{ Params: SponsorIdParams; Body: { editionId: number; tierId: number } }>(
+    "/sponsors/:id/editions",
+    { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
+    async (request, reply) => {
+      const sponsorId = Number(request.params.id);
+      const { editionId, tierId } = request.body;
+      if (!editionId || !tierId) {
+        return reply.code(400).send({ error: "editionId and tierId are required" });
+      }
+      const participation = await prisma.editionSponsor.upsert({
+        where: { sponsorId_editionId: { sponsorId, editionId } },
+        create: { sponsorId, editionId, tierId, publicationStatus: "DRAFT" },
+        update: { tierId },
+        select: { id: true, editionId: true, tierId: true, publicationStatus: true },
+      });
+      revalidateSponsors();
+      return participation;
+    },
+  );
+
+  // DELETE /api/admin/sponsors/:id/editions/:editionId — detach a participation.
+  // The company itself survives: the trash operates on the identity.
+  app.delete<{ Params: SponsorIdParams & { editionId: string } }>(
+    "/sponsors/:id/editions/:editionId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["id", "editionId"],
+          properties: { id: { type: "string" }, editionId: { type: "string" } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { count } = await prisma.editionSponsor.deleteMany({
+        where: { sponsorId: Number(request.params.id), editionId: Number(request.params.editionId) },
+      });
+      if (!count) return notFound(reply, "Participation not found");
+      revalidateSponsors();
+      return reply.code(204).send();
+    },
+  );
 
   // A sponsor can have several contacts, each with its own modification link
   // (#250). The token itself is never returned to the admin — only whether a
@@ -395,12 +651,17 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   );
 
   // DELETE /api/admin/sponsors/:id/job-offers/:offerId — moderate an offer (#251).
+  // Job offers hang off the participation now (#129), not the identity
+  // directly, so ownership is checked through `editionSponsor.sponsorId`.
   app.delete<{ Params: SponsorIdParams & { offerId: string } }>(
     "/sponsors/:id/job-offers/:offerId",
     { schema: { params: { type: "object", required: ["id", "offerId"], properties: { id: { type: "string" }, offerId: { type: "string" } } } } },
     async (request, reply) => {
-      const offer = await prisma.sponsorJobOffer.findUnique({ where: { id: Number(request.params.offerId) } });
-      if (!offer || offer.sponsorId !== Number(request.params.id)) {
+      const offer = await prisma.sponsorJobOffer.findUnique({
+        where: { id: Number(request.params.offerId) },
+        include: { editionSponsor: { select: { sponsorId: true } } },
+      });
+      if (!offer || offer.editionSponsor.sponsorId !== Number(request.params.id)) {
         return reply.code(404).send({ error: "Offer not found" });
       }
       await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });

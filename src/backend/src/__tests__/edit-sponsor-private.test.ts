@@ -46,13 +46,36 @@ describe("Sponsor private section (#249)", () => {
     expect(res.statusCode).toBe(200);
 
     const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
-    expect(sponsor?.comKitReceived).toBe(true);
-    expect(sponsor?.comKitLogoWebUrl).toBe("https://example.org/logo-web.png");
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId, editionId } },
+    });
+    expect(participation?.comKitReceived).toBe(true);
+    expect(participation?.comKitLogoWebUrl).toBe("https://example.org/logo-web.png");
     // The empty contact row is dropped; only Alice remains.
     const stand = JSON.parse(sponsor?.standContacts ?? "[]");
     expect(stand).toHaveLength(1);
     expect(stand[0].name).toBe("Alice");
     await app.close();
+  });
+
+  // #375 — a new logo belongs to the edition being edited. It also refreshes
+  // the company's current logo, so a later participation starts from it.
+  it("writes the logo onto the participation and the identity", async () => {
+    const app = await buildEditApp();
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/edit/${TOKEN}`,
+      payload: { logoUrl: "https://example.org/logo-2026.png" },
+    });
+    expect(res.statusCode).toBe(200);
+    await app.close();
+
+    const participation = await prisma.editionSponsor.findUnique({
+      where: { sponsorId_editionId: { sponsorId, editionId } },
+    });
+    const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
+    expect(participation?.logoUrl).toBe("https://example.org/logo-2026.png");
+    expect(sponsor?.logoUrl).toBe("https://example.org/logo-2026.png");
   });
 
   it("returns the private block to the token holder (GET)", async () => {

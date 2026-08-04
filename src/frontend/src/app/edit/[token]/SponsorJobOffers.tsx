@@ -33,6 +33,7 @@ interface Labels {
   jobOfferQuotaReached: string;
   jobOfferSaved: string;
   jobOfferRejected: string;
+  noCurrentParticipation: string;
 }
 
 const inputClass =
@@ -178,6 +179,10 @@ function OfferRow({
       return;
     }
     if (res.status === 409) setError(t.jobOfferQuotaReached);
+    // No participation on the featured edition (#129): only a new offer (POST)
+    // can hit this — an existing offer's PUT is ownership-checked against the
+    // current participation and would 404 first, never 422.
+    else if (res.status === 422) setError(t.noCurrentParticipation);
     else setError(t.jobOfferRejected);
   }
 

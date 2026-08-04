@@ -3,7 +3,7 @@ import { buildEditApp } from "./test-edit-app.js";
 import { buildPublicApp } from "./test-public-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
+import { createSponsorFixture, createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Sponsor job offers (#251): CRUD via the magic link, quota per level, HTML
 // sanitized, exposed publicly.
@@ -78,7 +78,11 @@ describe("Sponsor job offers (#251)", () => {
   it("rejects an unsafe URL", async () => {
     const app = await buildEditApp();
     // Delete one first so quota isn't the blocker.
-    const offer = await prisma.sponsorJobOffer.findFirst({ where: { sponsorId: goldSponsorId } });
+    const participation = await prisma.editionSponsor.findUniqueOrThrow({
+      where: { sponsorId_editionId: { sponsorId: goldSponsorId, editionId } },
+      select: { id: true },
+    });
+    const offer = await prisma.sponsorJobOffer.findFirst({ where: { editionSponsorId: participation.id } });
     await prisma.sponsorJobOffer.delete({ where: { id: offer!.id } });
 
     const res = await app.inject({
@@ -91,11 +95,15 @@ describe("Sponsor job offers (#251)", () => {
   });
 
   it("only edits offers belonging to the token's sponsor", async () => {
-    const other = await prisma.sponsor.create({
-      data: { name: "Other", slug: `offers-other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
+    const other = await createSponsorFixture({
+      name: "Other", slug: `offers-other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
+    });
+    const otherParticipation = await prisma.editionSponsor.findUniqueOrThrow({
+      where: { sponsorId_editionId: { sponsorId: other.id, editionId } },
+      select: { id: true },
     });
     const foreignOffer = await prisma.sponsorJobOffer.create({
-      data: { sponsorId: other.id, title: "Foreign", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
+      data: { editionSponsorId: otherParticipation.id, title: "Foreign", descriptionFr: "", descriptionEn: "", url: "https://x.org" },
     });
     const app = await buildEditApp();
     const res = await app.inject({

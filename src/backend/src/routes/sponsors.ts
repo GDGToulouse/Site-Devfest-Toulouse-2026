@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { archivedLogoUrl, archivedTier } from "../lib/sponsor-archive.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -21,88 +22,103 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
-    const sponsors = await prisma.sponsor.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
-      include: { tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } } },
+    // Since #129 the tier is bought per edition, so the query moves onto the
+    // participation join rather than the sponsor identity.
+    const links = await prisma.editionSponsor.findMany({
+      where: { editionId: edition.id, publicationStatus: "PUBLISHED", sponsor: notDeleted },
+      include: {
+        sponsor: { select: { id: true, slug: true, name: true, logoUrl: true, websiteUrl: true } },
+        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+      },
     });
 
-    return sponsors
-      .map((s) => ({
-        id: s.id,
-        slug: s.slug,
-        name: s.name,
-        logoUrl: s.logoUrl,
-        tier: {
-          key: s.tier.key,
-          rank: s.tier.rank,
-          nameFr: s.tier.nameFr,
-          nameEn: s.tier.nameEn,
-          logoScale: s.tier.logoScale,
-          color: s.tier.color,
-        },
-        websiteUrl: s.websiteUrl,
+    return links
+      .map((link) => ({
+        id: link.sponsor.id,
+        slug: link.sponsor.slug,
+        name: link.sponsor.name,
+        // Frozen per edition (#375) so the wall keeps showing what this year
+        // displayed, whatever the company or the catalogue does later.
+        logoUrl: archivedLogoUrl(link, link.sponsor),
+        tier: archivedTier(link),
+        websiteUrl: link.sponsor.websiteUrl,
       }))
       // Higher rank = more prominent (RG-221), so sort descending.
       .sort((a, b) => (b.tier.rank - a.tier.rank) || a.name.localeCompare(b.name));
   });
 
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).
+  // Since #129 the company page exists independently of the featured edition:
+  // any sponsor with at least one published participation resolves, and the
+  // featured edition only drives the highlight (tier + live job offers).
   app.get<{ Params: { slug: string } }>("/sponsors/:slug", {
     schema: {
       params: { type: "object", required: ["slug"], properties: { slug: { type: "string" } } },
     },
   }, async (request, reply) => {
-    const edition = await getFeaturedEdition();
-    if (!edition) return reply.status(404).send({ error: "No edition found" });
-
+    // The company, by global slug (#129). No featured-edition scope: a company
+    // page exists independently of whether it sponsors the current year.
     const sponsor = await prisma.sponsor.findFirst({
       where: {
-        editionId: edition.id,
         slug: request.params.slug,
-        publicationStatus: "PUBLISHED",
         ...notDeleted,
+        editions: { some: { publicationStatus: "PUBLISHED", edition: notDeleted } },
       },
       include: {
-        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
         // Nested reads need their own filter: a query extension would not reach
-        // them (Prisma applies those to the top-level operation only), and a
-        // trashed speaker would otherwise still show up on a live sponsor page.
-        // Participations since #353, so the association is already dated: no
-        // need to re-scope on the edition, the join row *is* the year. Still
-        // filtered on the publication of that participation and on the person
-        // not being in the trash.
+        // them (Prisma applies those to the top-level operation only).
+        //
+        // `edition: notDeleted` is required here since #352: the route used to
+        // resolve getFeaturedEdition(), which already filtered the trash. Now
+        // that it spans every year, a trashed edition would resurface.
+        editions: {
+          where: { publicationStatus: "PUBLISHED", edition: notDeleted },
+          select: {
+            editionId: true,
+            edition: { select: { year: true } },
+            tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+            // What this edition displayed (#375), preferred over the live values.
+            logoUrl: true,
+            tierNameFr: true,
+            tierNameEn: true,
+            tierColor: true,
+            tierLogoScale: true,
+            jobOffers: {
+              select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
+              orderBy: { createdAt: "asc" },
+            },
+          },
+          orderBy: { edition: { year: "desc" } },
+        },
         speakers: {
           where: { publicationStatus: "PUBLISHED", speaker: notDeleted },
-          select: {
-            speaker: { select: { slug: true, name: true, photoUrl: true, company: true } },
-          },
+          select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
           orderBy: { speaker: { name: "asc" } },
-        },
-        jobOffers: {
-          select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
-          orderBy: { createdAt: "asc" },
         },
       },
     });
 
     if (!sponsor) return reply.status(404).send({ error: "Sponsor not found" });
 
+    // The featured edition is resolved separately and drives the highlight only.
+    // Past years are tags: no tier, no offers (spec — "no past offer is ever
+    // shown", so there is no edition to choose when filtering).
+    const edition = await getFeaturedEdition();
+    const current = edition ? sponsor.editions.find((e) => e.editionId === edition.id) : undefined;
+
+    // As the featured edition displayed it (#375), not as the catalogue reads
+    // today. The logo below stays the identity's: this is the company's page,
+    // so it shows the company as it is now — the archive lives on the wall.
+    const tier = current ? archivedTier(current) : null;
     // Offers disappear one month after the event (#251).
-    const jobOffers = areOffersVisible(edition) ? sponsor.jobOffers : [];
+    const jobOffers = current && edition && areOffersVisible(edition) ? current.jobOffers : [];
 
     return {
       id: sponsor.id,
       slug: sponsor.slug,
       name: sponsor.name,
       logoUrl: sponsor.logoUrl,
-      tier: {
-        key: sponsor.tier.key,
-        rank: sponsor.tier.rank,
-        nameFr: sponsor.tier.nameFr,
-        nameEn: sponsor.tier.nameEn,
-        logoScale: sponsor.tier.logoScale,
-        color: sponsor.tier.color,
-      },
+      tier,
       websiteUrl: sponsor.websiteUrl,
       descriptionFr: sponsor.descriptionFr,
       descriptionEn: sponsor.descriptionEn,
@@ -110,6 +126,8 @@ export default async function sponsorRoutes(app: FastifyInstance) {
       // Projected back to the pre-#353 shape: the payload must not change.
       speakers: sponsor.speakers.map((link) => link.speaker),
       jobOffers,
+      // Year tags (#129), newest first. The frontend links them to /editions/<year>.
+      editions: sponsor.editions.map((e) => e.edition.year),
     };
   });
 
@@ -123,23 +141,35 @@ export default async function sponsorRoutes(app: FastifyInstance) {
 
     const sponsors = await prisma.sponsor.findMany({
       where: {
-        editionId: edition.id,
-        publicationStatus: "PUBLISHED",
         ...notDeleted,
-        jobOffers: { some: {} },
+        editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED", jobOffers: { some: {} } } },
       },
       select: {
         slug: true,
         name: true,
         logoUrl: true,
-        jobOffers: {
-          select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
-          orderBy: { createdAt: "asc" },
+        editions: {
+          where: { editionId: edition.id },
+          select: {
+            logoUrl: true,
+            jobOffers: {
+              select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
+              orderBy: { createdAt: "asc" },
+            },
+          },
         },
       },
       orderBy: { name: "asc" },
     });
 
-    return sponsors;
+    // Flatten so the emitted shape stays a flat jobOffers array per sponsor,
+    // unchanged despite the query now going through the participation join.
+    return sponsors.map((s) => ({
+      slug: s.slug,
+      name: s.name,
+      // The where above pins editions to the featured one, so at most one row.
+      logoUrl: s.editions[0] ? archivedLogoUrl(s.editions[0], s) : s.logoUrl,
+      jobOffers: s.editions.flatMap((e) => e.jobOffers),
+    }));
   });
 }

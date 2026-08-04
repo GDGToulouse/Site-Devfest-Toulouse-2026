@@ -298,15 +298,18 @@ export default async function editionRoutes(app: FastifyInstance) {
         prisma.speakerEdition.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
         }),
+        // Since #129 the tier is bought per edition, so the count moves onto the
+        // participation join rather than the sponsor identity.
         prisma.sponsor.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+          where: { ...notDeleted, editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } } },
         }),
         // Offers of published sponsors only — same set the recap page lists.
-        // SponsorJobOffer itself is out of the trash's scope, but its sponsor is
-        // not: offers of a trashed sponsor must stop counting.
+        // SponsorJobOffer now points at the participation (#129); the sponsor's
+        // trash status still has to be checked explicitly since the join row
+        // itself carries no deletedAt.
         prisma.sponsorJobOffer.count({
           where: {
-            sponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+            editionSponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", sponsor: notDeleted },
           },
         }),
       ]);
