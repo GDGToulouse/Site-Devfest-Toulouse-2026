@@ -254,6 +254,12 @@ export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
 }
 
+// Sponsors of a past edition (#370). Same payload as getSponsors() — the values
+// are frozen per edition (#375) — so both feed the same SponsorWall.
+export async function getEditionSponsors(year: number): Promise<SponsorPublic[]> {
+  return (await fetchAPI<SponsorPublic[]>(`/api/editions/${year}/sponsors`)) || [];
+}
+
 // Detail of one past talk (#343). Scoped by year: slugs are unique per edition,
 // and `/api/talks/:slug` would answer 404 outside the featured one.
 export async function getEditionTalkBySlug(

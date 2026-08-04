@@ -218,6 +218,7 @@
     "nextEdition": "Next edition",
     "speakers": "Speakers ({count})",
     "sessions": "Talks ({count})",
+    "sponsors": "Partners ({count})",
     "replay": "Watch",
     "allNews": "See all news"
   },

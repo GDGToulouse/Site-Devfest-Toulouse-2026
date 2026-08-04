@@ -3,7 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
-import { archivedLogoUrl, archivedTier } from "../lib/sponsor-archive.js";
+import { archivedLogoUrl, archivedTier, getEditionSponsorWall } from "../lib/sponsor-archive.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -22,29 +22,9 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     const edition = await getFeaturedEdition();
     if (!edition) return reply.status(404).send({ error: "No edition found" });
 
-    // Since #129 the tier is bought per edition, so the query moves onto the
-    // participation join rather than the sponsor identity.
-    const links = await prisma.editionSponsor.findMany({
-      where: { editionId: edition.id, publicationStatus: "PUBLISHED", sponsor: notDeleted },
-      include: {
-        sponsor: { select: { id: true, slug: true, name: true, logoUrl: true, websiteUrl: true } },
-        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
-      },
-    });
-
-    return links
-      .map((link) => ({
-        id: link.sponsor.id,
-        slug: link.sponsor.slug,
-        name: link.sponsor.name,
-        // Frozen per edition (#375) so the wall keeps showing what this year
-        // displayed, whatever the company or the catalogue does later.
-        logoUrl: archivedLogoUrl(link, link.sponsor),
-        tier: archivedTier(link),
-        websiteUrl: link.sponsor.websiteUrl,
-      }))
-      // Higher rank = more prominent (RG-221), so sort descending.
-      .sort((a, b) => (b.tier.rank - a.tier.rank) || a.name.localeCompare(b.name));
+    // Shared with /api/editions/:year/sponsors (#370): same wall, same frozen
+    // values (#375), only the edition resolved differs.
+    return getEditionSponsorWall(edition.id);
   });
 
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).

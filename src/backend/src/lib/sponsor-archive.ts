@@ -1,3 +1,6 @@
+import { prisma } from "./prisma.js";
+import { notDeleted } from "./admin-helpers.js";
+
 // What a sponsor looked like on a given edition (#375).
 //
 // #129 made Sponsor a company identity shared across editions, which moved the
@@ -36,6 +39,32 @@ export function archivedLogoUrl(
   sponsor: { logoUrl: string | null },
 ): string | null {
   return participation.logoUrl ?? sponsor.logoUrl;
+}
+
+// The published sponsor wall of one edition, as that edition displayed it.
+// Serves both /api/sponsors (featured edition) and /api/editions/:year/sponsors
+// (#370) — same payload, so the public page and the archive grid share one
+// component and one type; only the edition they resolve differs.
+export async function getEditionSponsorWall(editionId: number) {
+  const links = await prisma.editionSponsor.findMany({
+    where: { editionId, publicationStatus: "PUBLISHED", sponsor: notDeleted },
+    include: {
+      sponsor: { select: { id: true, slug: true, name: true, logoUrl: true, websiteUrl: true } },
+      tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+    },
+  });
+
+  return links
+    .map((link) => ({
+      id: link.sponsor.id,
+      slug: link.sponsor.slug,
+      name: link.sponsor.name,
+      logoUrl: archivedLogoUrl(link, link.sponsor),
+      tier: archivedTier(link),
+      websiteUrl: link.sponsor.websiteUrl,
+    }))
+    // Higher rank = more prominent (RG-221), so sort descending.
+    .sort((a, b) => (b.tier.rank - a.tier.rank) || a.name.localeCompare(b.name));
 }
 
 // The tier as this edition displayed it. `key` and `rank` are never frozen:
