@@ -488,10 +488,33 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       if (!editionId || !tierId) {
         return reply.code(400).send({ error: "editionId and tierId are required" });
       }
+      // Same freeze as on create (#375): a participation attached here must
+      // carry the tier's appearance too, or renaming the shared catalogue
+      // later would repaint this edition. The logo comes from the identity,
+      // which is all this company has at this point.
+      const sponsor = await prisma.sponsor.findFirst({
+        where: { id: sponsorId, ...notDeleted },
+        select: { logoUrl: true },
+      });
+      if (!sponsor) return notFound(reply, "Sponsor");
+
+      const tier = await prisma.sponsorTier.findFirst({
+        where: { id: tierId, ...notDeleted },
+        select: { id: true, nameFr: true, nameEn: true, color: true, logoScale: true },
+      });
+      if (!tier) return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
+
+      const frozen = {
+        tierId: tier.id,
+        tierNameFr: tier.nameFr,
+        tierNameEn: tier.nameEn,
+        tierColor: tier.color,
+        tierLogoScale: tier.logoScale,
+      };
       const participation = await prisma.editionSponsor.upsert({
         where: { sponsorId_editionId: { sponsorId, editionId } },
-        create: { sponsorId, editionId, tierId, publicationStatus: "DRAFT" },
-        update: { tierId },
+        create: { sponsorId, editionId, ...frozen, logoUrl: sponsor.logoUrl, publicationStatus: "DRAFT" },
+        update: frozen,
         select: { id: true, editionId: true, tierId: true, publicationStatus: true },
       });
       revalidateSponsors();

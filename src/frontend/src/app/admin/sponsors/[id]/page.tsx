@@ -6,6 +6,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
 import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
+import SponsorEditions from "@/components/admin/sponsors/SponsorEditions";
 import SponsorForm, { emptySponsorForm, type SponsorFormValue } from "@/components/admin/sponsors/SponsorForm";
 
 interface SponsorData extends Sponsor {
@@ -28,6 +29,8 @@ export default function SponsorEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set when the chosen name belongs to a company already in base (#389).
+  const [existingSponsorId, setExistingSponsorId] = useState<number | null>(null);
 
   // The tier catalogue drives the "Niveau" <select> and the promo-idea gating.
   useEffect(() => {
@@ -116,8 +119,16 @@ export default function SponsorEditorPage() {
     };
 
     if (isNew) {
-      const { data, status } = await adminFetch<{ id: number }>("/sponsors", { method: "POST", body: JSON.stringify(payload) });
+      const { data, status, errorBody } = await adminFetch<{ id: number }>("/sponsors", { method: "POST", body: JSON.stringify(payload) });
       setIsSaving(false);
+      // The slug is global since #129, so a taken name means the company is
+      // already there — offer to attach it to the chosen edition rather than
+      // leaving the editor at a dead end (#389).
+      if (status === 409 && typeof errorBody?.id === "number") {
+        setExistingSponsorId(errorBody.id);
+        setError(null);
+        return;
+      }
       if (status >= 400 || !data) {
         setError("Échec de la création.");
         return;
@@ -131,6 +142,23 @@ export default function SponsorEditorPage() {
         return;
       }
       router.push("/admin/sponsors");
+    }
+  }
+
+  // Attach the existing company to the edition picked above, then open its
+  // sheet where the other participations are managed.
+  async function attachExisting() {
+    if (!existingSponsorId || !editionId || !form.tierId) return;
+    setIsSaving(true);
+    const { status } = await adminFetch(`/sponsors/${existingSponsorId}/editions`, {
+      method: "POST",
+      body: JSON.stringify({ editionId, tierId: form.tierId }),
+    });
+    setIsSaving(false);
+    if (status === 200 || status === 201) {
+      router.push(`/admin/sponsors/${existingSponsorId}`);
+    } else {
+      setError("Échec du rattachement.");
     }
   }
 
@@ -160,12 +188,58 @@ export default function SponsorEditorPage() {
             </select>
           </label>
         ) : (
-          <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
+          // The form edits the participation of this year; the other years are
+          // managed just below (#389).
+          <p className="text-sm text-gris">
+            Édition en cours d&apos;édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span>
+          </p>
         )}
 
-        <SponsorForm value={form} onChange={setForm} tiers={tiers} />
+        <SponsorForm
+          value={form}
+          // Editing the name invalidates the "already exists" notice: it was
+          // about the previous one (#389).
+          onChange={(next) => {
+            if (next.name !== form.name) setExistingSponsorId(null);
+            setForm(next);
+          }}
+          tiers={tiers}
+        />
+
+        {!isNew && current && <SponsorEditions sponsorId={current.id} tiers={tiers} />}
 
         {!isNew && current && <SponsorContacts sponsorId={current.id} />}
+
+        {existingSponsorId !== null && (
+          <div className="rounded-lg border border-orange/40 bg-orange/10 p-3 text-sm text-noir">
+            <p>
+              <span className="font-medium">{form.name.trim()}</span>{" "}
+              existe déjà. Une entreprise n&apos;est saisie qu&apos;une fois : rattachez-la à
+              l&apos;édition{" "}
+              <span className="font-medium">
+                {editions.find((e) => e.id === editionId)?.year ?? "sélectionnée"}
+              </span>{" "}
+              plutôt que de la recréer.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={attachExisting}
+                disabled={isSaving}
+                className="rounded-lg bg-malachite px-3 py-2 text-sm font-medium text-blanc hover:bg-malachite/90 disabled:opacity-50"
+              >
+                Rattacher à cette édition
+              </button>
+              <button
+                type="button"
+                onClick={() => router.push(`/admin/sponsors/${existingSponsorId}`)}
+                className="text-sm font-medium text-noir hover:underline"
+              >
+                Ouvrir la fiche existante
+              </button>
+            </div>
+          </div>
+        )}
 
         {error && <p className="text-sm text-terre-cuite">{error}</p>}
 

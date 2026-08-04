@@ -11,7 +11,7 @@ interface AdminUser {
 export async function adminFetch<T>(
   path: string,
   options: RequestInit = {},
-): Promise<{ data: T | null; status: number; error?: string }> {
+): Promise<{ data: T | null; status: number; error?: string; errorBody?: Record<string, unknown> }> {
   try {
     const headers: Record<string, string> = {};
     if (options.body && !(options.body instanceof FormData)) {
@@ -37,7 +37,15 @@ export async function adminFetch<T>(
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       const error = body?.error || body?.message;
-      return { data: null, status: res.status, ...(error ? { error } : {}) };
+      // Some errors carry more than a message: the 409 on a taken sponsor slug
+      // returns the existing company's id, which the caller offers to attach
+      // rather than leaving the editor stuck (#389).
+      return {
+        data: null,
+        status: res.status,
+        ...(error ? { error } : {}),
+        ...(body && typeof body === "object" ? { errorBody: body as Record<string, unknown> } : {}),
+      };
     }
 
     // 204 No Content (e.g. a DELETE) has an empty body: res.json() would throw
