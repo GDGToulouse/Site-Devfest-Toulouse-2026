@@ -218,6 +218,7 @@
     "nextEdition": "Édition suivante",
     "speakers": "Speakers ({count})",
     "sessions": "Conférences ({count})",
+    "sponsors": "Partenaires ({count})",
     "replay": "Revoir",
     "allNews": "Voir toutes les actualités"
   },

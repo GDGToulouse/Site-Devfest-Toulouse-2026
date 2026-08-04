@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
+import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -138,6 +139,26 @@ export default async function editionRoutes(app: FastifyInstance) {
       select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
     });
     return links.map((link) => link.speaker);
+  });
+
+  // GET /api/editions/:year/sponsors — published sponsors of any edition by
+  // year (#370). `/api/sponsors` cannot serve this: it scopes to the featured
+  // edition, so a past year comes back empty.
+  //
+  // The payload matches /api/sponsors so the public wall and this grid share
+  // their component and their type. Values are the ones frozen on the
+  // participation (#375) — an archive shows what that year displayed, not what
+  // the company logo and the tier catalogue happen to say today.
+  app.get<{ Params: { year: string } }>("/editions/:year/sponsors", {
+    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    return getEditionSponsorWall(edition.id);
   });
 
   // GET /api/editions/:year/talks — published talks of any edition by year,

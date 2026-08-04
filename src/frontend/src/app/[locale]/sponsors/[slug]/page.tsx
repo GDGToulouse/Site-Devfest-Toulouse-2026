@@ -8,7 +8,7 @@ import { localizedField } from "@/lib/i18n-helpers";
 import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
-import { jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -68,7 +68,8 @@ export default async function SponsorDetailPage({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: sponsor.name,
-    ...(sponsor.logoUrl ? { logo: sponsor.logoUrl } : {}),
+    // Schema.org wants an absolute URL; the stored logo is site-relative.
+    ...(sponsor.logoUrl ? { logo: absoluteUrl(sponsor.logoUrl) } : {}),
     ...(sponsor.websiteUrl ? { url: sponsor.websiteUrl } : {}),
     ...(Object.values(sponsor.socialLinks).length > 0
       ? { sameAs: Object.values(sponsor.socialLinks) }
