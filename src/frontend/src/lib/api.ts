@@ -15,6 +15,7 @@ import type {
   SponsorTierPublic,
   SponsorPublic,
   SponsorDetail,
+  IndexableSponsor,
   SponsorWithOffers,
   SpeakerPublic,
   SpeakerDetail,
@@ -216,6 +217,13 @@ export async function getSponsors(): Promise<SponsorPublic[]> {
 
 export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | null> {
   return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
+}
+
+// Every company with a public page (#379). getSponsors() is the featured
+// edition's wall, so it would miss a company that only sponsored a past year —
+// yet its page answers 200. The sitemap needs the second set, not the first.
+export async function getIndexableSponsors(): Promise<IndexableSponsor[]> {
+  return (await fetchAPI<IndexableSponsor[]>("/api/sponsors/indexable")) || [];
 }
 
 export async function getJobOffers(): Promise<SponsorWithOffers[]> {

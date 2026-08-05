@@ -43,6 +43,7 @@ export interface EditionSummary {
   status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
   archivedSiteUrl: string | null;
   startDate: string | null;
+  updatedAt: string;
 }
 
 export interface SocialLinks {
@@ -351,8 +352,17 @@ export interface EditionTalk {
   level: TalkLevel | null;
   language: string;
   videoUrl: string | null;
+  updatedAt: string;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null }[];
+}
+
+// One company that has a public page, for the sitemap (#379). Not the sponsor
+// wall: this spans every edition, so a company that only sponsored a past year
+// is here too.
+export interface IndexableSponsor {
+  slug: string;
+  updatedAt: string | null;
 }
 
 // Hall of replays (#102): a filmed talk, carrying the edition it was given in
