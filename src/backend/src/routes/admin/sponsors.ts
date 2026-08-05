@@ -2,8 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
-import { generateEditToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { generateEditToken, generateInvitationToken } from "../../lib/edit-token.js";
+import { sendEditLinkEmail, sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -66,6 +66,12 @@ interface SponsorBulkBody {
 }
 
 const TIER_SELECT = { id: true, key: true, nameFr: true, nameEn: true, rank: true } as const;
+
+// Access roles on a sponsor's space (#362). Listed here rather than imported
+// from the generated client so the request body is validated against a plain
+// allow-list — an unknown value must be a 422, not a Prisma error.
+type SponsorAccessRole = "RESPONSABLE" | "EDITEUR" | "STAND";
+const ACCESS_ROLES: SponsorAccessRole[] = ["RESPONSABLE", "EDITEUR", "STAND"];
 
 interface ParticipationLike {
   id: number;
@@ -556,6 +562,11 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     editToken: string | null;
     editLinkLocked: boolean;
     editTokenSentAt: Date | null;
+    accessRole?: SponsorAccessRole;
+    userId?: string | null;
+    invitationToken?: string | null;
+    invitationSentAt?: Date | null;
+    invitationAcceptedAt?: Date | null;
   }) => ({
     id: c.id,
     email: c.email,
@@ -564,6 +575,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     hasLink: !!c.editToken,
     editLinkLocked: c.editLinkLocked,
     editTokenSentAt: c.editTokenSentAt,
+    // Account access (#362). Like the edit token above, the invitation token
+    // itself is never returned — only whether one is outstanding.
+    accessRole: c.accessRole,
+    hasAccount: !!c.userId,
+    invitationPending: !!c.invitationToken && !c.invitationAcceptedAt,
+    invitationSentAt: c.invitationSentAt,
+    invitationAcceptedAt: c.invitationAcceptedAt,
   });
 
   // GET /api/admin/sponsors/:id/contacts — list a sponsor's contacts.
@@ -637,6 +655,97 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       const updated = await prisma.sponsorContact.update({
         where: { id: contact.id },
         data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date() },
+      });
+      return serializeContact(updated);
+    },
+  );
+
+  // POST /api/admin/sponsors/:id/contacts/:contactId/invite — invite this
+  // contact to create an account on the sponsor's space (#362).
+  //
+  // Distinct from /resend, which hands out an edit link that works on its own:
+  // this opens an account. Re-inviting rotates the token, so the previous
+  // invitation stops working — the column is @unique, but the behaviour is
+  // deliberate, not a side effect.
+  app.post<{ Params: SponsorIdParams & { contactId: string }; Body: { accessRole?: SponsorAccessRole } }>(
+    "/sponsors/:id/contacts/:contactId/invite",
+    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
+    async (request, reply) => {
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+        include: { sponsor: true },
+      });
+      if (!contact || contact.sponsorId !== Number(request.params.id)) {
+        return notFound(reply, "Contact");
+      }
+      if (contact.sponsor.deletedAt) return notFound(reply, "Sponsor");
+      if (contact.userId) {
+        return reply.code(409).send({ error: "already_has_account" });
+      }
+
+      const accessRole = request.body?.accessRole;
+      if (accessRole && !ACCESS_ROLES.includes(accessRole)) {
+        return reply.code(422).send({ error: "Invalid accessRole" });
+      }
+
+      // Send first, persist second (#223): a failed mail must leave no
+      // invitation behind, or the sign-up door opens for nobody's benefit.
+      const token = generateInvitationToken();
+      try {
+        await sendSponsorInvitationEmail({
+          to: contact.email,
+          sponsorName: contact.sponsor.name,
+          token,
+          locale: contact.sponsor.locale,
+        });
+      } catch (err) {
+        request.log.error({ err }, "Failed to send sponsor invitation email");
+        return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
+      }
+
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: {
+          invitationToken: token,
+          invitationSentAt: new Date(),
+          invitationAcceptedAt: null,
+          ...(accessRole ? { accessRole } : {}),
+        },
+      });
+      return serializeContact(updated);
+    },
+  );
+
+  // PUT /api/admin/sponsors/:id/contacts/:contactId/access-role — change what
+  // this person may do on the sponsor's space (#362).
+  app.put<{ Params: SponsorIdParams & { contactId: string }; Body: { accessRole: SponsorAccessRole } }>(
+    "/sponsors/:id/contacts/:contactId/access-role",
+    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
+    async (request, reply) => {
+      const sponsorId = Number(request.params.id);
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+      });
+      if (!contact || contact.sponsorId !== sponsorId) return notFound(reply, "Contact");
+
+      const { accessRole } = request.body ?? {};
+      if (!accessRole || !ACCESS_ROLES.includes(accessRole)) {
+        return reply.code(422).send({ error: "Invalid accessRole" });
+      }
+
+      // Demoting the last RESPONSABLE would leave the space with nobody able to
+      // invite: the company could no longer manage its own team, and only an
+      // admin could unblock it.
+      if (contact.accessRole === "RESPONSABLE" && accessRole !== "RESPONSABLE") {
+        const others = await prisma.sponsorContact.count({
+          where: { sponsorId, accessRole: "RESPONSABLE", id: { not: contact.id } },
+        });
+        if (others === 0) return reply.code(409).send({ error: "last_responsable" });
+      }
+
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: { accessRole },
       });
       return serializeContact(updated);
     },

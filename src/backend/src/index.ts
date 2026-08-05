@@ -24,6 +24,8 @@ import categoryRoutes from "./routes/categories.js";
 import talkRoutes from "./routes/talks.js";
 import replayRoutes from "./routes/replays.js";
 import editRoutes from "./routes/edit.js";
+import sponsorInvitationRoutes from "./routes/sponsor-invitation.js";
+import sponsorSpaceRoutes from "./routes/sponsor-space.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
@@ -291,6 +293,8 @@ await app.register(categoryRoutes, { prefix: "/api" });
 await app.register(talkRoutes, { prefix: "/api" });
 await app.register(replayRoutes, { prefix: "/api" });
 await app.register(editRoutes, { prefix: "/api" });
+await app.register(sponsorInvitationRoutes, { prefix: "/api" });
+await app.register(sponsorSpaceRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)
 await app.register(myApiKeysRoutes, { prefix: "/api/me" });

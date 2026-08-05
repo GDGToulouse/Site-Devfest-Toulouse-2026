@@ -28,3 +28,35 @@ export function isEditTokenExpired(sentAt: Date | null, now: Date = new Date()):
   if (!sentAt) return false;
   return now.getTime() - sentAt.getTime() > EDIT_TOKEN_TTL_MS;
 }
+
+// An invitation to create a sponsor account (#362). Shorter-lived than an edit
+// link and single-use, which is why it has its own token: 7 days is enough for
+// an email read the next day, and an invitation that never expires is a bearer
+// secret left lying around.
+//
+// The magic link used to sign in to an existing account is shorter still — 60
+// minutes — and lives in auth.ts, where better-auth's plugin owns it.
+export const INVITATION_TTL_DAYS = 7;
+const INVITATION_TTL_MS = INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000;
+
+// Unlike an edit token, a missing send date is NOT treated as valid: an
+// invitation without one is malformed, and defaulting to "still open" would
+// keep the sign-up door ajar. No such row exists today — the column arrives
+// with the feature — so this only guards against a future bug.
+export function isInvitationExpired(sentAt: Date | null, now: Date = new Date()): boolean {
+  if (!sentAt) return true;
+  return now.getTime() - sentAt.getTime() > INVITATION_TTL_MS;
+}
+
+// Same shape as generateEditToken, named apart so a call site says which of the
+// two secrets it is minting — they have different lifetimes and consumption.
+export function generateInvitationToken(): string {
+  return randomBytes(32).toString("hex");
+}
+
+// Sign-in link for an account that already exists (#362). Minutes, not days:
+// it is mailed on demand and used straight away, so a long window would only
+// widen the replay surface. better-auth owns the token itself and takes the
+// TTL in seconds; the value lives here with the other two.
+export const MAGIC_LINK_TTL_MINUTES = 60;
+export const MAGIC_LINK_TTL_SECONDS = MAGIC_LINK_TTL_MINUTES * 60;
