@@ -1,6 +1,12 @@
 process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+
+// Inviting a colleague sends mail; stub SMTP so no test reaches a real server.
+const { sendMailMock } = vi.hoisted(() => ({ sendMailMock: vi.fn().mockResolvedValue({}) }));
+vi.mock("nodemailer", () => ({
+  default: { createTransport: () => ({ sendMail: sendMailMock }) },
+}));
 import Fastify, { type FastifyInstance } from "fastify";
 
 import sponsorSpaceRoutes from "../routes/sponsor-space.js";
@@ -286,6 +292,146 @@ describe("PUT /api/sponsor-space/:sponsorId — writing (#362)", () => {
     expect(res.statusCode).toBe(400);
     const after = await prisma.sponsor.findUniqueOrThrow({ where: { id: sponsor.id } });
     expect(after.name).toBe("Strict Co");
+  });
+});
+
+describe("Team management from the space (#362)", () => {
+  // Inviting sends mail; the transport is stubbed at the top of this file's
+  // sibling admin test. Here we only exercise the paths that stop before it.
+  it("refuses team management to EDITEUR", async () => {
+    const sponsor = await createSponsor("No Invite Co");
+    const { user, bearer } = await createAccount("SPONSOR", `noinvite-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "EDITEUR" },
+    });
+
+    const auth = { authorization: `Bearer ${bearer}` };
+    const invite = await app.inject({
+      method: "POST",
+      url: `/api/sponsor-space/${sponsor.id}/team`,
+      headers: auth,
+      payload: { email: "someone@example.org" },
+    });
+
+    // Inviting is exactly what separates EDITEUR from RESPONSABLE.
+    expect(invite.statusCode).toBe(403);
+  });
+
+  it("lets RESPONSABLE invite a colleague at a chosen role", async () => {
+    const sponsor = await createSponsor("Inviting Co");
+    const { user, bearer } = await createAccount("SPONSOR", `inviter-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+    sendMailMock.mockClear();
+
+    const invited = `colleague-${Date.now()}@example.org`;
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/sponsor-space/${sponsor.id}/team`,
+      headers: { authorization: `Bearer ${bearer}` },
+      payload: { email: invited, name: "Colleague", accessRole: "STAND" },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.accessRole).toBe("STAND");
+    expect(body.hasAccount).toBe(false);
+    // The invitation token stays server-side, like every other secret here.
+    expect(JSON.stringify(body)).not.toContain("invitationToken");
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+
+    const stored = await prisma.sponsorContact.findFirstOrThrow({
+      where: { sponsorId: sponsor.id, email: invited },
+    });
+    expect(stored.invitationToken).toBeTruthy();
+  });
+
+  it("refuses an address already on the team", async () => {
+    const sponsor = await createSponsor("Dup Team Co");
+    const { user, bearer } = await createAccount("SPONSOR", `dupteam-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/sponsor-space/${sponsor.id}/team`,
+      headers: { authorization: `Bearer ${bearer}` },
+      // Same address, different casing: a second row would give the same person
+      // two roles with no way to tell which applies.
+      payload: { email: user.email.toUpperCase() },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe("already_on_team");
+  });
+
+  it("refuses to remove the last RESPONSABLE", async () => {
+    const sponsor = await createSponsor("Solo Boss Co");
+    const { user, bearer } = await createAccount("SPONSOR", `soloboss-${Date.now()}@example.org`);
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+
+    const auth = { authorization: `Bearer ${bearer}` };
+    const demote = await app.inject({
+      method: "PUT",
+      url: `/api/sponsor-space/${sponsor.id}/team/${contact.id}`,
+      headers: auth,
+      payload: { accessRole: "EDITEUR" },
+    });
+    const remove = await app.inject({
+      method: "DELETE",
+      url: `/api/sponsor-space/${sponsor.id}/team/${contact.id}`,
+      headers: auth,
+    });
+
+    // Either move would leave the space with nobody able to invite anyone back.
+    expect(demote.statusCode).toBe(409);
+    expect(remove.statusCode).toBe(409);
+    expect(await prisma.sponsorContact.count({ where: { id: contact.id } })).toBe(1);
+  });
+
+  it("allows removing a RESPONSABLE when another remains", async () => {
+    const sponsor = await createSponsor("Two Boss Co");
+    const { user, bearer } = await createAccount("SPONSOR", `twoboss-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+    const second = await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: `second-${Date.now()}@example.org`, accessRole: "RESPONSABLE" },
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/sponsor-space/${sponsor.id}/team/${second.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    expect(res.statusCode).toBe(204);
+    expect(await prisma.sponsorContact.count({ where: { id: second.id } })).toBe(0);
+  });
+
+  it("refuses to touch a contact belonging to another company", async () => {
+    const mine = await createSponsor("My Team Co");
+    const theirs = await createSponsor("Their Team Co");
+    const { user, bearer } = await createAccount("SPONSOR", `crossteam-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: mine.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+    const foreign = await prisma.sponsorContact.create({
+      data: { sponsorId: theirs.id, email: `foreign-${Date.now()}@example.org`, accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `/api/sponsor-space/${mine.id}/team/${foreign.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(await prisma.sponsorContact.count({ where: { id: foreign.id } })).toBe(1);
   });
 });
 
