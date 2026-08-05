@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
 import SponsorEditions from "@/components/admin/sponsors/SponsorEditions";
 import SponsorForm, { emptySponsorForm, type SponsorFormValue } from "@/components/admin/sponsors/SponsorForm";
@@ -29,6 +30,8 @@ export default function SponsorEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Feedback after a save (#394), shown in place instead of redirecting away.
+  const [saveState, setSaveState] = useState<SaveState>(null);
   // Set when the chosen name belongs to a company already in base (#389).
   const [existingSponsorId, setExistingSponsorId] = useState<number | null>(null);
 
@@ -138,10 +141,12 @@ export default function SponsorEditorPage() {
       const { status } = await adminFetch(`/sponsors/${sponsorId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
       if (status >= 400) {
-        setError("Échec de l'enregistrement.");
+        setSaveState({ kind: "error", text: "Échec de l'enregistrement. Réessayez." });
         return;
       }
-      router.push("/admin/sponsors");
+      // Stays on the page rather than redirecting to the list (#394): the
+      // redirect was the only signal, and it looked exactly like Cancel.
+      setSaveState({ kind: "ok", text: "Modifications enregistrées." });
     }
   }
 
@@ -241,7 +246,9 @@ export default function SponsorEditorPage() {
           </div>
         )}
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
+
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button

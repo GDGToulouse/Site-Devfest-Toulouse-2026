@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Speaker } from "@/lib/types";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import EditLinkActions from "@/components/admin/EditLinkActions";
 import SpeakerForm, { emptySpeakerForm, type SpeakerFormValue } from "@/components/admin/speakers/SpeakerForm";
 import SpeakerEditionsPanel from "@/components/admin/speakers/SpeakerEditionsPanel";
@@ -32,6 +33,8 @@ export default function SpeakerEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Feedback after a save (#394), shown in place instead of redirecting away.
+  const [saveState, setSaveState] = useState<SaveState>(null);
   const [duplicate, setDuplicate] = useState<ExistingSpeaker | null>(null);
 
   // The editions list is needed in both modes now: to pick the first
@@ -129,10 +132,12 @@ export default function SpeakerEditorPage() {
       const { status } = await adminFetch(`/speakers/${speakerId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
       if (status >= 400) {
-        setError("Échec de l'enregistrement.");
+        setSaveState({ kind: "error", text: "Échec de l'enregistrement. Réessayez." });
         return;
       }
-      router.push("/admin/speakers");
+      // Stays on the page rather than redirecting (#394): the redirect was the
+      // only signal, and it looked exactly like Cancel.
+      setSaveState({ kind: "ok", text: "Modifications enregistrées." });
     }
   }
 
@@ -255,7 +260,9 @@ export default function SpeakerEditorPage() {
           />
         )}
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
+
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button
