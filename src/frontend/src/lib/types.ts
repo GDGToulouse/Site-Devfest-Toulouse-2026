@@ -194,6 +194,19 @@ export interface Sponsor {
   locale: string;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
+  // The flat fields above describe ONE participation — the most recent, or the
+  // one the query narrowed to. `editions` carries them all (#129), which is
+  // what a year filter has to read: a company sponsoring two editions would
+  // otherwise be matched on its latest year only (#395).
+  //
+  // Nested `edition` rather than a flat `year`, unlike SpeakerEdition: that is
+  // the shape the admin API returns.
+  editions?: {
+    editionId: number;
+    edition: { id: number; year: number };
+    tier: AdminSponsorTierRef;
+    publicationStatus: "DRAFT" | "PUBLISHED";
+  }[];
   // Private fields (#249) — organizers only, never on public pages.
   standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
   comKitReceived?: boolean;
