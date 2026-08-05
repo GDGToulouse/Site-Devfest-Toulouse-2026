@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { AdminSponsorTier } from "@/lib/types";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface Participation {
   editionId: number;
@@ -28,6 +29,10 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
   const [newTierId, setNewTierId] = useState<number | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  // The participation awaiting confirmation. `window.confirm` was the only
+  // native box on the screen, and it did not say that the logo and tier frozen
+  // for that year go with it (#393).
+  const [pendingDetach, setPendingDetach] = useState<Participation | null>(null);
 
   async function load() {
     const [sponsor, allEditions] = await Promise.all([
@@ -81,7 +86,7 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
 
   async function detach(participation: Participation) {
     const year = participation.edition.year;
-    if (!window.confirm(`Retirer la participation ${year} ? La fiche de l'entreprise est conservée.`)) return;
+    setPendingDetach(null);
     setIsBusy(true);
     setMessage(null);
     const { status } = await adminFetch(`/sponsors/${sponsorId}/editions/${participation.editionId}`, {
@@ -98,12 +103,10 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
 
   return (
     <div className="rounded-lg border border-gris/20 bg-blanc-casse/50 p-4 space-y-4">
-      <p className="text-sm font-medium text-noir">Éditions</p>
-
       {isLoading ? (
-        <p className="text-sm text-gris">Chargement…</p>
+        <p className="text-sm text-gris-sur-creme">Chargement…</p>
       ) : participations.length === 0 ? (
-        <p className="text-sm text-gris">Aucune participation pour l&apos;instant.</p>
+        <p className="text-sm text-gris-sur-creme">Aucune participation pour l&apos;instant.</p>
       ) : (
         <ul className="space-y-2">
           {participations.map((p) => (
@@ -124,11 +127,12 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
               </span>
               <button
                 type="button"
-                onClick={() => detach(p)}
+                onClick={() => setPendingDetach(p)}
                 disabled={isBusy}
-                className="text-xs font-medium text-terre-cuite hover:underline disabled:opacity-50"
+                // 24×24 minimum for a destructive control (WCAG 2.2, #393).
+                className="inline-flex min-h-[24px] items-center rounded px-2 py-1 text-xs font-medium text-terre-cuite hover:underline disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-terre-cuite/50"
               >
-                Retirer
+                Retirer<span className="sr-only"> la participation {p.edition.year}</span>
               </button>
             </li>
           ))}
@@ -136,13 +140,13 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
       )}
 
       <div className="border-t border-gris/15 pt-3">
-        <p className="mb-2 text-xs font-semibold text-gris">Rattacher à une édition</p>
+        <p className="mb-2 text-xs font-semibold text-gris-sur-creme">Rattacher à une édition</p>
         {availableEditions.length === 0 ? (
-          <p className="text-sm text-gris">Cette entreprise participe déjà à toutes les éditions.</p>
+          <p className="text-sm text-gris-sur-creme">Cette entreprise participe déjà à toutes les éditions.</p>
         ) : (
           <div className="flex flex-wrap items-end gap-2">
             <label className="min-w-[120px]">
-              <span className="mb-1 block text-xs text-gris">Édition</span>
+              <span className="mb-1 block text-xs text-gris-sur-creme">Édition</span>
               <select
                 value={newEditionId ?? ""}
                 onChange={(e) => setNewEditionId(Number(e.target.value))}
@@ -154,7 +158,7 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
               </select>
             </label>
             <label className="min-w-[160px]">
-              <span className="mb-1 block text-xs text-gris">Niveau</span>
+              <span className="mb-1 block text-xs text-gris-sur-creme">Niveau</span>
               <select
                 value={newTierId ?? ""}
                 onChange={(e) => setNewTierId(Number(e.target.value))}
@@ -178,8 +182,30 @@ export default function SponsorEditions({ sponsorId, tiers }: SponsorEditionsPro
       </div>
 
       {message && (
-        <p className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}>{message.text}</p>
+        <p
+          role={message.isOk ? "status" : "alert"}
+          aria-live={message.isOk ? "polite" : "assertive"}
+          className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}
+        >
+          {message.text}
+        </p>
       )}
+
+      <ConfirmDialog
+        isOpen={pendingDetach !== null}
+        title={`Retirer la participation ${pendingDetach?.edition.year ?? ""} ?`}
+        // Spells out what is lost: the logo and tier label frozen for that year
+        // (#375) go with the participation, and re-attaching starts from the
+        // company's current values instead.
+        message={
+          `La fiche de l'entreprise est conservée, mais le logo et le niveau figés pour ${pendingDetach?.edition.year ?? "cette année"} ` +
+          `seront perdus. Un nouveau rattachement repartira des valeurs actuelles de l'entreprise.`
+        }
+        confirmLabel="Retirer"
+        variant="danger"
+        onConfirm={() => pendingDetach && detach(pendingDetach)}
+        onCancel={() => setPendingDetach(null)}
+      />
     </div>
   );
 }

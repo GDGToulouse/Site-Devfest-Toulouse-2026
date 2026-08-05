@@ -69,6 +69,10 @@
   /* --- Colors: Neutrals --- */
   --color-noir: #1D1D1B;
   --color-gris: #737372;
+  /* Secondary text on the cream background: --color-gris only reaches 4.26:1
+     there (it clears AA on white at 4.75:1), so a panel sitting on
+     blanc-casse needs a darker grey — 4.79:1 (#393). */
+  --color-gris-sur-creme: #6B6B6A;
   --color-gris-clair: #767675;
   --color-gris-placeholder: #808080;
   --color-blanc: #FFFFFF;
