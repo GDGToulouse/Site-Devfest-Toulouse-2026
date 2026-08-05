@@ -8,6 +8,7 @@ import { prisma } from "../lib/prisma.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { hasPendingInvitation } from "../lib/sponsor-invitation.js";
 import { INVITATION_TTL_DAYS } from "../lib/edit-token.js";
+import { auth } from "../lib/auth.js";
 
 // #362 — accepting an invitation binds an account to a company. The rules that
 // matter are: the email must match exactly, the token works once, and an
@@ -186,6 +187,39 @@ describe("GET /api/sponsor-invitation/:token (#362)", () => {
   it("answers the same 404 for unknown and consumed tokens", async () => {
     const res = await app.inject({ method: "GET", url: "/api/sponsor-invitation/does-not-exist" });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("Sign-up through an invitation (#362)", () => {
+  // The hook's whole job: let an invited address in, and give it a role that
+  // grants nothing in the back-office. Both halves failed silently at first —
+  // better-auth drops unknown fields, so the role fell back to the column
+  // default, EDITOR, which requireAnyAuthenticated lets through.
+  it("creates the account with the SPONSOR role, never the EDITOR default", async () => {
+    const email = `signup-${Date.now()}@example.org`;
+    const { sponsor } = await createSponsorWithInvitation("Signup Co", email);
+    
+
+    await auth.api.signUpEmail({
+      body: { name: "Invited Person", email, password: "invited1234!test" },
+    });
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email } });
+    created.userIds.push(user.id);
+    // EDITOR here would hand /api/admin/* to every sponsor.
+    expect(user.role).toBe("SPONSOR");
+  });
+
+  it("refuses an address nobody invited", async () => {
+    const email = `uninvited-${Date.now()}@example.org`;
+
+    await expect(
+      auth.api.signUpEmail({ body: { name: "Nobody", email, password: "nobody1234!test" } }),
+    ).rejects.toThrow();
+
+    // No orphan row left behind: the hook rejects before the insert, which
+    // matters most for OAuth, where the provider would otherwise mint one.
+    expect(await prisma.user.count({ where: { email } })).toBe(0);
   });
 });
 

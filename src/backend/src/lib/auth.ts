@@ -93,6 +93,22 @@ export const auth = betterAuth({
       clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET || "",
     },
   },
+  user: {
+    additionalFields: {
+      // User.role exists in the Prisma schema but better-auth does not know it,
+      // so it drops the value the create hook sets — a sponsor account then
+      // fell back to the column default, EDITOR, which opens the back-office
+      // (#362). Declaring it here is what makes the hook's role stick.
+      //
+      // input: false — the role is never taken from the request body: a signup
+      // payload carrying `role: "ADMIN"` must not be able to grant itself one.
+      role: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+    },
+  },
   account: {
     accountLinking: {
       enabled: true,

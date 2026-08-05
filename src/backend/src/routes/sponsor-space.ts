@@ -3,7 +3,9 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getAuthContext } from "../lib/auth-context.js";
 import { notDeleted } from "../lib/admin-helpers.js";
-import { requireSponsorAccess } from "../lib/sponsor-guard.js";
+import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
+import { generateInvitationToken } from "../lib/edit-token.js";
+import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import { getFeaturedEdition } from "./editions.js";
@@ -15,6 +17,10 @@ const SHORT_MAX = 200;
 const URL_MAX = 2_048;
 const STAND_CONTACTS_MAX = 20;
 const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
+
+// Validated against a plain allow-list so an unknown value is a 422 rather than
+// a Prisma error surfacing as a 500.
+const ACCESS_ROLES: SponsorAccessRole[] = ["RESPONSABLE", "EDITEUR", "STAND"];
 
 // What a sponsor may write about itself. `name`, `slug` and the tier are the
 // organisers' business: renaming the company here would break its slug and its
@@ -281,15 +287,182 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     });
 
     // Tokens never leave the server — only whether an invitation is pending.
-    return contacts.map((c) => ({
-      id: c.id,
-      email: c.email,
-      name: c.name,
-      role: c.role,
-      accessRole: c.accessRole,
-      hasAccount: !!c.userId,
-      invitationSentAt: c.invitationSentAt,
-      invitationAcceptedAt: c.invitationAcceptedAt,
-    }));
+    return contacts.map(serializeMember);
   });
+
+  // POST /api/sponsor-space/:sponsorId/team — invite someone onto the space.
+  //
+  // RESPONSABLE only (#362): that is the whole difference with EDITEUR. The
+  // company invites its own colleagues without going through the organisers.
+  app.post<{ Params: { sponsorId: string }; Body: { email?: string; name?: string; accessRole?: SponsorAccessRole } }>(
+    "/sponsor-space/:sponsorId/team",
+    { schema: { params: sponsorIdParams }, preHandler: requireSponsorAccess("RESPONSABLE") },
+    async (request, reply) => {
+      const sponsorId = request.sponsorAccess!.sponsorId;
+      const email = request.body?.email?.trim();
+      if (!email) return reply.code(400).send({ error: "email_required" });
+
+      const accessRole = request.body?.accessRole ?? "EDITEUR";
+      if (!ACCESS_ROLES.includes(accessRole)) {
+        return reply.code(422).send({ error: "invalid_access_role" });
+      }
+
+      const sponsor = await prisma.sponsor.findFirst({
+        where: { id: sponsorId, ...notDeleted },
+        select: { name: true, locale: true },
+      });
+      if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
+
+      // Re-inviting an address already on the team would create a second row
+      // for the same person, each with its own role — and no way to tell which
+      // one applies.
+      const existing = await prisma.sponsorContact.findFirst({
+        where: { sponsorId, email: { equals: email, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existing) return reply.code(409).send({ error: "already_on_team" });
+
+      // Send first, persist second (#223): a failed mail must leave no
+      // invitation behind.
+      const token = generateInvitationToken();
+      try {
+        await sendSponsorInvitationEmail({
+          to: email,
+          sponsorName: sponsor.name,
+          token,
+          locale: sponsor.locale,
+        });
+      } catch (err) {
+        request.log.error({ err }, "Failed to send sponsor team invitation");
+        return reply.code(502).send({ error: "email_failed" });
+      }
+
+      const contact = await prisma.sponsorContact.create({
+        data: {
+          sponsorId,
+          email,
+          name: request.body?.name?.trim() || null,
+          accessRole,
+          invitationToken: token,
+          invitationSentAt: new Date(),
+        },
+      });
+      return reply.code(201).send(serializeMember(contact));
+    },
+  );
+
+  // PUT /api/sponsor-space/:sponsorId/team/:contactId — change a member's role.
+  app.put<{ Params: { sponsorId: string; contactId: string }; Body: { accessRole?: SponsorAccessRole } }>(
+    "/sponsor-space/:sponsorId/team/:contactId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["sponsorId", "contactId"],
+          properties: { sponsorId: { type: "string" }, contactId: { type: "string" } },
+        },
+      },
+      preHandler: requireSponsorAccess("RESPONSABLE"),
+    },
+    async (request, reply) => {
+      const sponsorId = request.sponsorAccess!.sponsorId;
+      const accessRole = request.body?.accessRole;
+      if (!accessRole || !ACCESS_ROLES.includes(accessRole)) {
+        return reply.code(422).send({ error: "invalid_access_role" });
+      }
+
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+        select: { id: true, sponsorId: true, accessRole: true },
+      });
+      if (!contact || contact.sponsorId !== sponsorId) {
+        return reply.code(404).send({ error: "Contact not found" });
+      }
+
+      if (await wouldStrandSpace(sponsorId, contact, accessRole)) {
+        return reply.code(409).send({ error: "last_responsable" });
+      }
+
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: { accessRole },
+      });
+      return serializeMember(updated);
+    },
+  );
+
+  // DELETE /api/sponsor-space/:sponsorId/team/:contactId — revoke access.
+  //
+  // Removes the contact outright: it exists to carry the access, unlike the
+  // organisers' own contact list which survives on the admin side.
+  app.delete<{ Params: { sponsorId: string; contactId: string } }>(
+    "/sponsor-space/:sponsorId/team/:contactId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["sponsorId", "contactId"],
+          properties: { sponsorId: { type: "string" }, contactId: { type: "string" } },
+        },
+      },
+      preHandler: requireSponsorAccess("RESPONSABLE"),
+    },
+    async (request, reply) => {
+      const sponsorId = request.sponsorAccess!.sponsorId;
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+        select: { id: true, sponsorId: true, accessRole: true },
+      });
+      if (!contact || contact.sponsorId !== sponsorId) {
+        return reply.code(404).send({ error: "Contact not found" });
+      }
+
+      // Same guard as demoting: removing the last RESPONSABLE would leave the
+      // space with nobody able to invite anyone back into it.
+      if (await wouldStrandSpace(sponsorId, contact, null)) {
+        return reply.code(409).send({ error: "last_responsable" });
+      }
+
+      await prisma.sponsorContact.delete({ where: { id: contact.id } });
+      return reply.code(204).send();
+    },
+  );
+}
+
+// Would this change leave the space without a single RESPONSABLE? Passing null
+// as the next role means the contact is being removed altogether.
+async function wouldStrandSpace(
+  sponsorId: number,
+  contact: { id: number; accessRole: SponsorAccessRole },
+  nextRole: SponsorAccessRole | null,
+): Promise<boolean> {
+  if (contact.accessRole !== "RESPONSABLE") return false;
+  if (nextRole === "RESPONSABLE") return false;
+  const others = await prisma.sponsorContact.count({
+    where: { sponsorId, accessRole: "RESPONSABLE", id: { not: contact.id } },
+  });
+  return others === 0;
+}
+
+// Tokens never leave the server — only whether an invitation is outstanding.
+function serializeMember(c: {
+  id: number;
+  email: string;
+  name: string | null;
+  role: string | null;
+  accessRole: SponsorAccessRole;
+  userId: string | null;
+  invitationSentAt: Date | null;
+  invitationAcceptedAt: Date | null;
+}) {
+  return {
+    id: c.id,
+    email: c.email,
+    name: c.name,
+    role: c.role,
+    accessRole: c.accessRole,
+    hasAccount: !!c.userId,
+    invitationSentAt: c.invitationSentAt,
+    invitationAcceptedAt: c.invitationAcceptedAt,
+  };
 }
