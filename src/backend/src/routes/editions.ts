@@ -52,7 +52,8 @@ export default async function editionRoutes(app: FastifyInstance) {
     const editions = await prisma.edition.findMany({
       where: notDeleted,
       orderBy: { year: "desc" },
-      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true },
+      // `updatedAt` dates the edition page in the sitemap (#379).
+      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true, updatedAt: true },
     });
     return editions;
   });
@@ -203,6 +204,9 @@ export default async function editionRoutes(app: FastifyInstance) {
       level: t.level,
       language: t.language,
       videoUrl: t.videoUrl,
+      // Dates the talk page in the sitemap (#379). The list already carries
+      // every published slug of the year, so no extra endpoint is needed.
+      updatedAt: t.updatedAt,
       category: visibleCategory(t.category),
       speakers: t.speakers,
     }));
