@@ -207,6 +207,88 @@ describe("requireSponsorAccess — isolation between companies (#362)", () => {
   });
 });
 
+describe("PUT /api/sponsor-space/:sponsorId — writing (#362)", () => {
+  it("lets EDITEUR save the company's own fields", async () => {
+    const sponsor = await createSponsor("Writer Co");
+    const { user, bearer } = await createAccount("SPONSOR", `writer-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+      payload: { descriptionFr: "Nouvelle description", websiteUrl: "https://example.org" },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const after = await prisma.sponsor.findUniqueOrThrow({ where: { id: sponsor.id } });
+    expect(after.descriptionFr).toContain("Nouvelle description");
+    expect(after.websiteUrl).toBe("https://example.org");
+  });
+
+  it("refuses a write from STAND", async () => {
+    const sponsor = await createSponsor("Readonly Co");
+    const { user, bearer } = await createAccount("SPONSOR", `readonly-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "STAND" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+      payload: { descriptionFr: "Tentative" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    const after = await prisma.sponsor.findUniqueOrThrow({ where: { id: sponsor.id } });
+    expect(after.descriptionFr).toBeNull();
+  });
+
+  it("rejects a javascript: URL", async () => {
+    const sponsor = await createSponsor("Unsafe Co");
+    const { user, bearer } = await createAccount("SPONSOR", `unsafe-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+      // Rendered on the public page, so the same http(s) allow-list as the
+      // edit link applies (#223).
+      payload: { websiteUrl: "javascript:alert(1)" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("unsafe_url");
+  });
+
+  it("rejects an unknown field rather than silently dropping it", async () => {
+    const sponsor = await createSponsor("Strict Co");
+    const { user, bearer } = await createAccount("SPONSOR", `strict-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+      // `name` belongs to the organisers: a sponsor renaming its own company
+      // would break the slug and the public page.
+      payload: { name: "Renamed by me" },
+    });
+
+    expect(res.statusCode).toBe(400);
+    const after = await prisma.sponsor.findUniqueOrThrow({ where: { id: sponsor.id } });
+    expect(after.name).toBe("Strict Co");
+  });
+});
+
 describe("GET /api/sponsor-space/mine (#362)", () => {
   it("lists only the companies this account may act on", async () => {
     const a = await createSponsor("Listed A");

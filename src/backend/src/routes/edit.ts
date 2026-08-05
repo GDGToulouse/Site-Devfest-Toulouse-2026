@@ -20,6 +20,13 @@ import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
 import { sanitizeRichHtml } from "../lib/sanitize.js";
+import {
+  applySponsorEdit,
+  writesYearField,
+  cleanSocial,
+  cleanStandContacts,
+  type StandContact,
+} from "../lib/sponsor-write.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -214,37 +221,6 @@ function findUnsafeUrl(body: Record<string, unknown>): string | null {
     }
   }
   return null;
-}
-
-// Drop empty social entries so clearing a field doesn't persist "".
-function cleanSocial(social: Record<string, string> | undefined): string | null {
-  if (!social) return null;
-  const kept = Object.entries(social).filter(([, v]) => typeof v === "string" && v.trim());
-  return kept.length ? JSON.stringify(Object.fromEntries(kept)) : null;
-}
-
-interface StandContact {
-  name?: string;
-  linkedin?: string;
-  twitter?: string;
-  bluesky?: string;
-}
-
-// Trim entries and drop those with no content at all, so an empty row the
-// sponsor left behind isn't persisted (#249). Returns null when nothing remains.
-function cleanStandContacts(contacts: StandContact[] | undefined): string | null {
-  if (!contacts) return null;
-  const kept = contacts
-    .map((c) => {
-      const entry: StandContact = {};
-      for (const key of ["name", "linkedin", "twitter", "bluesky"] as const) {
-        const v = c[key];
-        if (typeof v === "string" && v.trim()) entry[key] = v.trim();
-      }
-      return entry;
-    })
-    .filter((c) => Object.keys(c).length > 0);
-  return kept.length ? JSON.stringify(kept) : null;
 }
 
 function parseStandContacts(raw: string | null): StandContact[] {
@@ -597,80 +573,18 @@ export default async function editRoutes(app: FastifyInstance) {
       // (#252, #249).
       // logoUrl joined them in #375: what an edition displayed is frozen on its
       // participation, so a new logo must not rewrite the years already past.
-      const writesYearField =
-        body.logoUrl !== undefined ||
-        body.comKitReceived !== undefined ||
-        body.comKitLogoWebUrl !== undefined ||
-        body.comKitLogoPrintUrl !== undefined ||
-        body.comKitCharterUrl !== undefined ||
-        body.comKitNotes !== undefined ||
-        body.platinumPromoIdea !== undefined ||
-        body.platinumCoBuildIdea !== undefined;
-      if (writesYearField && !participation) {
+      if (writesYearField(body) && !participation) {
         return reply.code(422).send({ error: "no_current_participation" });
       }
 
-      await prisma.sponsor.update({
-        where: { id: entity.id },
-        data: {
-          // Rich-text HTML (#270): sanitized on write, like article content.
-          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
-          ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
-          // The company's current logo tracks the latest one it sent (#375),
-          // so a future participation starts from it. What each edition shows
-          // is the copy frozen on its own participation, just below.
-          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
-          ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
-          // Private field (#249) — stand staffing isn't per-year, stays on the identity.
-          ...(body.standContacts !== undefined && { standContacts: cleanStandContacts(body.standContacts) }),
-        },
+      // Shared with the account-based space (#362) so both ways in write the
+      // same fields under the same rules.
+      await applySponsorEdit({
+        sponsorId: entity.id,
+        sponsorSlug: entity.slug,
+        participation,
+        body,
       });
-
-      // Skip the write entirely when no per-year field was sent: EditionSponsor
-      // has @updatedAt, so an empty `data: {}` would still bump the
-      // participation's timestamp — and cost a round-trip — on every
-      // identity-only save (description, logo, socials).
-      if (participation && writesYearField) {
-        await prisma.editionSponsor.update({
-          where: { id: participation.id },
-          data: {
-            // The logo this edition displays (#375). Editing is already
-            // confined to the featured edition, and isEditingFrozen closes it
-            // once the event starts — so past years cannot be rewritten.
-            ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
-            // Private per-year fields (#249).
-            ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
-            ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
-            ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
-            ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
-            ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
-            // Promo-idea fields (#252): silently ignored for tiers that don't
-            // allow them, so the field can't be set by tampering with the payload.
-            ...(participation.tier.allowsPromoIdeas && body.platinumPromoIdea !== undefined && {
-              platinumPromoIdea: body.platinumPromoIdea || null,
-            }),
-            ...(participation.tier.allowsPromoIdeas && body.platinumCoBuildIdea !== undefined && {
-              platinumCoBuildIdea: body.platinumCoBuildIdea || null,
-            }),
-          },
-        });
-      }
-
-      // Only public-facing changes need cache revalidation; a private-only
-      // save (com kit, stand contacts) changes nothing on the public pages.
-      const touchesPublic =
-        body.descriptionFr !== undefined ||
-        body.descriptionEn !== undefined ||
-        body.websiteUrl !== undefined ||
-        body.logoUrl !== undefined ||
-        body.socialLinks !== undefined;
-      if (touchesPublic) {
-        revalidateSponsors();
-        // The company's own page too (#360) — editing from the magic link is
-        // precisely when someone watches for their change to appear.
-        revalidateSponsor(entity.slug);
-      }
     }
 
     return { saved: true };

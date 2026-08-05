@@ -63,6 +63,16 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/sponsors/:path*`,
       },
       {
+        // A sponsor's own space and its invitations (#362). Separate entries
+        // from /api/sponsors above: that one is the public company page.
+        source: "/api/sponsor-space/:path*",
+        destination: `${backendUrl}/api/sponsor-space/:path*`,
+      },
+      {
+        source: "/api/sponsor-invitation/:path*",
+        destination: `${backendUrl}/api/sponsor-invitation/:path*`,
+      },
+      {
         source: "/api/talks/:path*",
         destination: `${backendUrl}/api/talks/:path*`,
       },
