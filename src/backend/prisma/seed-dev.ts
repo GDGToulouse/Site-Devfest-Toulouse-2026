@@ -545,6 +545,75 @@ async function seedDev() {
     });
   }
 
+  // --- 2025 participations: the archive path (#370, #375) ---
+  //
+  // Without these, no sponsor has ever taken part in a past edition, so three
+  // behaviours stay untested in dev: the sponsors section of a past edition
+  // page, the per-edition freeze, and the year filter of the admin list — which
+  // only breaks once a company spans two years (#395).
+  //
+  // The frozen values are deliberately DIFFERENT from 2026: same company, other
+  // logo, other tier label. Seeding a copy of 2026 would look right while
+  // proving nothing — a page reading through to the live values would render
+  // identically.
+  const DEMO_SPONSORS_2025: { slug: string; level: "PLATINUM" | "GOLD" | "SOUTIEN" }[] = [
+    // Stayed on, same tier: the plain case.
+    { slug: "aeronova-systems", level: "PLATINUM" },
+    // Moved up between the two years — the sponsor wall must show Gold in 2025
+    // and Platinum in 2026.
+    { slug: "garonne-digital", level: "GOLD" },
+    // Moved down, the other direction.
+    { slug: "occitania-data", level: "PLATINUM" },
+    { slug: "pyrene-labs", level: "GOLD" },
+    // Two more spanning both years, so the admin year filter has enough rows to
+    // fail on visibly (#395) rather than a single edge case.
+    { slug: "cafe-et-commit", level: "SOUTIEN" },
+    { slug: "labo-ouvert", level: "SOUTIEN" },
+  ];
+
+  // One company sponsored 2025 and did NOT come back: its 2026 participation is
+  // dropped right after being seeded above, leaving the identity reachable only
+  // through 2025. That is the case which catches a page listing sponsors from
+  // the identity table instead of the participations — it would appear on the
+  // 2026 wall, where it no longer belongs. Reusing a seeded company rather than
+  // inventing one keeps its logo file real.
+  const GONE_SLUG = "cluster-sud-ouest";
+  await prisma.editionSponsor.deleteMany({
+    where: { editionId: edition.id, sponsor: { slug: GONE_SLUG } },
+  });
+  DEMO_SPONSORS_2025.push({ slug: GONE_SLUG, level: "GOLD" });
+
+  // Upserted, not deleted first: the purge above is scoped to the current
+  // edition on purpose, so 2025 rows survive a reseed and this loop refreshes
+  // them in place. The identity is looked up rather than created — these
+  // companies are seeded for 2026 just above.
+  for (const s of DEMO_SPONSORS_2025) {
+    const sponsor = await prisma.sponsor.findUnique({ where: { slug: s.slug }, select: { id: true } });
+    if (!sponsor) continue;
+
+    const tier = sponsorTiers[DEMO_LEVEL_TO_TIER[s.level]];
+    const frozen = {
+      // A logo the company no longer uses. Anything reading the identity's
+      // current logo instead of the frozen one shows the 2026 file — visible
+      // at a glance on /fr/editions/2025.
+      logoUrl: `/images/sponsors/${s.slug}.svg`,
+      tierId: tier.id,
+      // Year-stamped labels: a page rendering "Platinum" on the 2025 wall is
+      // reading the live catalogue, which #375 exists to prevent.
+      tierNameFr: `${tier.nameFr} 2025`,
+      tierNameEn: `${tier.nameEn} 2025`,
+      tierColor: tier.color,
+      tierLogoScale: tier.logoScale,
+      publicationStatus: "PUBLISHED" as const,
+    };
+    await prisma.editionSponsor.upsert({
+      where: { sponsorId_editionId: { sponsorId: sponsor.id, editionId: edition2025.id } },
+      update: frozen,
+      create: { sponsorId: sponsor.id, editionId: edition2025.id, ...frozen },
+    });
+  }
+  console.log(`Sponsors linked to 2025: ${DEMO_SPONSORS_2025.length} (frozen tier labels)`);
+
   const counts = DEMO_SPONSORS.reduce<Record<string, number>>((acc, s) => {
     acc[s.level] = (acc[s.level] ?? 0) + 1;
     return acc;
