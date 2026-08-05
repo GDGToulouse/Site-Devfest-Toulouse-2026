@@ -1,0 +1,236 @@
+process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
+
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import Fastify, { type FastifyInstance } from "fastify";
+
+import sponsorSpaceRoutes from "../routes/sponsor-space.js";
+import { prisma } from "../lib/prisma.js";
+import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
+
+// #362 — who may read what on a sponsor's space. This is authorization code:
+// a silent regression here hands one company's private data to another.
+//
+// Authenticated through the API-key path of getAuthContext rather than a
+// better-auth cookie: same resolution, same guard, without having to forge a
+// session. The role still comes from the User row, so the check is real.
+
+let app: FastifyInstance;
+
+const created = {
+  userIds: [] as string[],
+  sponsorIds: [] as number[],
+};
+
+// An account plus the bearer token that authenticates it.
+async function createAccount(role: "ADMIN" | "EDITOR" | "SPONSOR", email: string) {
+  const user = await prisma.user.create({
+    data: { email, name: email, role, emailVerified: true },
+  });
+  created.userIds.push(user.id);
+
+  const key = await generateApiKey(resolveApiKeyEnv());
+  await prisma.apiKey.create({
+    data: { name: `test-${email}`, prefix: key.prefix, hashedKey: key.hashedKey, userId: user.id },
+  });
+  return { user, bearer: key.raw };
+}
+
+async function createSponsor(name: string) {
+  const sponsor = await prisma.sponsor.create({
+    data: { name, slug: `${name.toLowerCase().replace(/\W+/g, "-")}-${Date.now()}` },
+  });
+  created.sponsorIds.push(sponsor.id);
+  return sponsor;
+}
+
+beforeAll(async () => {
+  app = Fastify({ logger: false });
+  app.decorateRequest("authContext");
+  app.decorateRequest("sponsorAccess");
+  await app.register(sponsorSpaceRoutes, { prefix: "/api" });
+  await app.ready();
+});
+
+afterAll(async () => {
+  await app.close();
+  if (created.userIds.length) {
+    await prisma.apiKey.deleteMany({ where: { userId: { in: created.userIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: created.userIds } } });
+  }
+  if (created.sponsorIds.length) {
+    await prisma.sponsor.deleteMany({ where: { id: { in: created.sponsorIds } } });
+  }
+});
+
+describe("GET /api/sponsor-space/:sponsorId — access by role (#362)", () => {
+  it("lets STAND read the public profile but not the private block", async () => {
+    const sponsor = await createSponsor("Stand Co");
+    const { user, bearer } = await createAccount("SPONSOR", `stand-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "STAND" },
+    });
+
+    const auth = { authorization: `Bearer ${bearer}` };
+    const profile = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}`, headers: auth });
+    const priv = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}/private`, headers: auth });
+    const team = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}/team`, headers: auth });
+
+    expect(profile.statusCode).toBe(200);
+    expect(profile.json().accessRole).toBe("STAND");
+    // The booth team has no business reading the com kit, nor the colleagues'
+    // addresses.
+    expect(priv.statusCode).toBe(403);
+    expect(team.statusCode).toBe(403);
+  });
+
+  it("lets EDITEUR read the private block but not the team", async () => {
+    const sponsor = await createSponsor("Editeur Co");
+    const { user, bearer } = await createAccount("SPONSOR", `editeur-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "EDITEUR" },
+    });
+
+    const auth = { authorization: `Bearer ${bearer}` };
+    const priv = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}/private`, headers: auth });
+    const team = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}/team`, headers: auth });
+
+    expect(priv.statusCode).toBe(200);
+    // Inviting is the RESPONSABLE's job, so the team list stays out of reach.
+    expect(team.statusCode).toBe(403);
+  });
+
+  it("lets RESPONSABLE read everything, tokens excluded", async () => {
+    const sponsor = await createSponsor("Responsable Co");
+    const { user, bearer } = await createAccount("SPONSOR", `resp-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: {
+        sponsorId: sponsor.id,
+        email: user.email,
+        userId: user.id,
+        accessRole: "RESPONSABLE",
+        invitationToken: `tok-${Date.now()}`,
+        invitationSentAt: new Date(),
+      },
+    });
+
+    const auth = { authorization: `Bearer ${bearer}` };
+    const team = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}/team`, headers: auth });
+
+    expect(team.statusCode).toBe(200);
+    const body = team.json();
+    expect(body).toHaveLength(1);
+    expect(body[0].accessRole).toBe("RESPONSABLE");
+    // A pending invitation is reported as a boolean; the secret never leaves.
+    expect(JSON.stringify(body)).not.toContain("tok-");
+  });
+});
+
+describe("requireSponsorAccess — isolation between companies (#362)", () => {
+  it("answers 404 for a sponsor this account has no contact on", async () => {
+    const mine = await createSponsor("Mine Co");
+    const theirs = await createSponsor("Theirs Co");
+    const { user, bearer } = await createAccount("SPONSOR", `outsider-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: mine.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/sponsor-space/${theirs.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    // 404 and not 403: a stranger probing ids must not learn which exist.
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("refuses an unauthenticated caller", async () => {
+    const sponsor = await createSponsor("Anon Co");
+    const res = await app.inject({ method: "GET", url: `/api/sponsor-space/${sponsor.id}` });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("refuses an authenticated account with no contact at all", async () => {
+    const sponsor = await createSponsor("Nobody Co");
+    const { bearer } = await createAccount("SPONSOR", `nobody-${Date.now()}@example.org`);
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("stops granting access once the company is trashed", async () => {
+    const sponsor = await createSponsor("Trashed Co");
+    const { user, bearer } = await createAccount("SPONSOR", `trashed-${Date.now()}@example.org`);
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+    });
+    await prisma.sponsor.update({ where: { id: sponsor.id }, data: { deletedAt: new Date() } });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("lets an ADMIN in for support, without giving them a contact", async () => {
+    const sponsor = await createSponsor("Supported Co");
+    const { bearer } = await createAccount("ADMIN", `admin-${Date.now()}@example.org`);
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/sponsor-space/${sponsor.id}/team`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    // The override must not appear as a member of the company's own team.
+    expect(res.json()).toEqual([]);
+  });
+
+  it("keeps a back-office EDITOR out — the back-office role grants nothing here", async () => {
+    const sponsor = await createSponsor("Editor Role Co");
+    const { bearer } = await createAccount("EDITOR", `boeditor-${Date.now()}@example.org`);
+
+    const res = await app.inject({
+      method: "GET",
+      url: `/api/sponsor-space/${sponsor.id}`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+    // Only ADMIN gets the support override; EDITOR has no business here.
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("GET /api/sponsor-space/mine (#362)", () => {
+  it("lists only the companies this account may act on", async () => {
+    const a = await createSponsor("Listed A");
+    const b = await createSponsor("Listed B");
+    await createSponsor("Unlisted C");
+    const { user, bearer } = await createAccount("SPONSOR", `mine-${Date.now()}@example.org`);
+    await prisma.sponsorContact.createMany({
+      data: [
+        { sponsorId: a.id, email: user.email, userId: user.id, accessRole: "RESPONSABLE" },
+        { sponsorId: b.id, email: user.email, userId: user.id, accessRole: "STAND" },
+      ],
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/sponsor-space/mine",
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const slugs = res.json().map((s: { id: number; accessRole: string }) => `${s.id}:${s.accessRole}`);
+    expect(slugs).toHaveLength(2);
+    // The same person can hold a different role at each company (#362).
+    expect(slugs).toContain(`${a.id}:RESPONSABLE`);
+    expect(slugs).toContain(`${b.id}:STAND`);
+  });
+});

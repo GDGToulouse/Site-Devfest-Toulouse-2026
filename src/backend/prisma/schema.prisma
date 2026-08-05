@@ -38,6 +38,25 @@ enum SponsorPageStatus {
 enum UserRole {
   ADMIN
   EDITOR
+  // Grants NOTHING in the back-office — it exists so a sponsor account can be
+  // stored without falling back to EDITOR, which requireAnyAuthenticated lets
+  // through (#362). A sponsor's rights come from SponsorContact.accessRole.
+  SPONSOR
+}
+
+// What a person may do on ONE sponsor's space (#362). Deliberately not part of
+// UserRole: that one grants back-office access, and a sponsor must never hold
+// it. The same person can be RESPONSABLE for one company and STAND for another,
+// so the right belongs to the SponsorContact, not to the User.
+//
+// Ordered from most to least powerful — requireSponsorAccess compares ranks:
+//   RESPONSABLE  read + write + invite
+//   EDITEUR      read + write
+//   STAND        read public only (badge scanning comes later, #113)
+enum SponsorAccessRole {
+  RESPONSABLE
+  EDITEUR
+  STAND
 }
 
 // ============================================
@@ -377,6 +396,9 @@ model User {
   sessions Session[]
   accounts Account[]
   apiKeys  ApiKey[]
+  // The sponsor spaces this account may act on (#362). A sponsor account holds
+  // no back-office UserRole — its rights live entirely on these contacts.
+  sponsorContacts SponsorContact[]
 
   @@index([deletedAt])
   @@map("user")
@@ -749,6 +771,8 @@ model SponsorContact {
   id    Int     @id @default(autoincrement())
   email String
   name  String?
+  // Free-text job title ("Responsable marketing"). NOT a permission — the right
+  // to act is accessRole below (#362). Two different things, close names.
   role  String?
 
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
@@ -757,6 +781,26 @@ model SponsorContact {
   editLinkLocked  Boolean   @default(false)
   editTokenSentAt DateTime?
 
+  // What this person may do on the sponsor's space (#362). Every contact used
+  // to have equal rights; the default keeps that true for rows created before
+  // the split, since they were all full editors.
+  accessRole SponsorAccessRole @default(EDITEUR)
+
+  // The account behind the contact, once the invitation is accepted. Null means
+  // "invited, or contact-only" — someone the organisers email without giving
+  // them a login. SetNull rather than Cascade: deleting an account must not
+  // erase the sponsor's contact list.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Invitation to create an account, kept apart from editToken (#362): the two
+  // differ in lifetime (7 days vs 30) and in consumption (single-use vs not),
+  // and the edit link stays in service for speakers. Merging them would make
+  // both expiries hard to follow.
+  invitationToken      String?   @unique
+  invitationSentAt     DateTime?
+  invitationAcceptedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -764,6 +808,7 @@ model SponsorContact {
   sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
 
   @@index([sponsorId])
+  @@index([userId])
 }
 
 // A job offer a sponsor wants relayed during the DevFest (#251). Shown on the

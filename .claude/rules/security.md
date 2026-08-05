@@ -32,6 +32,24 @@
 - Verify permissions on every request — never rely solely on client-side checks
 - Use constant-time comparison for tokens and secrets
 
+### Opening account creation to a new kind of user
+
+`User.role` is `UserRole @default(EDITOR)`, and `requireAnyAuthenticated` lets
+`EDITOR` through. Any account created without an explicit role therefore gets
+the back-office. That default was safe while only administrators could hold an
+account; it stops being safe the moment a third party can create one.
+
+So, before opening sign-up to a new kind of user (sponsor #362, speaker #363):
+
+- Add a **neutral** `UserRole` value for them and set it explicitly on create.
+  Never let them fall back to the default.
+- Do **not** widen `requireAnyAuthenticated` — it guards the back-office, whose
+  fine-grained authorization happens inside the handlers. Give the newcomer its
+  own guard reading its own link table (e.g. `SponsorContact.accessRole` via
+  `requireSponsorAccess`).
+- Reject the account at `user.create.before` rather than after the fact, so a
+  failed attempt leaves no orphan row behind.
+
 ## Dependency Updates
 - Run `npm audit` / `yarn audit` regularly
 - Update dependencies with known vulnerabilities promptly
