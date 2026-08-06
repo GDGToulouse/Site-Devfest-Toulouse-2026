@@ -127,8 +127,89 @@ describe("The sponsor wall serves the edition's frozen values (#375)", () => {
   });
 });
 
-// Years 1760 and 1761 are reserved for this file's past-edition fixtures.
-// Both sit below getSeededEdition()'s 2016 floor, so parallel test files
+// #379 — the sitemap needs every company that HAS a page, which is not the same
+// set as the featured edition's wall. Getting this wrong silently drops the
+// historical sponsors from indexing while their pages answer 200.
+describe("Indexable sponsors span every edition (#379)", () => {
+  it("lists a sponsor of a past edition that the featured wall omits", async () => {
+    const past = await prisma.edition.create({ data: { year: 1762 } });
+    createdEditionIds.push(past.id);
+    const tierId = await tierIdByKey("gold");
+    const sponsor = await createSponsorFixture({
+      name: "Sitemap Past Co",
+      slug: `sitemap-past-${Date.now()}`,
+      editionId: past.id,
+      tierId,
+      publicationStatus: "PUBLISHED",
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    const app = await buildPublicApp();
+    const [indexable, wall, detail] = await Promise.all([
+      app.inject({ method: "GET", url: "/api/sponsors/indexable" }),
+      app.inject({ method: "GET", url: "/api/sponsors" }),
+      app.inject({ method: "GET", url: `/api/sponsors/${sponsor.slug}` }),
+    ]);
+    await app.close();
+
+    // The page exists, so the sitemap must list it...
+    expect(detail.statusCode).toBe(200);
+    expect(indexable.json().map((s: { slug: string }) => s.slug)).toContain(sponsor.slug);
+    // ...even though it is absent from the featured wall. This gap is the bug.
+    expect(wall.json().map((s: { slug: string }) => s.slug)).not.toContain(sponsor.slug);
+  });
+
+  it("omits a sponsor with no published participation", async () => {
+    const past = await prisma.edition.create({ data: { year: 1763 } });
+    createdEditionIds.push(past.id);
+    const tierId = await tierIdByKey("gold");
+    const sponsor = await createSponsorFixture({
+      name: "Sitemap Draft Co",
+      slug: `sitemap-draft-${Date.now()}`,
+      editionId: past.id,
+      tierId,
+      publicationStatus: "DRAFT",
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    const app = await buildPublicApp();
+    const [indexable, detail] = await Promise.all([
+      app.inject({ method: "GET", url: "/api/sponsors/indexable" }),
+      app.inject({ method: "GET", url: `/api/sponsors/${sponsor.slug}` }),
+    ]);
+    await app.close();
+
+    // Symmetry with the route: no page, no sitemap entry.
+    expect(detail.statusCode).toBe(404);
+    expect(indexable.json().map((s: { slug: string }) => s.slug)).not.toContain(sponsor.slug);
+  });
+
+  it("carries a real modification date, not the moment of the request", async () => {
+    const edition = await getSeededEdition();
+    const tierId = await tierIdByKey("gold");
+    const sponsor = await createSponsorFixture({
+      name: "Sitemap Dated Co",
+      slug: `sitemap-dated-${Date.now()}`,
+      editionId: edition.id,
+      tierId,
+      publicationStatus: "PUBLISHED",
+    });
+    createdSponsorIds.push(sponsor.id);
+
+    const app = await buildPublicApp();
+    const res = await app.inject({ method: "GET", url: "/api/sponsors/indexable" });
+    await app.close();
+
+    const mine = res.json().find((s: { slug: string }) => s.slug === sponsor.slug);
+    // A `lastmod` that always equals "now" carries no information at all, which
+    // is what the sitemap used to send.
+    expect(mine.updatedAt).toBeTruthy();
+    expect(new Date(mine.updatedAt).getTime()).toBeLessThanOrEqual(Date.now());
+  });
+});
+
+// Years 1760 to 1763 are reserved for this file's past-edition fixtures.
+// All sit below getSeededEdition()'s 2016 floor, so parallel test files
 // cannot pick them up as "the current edition" (#292).
 describe("Sponsor detail spans editions (#129)", () => {
   it("serves a sponsor of a past edition with no tier and no offers, even if it had one", async () => {

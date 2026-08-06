@@ -4,6 +4,7 @@ import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
 import { archivedLogoUrl, archivedTier, getEditionSponsorWall } from "../lib/sponsor-archive.js";
+import { mostRecent } from "../lib/lastmod.js";
 
 function parseSocial(raw: string | null): Record<string, string> {
   if (!raw) return {};
@@ -25,6 +26,44 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     // Shared with /api/editions/:year/sponsors (#370): same wall, same frozen
     // values (#375), only the edition resolved differs.
     return getEditionSponsorWall(edition.id);
+  });
+
+  // GET /api/sponsors/indexable — every company that has a page, all editions.
+  //
+  // /api/sponsors above is the featured edition's wall, so it cannot drive the
+  // sitemap (#379): a company that sponsored 2025 but not 2026 is absent from
+  // the wall while /sponsors/:slug still answers 200 for it. Reading the same
+  // condition as that route — at least one published participation on a live
+  // edition — is what keeps the sitemap and the pages in agreement.
+  //
+  // Declared before "/sponsors/:slug" for readability only: find-my-way gives
+  // static segments priority over parametric ones, so the order does not matter
+  // — but it does mean "indexable" can never be a company's slug.
+  app.get("/sponsors/indexable", async () => {
+    const sponsors = await prisma.sponsor.findMany({
+      where: {
+        ...notDeleted,
+        editions: { some: { publicationStatus: "PUBLISHED", edition: notDeleted } },
+      },
+      orderBy: { name: "asc" },
+      select: {
+        slug: true,
+        updatedAt: true,
+        // The most recent published participation dates the page as well: its
+        // logo and tier are part of what the page renders (#375).
+        editions: {
+          where: { publicationStatus: "PUBLISHED", edition: notDeleted },
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          select: { updatedAt: true },
+        },
+      },
+    });
+
+    return sponsors.map((s) => ({
+      slug: s.slug,
+      updatedAt: mostRecent(s.updatedAt, s.editions[0]?.updatedAt),
+    }));
   });
 
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).
