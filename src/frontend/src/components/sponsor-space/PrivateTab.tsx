@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { getSponsorPrivate, saveSponsorProfile, type SponsorSpacePrivate } from "@/lib/sponsor-api";
+import SponsorFileField from "@/components/sponsor-space/SponsorFileField";
 
 // The com kit and booth staff (#362) — what the company and the organisers
 // exchange privately. Never rendered on the public site.
@@ -15,6 +16,9 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
   const [comKitNotes, setComKitNotes] = useState("");
   const [promoIdea, setPromoIdea] = useState("");
   const [coBuildIdea, setCoBuildIdea] = useState("");
+  const [logoWebUrl, setLogoWebUrl] = useState("");
+  const [logoPrintUrl, setLogoPrintUrl] = useState("");
+  const [charterUrl, setCharterUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
 
@@ -28,6 +32,9 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
       setComKitNotes(current?.comKitNotes ?? "");
       setPromoIdea(current?.platinumPromoIdea ?? "");
       setCoBuildIdea(current?.platinumCoBuildIdea ?? "");
+      setLogoWebUrl(current?.comKitLogoWebUrl ?? "");
+      setLogoPrintUrl(current?.comKitLogoPrintUrl ?? "");
+      setCharterUrl(current?.comKitCharterUrl ?? "");
     });
   }, [sponsorId]);
 
@@ -41,6 +48,9 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
     setMessage(null);
     const { status } = await saveSponsorProfile(sponsorId, {
       comKitNotes,
+      comKitLogoWebUrl: logoWebUrl,
+      comKitLogoPrintUrl: logoPrintUrl,
+      comKitCharterUrl: charterUrl,
       ...(allowsPromoIdeas ? { platinumPromoIdea: promoIdea, platinumCoBuildIdea: coBuildIdea } : {}),
     });
     setIsSaving(false);
@@ -67,13 +77,37 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
             <p className="text-sm text-gris">
               {current.comKitReceived
                 ? "Reçu par l'équipe DevFest."
-                : "Pas encore reçu. Envoyez vos fichiers à l'équipe DevFest."}
+                : "Pas encore reçu. Déposez vos fichiers ci-dessous, puis enregistrez."}
             </p>
-            <ul className="mt-3 space-y-1 text-sm">
-              <FileLine label="Logo web" url={current.comKitLogoWebUrl} />
-              <FileLine label="Logo print" url={current.comKitLogoPrintUrl} />
-              <FileLine label="Charte graphique" url={current.comKitCharterUrl} />
-            </ul>
+            <div className="mt-4 space-y-4">
+              <SponsorFileField
+                label="Logo web"
+                hint="PNG, WebP ou SVG, fond transparent de préférence."
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                value={logoWebUrl}
+                sponsorId={sponsorId}
+                canEdit
+                onChange={setLogoWebUrl}
+              />
+              <SponsorFileField
+                label="Logo print"
+                hint="Version haute définition ou vectorielle, pour l'impression."
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
+                value={logoPrintUrl}
+                sponsorId={sponsorId}
+                canEdit
+                onChange={setLogoPrintUrl}
+              />
+              <SponsorFileField
+                label="Charte graphique"
+                hint="PDF."
+                accept="application/pdf"
+                value={charterUrl}
+                sponsorId={sponsorId}
+                canEdit
+                onChange={setCharterUrl}
+              />
+            </div>
           </div>
 
           <label className="block">
@@ -148,21 +182,6 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
         </button>
       )}
     </div>
-  );
-}
-
-function FileLine({ label, url }: { label: string; url: string | null }) {
-  return (
-    <li className="flex items-center gap-2">
-      <span className="text-gris">{label} :</span>
-      {url ? (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="text-bleu hover:underline">
-          voir le fichier
-        </a>
-      ) : (
-        <span className="text-gris">non fourni</span>
-      )}
-    </li>
   );
 }
 

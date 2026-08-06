@@ -8,7 +8,9 @@ import { generateInvitationToken } from "../lib/edit-token.js";
 import { resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
-import { isSafeUrl } from "../lib/sanitize.js";
+import { isSafeUrl, sanitizeRichHtml } from "../lib/sanitize.js";
+import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
+import { revalidateJobOffers, revalidateSponsors } from "../lib/revalidate.js";
 import { getFeaturedEdition } from "./editions.js";
 
 // Same bounds as the edit link (#223): this endpoint writes fields rendered on
@@ -22,6 +24,40 @@ const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as c
 // Validated against a plain allow-list so an unknown value is a 422 rather than
 // a Prisma error surfacing as a 500.
 const ACCESS_ROLES: SponsorAccessRole[] = ["RESPONSABLE", "EDITEUR", "STAND"];
+
+// Same bounds as the edit link. SVG is allowed because storeImageBuffer strips
+// scripts, handlers and remote references before the file reaches the disk, and
+// .svg is served under a sandbox CSP (#346) — a vector logo is exactly what a
+// sponsor has to hand. PDF is the com-kit charter, a document rather than an
+// image (#374): storeImageBuffer stores it as-is, never passing it to sharp.
+const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
+const UPLOAD_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+  "application/pdf",
+]);
+
+interface JobOfferBody {
+  title: string;
+  descriptionFr?: string;
+  descriptionEn?: string;
+  url: string;
+}
+
+const jobOfferBodySchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "url"],
+  properties: {
+    title: { type: "string", maxLength: SHORT_MAX },
+    descriptionFr: { type: "string", maxLength: TEXT_MAX },
+    descriptionEn: { type: "string", maxLength: TEXT_MAX },
+    url: { type: "string", maxLength: URL_MAX },
+  },
+} as const;
 
 // What a sponsor may write about itself. `name`, `slug` and the tier are the
 // organisers' business: renaming the company here would break its slug and its
@@ -434,6 +470,198 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       return reply.code(204).send();
     },
   );
+
+  // --- Job offers (#251) -----------------------------------------------------
+  //
+  // Offers hang off the participation, not the company: a company sponsoring two
+  // years advertises different jobs each time, and the tier that sets the quota
+  // is per-year too.
+
+  // GET /api/sponsor-space/:sponsorId/job-offers — the year's offers and quota.
+  //
+  // STAND may read: the offers are published on a public page anyway, and a
+  // stand host being able to see what their own company advertises is the point.
+  app.get<{ Params: { sponsorId: string } }>("/sponsor-space/:sponsorId/job-offers", {
+    schema: { params: sponsorIdParams },
+    preHandler: requireSponsorAccess("STAND"),
+  }, async (request, reply) => {
+    const participation = await loadCurrentParticipation(request.sponsorAccess!.sponsorId);
+    if (!participation) return reply.code(422).send({ error: "no_current_participation" });
+
+    return {
+      quota: participation.tier.jobOfferQuota,
+      offers: participation.jobOffers.map(serializeJobOffer),
+    };
+  });
+
+  // POST /api/sponsor-space/:sponsorId/job-offers — create one, within quota.
+  app.post<{ Params: { sponsorId: string }; Body: JobOfferBody }>("/sponsor-space/:sponsorId/job-offers", {
+    schema: { params: sponsorIdParams, body: jobOfferBodySchema },
+    preHandler: requireSponsorAccess("EDITEUR"),
+  }, async (request, reply) => {
+    const participation = await loadCurrentParticipation(request.sponsorAccess!.sponsorId);
+    if (!participation) return reply.code(422).send({ error: "no_current_participation" });
+
+    const { title, url } = request.body;
+    if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
+    if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+
+    // A lowered tier keeps the offers already published but blocks new ones
+    // beyond the new cap (#251).
+    const quota = participation.tier.jobOfferQuota;
+    if (participation.jobOffers.length >= quota) {
+      return reply.code(409).send({ error: "quota_reached", quota });
+    }
+
+    const offer = await prisma.sponsorJobOffer.create({
+      data: {
+        editionSponsorId: participation.id,
+        title: title.trim(),
+        descriptionFr: sanitizeRichHtml(request.body.descriptionFr),
+        descriptionEn: sanitizeRichHtml(request.body.descriptionEn),
+        url: url.trim(),
+      },
+    });
+    revalidateSponsors();
+    revalidateJobOffers();
+    return reply.code(201).send(serializeJobOffer(offer));
+  });
+
+  // PUT /api/sponsor-space/:sponsorId/job-offers/:offerId — edit one.
+  app.put<{ Params: { sponsorId: string; offerId: string }; Body: Partial<JobOfferBody> }>(
+    "/sponsor-space/:sponsorId/job-offers/:offerId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["sponsorId", "offerId"],
+          properties: { sponsorId: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+        body: { type: "object", additionalProperties: false, properties: jobOfferBodySchema.properties },
+      },
+      preHandler: requireSponsorAccess("EDITEUR"),
+    },
+    async (request, reply) => {
+      const participation = await loadCurrentParticipation(request.sponsorAccess!.sponsorId);
+      if (!participation) return reply.code(422).send({ error: "no_current_participation" });
+
+      // Ownership: an id belonging to another company answers 404, never 403 —
+      // same reasoning as the guard, ids must not be probeable.
+      const offer = participation.jobOffers.find((o) => o.id === Number(request.params.offerId));
+      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
+
+      const body = request.body ?? {};
+      if (body.title !== undefined && !body.title.trim()) return reply.code(400).send({ error: "empty_title" });
+      if (body.url !== undefined && !isSafeUrl(body.url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+
+      const updated = await prisma.sponsorJobOffer.update({
+        where: { id: offer.id },
+        data: {
+          ...(body.title !== undefined && { title: body.title.trim() }),
+          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) }),
+          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) }),
+          ...(body.url !== undefined && { url: body.url.trim() }),
+        },
+      });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return serializeJobOffer(updated);
+    },
+  );
+
+  // DELETE /api/sponsor-space/:sponsorId/job-offers/:offerId — remove one.
+  app.delete<{ Params: { sponsorId: string; offerId: string } }>(
+    "/sponsor-space/:sponsorId/job-offers/:offerId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["sponsorId", "offerId"],
+          properties: { sponsorId: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+      },
+      preHandler: requireSponsorAccess("EDITEUR"),
+    },
+    async (request, reply) => {
+      const participation = await loadCurrentParticipation(request.sponsorAccess!.sponsorId);
+      if (!participation) return reply.code(422).send({ error: "no_current_participation" });
+
+      const offer = participation.jobOffers.find((o) => o.id === Number(request.params.offerId));
+      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
+
+      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
+      revalidateSponsors();
+      revalidateJobOffers();
+      return reply.code(204).send();
+    },
+  );
+
+  // POST /api/sponsor-space/:sponsorId/upload — store a logo or a com-kit file.
+  //
+  // Rate-limited: unlike the rest of this file, a call here writes to disk, and
+  // an account is not a reason to let someone fill it.
+  app.post<{ Params: { sponsorId: string } }>("/sponsor-space/:sponsorId/upload", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    schema: { params: sponsorIdParams },
+    preHandler: requireSponsorAccess("EDITEUR"),
+  }, async (request, reply) => {
+    const data = await request.file({ limits: { fileSize: UPLOAD_MAX_SIZE } });
+    if (!data) return reply.code(400).send({ error: "no_file" });
+
+    if (!UPLOAD_MIMES.has(data.mimetype)) {
+      await data.toBuffer(); // drain the stream so the request doesn't hang
+      return reply.code(400).send({ error: "invalid_file_type" });
+    }
+
+    const buffer = await data.toBuffer();
+    if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
+
+    try {
+      const url = await storeImageBuffer(buffer, data.mimetype);
+      return { url };
+    } catch (err) {
+      // An SVG whose only content was executable leaves nothing to render —
+      // tell the sponsor their file was refused rather than return a 500.
+      if (err instanceof UnsafeSvgError) {
+        return reply.code(400).send({ error: "invalid_file_type" });
+      }
+      throw err;
+    }
+  });
+}
+
+// The year's participation with everything the job-offer routes need: the
+// offers themselves and the tier that caps them.
+async function loadCurrentParticipation(sponsorId: number) {
+  const edition = await getFeaturedEdition();
+  if (!edition) return null;
+  return prisma.editionSponsor.findFirst({
+    where: { sponsorId, editionId: edition.id, edition: notDeleted },
+    select: {
+      id: true,
+      tier: { select: { jobOfferQuota: true } },
+      jobOffers: {
+        select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
+        orderBy: { id: "asc" },
+      },
+    },
+  });
+}
+
+function serializeJobOffer(o: {
+  id: number;
+  title: string;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  url: string;
+}) {
+  return {
+    id: o.id,
+    title: o.title,
+    descriptionFr: o.descriptionFr,
+    descriptionEn: o.descriptionEn,
+    url: o.url,
+  };
 }
 
 // Would this change leave the space without a single RESPONSABLE? Passing null

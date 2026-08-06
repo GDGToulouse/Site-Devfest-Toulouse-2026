@@ -61,6 +61,21 @@ export interface SponsorTeamMember {
   invitationAcceptedAt: string | null;
 }
 
+export interface SponsorJobOffer {
+  id: number;
+  title: string;
+  descriptionFr: string | null;
+  descriptionEn: string | null;
+  url: string;
+}
+
+export interface SponsorJobOffers {
+  // How many offers this year's tier allows. A lowered tier keeps the offers
+  // already published but blocks new ones beyond the new cap (#251).
+  quota: number;
+  offers: SponsorJobOffer[];
+}
+
 export interface InvitationPreview {
   sponsorName: string;
   accessRole: SponsorAccessRole;
@@ -141,6 +156,53 @@ export function setTeamMemberRole(sponsorId: number, contactId: number, accessRo
 
 export function revokeTeamMember(sponsorId: number, contactId: number) {
   return call<null>(`/api/sponsor-space/${sponsorId}/team/${contactId}`, { method: "DELETE" });
+}
+
+export function getSponsorJobOffers(sponsorId: number) {
+  return call<SponsorJobOffers>(`/api/sponsor-space/${sponsorId}/job-offers`);
+}
+
+export function createSponsorJobOffer(sponsorId: number, body: Omit<SponsorJobOffer, "id">) {
+  return call<SponsorJobOffer>(`/api/sponsor-space/${sponsorId}/job-offers`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateSponsorJobOffer(
+  sponsorId: number,
+  offerId: number,
+  body: Partial<Omit<SponsorJobOffer, "id">>,
+) {
+  return call<SponsorJobOffer>(`/api/sponsor-space/${sponsorId}/job-offers/${offerId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteSponsorJobOffer(sponsorId: number, offerId: number) {
+  return call<null>(`/api/sponsor-space/${sponsorId}/job-offers/${offerId}`, { method: "DELETE" });
+}
+
+// Outside call(): that helper forces Content-Type: application/json, which would
+// strip the multipart boundary the browser sets for us.
+export async function uploadSponsorFile(sponsorId: number, file: File): Promise<Result<{ url: string }>> {
+  try {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`/api/sponsor-space/${sponsorId}/upload`, {
+      method: "POST",
+      credentials: "include",
+      body: form,
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => null);
+      return { data: null, status: res.status, ...(body?.error ? { error: body.error } : {}) };
+    }
+    return { data: (await res.json()) as { url: string }, status: res.status };
+  } catch {
+    return { data: null, status: 0 };
+  }
 }
 
 // Ask for a sign-in link by email (#362). better-auth's magic-link plugin runs
