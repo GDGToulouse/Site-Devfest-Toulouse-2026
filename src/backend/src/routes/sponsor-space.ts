@@ -5,6 +5,7 @@ import { getAuthContext } from "../lib/auth-context.js";
 import { notDeleted } from "../lib/admin-helpers.js";
 import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
 import { generateInvitationToken } from "../lib/edit-token.js";
+import { resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
 import { isSafeUrl } from "../lib/sanitize.js";
@@ -337,12 +338,18 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
         return reply.code(502).send({ error: "email_failed" });
       }
 
+      // Normally unreachable — the guard above already requires a RESPONSABLE.
+      // It fires for the ADMIN override, which acts without holding a contact
+      // of its own: the member an organiser adds to an empty space must be able
+      // to run it (#362). The contact does not exist yet, hence the -1.
+      const promoted = await resolveInitialAccessRole(sponsorId, -1);
+
       const contact = await prisma.sponsorContact.create({
         data: {
           sponsorId,
           email,
           name: request.body?.name?.trim() || null,
-          accessRole,
+          accessRole: promoted ?? accessRole,
           invitationToken: token,
           invitationSentAt: new Date(),
         },

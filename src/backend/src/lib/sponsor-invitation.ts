@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { isInvitationExpired } from "./edit-token.js";
+import type { SponsorAccessRole } from "./sponsor-guard.js";
 
 // Invitations to a sponsor space (#362).
 //
@@ -29,6 +30,31 @@ export async function findPendingInvitation(token: string) {
   if (contact.invitationAcceptedAt) return null;
   if (isInvitationExpired(contact.invitationSentAt)) return null;
   return contact;
+}
+
+// The first person invited to a sponsor's space becomes its RESPONSABLE (#362).
+//
+// Without this, nobody can invite the rest of the team without going back to an
+// organiser: inviting is RESPONSABLE-only, and the last_responsable guard
+// forbids creating one after the fact from the space itself.
+//
+// "First" is measured on RESPONSABLE rows, not on accounts, so that this rule
+// and that guard read the same thing. Counting accounts instead would allow a
+// space with two active members, no RESPONSABLE, and nobody able to invite.
+//
+// The promotion overrides the requested role — an organiser inviting the very
+// first contact as STAND gets a RESPONSABLE. Deliberate, and stated in the
+// admin UI: silently ending up with an unmanageable space is worse.
+// Returns null when the caller's own choice stands, so an invite that asked for
+// nothing keeps the role the contact already has instead of being reset.
+export async function resolveInitialAccessRole(
+  sponsorId: number,
+  excludeContactId: number,
+): Promise<SponsorAccessRole | null> {
+  const responsables = await prisma.sponsorContact.count({
+    where: { sponsorId, accessRole: "RESPONSABLE", id: { not: excludeContactId } },
+  });
+  return responsables === 0 ? "RESPONSABLE" : null;
 }
 
 // Does this email hold a live invitation? Asked by the sign-up hook, which runs

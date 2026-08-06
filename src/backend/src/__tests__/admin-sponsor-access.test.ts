@@ -70,6 +70,64 @@ describe("POST /api/admin/sponsors/:id/contacts/:contactId/invite (#362)", () =>
     expect(stored.invitationSentAt).not.toBeNull();
   });
 
+  it("promotes the first invited contact to RESPONSABLE even when EDITEUR is asked", async () => {
+    const sponsor = await createSponsor("First Invite Co");
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: "first@example.org", accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/sponsors/${sponsor.id}/contacts/${contact.id}/invite`,
+      payload: { accessRole: "EDITEUR" },
+    });
+
+    // Otherwise nobody can invite the rest of the team: inviting is
+    // RESPONSABLE-only, and last_responsable forbids creating one afterwards.
+    expect(res.statusCode).toBe(200);
+    expect(res.json().accessRole).toBe("RESPONSABLE");
+    const stored = await prisma.sponsorContact.findUniqueOrThrow({ where: { id: contact.id } });
+    expect(stored.accessRole).toBe("RESPONSABLE");
+  });
+
+  it("keeps the requested role once the sponsor already has a RESPONSABLE", async () => {
+    const sponsor = await createSponsor("Second Invite Co");
+    await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: "boss@example.org", accessRole: "RESPONSABLE" },
+    });
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: sponsor.id, email: "colleague@example.org", accessRole: "EDITEUR" },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/sponsors/${sponsor.id}/contacts/${contact.id}/invite`,
+      payload: { accessRole: "STAND" },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().accessRole).toBe("STAND");
+  });
+
+  it("reports an invitation past its 7-day window as expired, not pending", async () => {
+    const sponsor = await createSponsor("Stale Invite Co");
+    const contact = await prisma.sponsorContact.create({
+      data: {
+        sponsorId: sponsor.id,
+        email: "stale@example.org",
+        invitationToken: `stale-${Date.now()}`,
+        // 8 days back — one past the TTL.
+        invitationSentAt: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000),
+      },
+    });
+
+    const res = await app.inject({ method: "GET", url: `/api/admin/sponsors/${sponsor.id}/contacts` });
+
+    const listed = res.json().find((c: { id: number }) => c.id === contact.id);
+    expect(listed.invitationPending).toBe(false);
+    expect(listed.invitationExpired).toBe(true);
+  });
+
   it("rotates the token on re-invite, invalidating the previous one", async () => {
     const sponsor = await createSponsor("Reinvite Co");
     const contact = await prisma.sponsorContact.create({

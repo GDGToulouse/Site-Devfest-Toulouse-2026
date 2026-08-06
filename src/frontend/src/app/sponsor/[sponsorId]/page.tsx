@@ -8,6 +8,7 @@ import PublicTab from "@/components/sponsor-space/PublicTab";
 import PrivateTab from "@/components/sponsor-space/PrivateTab";
 import TeamTab from "@/components/sponsor-space/TeamTab";
 import { getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
+import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
 import { signOut } from "@/lib/admin-api";
 
 // A sponsor's own space (#362), in three tabs — the split the issue asked for,
@@ -68,7 +69,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-noir">{profile.name}</h1>
-          <p className="text-sm text-gris">Espace partenaire · {ROLE_LABELS[profile.accessRole]}</p>
+          <p className="text-sm text-gris">Espace partenaire · {SPONSOR_ROLE_LABELS[profile.accessRole]}</p>
         </div>
         <button
           type="button"
@@ -97,12 +98,6 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
     </Shell>
   );
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  RESPONSABLE: "Responsable",
-  EDITEUR: "Éditeur",
-  STAND: "Stand",
-};
 
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (
