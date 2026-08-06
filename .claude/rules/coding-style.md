@@ -1,16 +1,12 @@
 # Coding Style
 
-- Do not add docstrings, type annotations, or comments to code you did not change
-- Avoid over-engineering: no premature abstractions, no feature flags for one-time operations
-- Three similar lines of code is better than a premature abstraction
-- Boolean variables: use `is`, `has`, `can`, `should` prefixes
-- Functions: use verbs (`get`, `create`, `update`, `delete`, `validate`, `handle`)
-- Only validate at system boundaries (user input, external APIs); trust internal code
+Formatting is Prettier's and ESLint's job — do not fix by hand what tooling handles, and do not
+bikeshed it.
 
-## Formatting
-- Delegate to tooling (Prettier, ESLint) — don't manually fix formatting
-- Do not bikeshed on style that the formatter handles
+Booleans read as assertions: `is`, `has`, `can`, `should`. Functions are verbs. `UPPER_SNAKE_CASE`
+is for true compile-time constants, `camelCase` for anything merely assigned once at runtime.
 
-## Constants
-- Use `UPPER_SNAKE_CASE` for true constants (compile-time values, config keys)
-- Use regular `camelCase` for values that are just assigned once at runtime
+Validate at system boundaries — user input, external APIs — and trust internal code.
+
+Avoid premature abstraction and one-off feature flags. The bar for a new indirection is a second
+real caller, not an imagined one.

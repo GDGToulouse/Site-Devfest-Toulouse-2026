@@ -1,9 +1,12 @@
 # Communication
 
-- When corrected: apply fix, update auto memory. Pattern: "Correction received -> Fix applied -> Memory updated"
-- Consult CLAUDE.md and specification documents before making assumptions
-- Don't explain verbosely what you're about to do; just do it
+**Langue** : code, commentaires, commits et noms de branche en **anglais** ; échanges avec
+Julien en **français**, sauf s'il écrit en anglais.
 
-## Language
-- Code, comments, commits, and branch names: **English**
-- Communication with the user: **French** (unless the user writes in English)
+Ne pas annoncer ce qu'on va faire — le faire. Ce qui mérite d'être dit, c'est ce qu'on a trouvé
+en chemin : une hypothèse de départ fausse, un défaut dans l'énoncé d'une issue, une vérification
+qu'on n'a pas pu mener. Dire explicitement ce qui n'a **pas** été vérifié vaut mieux qu'un compte
+rendu qui laisse croire à une couverture complète.
+
+Quand une correction est reçue : appliquer, puis consigner le pourquoi en mémoire si le piège
+peut se reproduire.
