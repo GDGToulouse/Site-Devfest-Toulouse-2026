@@ -119,7 +119,7 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     labelField: "year",
     // `year` is unique but numeric — same limitation as ticket sortOrder.
     parkedFields: [],
-    fileFields: ["heroImageUrl", "sponsorHeroImageUrl", "sponsorBrochureUrl"],
+    fileFields: ["heroImageUrl", "sponsorHeroImageUrl", "sponsorBrochureUrl", "sponsorBrochureUrlEn"],
     adminOnly: true,
   },
   {

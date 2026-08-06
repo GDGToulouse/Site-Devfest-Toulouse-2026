@@ -102,8 +102,12 @@ model Edition {
   aftermovieUrl           String?
   galleryUrl              String?
   archivedSiteUrl         String?
-  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
+  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files).
+  // The unsuffixed field is the French one — it predates the English variant (#401)
+  // and renaming it would rewrite existing rows for no gain. When the English
+  // brochure is missing, English requesters fall back to the French one.
   sponsorBrochureUrl      String?
+  sponsorBrochureUrlEn    String?
   // Optional hero image specific to the /devenir-sponsor page. When null,
   // the page falls back to heroImageUrl.
   sponsorHeroImageUrl     String?
