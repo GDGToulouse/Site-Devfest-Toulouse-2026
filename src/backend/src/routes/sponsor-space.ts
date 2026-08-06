@@ -275,6 +275,20 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "unsafe_url", field: `socialLinks.${key}` });
       }
     }
+    // Booth contacts carry their own social URLs (#249) — the edit link checked
+    // these and this route did not, so a javascript: handle could be stored
+    // here and rendered by whoever displays the booth team.
+    if (Array.isArray(body.standContacts)) {
+      for (const [i, contact] of body.standContacts.entries()) {
+        if (!contact || typeof contact !== "object") continue;
+        for (const key of ["linkedin", "twitter", "bluesky"] as const) {
+          const value = (contact as Record<string, unknown>)[key];
+          if (typeof value === "string" && value.trim() && !isSafeUrl(value)) {
+            return reply.code(400).send({ error: "unsafe_url", field: `standContacts[${i}].${key}` });
+          }
+        }
+      }
+    }
 
     const sponsor = await prisma.sponsor.findFirst({
       where: { id: sponsorId, ...notDeleted },

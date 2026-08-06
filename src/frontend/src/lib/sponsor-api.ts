@@ -205,6 +205,33 @@ export async function uploadSponsorFile(sponsorId: number, file: File): Promise<
   }
 }
 
+// Open the account an invitation entitles someone to (#362). Distinct from
+// signInWithEmail, which only authenticates an account that already exists —
+// a sponsor arriving from an invitation has none yet.
+//
+// The server accepts this only for an address holding a live invitation; any
+// other one is refused by the user.create.before hook in auth.ts.
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  name: string,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const res = await fetch("/api/auth/sign-up/email", {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password, name }),
+    });
+    if (res.ok) return { success: true };
+
+    const body = (await res.json().catch(() => null)) as { message?: string } | null;
+    return { success: false, error: body?.message || "La création du compte a échoué." };
+  } catch {
+    return { success: false, error: "Impossible de contacter le serveur." };
+  }
+}
+
 // Ask for a sign-in link by email (#362). better-auth's magic-link plugin runs
 // with disableSignUp, so this never creates an account: an address with no
 // account gets the same answer as one that has it, which is deliberate — the

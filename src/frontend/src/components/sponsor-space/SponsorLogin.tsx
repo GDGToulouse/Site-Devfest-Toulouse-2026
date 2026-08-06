@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
-import { requestMagicLink } from "@/lib/sponsor-api";
+import { requestMagicLink, signUpWithEmail } from "@/lib/sponsor-api";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
 // account holds no back-office role, and landing on a page titled "DevFest
@@ -14,7 +14,16 @@ interface Providers {
   github: boolean;
 }
 
-export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
+// mode="signup" is what someone arriving from an invitation sees. They have no
+// account yet, and a screen headed "Sign in" reads as a dead end (#362) — the
+// form is the same either way, only the wording changes.
+export default function SponsorLogin({
+  callbackURL,
+  mode = "signin",
+}: {
+  callbackURL: string;
+  mode?: "signin" | "signup";
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -33,7 +42,12 @@ export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    const result = await signInWithEmail(email, password);
+    // sign-in only authenticates an existing account; someone arriving from an
+    // invitation has none yet and needs sign-up (#362).
+    const result =
+      mode === "signup"
+        ? await signUpWithEmail(email.trim(), password, email.trim())
+        : await signInWithEmail(email, password);
     if (result.success) {
       window.location.href = callbackURL;
       return;
@@ -69,7 +83,7 @@ export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
 
   if (linkSent) {
     return (
-      <Shell>
+      <Shell mode={mode}>
         <p className="text-center text-noir">
           Si un compte existe pour <strong>{email.trim()}</strong>, un lien de connexion vient d&apos;y
           être envoyé. Il est valable 60 minutes et ne peut servir qu&apos;une fois.
@@ -86,7 +100,7 @@ export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
   }
 
   return (
-    <Shell>
+    <Shell mode={mode}>
       {(providers?.google || providers?.github) && (
         <div className="space-y-3">
           {providers.google && (
@@ -145,7 +159,7 @@ export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
           disabled={isLoading || !email.trim() || !password}
           className="w-full rounded-[12px] bg-malachite px-4 py-3 font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isLoading ? "Connexion…" : "Me connecter"}
+          {isLoading ? "Connexion…" : mode === "signup" ? "Créer mon compte" : "Me connecter"}
         </button>
       </form>
 
@@ -159,18 +173,21 @@ export default function SponsorLogin({ callbackURL }: { callbackURL: string }) {
       </button>
 
       <p className="mt-6 text-center text-xs text-gris">
-        Accès sur invitation uniquement. Contactez l&apos;équipe DevFest si vous n&apos;avez pas encore
-        reçu la vôtre.
+        {mode === "signup"
+          ? "Choisissez un mot de passe, ou connectez-vous avec Google ou GitHub : votre compte sera créé avec l'adresse qui a reçu l'invitation."
+          : "Accès sur invitation uniquement. Contactez l'équipe DevFest si vous n'avez pas encore reçu la vôtre."}
       </p>
     </Shell>
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, mode }: { children: React.ReactNode; mode: "signin" | "signup" }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-blanc-casse px-6 py-10">
       <div className="w-full max-w-md rounded-3xl bg-blanc p-8 shadow-card">
-        <h1 className="mb-2 text-center text-2xl font-bold text-noir">Espace partenaire</h1>
+        <h1 className="mb-2 text-center text-2xl font-bold text-noir">
+          {mode === "signup" ? "Créer votre compte partenaire" : "Espace partenaire"}
+        </h1>
         <p className="mb-6 text-center text-sm text-gris">DevFest Toulouse</p>
         {children}
       </div>

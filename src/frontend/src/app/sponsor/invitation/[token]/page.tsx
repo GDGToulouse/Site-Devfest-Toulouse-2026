@@ -78,7 +78,7 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
   }
 
   if (needsSignIn) {
-    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} />;
+    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} mode="signup" />;
   }
 
   return (

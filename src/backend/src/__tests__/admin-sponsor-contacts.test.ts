@@ -39,7 +39,7 @@ describe("Admin sponsor contacts (#250)", () => {
 
   beforeEach(() => sendMailMock.mockClear());
 
-  it("adds a contact and emails its link", async () => {
+  it("adds a contact and invites them to open an account", async () => {
     const res = await app.inject({
       method: "POST",
       url: `/api/admin/sponsors/${sponsorId}/contacts`,
@@ -48,8 +48,13 @@ describe("Admin sponsor contacts (#250)", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.email).toBe("alice@example.org");
-    expect(body.hasLink).toBe(true);
-    // The raw token is never returned to the admin.
+    // An invitation, not the edit link it replaced (#362).
+    expect(body.invitationPending).toBe(true);
+    expect(body.hasLink).toBe(false);
+    // The first contact runs the space, or nobody can invite the rest.
+    expect(body.accessRole).toBe("RESPONSABLE");
+    // Neither secret is ever returned to the admin.
+    expect(JSON.stringify(body)).not.toContain("invitationToken");
     expect(body).not.toHaveProperty("editToken");
     expect(sendMailMock).toHaveBeenCalledTimes(1);
   });
