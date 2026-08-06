@@ -766,11 +766,11 @@ model EditionSponsor {
   @@index([tierId])
 }
 
-// A person who can edit a sponsor's page via their own modification link
-// (#250). Replaces the single editToken that used to live on Sponsor: a
-// sponsor can now have several contacts, each with an independent token, send
-// date (30-day expiry) and lock. All contacts edit the same sponsor page with
-// equal rights.
+// A person the organisers deal with at a sponsor company, and what they may do
+// on its space (#250, #362). A sponsor has several of them, each with its own
+// access role and its own account — or none, for someone the organisers merely
+// email. Access used to come from a per-contact modification link instead; see
+// the token fields below, kept only to convert the links already sent.
 model SponsorContact {
   id    Int     @id @default(autoincrement())
   email String
@@ -779,8 +779,14 @@ model SponsorContact {
   // to act is accessRole below (#362). Two different things, close names.
   role  String?
 
-  // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
-  // now per-contact. Locale for the link email is inherited from the sponsor.
+  // Modification-link token (issue #79, RG-242 to RG-251). Read-only since
+  // #362: nothing writes these any more, and a sponsor edits from an account.
+  // They survive because they carry the links still sitting in mailboxes —
+  // opening one converts it into an invitation, and editLinkLocked is what
+  // still lets an organiser refuse that conversion.
+  //
+  // Droppable once no editTokenSentAt is within its 30-day window, i.e. a month
+  // after #362 reaches production.
   editToken       String?   @unique
   editLinkLocked  Boolean   @default(false)
   editTokenSentAt DateTime?

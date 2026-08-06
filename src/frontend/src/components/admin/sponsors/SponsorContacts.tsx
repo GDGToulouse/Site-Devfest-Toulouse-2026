@@ -148,7 +148,16 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                 {c.name && <p className="text-xs text-gris">{c.email}</p>}
               </div>
               <AccessStatus contact={c} />
-              {c.editLinkLocked && <StatusBadge status="Lien verrouillé" variant="orange" />}
+              {/* An edit link still in a mailbox (#362). It no longer edits
+                  anything — opening it turns it into an invitation — but
+                  locking it is what refuses that conversion, so the organisers
+                  need to see it exists. */}
+              {c.hasLink &&
+                (c.editLinkLocked ? (
+                  <StatusBadge status="Ancien lien verrouillé" variant="orange" />
+                ) : (
+                  <StatusBadge status="Ancien lien encore valable" variant="gray" />
+                ))}
 
               {/* Setting a role on someone who was never invited has no visible
                   effect — the control appears once access is on its way. */}
