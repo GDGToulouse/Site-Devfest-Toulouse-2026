@@ -194,10 +194,17 @@ export default async function contactRoutes(app: FastifyInstance) {
           // secret are configured; falls back to the raw URL otherwise so
           // the email stays useful in dev.
           const brochureToken = makeToken(stored.id);
-          const brochureUrl = edition?.sponsorBrochureUrl
+          // Untracked fallback only: the tracked link resolves the language
+          // itself from the stored locale (#401), so it needs no variant here.
+          const directBrochureUrl =
+            (lang === "en" ? edition?.sponsorBrochureUrlEn : null) ??
+            edition?.sponsorBrochureUrl ??
+            edition?.sponsorBrochureUrlEn ??
+            null;
+          const brochureUrl = directBrochureUrl
             ? brochureToken
               ? `${baseUrl}/api/brochure/${brochureToken}`
-              : `${baseUrl}${edition.sponsorBrochureUrl}`
+              : `${baseUrl}${directBrochureUrl}`
             : "";
 
           const vars = {
