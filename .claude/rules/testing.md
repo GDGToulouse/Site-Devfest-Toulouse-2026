@@ -14,50 +14,50 @@
 - One assertion per concept (multiple asserts are fine if they test the same behavior)
 - No logic in tests (no if/else, no loops) — tests should be linear
 
-## Development workflow — Test Driven Development
+## Development workflow
 
-Every feature or fix follows this strict cycle. Do not skip steps.
+Code and tests ship together, and nothing is pushed that has not been seen working. The order
+below is what that implies; it is not a ritual to perform for its own sake.
 
-### Step 1 — Write code + unit/integration tests
-1. Write the implementation code.
-2. Write the associated automated tests (unit and/or integration).
-3. **Commit** the code and tests together (`feat:` or `fix:`).
+### 1 — Write the code and its tests, commit them together
 
-### Step 2 — Run automated tests
-4. Run the full test suite (`npm test` or equivalent).
-5. If tests fail: fix the code or tests, then **commit** the fix (`fix: correct ...`).
-6. Repeat until all tests pass.
+A test that passes without the fix proves nothing. When fixing a bug, make the test fail first
+(revert the fix, watch it go red) — that is the only way to know it is testing the right thing.
 
-### Step 3 — Functional testing via browser
-7. Start the local Docker environment (`docker compose up`) if not running.
-8. Use the **Chrome DevTools MCP** to navigate to the relevant page(s) on the local Docker instance.
-9. Verify the feature visually and interactively:
-   - Does the page render correctly?
-   - Do interactions work (clicks, forms, navigation)?
-   - Are there console errors?
-   - Is the layout correct on the target viewport?
-10. If issues are found: fix, **commit**, and re-test (go back to step 7).
+### 2 — Run the suites
 
-### Step 4 — Push
-11. All automated tests pass, functional verification is clean.
-12. **Push** to the remote branch.
+```bash
+# frontend
+cd src/frontend && pnpm exec vitest run
 
-### Summary
-
-```
-Write code + tests
-      ↓
-   Commit
-      ↓
-Run automated tests ──fail──→ Fix → Commit → (re-run)
-      ↓ pass
-Functional test (Chrome DevTools MCP) ──fail──→ Fix → Commit → (re-test)
-      ↓ pass
-    Push
+# backend — DATABASE_URL must point at localhost, or ~44 tests fail with 500s
+cd src/backend && DATABASE_URL="postgresql://devfest:devfest@localhost:5432/devfest?schema=public" pnpm exec vitest run
 ```
 
-### Rules
-- Never push code that has failing tests.
-- Never push code that has not been functionally verified in the browser.
-- Each fix is its own commit — do not amend the original commit.
-- If a fix changes the implementation significantly, update the tests accordingly.
+Integration tests share one database and run in parallel: an isolated failure that does not
+reproduce is usually a fixture collision, not a regression. Re-run before chasing it, and say so
+rather than passing it off as green.
+
+### 3 — Verify in the browser
+
+```bash
+docker compose -f docker-compose.local.yml up -d
+```
+
+Drive the real page through the **Chrome DevTools MCP**: does it render, do the interactions
+work, is the console clean, does the layout hold at the target viewport? Tests pass on code that
+is wired to nothing — several bugs on this project (a silent security fallback, a 404 in the
+sitemap) were invisible to the suites and obvious in the browser.
+
+If the environment misbehaves rather than the code, say which and why. Every route 404ing means
+a stale `.next` volume, not a broken feature.
+
+### 4 — Push
+
+Only once the suites pass and the feature has been seen working. State what was verified and
+what was not — an unobserved behaviour is not a verified one.
+
+### Non-negotiable
+
+- Never push failing tests, and never push what has not been seen working in the browser.
+- Each fix is its own commit — do not amend the original.
