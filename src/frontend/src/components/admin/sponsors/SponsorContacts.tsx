@@ -93,12 +93,10 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
 
   return (
     <div className="rounded-lg border border-gris/20 bg-blanc-casse/50 p-4 space-y-4">
-      <p className="text-sm font-medium text-noir">Contacts &amp; liens de modification</p>
-
       {loading ? (
-        <p className="text-sm text-gris">Chargement…</p>
+        <p className="text-sm text-gris-sur-creme">Chargement…</p>
       ) : contacts.length === 0 ? (
-        <p className="text-sm text-gris">Aucun contact pour l&apos;instant.</p>
+        <p className="text-sm text-gris-sur-creme">Aucun contact pour l&apos;instant.</p>
       ) : (
         <ul className="space-y-2">
           {contacts.map((c) => (
@@ -115,14 +113,17 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                   Verrouillé
                 </span>
               )}
-              <button type="button" onClick={() => resend(c.id)} disabled={busy} className="text-xs font-medium text-malachite hover:underline disabled:opacity-50">
-                Renvoyer le lien
+              {/* 24×24 minimum on every row action (WCAG 2.2, #393), and each
+                  one names its contact: three identical "Retirer" in a list
+                  say nothing on their own to a screen reader. */}
+              <button type="button" onClick={() => resend(c.id)} disabled={busy} className={`${rowActionClass} text-malachite focus:ring-malachite/50`}>
+                Renvoyer le lien<span className="sr-only"> à {c.email}</span>
               </button>
-              <button type="button" onClick={() => toggleLock(c)} disabled={busy} className="text-xs font-medium text-noir hover:underline disabled:opacity-50">
-                {c.editLinkLocked ? "Déverrouiller" : "Verrouiller"}
+              <button type="button" onClick={() => toggleLock(c)} disabled={busy} className={`${rowActionClass} text-noir focus:ring-noir/30`}>
+                {c.editLinkLocked ? "Déverrouiller" : "Verrouiller"}<span className="sr-only"> le lien de {c.email}</span>
               </button>
-              <button type="button" onClick={() => remove(c.id)} disabled={busy} className="text-xs font-medium text-terre-cuite hover:underline disabled:opacity-50">
-                Retirer
+              <button type="button" onClick={() => remove(c.id)} disabled={busy} className={`${rowActionClass} text-terre-cuite focus:ring-terre-cuite/50`}>
+                Retirer<span className="sr-only"> le contact {c.email}</span>
               </button>
             </li>
           ))}
@@ -130,18 +131,18 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
       )}
 
       <div className="border-t border-gris/15 pt-3">
-        <p className="mb-2 text-xs font-semibold text-gris">Ajouter un contact</p>
+        <p className="mb-2 text-xs font-semibold text-gris-sur-creme">Ajouter un contact</p>
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex-1 min-w-[180px]">
-            <span className="mb-1 block text-xs text-gris">Email</span>
+            <span className="mb-1 block text-xs text-gris-sur-creme">Email</span>
             <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@exemple.com" className={inputClass} />
           </label>
           <label className="min-w-[120px]">
-            <span className="mb-1 block text-xs text-gris">Nom (optionnel)</span>
+            <span className="mb-1 block text-xs text-gris-sur-creme">Nom (optionnel)</span>
             <input value={name} onChange={(e) => setName(e.target.value)} className={inputClass} />
           </label>
           <label className="min-w-[120px]">
-            <span className="mb-1 block text-xs text-gris">Rôle (optionnel)</span>
+            <span className="mb-1 block text-xs text-gris-sur-creme">Rôle (optionnel)</span>
             <input value={role} onChange={(e) => setRole(e.target.value)} className={inputClass} />
           </label>
           <button type="button" onClick={add} disabled={busy} className="px-3 py-2 text-sm rounded-lg bg-malachite text-blanc font-medium hover:bg-malachite/90 disabled:opacity-50">
@@ -150,10 +151,21 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
         </div>
       </div>
 
-      {msg && <p className={`text-sm ${msg.ok ? "text-malachite" : "text-terre-cuite"}`}>{msg.text}</p>}
+      {msg && (
+        <p
+          role={msg.ok ? "status" : "alert"}
+          aria-live={msg.ok ? "polite" : "assertive"}
+          className={`text-sm ${msg.ok ? "text-malachite" : "text-terre-cuite"}`}
+        >
+          {msg.text}
+        </p>
+      )}
     </div>
   );
 }
 
 const inputClass =
   "w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
+
+const rowActionClass =
+  "inline-flex min-h-[24px] items-center rounded px-2 py-1 text-xs font-medium hover:underline disabled:opacity-50 focus:outline-none focus:ring-2";
