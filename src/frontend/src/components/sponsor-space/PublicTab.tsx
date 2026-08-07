@@ -5,6 +5,7 @@ import { useState } from "react";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import { saveSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
+import SponsorFileField from "@/components/sponsor-space/SponsorFileField";
 
 // What the public site shows about the company (#362). Read-only for STAND:
 // the booth team sees the page without being able to rewrite it.
@@ -54,7 +55,12 @@ export default function PublicTab({
       text:
         error === "unsafe_url"
           ? "Une des adresses saisies n'est pas valide. Utilisez une URL commençant par http:// ou https://."
-          : "L'enregistrement a échoué. Réessayez.",
+          : // The logo is stored per edition (#375), so it has nowhere to go when
+            // the company does not sponsor the current one. Saying "failed" here
+            // sent the sponsor looking for a mistake in their own input.
+            error === "no_current_participation"
+            ? "Votre entreprise ne sponsorise pas l'édition en cours : le logo ne peut pas être enregistré. Contactez l'équipe DevFest Toulouse."
+            : "L'enregistrement a échoué. Réessayez.",
     });
   }
 
@@ -103,19 +109,21 @@ export default function PublicTab({
         />
       </label>
 
-      <label className="block">
-        <span className="mb-1 block text-sm font-medium text-noir">Logo (URL)</span>
-        <input
+      <div>
+        <SponsorFileField
+          label="Logo"
+          hint="Haute définition (largeur ≥ 1000 px), sans marge autour du logo, PNG ou WebP à fond transparent de préférence."
+          accept="image/png,image/jpeg,image/webp,image/svg+xml"
           value={logoUrl}
-          onChange={(e) => setLogoUrl(e.target.value)}
-          disabled={!canEdit}
-          className={inputClass}
+          sponsorId={profile.id}
+          canEdit={canEdit}
+          onChange={setLogoUrl}
         />
-        <span className="mt-1 block text-xs text-gris">
-          Haute définition (largeur ≥ 1000 px), sans marge autour du logo, PNG ou WebP à fond
-          transparent de préférence.
-        </span>
-      </label>
+        {logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={logoUrl} alt="Aperçu du logo" className="mt-2 h-16 object-contain" />
+        )}
+      </div>
 
       <fieldset className="space-y-3">
         <legend className="mb-1 text-sm font-medium text-noir">Réseaux sociaux</legend>

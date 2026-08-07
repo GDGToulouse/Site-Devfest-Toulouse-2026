@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 import { getMySponsorSpaces, type SponsorSpaceSummary } from "@/lib/sponsor-api";
+import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
 
 // Entry point of a sponsor's space (#362). A person invited by two companies
 // has to pick one, and the frontend cannot guess the ids on its own.
@@ -71,7 +72,7 @@ export default function SponsorHomePage() {
               className="flex items-center justify-between rounded-lg border border-gris/20 bg-blanc px-4 py-3 transition-colors hover:border-malachite"
             >
               <span className="font-medium text-noir">{s.name}</span>
-              <span className="text-xs text-gris">{ROLE_SHORT[s.accessRole]}</span>
+              <span className="text-xs text-gris">{SPONSOR_ROLE_LABELS[s.accessRole]}</span>
             </Link>
           </li>
         ))}
@@ -79,12 +80,6 @@ export default function SponsorHomePage() {
     </Shell>
   );
 }
-
-const ROLE_SHORT: Record<string, string> = {
-  RESPONSABLE: "Responsable",
-  EDITEUR: "Éditeur",
-  STAND: "Stand",
-};
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (

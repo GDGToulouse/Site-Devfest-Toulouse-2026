@@ -7,7 +7,9 @@ import Tabs from "@/components/admin/Tabs";
 import PublicTab from "@/components/sponsor-space/PublicTab";
 import PrivateTab from "@/components/sponsor-space/PrivateTab";
 import TeamTab from "@/components/sponsor-space/TeamTab";
+import JobOffersTab from "@/components/sponsor-space/JobOffersTab";
 import { getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
+import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
 import { signOut } from "@/lib/admin-api";
 
 // A sponsor's own space (#362), in three tabs — the split the issue asked for,
@@ -57,8 +59,11 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   const canEdit = profile.accessRole === "RESPONSABLE" || profile.accessRole === "EDITEUR";
   const canManageTeam = profile.accessRole === "RESPONSABLE";
 
+  // Job offers are published on the public site, so STAND reads them like the
+  // public tab; only EDITEUR and above may write (#251).
   const tabs = [
     { key: "public", label: "Fiche publique" },
+    { key: "job-offers", label: "Offres d'emploi" },
     ...(canEdit ? [{ key: "private", label: "Informations privées" }] : []),
     ...(canManageTeam ? [{ key: "team", label: "Accès" }] : []),
   ];
@@ -68,7 +73,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-noir">{profile.name}</h1>
-          <p className="text-sm text-gris">Espace partenaire · {ROLE_LABELS[profile.accessRole]}</p>
+          <p className="text-sm text-gris">Espace partenaire · {SPONSOR_ROLE_LABELS[profile.accessRole]}</p>
         </div>
         <button
           type="button"
@@ -91,18 +96,13 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
 
       <div id={`sponsor-panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "public" && <PublicTab profile={profile} canEdit={canEdit} onSaved={load} />}
+        {activeTab === "job-offers" && <JobOffersTab sponsorId={id} canEdit={canEdit} />}
         {activeTab === "private" && canEdit && <PrivateTab sponsorId={id} />}
         {activeTab === "team" && canManageTeam && <TeamTab sponsorId={id} />}
       </div>
     </Shell>
   );
 }
-
-const ROLE_LABELS: Record<string, string> = {
-  RESPONSABLE: "Responsable",
-  EDITEUR: "Éditeur",
-  STAND: "Stand",
-};
 
 function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
   return (

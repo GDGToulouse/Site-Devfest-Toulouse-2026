@@ -10,15 +10,10 @@ import {
   type SponsorAccessRole,
   type SponsorTeamMember,
 } from "@/lib/sponsor-api";
+import { SPONSOR_ROLE_OPTIONS } from "@/lib/sponsor-roles";
 
 // Who may act on this space, and as what (#362). RESPONSABLE only — inviting is
 // the whole difference between that role and EDITEUR.
-
-const ROLE_OPTIONS: { value: SponsorAccessRole; label: string; hint: string }[] = [
-  { value: "RESPONSABLE", label: "Responsable", hint: "Gère la fiche et invite l'équipe" },
-  { value: "EDITEUR", label: "Éditeur", hint: "Gère la fiche" },
-  { value: "STAND", label: "Stand", hint: "Consulte la fiche publique" },
-];
 
 export default function TeamTab({ sponsorId }: { sponsorId: number }) {
   const [members, setMembers] = useState<SponsorTeamMember[] | null>(null);
@@ -142,7 +137,7 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
               disabled={isBusy}
               className="rounded-lg border border-gris/30 bg-blanc px-2 py-1.5 text-sm text-noir"
             >
-              {ROLE_OPTIONS.map((o) => (
+              {SPONSOR_ROLE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
@@ -183,7 +178,7 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
               onChange={(e) => setAccessRole(e.target.value as SponsorAccessRole)}
               className={inputClass}
             >
-              {ROLE_OPTIONS.map((o) => (
+              {SPONSOR_ROLE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
@@ -198,7 +193,7 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
           </button>
         </div>
         <p className="mt-3 text-xs text-gris">
-          {ROLE_OPTIONS.find((o) => o.value === accessRole)?.hint}
+          {SPONSOR_ROLE_OPTIONS.find((o) => o.value === accessRole)?.hint}
           {" · "}
           L&apos;invitation est valable 7 jours et doit être acceptée avec cette adresse exacte.
         </p>

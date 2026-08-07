@@ -87,7 +87,8 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 - **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`),
   invalidation à la demande depuis l'admin ; SSR+SPA hybride sur les pages authentifiées.
 - **Accueil** : contenu conditionné par le statut de l'édition (préparation / annonce / à l'année prochaine).
-- **Rôles** : admin, sponsor, speaker — sponsors et speakers éditent leur fiche via magic link.
+- **Rôles** : admin, sponsor, speaker — un sponsor gère sa fiche depuis un **compte**
+  (invitation, rôles par entreprise) ; un speaker garde le lien de modification `/edit/<token>`.
 - **SEO** : Schema.org (Event, Organization, Person, Article), Open Graph, images OG dynamiques.
 - **i18n** : bilingue FR (défaut) + EN, URLs localisées.
 

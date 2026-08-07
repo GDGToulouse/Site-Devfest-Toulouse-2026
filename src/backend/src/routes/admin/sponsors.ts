@@ -2,8 +2,9 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
-import { generateEditToken, generateInvitationToken } from "../../lib/edit-token.js";
-import { sendEditLinkEmail, sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
+import { resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
+import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -579,7 +580,14 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     // itself is never returned — only whether one is outstanding.
     accessRole: c.accessRole,
     hasAccount: !!c.userId,
-    invitationPending: !!c.invitationToken && !c.invitationAcceptedAt,
+    // The 7-day TTL is a server rule: reported here rather than recomputed from
+    // invitationSentAt by the client, which would let the two drift apart. An
+    // expired invitation is neither pending nor absent — the admin has to know
+    // it needs sending again.
+    invitationPending:
+      !!c.invitationToken && !c.invitationAcceptedAt && !isInvitationExpired(c.invitationSentAt ?? null),
+    invitationExpired:
+      !!c.invitationToken && !c.invitationAcceptedAt && isInvitationExpired(c.invitationSentAt ?? null),
     invitationSentAt: c.invitationSentAt,
     invitationAcceptedAt: c.invitationAcceptedAt,
   });
@@ -595,7 +603,11 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     return contacts.map(serializeContact);
   });
 
-  // POST /api/admin/sponsors/:id/contacts — add a contact and send its link.
+  // POST /api/admin/sponsors/:id/contacts — add a contact and invite them.
+  //
+  // Sends an invitation to open an account, not the edit link it replaced
+  // (#362). /resend went with that link: re-inviting through /invite rotates
+  // the token and does the same job.
   app.post<{ Params: SponsorIdParams; Body: { email?: string; name?: string; role?: string } }>(
     "/sponsors/:id/contacts",
     { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
@@ -608,14 +620,23 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       const email = request.body.email?.trim();
       if (!email) return reply.code(400).send({ error: "No contact email provided" });
 
-      // Send first, persist second (#223): if the mail fails we create nothing.
-      const token = generateEditToken();
+      // Send first, persist second (#223): if the mail fails we create nothing,
+      // so the sign-up door never opens for an invitation nobody received.
+      const token = generateInvitationToken();
       try {
-        await sendEditLinkEmail({ to: email, name: sponsor.name, token, kind: "sponsor", locale: sponsor.locale });
+        await sendSponsorInvitationEmail({
+          to: email,
+          sponsorName: sponsor.name,
+          token,
+          locale: sponsor.locale,
+        });
       } catch (err) {
-        request.log.error({ err }, "Failed to send sponsor edit link email");
+        request.log.error({ err }, "Failed to send sponsor invitation email");
         return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
       }
+
+      // -1: the contact does not exist yet, so there is none to exclude.
+      const promoted = await resolveInitialAccessRole(sponsorId, -1);
 
       const contact = await prisma.sponsorContact.create({
         data: {
@@ -623,40 +644,12 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           email,
           name: request.body.name?.trim() || null,
           role: request.body.role?.trim() || null,
-          editToken: token,
-          editTokenSentAt: new Date(),
+          ...(promoted ? { accessRole: promoted } : {}),
+          invitationToken: token,
+          invitationSentAt: new Date(),
         },
       });
       return reply.code(201).send(serializeContact(contact));
-    },
-  );
-
-  // POST /api/admin/sponsors/:id/contacts/:contactId/resend — rotate + resend.
-  app.post<{ Params: SponsorIdParams & { contactId: string } }>(
-    "/sponsors/:id/contacts/:contactId/resend",
-    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
-    async (request, reply) => {
-      const contact = await prisma.sponsorContact.findUnique({
-        where: { id: Number(request.params.contactId) },
-        include: { sponsor: true },
-      });
-      if (!contact || contact.sponsorId !== Number(request.params.id)) {
-        return reply.code(404).send({ error: "Contact not found" });
-      }
-
-      const token = generateEditToken();
-      try {
-        await sendEditLinkEmail({ to: contact.email, name: contact.sponsor.name, token, kind: "sponsor", locale: contact.sponsor.locale });
-      } catch (err) {
-        request.log.error({ err }, "Failed to resend sponsor edit link email");
-        return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
-      }
-
-      const updated = await prisma.sponsorContact.update({
-        where: { id: contact.id },
-        data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date() },
-      });
-      return serializeContact(updated);
     },
   );
 
@@ -703,13 +696,18 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         return reply.code(502).send({ error: "Email sending failed", detail: "retry" });
       }
 
+      // The first invited contact is promoted to RESPONSABLE whatever was asked,
+      // so the company can invite its own team (#362).
+      const promoted = await resolveInitialAccessRole(contact.sponsorId, contact.id);
+      const role = promoted ?? accessRole;
+
       const updated = await prisma.sponsorContact.update({
         where: { id: contact.id },
         data: {
           invitationToken: token,
           invitationSentAt: new Date(),
           invitationAcceptedAt: null,
-          ...(accessRole ? { accessRole } : {}),
+          ...(role ? { accessRole: role } : {}),
         },
       });
       return serializeContact(updated);

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import { getInvitationPreview, acceptInvitation, type InvitationPreview } from "@/lib/sponsor-api";
 import SponsorLogin from "@/components/sponsor-space/SponsorLogin";
+import { describeSponsorRole } from "@/lib/sponsor-roles";
 
 // Accepting an invitation to a sponsor space (#362).
 //
@@ -12,12 +13,6 @@ import SponsorLogin from "@/components/sponsor-space/SponsorLogin";
 // with the invited address, bind the account. The binding is a separate step
 // rather than a side effect of signing in, because the email may not match —
 // and that has to be said out loud instead of failing silently.
-
-const ROLE_LABELS: Record<string, string> = {
-  RESPONSABLE: "Responsable — gérer la fiche et inviter votre équipe",
-  EDITEUR: "Éditeur — gérer la fiche",
-  STAND: "Stand — consulter la fiche",
-};
 
 export default function SponsorInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -83,7 +78,7 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
   }
 
   if (needsSignIn) {
-    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} />;
+    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} mode="signup" />;
   }
 
   return (
@@ -93,7 +88,7 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
         DevFest Toulouse.
       </p>
       <p className="mt-3 text-sm text-gris">
-        Rôle proposé : {ROLE_LABELS[preview.accessRole] ?? preview.accessRole}
+        Rôle proposé : {describeSponsorRole(preview.accessRole)}
       </p>
       <p className="mt-3 text-sm text-gris">
         Connectez-vous avec l&apos;adresse <strong>{preview.emailHint}</strong>{" "}
