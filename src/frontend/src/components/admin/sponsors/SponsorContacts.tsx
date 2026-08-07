@@ -61,7 +61,7 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
     });
     setBusy(false);
     if (status === 201) {
-      setMsg({ ok: true, text: `Lien envoyé à ${email.trim()}.` });
+      setMsg({ ok: true, text: `Invitation envoyée à ${email.trim()}.` });
       setEmail("");
       setName("");
       setRole("");
@@ -218,7 +218,7 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
             <input value={role} onChange={(e) => setRole(e.target.value)} className={inputClass} />
           </label>
           <button type="button" onClick={add} disabled={busy} className="px-3 py-2 text-sm rounded-lg bg-malachite text-blanc font-medium hover:bg-malachite/90 disabled:opacity-50">
-            Ajouter &amp; envoyer le lien
+            Ajouter &amp; inviter
           </button>
         </div>
         <p className="mt-2 text-xs text-gris-sur-creme">

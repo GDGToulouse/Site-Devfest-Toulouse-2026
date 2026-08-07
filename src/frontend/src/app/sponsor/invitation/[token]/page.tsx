@@ -13,6 +13,11 @@ import { describeSponsorRole } from "@/lib/sponsor-roles";
 // with the invited address, bind the account. The binding is a separate step
 // rather than a side effect of signing in, because the email may not match —
 // and that has to be said out loud instead of failing silently.
+//
+// Signing in leaves through window.location, so this component remounts with
+// its state gone. It therefore retries the binding on mount: without that, an
+// account created here lands back on "Accept the invitation" with no hint the
+// sign-up worked, and the contact stays unlinked until someone clicks again.
 
 export default function SponsorInvitationPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = use(params);
@@ -25,20 +30,26 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
   const [needsSignIn, setNeedsSignIn] = useState(false);
 
   useEffect(() => {
-    getInvitationPreview(token).then(({ data }) => {
+    getInvitationPreview(token).then(async ({ data }) => {
       setPreview(data);
+      // Coming back from sign-up, the session is already there and the visitor
+      // has nothing left to confirm — bind straight away. A 401 just means they
+      // arrived from their mailbox, so fall through to the normal screen.
+      if (data) await accept({ silent: true });
       setIsLoading(false);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  async function accept() {
+  async function accept({ silent = false }: { silent?: boolean } = {}) {
     setIsAccepting(true);
     setError(null);
     const { data, status, error: apiError } = await acceptInvitation(token);
 
     if (status === 401) {
-      // Not signed in yet — show the sign-in form rather than an error.
-      setNeedsSignIn(true);
+      // Not signed in yet — show the sign-in form rather than an error. On the
+      // silent attempt this is the expected answer, so say nothing.
+      setNeedsSignIn(!silent);
       setIsAccepting(false);
       return;
     }
@@ -52,7 +63,11 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
       return;
     }
     if (!data) {
-      setError("Cette invitation n'est plus valable. Demandez-en une nouvelle à l'équipe DevFest.");
+      // Silent attempt: the visitor asked for nothing, so an error here would
+      // come out of nowhere. Let them press the button and get it in context.
+      if (!silent) {
+        setError("Cette invitation n'est plus valable. Demandez-en une nouvelle à l'équipe DevFest.");
+      }
       setIsAccepting(false);
       return;
     }
@@ -99,7 +114,7 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
 
       <button
         type="button"
-        onClick={accept}
+        onClick={() => accept()}
         disabled={isAccepting}
         className="mt-6 w-full rounded-[12px] bg-malachite px-4 py-3 font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-50"
       >
