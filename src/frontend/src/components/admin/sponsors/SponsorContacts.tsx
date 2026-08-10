@@ -140,12 +140,15 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
         <ul className="space-y-2">
           {contacts.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center gap-3 rounded-lg border border-gris/15 bg-blanc px-3 py-2">
-              <div className="min-w-[180px] flex-1">
-                <p className="text-sm font-medium text-noir">
+              {/* min-w-0, not a min width: a flex child refuses to shrink below
+                  its content, so a long address grew past its cell and ran
+                  under the status badge. */}
+              <div className="min-w-0 flex-1 basis-[180px]">
+                <p className="truncate text-sm font-medium text-noir">
                   {c.name || c.email}
                   {c.role && <span className="ml-2 text-xs text-gris">({c.role})</span>}
                 </p>
-                {c.name && <p className="text-xs text-gris">{c.email}</p>}
+                {c.name && <p className="truncate text-xs text-gris" title={c.email}>{c.email}</p>}
               </div>
               <AccessStatus contact={c} />
               {/* An edit link still in a mailbox (#362). It no longer edits
