@@ -1,38 +1,45 @@
 # Security
 
-## Secrets Management
-- Never hardcode secrets (API keys, passwords, tokens) in source code
-- Use environment variables via `.env` files (excluded from git via `.gitignore`)
-- Never log secrets — mask or omit them from error messages and stack traces
-- Never commit `.env` files; provide a `.env.example` with placeholder values
+Standard practice applies (validate at boundaries, parameterize queries, escape output, never
+log or commit secrets, verify permissions server-side on every request). What follows is what is
+specific to *this* codebase — the parts that have already gone wrong, or would.
 
-## Input Validation
-- Validate and sanitize all user input at system boundaries (API endpoints, form handlers)
-- Validate type, length, format, and allowed ranges
-- Reject unexpected fields — use allowlists, not blocklists
-- Parameterize all database queries — never interpolate user input into SQL
+## Secrets
 
-## Common Vulnerabilities (OWASP)
-- **Injection**: use parameterized queries and prepared statements
-- **XSS**: escape output rendered in HTML; use framework auto-escaping
-- **CSRF**: use anti-CSRF tokens on state-changing requests
-- **Sensitive data exposure**: never return passwords, tokens, or internal IDs in API responses unless required
+Secrets come from the environment, injected by Docker Compose. `.env` is gitignored;
+`.env.example` carries placeholders. Never echo a secret into a log line, an error message, or a
+test fixture.
+
+## Opening account creation to a new kind of user
+
+`User.role` is `UserRole @default(EDITOR)`, and `requireAnyAuthenticated` lets
+`EDITOR` through. Any account created without an explicit role therefore gets
+the back-office. That default was safe while only administrators could hold an
+account; it stops being safe the moment a third party can create one.
+
+So, before opening sign-up to a new kind of user (sponsor #362, speaker #363):
+
+- Add a **neutral** `UserRole` value for them and set it explicitly on create.
+  Never let them fall back to the default.
+- Do **not** widen `requireAnyAuthenticated` — it guards the back-office, whose
+  fine-grained authorization happens inside the handlers. Give the newcomer its
+  own guard reading its own link table (e.g. `SponsorContact.accessRole` via
+  `requireSponsorAccess`).
+- Reject the account at `user.create.before` rather than after the fact, so a
+  failed attempt leaves no orphan row behind.
+
+## better-auth drops fields it does not know about
+
+Setting `role` in a `databaseHooks.user.create.before` hook is not enough: better-auth strips
+any field absent from its own user model, so the value never reaches the database and the column
+default (`EDITOR`) wins. The field must also be declared in `user.additionalFields` with
+`input: false`.
+
+This failed silently — 617 green tests, and the account still landed with back-office access.
+It was only visible in the browser. A test that asserts the hook was called proves nothing here;
+assert the **stored** role.
 
 ## Dependencies
-- Prefer well-maintained packages with active security advisories
-- Review dependency additions — avoid pulling in large transitive trees for small features
 
-## Security Headers
-- Set `Content-Security-Policy` to restrict script/style sources
-- Enable `Strict-Transport-Security` (HSTS) with a long max-age
-- Set `X-Frame-Options: DENY` (or use CSP `frame-ancestors`)
-- Set `X-Content-Type-Options: nosniff`
-
-## Authentication & Authorization
-- Verify permissions on every request — never rely solely on client-side checks
-- Use constant-time comparison for tokens and secrets
-
-## Dependency Updates
-- Run `npm audit` / `yarn audit` regularly
-- Update dependencies with known vulnerabilities promptly
-- Pin major versions to avoid unexpected breaking changes
+`pnpm audit` (not npm — both lockfiles exist, only `pnpm-lock.yaml` is tracked). Prefer
+well-maintained packages, and weigh a large transitive tree against the feature it buys.

@@ -14,6 +14,19 @@ interface SponsorRow extends Sponsor {
   edition?: { id: number; year: number };
 }
 
+// The participation the admin is currently looking at. With no year filter a
+// company may hold several, in which case the most recent one is shown — the
+// API sorts `editions` newest first. Mirrors the speakers list, where the same
+// question arose first (#351).
+//
+// Falls back to the flattened fields when `editions` is missing, so a row keeps
+// rendering rather than showing "—" if the payload ever narrows.
+function currentParticipation(sponsor: SponsorRow, year: string) {
+  const participations = sponsor.editions ?? [];
+  if (!year) return participations[0];
+  return participations.find((e) => String(e.edition.year) === year);
+}
+
 export default function SponsorsDataPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -39,12 +52,26 @@ export default function SponsorsDataPage() {
   }, []);
 
   async function applyBulk(value: "DRAFT" | "PUBLISHED") {
+    // publicationStatus lives on the participation (#129), so an edition has to
+    // be picked: applying to every edition a sponsor appears in would publish
+    // it on a year the admin was not even looking at (the guard #351
+    // established for speakers).
+    const editionId = selectedEditionId;
+    if (!editionId) {
+      setError("Choisissez une édition avant d'appliquer une action groupée.");
+      return;
+    }
+
+    setError(null);
     const ids = [...selectedIds];
-    const { status } = await adminFetch("/sponsors/bulk", {
+    const { status, error: apiError } = await adminFetch("/sponsors/bulk", {
       method: "POST",
-      body: JSON.stringify({ ids, action: "setStatus", value }),
+      body: JSON.stringify({ ids, action: "setStatus", value, editionId }),
     });
-    if (status !== 200) return;
+    if (status !== 200) {
+      setError(apiError ?? "Action groupée impossible.");
+      return;
+    }
     setSponsors((prev) =>
       prev.map((s) => (selectedIds.has(s.id) ? { ...s, publicationStatus: value } : s)),
     );
@@ -69,15 +96,23 @@ export default function SponsorsDataPage() {
     setError(apiError ?? "Suppression impossible.");
   }
 
+  // Every year the listed companies took part in, not just their latest one: a
+  // sponsor spans editions since #129, so reading the flattened `edition` would
+  // hide years from the picker and drop rows from the filter (#395).
   const years = useMemo(
-    () => [...new Set(sponsors.map((s) => s.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
+    () => [...new Set(sponsors.flatMap((s) => (s.editions ?? []).map((e) => e.edition.year)))].sort((a, b) => b - a),
     [sponsors],
   );
+
+  // The edition the bulk actions apply to, read off the year filter.
+  const selectedEditionId = year
+    ? (sponsors.flatMap((s) => s.editions ?? []).find((e) => String(e.edition.year) === year)?.editionId ?? null)
+    : null;
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sponsors.filter((s) => {
-      if (year && String(s.edition?.year) !== year) return false;
+      if (year && !(s.editions ?? []).some((e) => String(e.edition.year) === year)) return false;
       if (tierKey && s.tier?.key !== tierKey) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
@@ -90,18 +125,31 @@ export default function SponsorsDataPage() {
 
   const columns = [
     { key: "name", label: "Sponsor", render: (s: SponsorRow) => <span className="font-medium text-noir">{s.name}</span> },
-    { key: "tier", label: "Niveau", render: (s: SponsorRow) => s.tier?.nameFr ?? "—" },
+    {
+      key: "tier",
+      label: "Niveau",
+      render: (s: SponsorRow) => currentParticipation(s, year)?.tier?.nameFr ?? s.tier?.nameFr ?? "—",
+    },
     {
       key: "status",
       label: "Statut",
-      render: (s: SponsorRow) => (
-        <StatusBadge
-          status={s.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
-          variant={s.publicationStatus === "PUBLISHED" ? "green" : "gray"}
-        />
-      ),
+      render: (s: SponsorRow) => {
+        // Publication is per participation (#129): a company published in 2026
+        // may still be a draft for 2025.
+        const status = currentParticipation(s, year)?.publicationStatus ?? s.publicationStatus;
+        return (
+          <StatusBadge
+            status={status === "PUBLISHED" ? "Publié" : "Brouillon"}
+            variant={status === "PUBLISHED" ? "green" : "gray"}
+          />
+        );
+      },
     },
-    { key: "edition", label: "Édition", render: (s: SponsorRow) => s.edition?.year ?? "—" },
+    {
+      key: "edition",
+      label: "Édition",
+      render: (s: SponsorRow) => currentParticipation(s, year)?.edition.year ?? s.edition?.year ?? "—",
+    },
   ];
 
   return (
@@ -154,7 +202,14 @@ export default function SponsorsDataPage() {
             <span className="text-sm text-gris">{filtered.length} sponsor{filtered.length > 1 ? "s" : ""}</span>
           </div>
 
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && !selectedEditionId && (
+            <div role="status" className="mb-4 rounded-lg bg-jaune/10 px-4 py-3 text-sm text-noir">
+              Les actions groupées s&apos;appliquent à une édition : choisissez une année dans le
+              filtre ci-dessus.
+            </div>
+          )}
+
+          {selectedIds.size > 0 && selectedEditionId && (
             <BulkActionBar
               count={selectedIds.size}
               entitySingular="sponsor"

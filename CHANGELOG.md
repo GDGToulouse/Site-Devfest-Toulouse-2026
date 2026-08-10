@@ -221,6 +221,53 @@ une série d'améliorations UX/SEO/mobile.
 
 - **CI** : exécution des tests backend activée (Postgres + seed) (#236).
 
+## [1.2.0] - 2026-07-14
+
+Première grande vague de contenu et de sécurité : le Lot 2 complet (speakers,
+sessions, sponsors), le durcissement du lien de modification avant son ouverture
+aux intervenants, et une série de correctifs de performance et de SEO.
+
+### Ajouté
+
+- **Lot 2 — Speakers, Sessions & Sponsors** : CRUD complet, vues transverses
+  « Données », page édition en synthèse avec raccourcis vers les fiches, sélection
+  multiple et actions groupées (#121, #122, #201).
+- **Langue de contact** des speakers et sponsors : emails du lien de modification
+  et page `/edit/[token]` rendus dans la langue du destinataire (FR/EN), pilotée
+  par un champ dans l'admin (#224).
+- **Monitoring** : Core Web Vitals réels envoyés à Plausible + alertes des erreurs
+  5xx par webhook (#118).
+- **Rotation nocturne des speakers à la une** : tirage aléatoire chaque nuit (#214).
+- **Pages « éditions précédentes »** hébergeant l'historique des conférences (#63).
+- **Import Sessionize** des avatars de speakers, rapatriés dans `/uploads/` (#205).
+- Nav « Conférences » et liste publique des sessions de l'édition (#203, #207).
+
+### Corrigé
+
+- **Sécurité — durcissement du lien de modification** (#223) : `PUT /api/edit/:token`
+  était le seul endpoint non authentifié écrivant en base et rendu sur les pages
+  publiques, sans aucune validation. Une URL `javascript:` y passait jusqu'à un
+  `href` public. Ajout d'un schéma de corps, d'une allowlist des protocoles d'URL,
+  d'une whitelist des liens sociaux, d'un rate limit dédié, d'une expiration des
+  tokens à 30 jours et d'un envoi transactionnel de l'email.
+- **Performance — LCP à 20,6 s** sur la home : l'image du hero (3,4 Mo servis bruts)
+  passe par `next/image`, soit **44 Ko en AVIF sur mobile, 76× plus léger** (#197).
+- **SEO — Schema.org Event** : retrait du `superEvent` invalide (2 erreurs critiques
+  en Search Console) et ajout des champs recommandés (#185).
+- **SEO — image OG** : l'image générée écrasait l'`og:image` personnalisée de
+  l'admin ; elle est désormais respectée (#183).
+- **Billetterie** : le statut des billets Billetweb n'était pas correctement mis à
+  jour et n'était pas modifiable dans l'admin (#161).
+- Navigation vers tous les articles d'une édition archivée (#178).
+- Purge du cache admin : le backend renvoyait un contrat incohérent, l'UI affichait
+  « Erreur » à tort (#181).
+- Césure du mot « dev » qui revenait à la ligne (#133).
+
+### Modifié
+
+- Refonte de la sidebar admin (groupes + édition en cours) (#120).
+- Densification de l'espacement vertical des sections de la home (#135).
+
 ## [1.1.3] - 2026-07-10
 
 Correctif d'infrastructure : prépare des déploiements sans coupure.
@@ -314,7 +361,12 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.3...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.6.0...dev
+[1.6.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.3...v1.2.0
 [1.1.3]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.1.0...v1.1.1

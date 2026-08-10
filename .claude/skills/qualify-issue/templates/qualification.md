@@ -28,6 +28,47 @@ avec un choix de périmètre, poser la question.>
 - `chemin/fichier.tsx:LL`
 ```
 
+## Variante — qualification partielle (cause racine non trouvée)
+
+Quand l'investigation n'aboutit pas à une cause certaine, **ne pas maquiller une hypothèse en diagnostic**. Utiliser cette forme :
+
+```markdown
+## Qualification technique — partielle, il manque des éléments pour trancher
+
+<Une phrase : ce qui a été exploré, et le fait que la cause n'est pas établie.>
+
+### Ce que j'ai vérifié et écarté
+
+| Piste | Verdict |
+|---|---|
+| <hypothèse testée> | ✅ **fonctionne** — <preuve concrète : code HTTP, ligne de code, mesure> |
+
+### La piste qui reste
+
+<L'hypothèse la plus plausible, présentée COMME une hypothèse, avec ce qui la
+rend crédible et ce qui la rendrait fausse.>
+
+### Ce qui m'aiderait à conclure
+
+<Voir « Poser des questions au déclarant » ci-dessous. Maximum 3, sans jargon,
+chacune avec sa valeur par défaut.>
+```
+
+Cette variante a autant de valeur qu'une qualification complète : elle évite que la personne suivante refasse les mêmes vérifications.
+
+## Poser des questions au déclarant
+
+Le corps de la qualification (cause racine, `fichier:ligne`, correctif) s'adresse à **qui implémentera** — il reste technique. Les questions posées au déclarant s'adressent à **qui a rencontré le problème** — souvent un organisateur, pas un développeur. Registre différent.
+
+**Quatre règles :**
+
+1. **Trois questions maximum.** Au-delà, on transfère le travail d'investigation au déclarant.
+2. **Toujours annoncer une valeur par défaut.** Une question sans défaut oblige à répondre ; une question avec défaut permet de ne répondre que pour corriger. Écrire « sauf indication contraire, je pars du principe que c'est le site en ligne » plutôt que « sur quel environnement ? ».
+3. **Aucun jargon.** Voir le lexique dans [references/vocabulaire-utilisateur.md](../references/vocabulaire-utilisateur.md). Ne jamais demander d'ouvrir la console, de lire un onglet réseau ou de distinguer deux chemins de code.
+4. **Une capture d'écran vaut mieux que trois questions.** La demander en premier ; elle répond souvent à tout le reste d'un coup.
+
+**Ne poser une question que si sa réponse change le diagnostic.** Si les deux réponses possibles mènent au même correctif, ne pas la poser.
+
 ## Règles
 
 - **Citer du code réel et vérifié** (`Read`/`Grep` avant d'affirmer une ligne). Ne pas inventer de chemins ou de numéros de ligne.

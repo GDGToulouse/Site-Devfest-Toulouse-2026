@@ -10,7 +10,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import adminSponsorRoutes from "../routes/admin/sponsors.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { tierIdByKey } from "./sponsor-test-helpers.js";
+import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
 // Admin management of sponsor contacts (#250): add, list, lock, resend, delete.
 
@@ -26,8 +26,8 @@ describe("Admin sponsor contacts (#250)", () => {
     const edition = await getSeededEdition();
     editionId = edition.id;
 
-    const sponsor = await prisma.sponsor.create({
-      data: { name: "Admin Contacts Sponsor", slug: `admin-contacts-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
+    const sponsor = await createSponsorFixture({
+      name: "Admin Contacts Sponsor", slug: `admin-contacts-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
     });
     sponsorId = sponsor.id;
   });
@@ -39,7 +39,7 @@ describe("Admin sponsor contacts (#250)", () => {
 
   beforeEach(() => sendMailMock.mockClear());
 
-  it("adds a contact and emails its link", async () => {
+  it("adds a contact and invites them to open an account", async () => {
     const res = await app.inject({
       method: "POST",
       url: `/api/admin/sponsors/${sponsorId}/contacts`,
@@ -48,8 +48,13 @@ describe("Admin sponsor contacts (#250)", () => {
     expect(res.statusCode).toBe(201);
     const body = res.json();
     expect(body.email).toBe("alice@example.org");
-    expect(body.hasLink).toBe(true);
-    // The raw token is never returned to the admin.
+    // An invitation, not the edit link it replaced (#362).
+    expect(body.invitationPending).toBe(true);
+    expect(body.hasLink).toBe(false);
+    // The first contact runs the space, or nobody can invite the rest.
+    expect(body.accessRole).toBe("RESPONSABLE");
+    // Neither secret is ever returned to the admin.
+    expect(JSON.stringify(body)).not.toContain("invitationToken");
     expect(body).not.toHaveProperty("editToken");
     expect(sendMailMock).toHaveBeenCalledTimes(1);
   });
@@ -85,8 +90,8 @@ describe("Admin sponsor contacts (#250)", () => {
   });
 
   it("rejects a contact that belongs to another sponsor (404)", async () => {
-    const other = await prisma.sponsor.create({
-      data: { name: "Other Sponsor", slug: `other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold") },
+    const other = await createSponsorFixture({
+      name: "Other Sponsor", slug: `other-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
     });
     const otherContact = await prisma.sponsorContact.create({
       data: { sponsorId: other.id, email: "x@example.org" },

@@ -1,4 +1,4 @@
-// Import past editions (2016-2025) from data/devfest-history.json into the
+// Import past editions (2016-2025) from prisma/devfest-history.json into the
 // Speaker / Talk / Edition tables (issue #63). Idempotent and re-runnable on any
 // instance (local / beta / prod): entities are matched by (editionId, slug), so
 // running it twice updates instead of duplicating.

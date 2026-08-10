@@ -218,6 +218,7 @@
     "nextEdition": "Next edition",
     "speakers": "Speakers ({count})",
     "sessions": "Talks ({count})",
+    "sponsors": "Partners ({count})",
     "replay": "Watch",
     "allNews": "See all news"
   },
@@ -340,6 +341,7 @@
     "home": "Home",
     "empty": "Sponsors will be announced soon.",
     "visitWebsite": "Visit website",
+    "currentTier": "{tier} sponsor of the current edition",
     "speakersOf": "Speakers from {name}",
     "jobOffersTitle": "Job offers",
     "jobOfferCta": "View offer"

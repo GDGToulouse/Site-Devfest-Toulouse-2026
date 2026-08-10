@@ -218,6 +218,7 @@
     "nextEdition": "Édition suivante",
     "speakers": "Speakers ({count})",
     "sessions": "Conférences ({count})",
+    "sponsors": "Partenaires ({count})",
     "replay": "Revoir",
     "allNews": "Voir toutes les actualités"
   },
@@ -340,6 +341,7 @@
     "home": "Accueil",
     "empty": "Les sponsors seront annoncés prochainement.",
     "visitWebsite": "Visiter le site",
+    "currentTier": "Sponsor {tier} de l'édition en cours",
     "speakersOf": "Speakers de {name}",
     "jobOffersTitle": "Offres d'emploi",
     "jobOfferCta": "Voir l'offre"

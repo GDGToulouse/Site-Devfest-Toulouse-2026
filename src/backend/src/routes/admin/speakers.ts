@@ -397,7 +397,6 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
         to: email,
         name: speaker.name,
         token,
-        kind: "speaker",
         locale: speaker.locale,
       });
     } catch (err) {

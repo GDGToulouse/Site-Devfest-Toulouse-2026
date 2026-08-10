@@ -63,6 +63,16 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/sponsors/:path*`,
       },
       {
+        // A sponsor's own space and its invitations (#362). Separate entries
+        // from /api/sponsors above: that one is the public company page.
+        source: "/api/sponsor-space/:path*",
+        destination: `${backendUrl}/api/sponsor-space/:path*`,
+      },
+      {
+        source: "/api/sponsor-invitation/:path*",
+        destination: `${backendUrl}/api/sponsor-invitation/:path*`,
+      },
+      {
         source: "/api/talks/:path*",
         destination: `${backendUrl}/api/talks/:path*`,
       },
@@ -167,7 +177,12 @@ const nextConfig: NextConfig = {
               `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: https:",
+              // blob: is required by the admin image picker (#371): the preview
+              // shown before upload is a URL.createObjectURL() of the local
+              // file, which is a blob: URL. Without it the CSP blocks the
+              // preview and the admin sees a broken image. Same-origin and
+              // short-lived — it only ever points at bytes the page already has.
+              "img-src 'self' data: blob: https:",
               `connect-src 'self'${isDev ? " http://localhost:4000 ws://localhost:3000" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",

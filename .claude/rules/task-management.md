@@ -1,24 +1,12 @@
 # Task Management
 
-- Only one task should be in_progress at a time
-- Compact context proactively when working on long tasks (before hitting limits)
+Start non-trivial work in plan mode, and go back to it when an approach turns out to be wrong —
+pushing a broken plan further is the expensive failure mode. Plan the verification too, not only
+the building.
 
-## Compaction
+Offload independent research and codebase-wide search to subagents (`Explore` for search) so the
+main context stays on the task. Subagents report conclusions, not file dumps — take their
+findings as input to check, not as verified fact.
 
-When compacting, always preserve:
-- List of modified files and their purpose
-- Architectural decisions made during the session
-- Current task progress and remaining steps
-
-## Plan Mode
-
-- Start every complex task in plan mode — pour energy into the plan so implementation can be done in one shot
-- When something goes sideways, switch back to plan mode and re-plan — don't keep pushing a broken approach
-- Use plan mode for verification steps too, not just for building
-
-## Subagents
-
-- Use subagents to keep the main context window clean and focused
-- Offload independent research, exploration, or analysis tasks to subagents
-- For complex requests, append "use subagents" to throw more compute at the problem
-- Prefer the `Explore` subagent for codebase search over multiple manual Glob/Grep calls
+When context is compacted, what must survive is: which files changed and why, the architectural
+decisions taken during the session, and what remains to do.

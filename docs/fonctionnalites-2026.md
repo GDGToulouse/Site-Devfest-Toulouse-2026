@@ -189,6 +189,34 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 - Accès au dashboard (statistiques globales)
 - Pas d'accès à : configuration de l'édition, billetterie, CFP, catégories contact, chiffres clés, cache, gestion utilisateurs
 
+### Espace partenaire (rôle SPONSOR)
+
+Un sponsor gère sa fiche depuis un **compte**, pas depuis un lien (#362). Le rôle
+`SPONSOR` n'ouvre **rien** dans le back-office : les droits viennent du contact
+rattaché à l'entreprise, et une même personne peut être responsable d'une société
+et simple visiteur du stand d'une autre.
+
+| Rôle sur l'espace | Peut faire |
+|---|---|
+| **Responsable** | Tout, plus inviter et révoquer son équipe |
+| **Éditeur** | Modifier la fiche publique, les informations privées, les offres d'emploi |
+| **Stand** | Consulter la fiche publique et les offres (le scan de badge viendra avec #113) |
+
+- **Le premier contact invité devient responsable** : sans lui, personne ne peut
+  inviter le reste de l'équipe sans repasser par un organisateur. Une garde
+  empêche par ailleurs de retirer le dernier responsable.
+- L'invitation est valable **7 jours** et ne fonctionne qu'avec l'adresse qui l'a
+  reçue. L'inscription est fermée : sans invitation vivante, aucun compte ne peut
+  être créé.
+- Connexion par mot de passe, lien magique (60 min) ou Google/GitHub.
+
+### Lien de modification (`/edit/<token>`)
+
+**Réservé aux speakers** depuis #362. Un lien sponsor encore en circulation n'édite
+plus rien : l'ouvrir le transforme en invitation à créer un compte, à usage unique.
+Un lien verrouillé par un organisateur refuse cette conversion — c'est le seul
+moyen de révoquer un lien déjà envoyé.
+
 ### Publications réseaux sociaux
 
 - Génération de visuels/publications pour les sponsors, speakers et conférences

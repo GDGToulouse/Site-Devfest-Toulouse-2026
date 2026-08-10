@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
@@ -66,6 +67,8 @@ export default function ArticleEditorPage() {
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Feedback after a save (#394): this screen stayed put but said nothing.
+  const [saveState, setSaveState] = useState<SaveState>(null);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [activeLang, setActiveLang] = useState<"fr" | "en">("fr");
   const [showImagePicker, setShowImagePicker] = useState(false);
@@ -229,7 +232,10 @@ export default function ArticleEditorPage() {
 
     if (isNew) {
       router.push(`/admin/articles/${data.id}`);
+      return;
     }
+    // This screen already stayed put on save; it just never said so (#394).
+    setSaveState({ kind: "ok", text: "Modifications enregistrées." });
   }
 
   if (isLoading) {
@@ -260,8 +266,12 @@ export default function ArticleEditorPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
+        <div role="alert" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
       )}
+
+      <div className="mb-6">
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
+      </div>
 
       <div className="space-y-6">
         <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">

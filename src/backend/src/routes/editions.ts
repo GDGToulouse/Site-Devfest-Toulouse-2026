@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
+import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -51,7 +52,8 @@ export default async function editionRoutes(app: FastifyInstance) {
     const editions = await prisma.edition.findMany({
       where: notDeleted,
       orderBy: { year: "desc" },
-      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true },
+      // `updatedAt` dates the edition page in the sitemap (#379).
+      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true, updatedAt: true },
     });
     return editions;
   });
@@ -140,6 +142,26 @@ export default async function editionRoutes(app: FastifyInstance) {
     return links.map((link) => link.speaker);
   });
 
+  // GET /api/editions/:year/sponsors — published sponsors of any edition by
+  // year (#370). `/api/sponsors` cannot serve this: it scopes to the featured
+  // edition, so a past year comes back empty.
+  //
+  // The payload matches /api/sponsors so the public wall and this grid share
+  // their component and their type. Values are the ones frozen on the
+  // participation (#375) — an archive shows what that year displayed, not what
+  // the company logo and the tier catalogue happen to say today.
+  app.get<{ Params: { year: string } }>("/editions/:year/sponsors", {
+    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    return getEditionSponsorWall(edition.id);
+  });
+
   // GET /api/editions/:year/talks — published talks of any edition by year,
   // with speakers, category and replay video (issue #63).
   app.get<{ Params: { year: string } }>("/editions/:year/talks", {
@@ -182,6 +204,9 @@ export default async function editionRoutes(app: FastifyInstance) {
       level: t.level,
       language: t.language,
       videoUrl: t.videoUrl,
+      // Dates the talk page in the sitemap (#379). The list already carries
+      // every published slug of the year, so no extra endpoint is needed.
+      updatedAt: t.updatedAt,
       category: visibleCategory(t.category),
       speakers: t.speakers,
     }));
@@ -298,15 +323,18 @@ export default async function editionRoutes(app: FastifyInstance) {
         prisma.speakerEdition.count({
           where: { editionId: edition.id, publicationStatus: "PUBLISHED", speaker: notDeleted },
         }),
+        // Since #129 the tier is bought per edition, so the count moves onto the
+        // participation join rather than the sponsor identity.
         prisma.sponsor.count({
-          where: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+          where: { ...notDeleted, editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } } },
         }),
         // Offers of published sponsors only — same set the recap page lists.
-        // SponsorJobOffer itself is out of the trash's scope, but its sponsor is
-        // not: offers of a trashed sponsor must stop counting.
+        // SponsorJobOffer now points at the participation (#129); the sponsor's
+        // trash status still has to be checked explicitly since the join row
+        // itself carries no deletedAt.
         prisma.sponsorJobOffer.count({
           where: {
-            sponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", ...notDeleted },
+            editionSponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", sponsor: notDeleted },
           },
         }),
       ]);

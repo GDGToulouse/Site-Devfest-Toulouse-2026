@@ -25,6 +25,7 @@ interface EditionBody {
   galleryUrl?: string;
   archivedSiteUrl?: string;
   sponsorBrochureUrl?: string;
+  sponsorBrochureUrlEn?: string;
   sponsorHeroImageUrl?: string;
   sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
   sponsorTemporaryFormUrl?: string;
@@ -113,7 +114,10 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               // `categories` below: the join row has no deletedAt of its own.
               speakers: { where: { speaker: notDeleted } },
               talks: { where: notDeleted },
-              sponsors: { where: notDeleted },
+              // `editionSponsors` is the EditionSponsor join since #129, same as
+              // `speakers` and `categories`: the join row has no deletedAt, so
+              // the filter targets the company.
+              editionSponsors: { where: { sponsor: notDeleted } },
               // `categories` is the EditionCategory join since #338: the join
               // row carries no deletedAt, so the filter targets the track.
               categories: { where: { category: notDeleted } },
@@ -144,6 +148,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: edition.galleryUrl,
         archivedSiteUrl: edition.archivedSiteUrl,
         sponsorBrochureUrl: edition.sponsorBrochureUrl,
+        sponsorBrochureUrlEn: edition.sponsorBrochureUrlEn,
         sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
@@ -151,7 +156,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         articlesCount: edition._count.articles,
         speakersCount: edition._count.speakers,
         talksCount: edition._count.talks,
-        sponsorsCount: edition._count.sponsors,
+        sponsorsCount: edition._count.editionSponsors,
         categoriesCount: edition._count.categories,
       };
     }
@@ -205,6 +210,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         galleryUrl: body.galleryUrl !== undefined ? (body.galleryUrl || null) : existing.galleryUrl,
         archivedSiteUrl: body.archivedSiteUrl !== undefined ? (body.archivedSiteUrl || null) : existing.archivedSiteUrl,
         sponsorBrochureUrl: body.sponsorBrochureUrl !== undefined ? (body.sponsorBrochureUrl || null) : existing.sponsorBrochureUrl,
+        sponsorBrochureUrlEn: body.sponsorBrochureUrlEn !== undefined ? (body.sponsorBrochureUrlEn || null) : existing.sponsorBrochureUrlEn,
         sponsorHeroImageUrl: body.sponsorHeroImageUrl !== undefined ? (body.sponsorHeroImageUrl || null) : existing.sponsorHeroImageUrl,
         sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
         sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
@@ -274,7 +280,9 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
               talks: { where: notDeleted },
               // The SpeakerEdition join since #351 — no deletedAt of its own.
               speakers: { where: { speaker: notDeleted } },
-              sponsors: { where: notDeleted },
+              // `editionSponsors` is the EditionSponsor join since #129: the join
+              // row has no deletedAt, so the filter targets the company.
+              editionSponsors: { where: { sponsor: notDeleted } },
               // `categories` is the EditionCategory join since #338: the join
               // row carries no deletedAt, so the filter targets the track.
               categories: { where: { category: notDeleted } },
@@ -291,9 +299,15 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       // trashed *by* the cascade — otherwise it resurrects what should stay
       // gone. The article check below already worked this way; the other
       // children now follow the same rule.
+      //
+      // `_count` keys are Prisma relation names, not user-facing labels: since
+      // #129 the sponsor relation is `editionSponsors`, which reads as an
+      // internal implementation detail to an admin reading a 409. Map the one
+      // relation whose name diverges from what the organiser expects.
+      const RELATION_LABELS: Record<string, string> = { editionSponsors: "sponsors" };
       const blocking = Object.entries(existing._count)
         .filter(([, count]) => count > 0)
-        .map(([relation, count]) => `${relation} (${count})`);
+        .map(([relation, count]) => `${RELATION_LABELS[relation] ?? relation} (${count})`);
 
       if (blocking.length > 0) {
         return reply.status(409).send({

@@ -38,6 +38,25 @@ enum SponsorPageStatus {
 enum UserRole {
   ADMIN
   EDITOR
+  // Grants NOTHING in the back-office — it exists so a sponsor account can be
+  // stored without falling back to EDITOR, which requireAnyAuthenticated lets
+  // through (#362). A sponsor's rights come from SponsorContact.accessRole.
+  SPONSOR
+}
+
+// What a person may do on ONE sponsor's space (#362). Deliberately not part of
+// UserRole: that one grants back-office access, and a sponsor must never hold
+// it. The same person can be RESPONSABLE for one company and STAND for another,
+// so the right belongs to the SponsorContact, not to the User.
+//
+// Ordered from most to least powerful — requireSponsorAccess compares ranks:
+//   RESPONSABLE  read + write + invite
+//   EDITEUR      read + write
+//   STAND        read public only (badge scanning comes later, #113)
+enum SponsorAccessRole {
+  RESPONSABLE
+  EDITEUR
+  STAND
 }
 
 // ============================================
@@ -83,8 +102,12 @@ model Edition {
   aftermovieUrl           String?
   galleryUrl              String?
   archivedSiteUrl         String?
-  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files)
+  // URL of the sponsor brochure PDF (stored under /uploads/, picked from /admin/files).
+  // The unsuffixed field is the French one — it predates the English variant (#401)
+  // and renaming it would rewrite existing rows for no gain. When the English
+  // brochure is missing, English requesters fall back to the French one.
   sponsorBrochureUrl      String?
+  sponsorBrochureUrlEn    String?
   // Optional hero image specific to the /devenir-sponsor page. When null,
   // the page falls back to heroImageUrl.
   sponsorHeroImageUrl     String?
@@ -97,16 +120,16 @@ model Edition {
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt               DateTime?
 
-  ticketTiers  TicketTier[]
-  articles     Article[]
-  keyFigures   KeyFigure[]
-  sponsorTiers EditionSponsorTier[]
+  ticketTiers     TicketTier[]
+  articles        Article[]
+  keyFigures      KeyFigure[]
+  sponsorTiers    EditionSponsorTier[]
   // The join since #351, like `categories` above: an edition's speakers are
   // participations, not identities.
-  speakers     SpeakerEdition[]
-  talks        Talk[]
-  sponsors     Sponsor[]
-  categories   EditionCategory[]
+  speakers        SpeakerEdition[]
+  talks           Talk[]
+  editionSponsors EditionSponsor[]
+  categories      EditionCategory[]
 
   @@index([deletedAt])
 }
@@ -175,36 +198,36 @@ model Tag {
 // a signed sponsor) and the SponsorPlan model (offer shown on /devenir-sponsor).
 // The per-edition binding (price, visibility, order) lives in EditionSponsorTier.
 model SponsorTier {
-  id            Int       @id @default(autoincrement())
+  id               Int       @id @default(autoincrement())
   // Stable key used in code/imports and to park the row when trashed
   // (e.g. "platinum", "gold", "discovery", "soutien-communautes").
-  key           String    @unique
-  nameFr        String
-  nameEn        String
-  subtitleFr    String?
-  subtitleEn    String?
-  descriptionFr String?
-  descriptionEn String?
+  key              String    @unique
+  nameFr           String
+  nameEn           String
+  subtitleFr       String?
+  subtitleEn       String?
+  descriptionFr    String?
+  descriptionEn    String?
   // JSON array of { fr: string, en: string }.
-  advantages    String?
-  standSize     String?
-  color         String    @default("#109E6E")
+  advantages       String?
+  standSize        String?
+  color            String    @default("#109E6E")
   // Logo display scale on the sponsor wall (#315): higher tier, larger logo.
-  logoScale     Float     @default(1)
+  logoScale        Float     @default(1)
   // Importance rank — higher means more prominent (Platinum). Sorted descending.
-  rank          Int       @default(0)
+  rank             Int       @default(0)
   // How many job offers a sponsor of this tier may publish (#251, ex-OFFER_QUOTA).
-  jobOfferQuota Int       @default(1)
+  jobOfferQuota    Int       @default(1)
   // Whether sponsors of this tier may fill the promo/co-build ideas (#252,
   // ex-condition level === PLATINUM).
-  allowsPromoIdeas Boolean @default(false)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  allowsPromoIdeas Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
-  deletedAt     DateTime?
+  deletedAt        DateTime?
 
-  sponsors     Sponsor[]
-  editionLinks EditionSponsorTier[]
+  editionSponsors EditionSponsor[]
+  editionLinks    EditionSponsorTier[]
 
   @@index([deletedAt])
 }
@@ -377,6 +400,9 @@ model User {
   sessions Session[]
   accounts Account[]
   apiKeys  ApiKey[]
+  // The sponsor spaces this account may act on (#362). A sponsor account holds
+  // no back-office UserRole — its rights live entirely on these contacts.
+  sponsorContacts SponsorContact[]
 
   @@index([deletedAt])
   @@map("user")
@@ -544,7 +570,9 @@ model Speaker {
   deletedAt DateTime?
 
   // The sponsor association moved to SpeakerEdition (#353): working for a
-  // sponsor is true of a given year, and Sponsor is itself edition-scoped.
+  // sponsor is true of a given year, so the link is dated on the speaker's
+  // side. Sponsor itself is a company identity since #129 — the year lives
+  // on EditionSponsor, not on Sponsor.
 
   editions SpeakerEdition[]
   talks    Talk[]
@@ -639,10 +667,14 @@ model Talk {
 // --- Sponsors (RG-220 to RG-231) ---
 
 model Sponsor {
-  id            Int          @id @default(autoincrement())
-  // Slug derived from the name (RG-227). Unique per edition.
-  slug          String
+  id            Int     @id @default(autoincrement())
+  // Globally unique since #129: a slug identifies a company, not a
+  // participation. Same rule as Speaker.slug (#351).
+  slug          String  @unique
   name          String
+  // The company's current logo. Falls back for an edition that has none of its
+  // own (#375) — a new participation starts from it instead of being resaisi.
+  // What a past edition shows is EditionSponsor.logoUrl, never this one.
   logoUrl       String?
   websiteUrl    String?
   descriptionFr String?
@@ -655,35 +687,15 @@ model Sponsor {
   // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
   // Social handles of the people staffing the booth, for day-of relaying.
   // JSON array of { name, linkedin, twitter, bluesky }.
-  standContacts       String?
-  // Communication kit: whether the sponsor confirmed receiving it, plus the
-  // assets they can drop as links (web/print logo, brand charter) and free notes.
-  comKitReceived      Boolean           @default(false)
-  comKitLogoWebUrl    String?
-  comKitLogoPrintUrl  String?
-  comKitCharterUrl    String?
-  comKitNotes         String?
-  // Platinum-only promotional content ideas (#252) — private, shown in the
-  // edit form only when level == PLATINUM.
-  platinumPromoIdea   String?
-  platinumCoBuildIdea String?
+  standContacts String?
   // Language we write to this sponsor in — "fr" | "en" (#224). Same rule as
   // Speaker.locale: set in the admin, defaults to French.
-  locale              String            @default("fr")
-  publicationStatus   PublicationStatus @default(DRAFT)
+  locale        String  @default("fr")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
   deletedAt DateTime?
-
-  editionId Int
-  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
-
-  // Sponsoring tier from the shared catalogue (#317). Replaces the SponsorLevel
-  // enum: the level assigned to a sponsor IS an entry of the SponsorTier catalogue.
-  tierId Int
-  tier   SponsorTier @relation(fields: [tierId], references: [id])
 
   // Speakers working for this sponsor's company (RG-226). Through the
   // participation since #353 — the association is per-edition on both ends.
@@ -693,31 +705,111 @@ model Sponsor {
   // modification link (#250). Replaces the single editToken on Sponsor.
   contacts SponsorContact[]
 
-  // Job offers the sponsor wants relayed (#251). Count capped by tier.
-  jobOffers SponsorJobOffer[]
+  editions EditionSponsor[]
 
-  @@unique([editionId, slug])
-  @@index([editionId])
-  @@index([tierId])
   @@index([deletedAt])
 }
 
-// A person who can edit a sponsor's page via their own modification link
-// (#250). Replaces the single editToken that used to live on Sponsor: a
-// sponsor can now have several contacts, each with an independent token, send
-// date (30-day expiry) and lock. All contacts edit the same sponsor page with
-// equal rights.
+// Which editions a company sponsored (#129), and on what terms that year.
+// The identity/participation split of SpeakerEdition (#351), EditionCategory
+// (#338) and EditionSponsorTier (#316).
+//
+// The tier is bought per edition, and so is everything the organisers track
+// while preparing it: the communication kit and the Platinum promo ideas.
+// It also carries what the edition displayed — logo and tier appearance —
+// frozen so an archive stays true to its year (#375).
+// standContacts deliberately stays on Sponsor — the booth team only matters
+// for scanning during the event, so its history has no value.
+// Pure join row: the trash operates on the Sponsor identity, so no soft delete.
+model EditionSponsor {
+  id                Int               @id @default(autoincrement())
+  publicationStatus PublicationStatus @default(DRAFT)
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  sponsorId Int
+  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  // Sponsoring tier from the shared catalogue (#317), bought for this edition.
+  tierId Int
+  tier   SponsorTier @relation(fields: [tierId], references: [id])
+
+  // What this edition displayed, frozen so later edits never rewrite an
+  // archive (#375). The catalogue is shared and mutable: renaming "Gold" or
+  // recolouring it would otherwise repaint every past edition's sponsor wall.
+  // Null means "not frozen yet" — read through to the live tier / identity.
+  logoUrl       String?
+  tierNameFr    String?
+  tierNameEn    String?
+  tierColor     String?
+  tierLogoScale Float?
+
+  // --- Private fields (#249) — organizers only, NEVER exposed publicly ---
+  comKitReceived      Boolean @default(false)
+  comKitLogoWebUrl    String?
+  comKitLogoPrintUrl  String?
+  comKitCharterUrl    String?
+  comKitNotes         String?
+  // Platinum-only promotional content ideas (#252).
+  platinumPromoIdea   String?
+  platinumCoBuildIdea String?
+
+  // Job offers are dated by nature and their quota depends on this year's
+  // tier (#251), so they hang off the participation, not the company.
+  jobOffers SponsorJobOffer[]
+
+  @@unique([sponsorId, editionId])
+  @@index([sponsorId])
+  @@index([editionId])
+  @@index([tierId])
+}
+
+// A person the organisers deal with at a sponsor company, and what they may do
+// on its space (#250, #362). A sponsor has several of them, each with its own
+// access role and its own account — or none, for someone the organisers merely
+// email. Access used to come from a per-contact modification link instead; see
+// the token fields below, kept only to convert the links already sent.
 model SponsorContact {
   id    Int     @id @default(autoincrement())
   email String
   name  String?
+  // Free-text job title ("Responsable marketing"). NOT a permission — the right
+  // to act is accessRole below (#362). Two different things, close names.
   role  String?
 
-  // Modification-link token infrastructure (issue #79, RG-242 to RG-251),
-  // now per-contact. Locale for the link email is inherited from the sponsor.
+  // Modification-link token (issue #79, RG-242 to RG-251). Read-only since
+  // #362: nothing writes these any more, and a sponsor edits from an account.
+  // They survive because they carry the links still sitting in mailboxes —
+  // opening one converts it into an invitation, and editLinkLocked is what
+  // still lets an organiser refuse that conversion.
+  //
+  // Droppable once no editTokenSentAt is within its 30-day window, i.e. a month
+  // after #362 reaches production.
   editToken       String?   @unique
   editLinkLocked  Boolean   @default(false)
   editTokenSentAt DateTime?
+
+  // What this person may do on the sponsor's space (#362). Every contact used
+  // to have equal rights; the default keeps that true for rows created before
+  // the split, since they were all full editors.
+  accessRole SponsorAccessRole @default(EDITEUR)
+
+  // The account behind the contact, once the invitation is accepted. Null means
+  // "invited, or contact-only" — someone the organisers email without giving
+  // them a login. SetNull rather than Cascade: deleting an account must not
+  // erase the sponsor's contact list.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  // Invitation to create an account, kept apart from editToken (#362): the two
+  // differ in lifetime (7 days vs 30) and in consumption (single-use vs not),
+  // and the edit link stays in service for speakers. Merging them would make
+  // both expiries hard to follow.
+  invitationToken      String?   @unique
+  invitationSentAt     DateTime?
+  invitationAcceptedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -726,6 +818,7 @@ model SponsorContact {
   sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
 
   @@index([sponsorId])
+  @@index([userId])
 }
 
 // A job offer a sponsor wants relayed during the DevFest (#251). Shown on the
@@ -743,10 +836,10 @@ model SponsorJobOffer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sponsorId Int
-  sponsor   Sponsor @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  editionSponsorId Int
+  editionSponsor   EditionSponsor @relation(fields: [editionSponsorId], references: [id], onDelete: Cascade)
 
-  @@index([sponsorId])
+  @@index([editionSponsorId])
 }
 
 // --- Categories / Tracks (RG-213, US-246) ---

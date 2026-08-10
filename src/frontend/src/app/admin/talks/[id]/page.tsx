@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
 
@@ -27,6 +28,8 @@ export default function TalkEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Feedback after a save (#394), shown in place instead of redirecting away.
+  const [saveState, setSaveState] = useState<SaveState>(null);
 
   useEffect(() => {
     if (isNew) {
@@ -142,7 +145,9 @@ export default function TalkEditorPage() {
 
         <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} />
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
+
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button
