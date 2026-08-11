@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import type { SpeakerEdition } from "@/lib/types";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ParticipationSponsorSelect from "@/components/admin/speakers/ParticipationSponsorSelect";
 
@@ -30,6 +31,9 @@ export default function SpeakerEditionsPanel({
 }: SpeakerEditionsPanelProps) {
   const [pendingEditionId, setPendingEditionId] = useState<string>("");
   const [busyId, setBusyId] = useState<number | null>(null);
+  // Detaching a sponsor from an edition asks first; this did not, for the same
+  // gesture on the other side of the model (#414).
+  const [detachTarget, setDetachTarget] = useState<SpeakerEdition | null>(null);
 
   const attachedIds = new Set(editions.map((e) => e.id));
   const available = allEditions.filter((e) => !attachedIds.has(e.id));
@@ -114,7 +118,7 @@ export default function SpeakerEditionsPanel({
                   <button
                     type="button"
                     disabled={busyId === participation.id}
-                    onClick={() => run(participation.id, () => onDetach(participation.id))}
+                    onClick={() => setDetachTarget(participation)}
                     className="text-sm text-terre-cuite hover:underline disabled:opacity-50"
                   >
                     Retirer
@@ -155,6 +159,21 @@ export default function SpeakerEditionsPanel({
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={!!detachTarget}
+        title="Retirer de cette édition"
+        message={`Retirer ce speaker de l'édition ${detachTarget?.year} ? Sa fiche et ses autres participations sont conservées.`}
+        confirmLabel="Retirer"
+        variant="danger"
+        onConfirm={() => {
+          if (!detachTarget) return;
+          const id = detachTarget.id;
+          setDetachTarget(null);
+          void run(id, () => onDetach(id));
+        }}
+        onCancel={() => setDetachTarget(null)}
+      />
     </section>
   );
 }

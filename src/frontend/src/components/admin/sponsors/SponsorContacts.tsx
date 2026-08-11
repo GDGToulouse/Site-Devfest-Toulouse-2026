@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { adminFetch } from "@/lib/admin-api";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { SPONSOR_ROLE_OPTIONS } from "@/lib/sponsor-roles";
 import type { SponsorAccessRole } from "@/lib/sponsor-api";
@@ -36,6 +37,7 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
   const [role, setRole] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [removeTarget, setRemoveTarget] = useState<Contact | null>(null);
 
   async function load() {
     const { data } = await adminFetch<Contact[]>(`/sponsors/${sponsorId}/contacts`);
@@ -126,9 +128,19 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
     setMsg(null);
     const { status } = await adminFetch(`/sponsors/${sponsorId}/contacts/${id}`, { method: "DELETE" });
     setBusy(false);
+    setRemoveTarget(null);
     if (status === 204) void load();
     else setMsg({ ok: false, text: "Échec de la suppression." });
   }
+
+  // Demoting the last RESPONSABLE is refused server-side, but removing them was
+  // not — same outcome by another route, and nothing warned about it (#407).
+  // The admin stays free to do it: they are the only recourse when someone has
+  // left the company. They just get told what it costs.
+  const isLastResponsable =
+    !!removeTarget &&
+    removeTarget.accessRole === "RESPONSABLE" &&
+    contacts.filter((c) => c.accessRole === "RESPONSABLE").length === 1;
 
   return (
     <div className="rounded-lg border border-gris/20 bg-blanc-casse/50 p-4 space-y-4">
@@ -197,7 +209,7 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                   {c.editLinkLocked ? "Déverrouiller" : "Verrouiller"}<span className="sr-only"> l&apos;ancien lien de {c.email}</span>
                 </button>
               )}
-              <button type="button" onClick={() => remove(c.id)} disabled={busy} className={`${rowActionClass} text-terre-cuite focus:ring-terre-cuite/50`}>
+              <button type="button" onClick={() => setRemoveTarget(c)} disabled={busy} className={`${rowActionClass} text-terre-cuite focus:ring-terre-cuite/50`}>
                 Retirer<span className="sr-only"> le contact {c.email}</span>
               </button>
             </li>
@@ -239,6 +251,20 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
           {msg.text}
         </p>
       )}
+
+      <ConfirmDialog
+        isOpen={!!removeTarget}
+        title="Retirer ce contact"
+        message={
+          isLastResponsable
+            ? `${removeTarget?.email} est le seul responsable de ce partenaire. En le retirant, plus personne ne pourra inviter d'équipe depuis l'espace partenaire — il faudra passer par vous. Nommez un autre responsable d'abord pour l'éviter.`
+            : `Retirer ${removeTarget?.email} des contacts de ce partenaire ? Son accès à l'espace partenaire sera révoqué.`
+        }
+        confirmLabel="Retirer"
+        variant="danger"
+        onConfirm={() => removeTarget && remove(removeTarget.id)}
+        onCancel={() => setRemoveTarget(null)}
+      />
     </div>
   );
 }

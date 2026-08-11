@@ -50,6 +50,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
   const [rows, setRows] = useState<EditionTierRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTierId, setSavingTierId] = useState<number | null>(null);
+  const [tierError, setTierError] = useState("");
 
   // Page settings (status, temporary form URL, brochure/hero) — live on Edition.
   const [settings, setSettings] = useState<EditionSettings>({
@@ -113,19 +114,24 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   // The single checkbox: checking publishes the offer on /devenir-sponsor (PUT
   // the link, visible), unchecking removes the link entirely.
+  // No confirmation on a checkbox — asking on every tick would be worse than the
+  // mistake it prevents. But the box used to move whatever the server answered,
+  // so a refused change left it showing a state the edition did not have (#412).
   async function toggleOffered(row: EditionTierRow) {
     setSavingTierId(row.tier.id);
-    if (row.offered) {
-      await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, { method: "DELETE" });
-      patchRow(row.tier.id, { offered: false });
-    } else {
-      await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
-      });
-      patchRow(row.tier.id, { offered: true });
-    }
+    setTierError("");
+    const { status } = row.offered
+      ? await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, { method: "DELETE" })
+      : await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
+        });
     setSavingTierId(null);
+    if (status !== 200 && status !== 204) {
+      setTierError("La modification a échoué. Réessayez.");
+      return;
+    }
+    patchRow(row.tier.id, { offered: !row.offered });
   }
 
   // Persist the price/order of an already-published offer, on blur.
@@ -328,6 +334,12 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
           d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ».
         </p>
       </div>
+
+      {tierError && (
+        <p role="alert" aria-live="assertive" className="rounded-lg bg-terre-cuite/10 px-3 py-2 text-sm text-terre-cuite">
+          {tierError}
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-gris text-sm">
