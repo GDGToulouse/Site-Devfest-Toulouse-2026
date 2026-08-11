@@ -97,7 +97,7 @@ export default function CategoryEditorPage() {
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
         <CategoryForm value={form} onChange={setForm} editions={editions} />
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}
 
         <div className="flex items-center gap-3 pt-2">
           <button

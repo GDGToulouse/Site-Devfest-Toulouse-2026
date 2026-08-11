@@ -78,7 +78,7 @@ export default function AdminLogin() {
         </p>
 
         {error && (
-          <div className="mb-4 p-3 rounded-[12px] bg-rouge/10 text-bismarck text-sm">{error}</div>
+          <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-[12px] bg-rouge/10 text-bismarck text-sm">{error}</div>
         )}
         {success && (
           <div className="mb-4 p-3 rounded-[12px] bg-malachite/10 text-[#0A6B4B] text-sm">{success}</div>

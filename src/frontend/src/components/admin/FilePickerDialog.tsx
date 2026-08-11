@@ -175,7 +175,7 @@ export default function FilePickerDialog({
         </div>
 
         {error && (
-          <div className="mx-4 mt-3 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
+          <div role="alert" aria-live="assertive" className="mx-4 mt-3 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
         )}
 
         <div className="flex-1 overflow-y-auto p-4">

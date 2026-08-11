@@ -81,7 +81,7 @@ export default function EditionsPage() {
   }
 
   async function handleSetFeatured(editionId: number) {
-    setError("");
+    setError(null);
     const { status } = await adminFetch("/editions/featured", {
       method: "PUT",
       body: JSON.stringify({ editionId }),
@@ -119,7 +119,7 @@ export default function EditionsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
+        <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
       )}
 
       <div className="space-y-3">

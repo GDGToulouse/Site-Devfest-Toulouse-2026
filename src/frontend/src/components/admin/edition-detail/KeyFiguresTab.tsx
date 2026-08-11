@@ -94,7 +94,7 @@ export default function KeyFiguresTab({ editionId }: KeyFiguresTabProps) {
         >
           {isSaving ? "Sauvegarde..." : "Sauvegarder les chiffres"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
+        {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
     </div>
   );
