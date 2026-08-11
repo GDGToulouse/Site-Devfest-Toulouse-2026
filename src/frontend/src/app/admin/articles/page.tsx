@@ -31,6 +31,7 @@ export default function ArticlesListPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<ArticleSummary | null>(null);
+  const [error, setError] = useState("");
 
   async function loadArticles(p = 1) {
     setIsLoading(true);
@@ -49,8 +50,15 @@ export default function ArticlesListPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await adminFetch(`/articles/${deleteTarget.id}`, { method: "DELETE" });
+    setError("");
+    const { status } = await adminFetch(`/articles/${deleteTarget.id}`, { method: "DELETE" });
     setDeleteTarget(null);
+    // A refused delete closed the dialog and reloaded the list, so the article
+    // reappeared with nothing said about why (#412).
+    if (status !== 204 && status !== 200) {
+      setError("La suppression a échoué. Réessayez.");
+      return;
+    }
     loadArticles(page);
   }
 
@@ -65,6 +73,12 @@ export default function ArticlesListPage() {
           Nouvel article
         </Link>
       </div>
+
+      {error && (
+        <p role="alert" aria-live="assertive" className="mb-6 rounded-xl bg-terre-cuite/10 p-4 text-sm text-terre-cuite">
+          {error}
+        </p>
+      )}
 
       {isLoading ? (
         <p className="text-gris">Chargement...</p>

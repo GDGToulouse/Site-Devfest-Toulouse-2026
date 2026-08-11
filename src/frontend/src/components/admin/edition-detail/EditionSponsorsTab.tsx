@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 import { adminFetch } from "@/lib/admin-api";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import type { AdminSponsorTier } from "@/lib/types";
 
 interface SponsorRow {
@@ -30,6 +31,7 @@ export default function EditionSponsorsTab({ editionId }: EditionSponsorsTabProp
   const [pickedTierId, setPickedTierId] = useState<number | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  const [detachTarget, setDetachTarget] = useState<SponsorRow | null>(null);
 
   async function load() {
     const [ofEdition, everyone, catalogue] = await Promise.all([
@@ -87,12 +89,14 @@ export default function EditionSponsorsTab({ editionId }: EditionSponsorsTabProp
     }
   }
 
+  // ConfirmDialog rather than window.confirm (#414): the native box is outside
+  // the charter, unstyleable, and its wording is the browser's, not ours.
   async function detach(sponsor: SponsorRow) {
-    if (!window.confirm(`Retirer ${sponsor.name} de cette édition ? La fiche de l'entreprise est conservée.`)) return;
     setIsBusy(true);
     setMessage(null);
     const { status } = await adminFetch(`/sponsors/${sponsor.id}/editions/${editionId}`, { method: "DELETE" });
     setIsBusy(false);
+    setDetachTarget(null);
     if (status === 204) {
       setMessage({ isOk: true, text: `${sponsor.name} retiré de cette édition.` });
       void load();
@@ -137,7 +141,7 @@ export default function EditionSponsorsTab({ editionId }: EditionSponsorsTabProp
               </span>
               <button
                 type="button"
-                onClick={() => detach(s)}
+                onClick={() => setDetachTarget(s)}
                 disabled={isBusy}
                 className="text-xs font-medium text-terre-cuite hover:underline disabled:opacity-50"
               >
@@ -210,8 +214,24 @@ export default function EditionSponsorsTab({ editionId }: EditionSponsorsTabProp
       </div>
 
       {message && (
-        <p className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}>{message.text}</p>
+        <p
+          role={message.isOk ? "status" : "alert"}
+          aria-live={message.isOk ? "polite" : "assertive"}
+          className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}
+        >
+          {message.text}
+        </p>
       )}
+
+      <ConfirmDialog
+        isOpen={!!detachTarget}
+        title="Retirer de cette édition"
+        message={`Retirer ${detachTarget?.name} de cette édition ? La fiche de l'entreprise est conservée.`}
+        confirmLabel="Retirer"
+        variant="danger"
+        onConfirm={() => detachTarget && detach(detachTarget)}
+        onCancel={() => setDetachTarget(null)}
+      />
     </div>
   );
 }

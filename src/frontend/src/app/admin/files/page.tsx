@@ -111,8 +111,15 @@ export default function FilesAdminPage() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    await adminFetch(`/files/${deleteTarget}`, { method: "DELETE" });
+    setError("");
+    const { status } = await adminFetch(`/files/${deleteTarget}`, { method: "DELETE" });
     setDeleteTarget(null);
+    // A file still referenced elsewhere comes back on the next load; without
+    // this the dialog just closed and the file silently reappeared (#412).
+    if (status !== 204 && status !== 200) {
+      setError("La suppression a échoué. Le fichier est peut-être encore utilisé.");
+      return;
+    }
     loadFiles();
   }
 
@@ -192,7 +199,7 @@ export default function FilesAdminPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
+        <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
       )}
 
       {filtered.length === 0 ? (
