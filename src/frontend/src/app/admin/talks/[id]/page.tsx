@@ -110,7 +110,10 @@ export default function TalkEditorPage() {
         setError("Échec de l'enregistrement.");
         return;
       }
-      router.push("/admin/talks");
+      // Staying put, like the sponsor and speaker sheets (#394): creating left
+      // the editor on the talk, saving then threw them back to the list, and
+      // the SaveFeedback below never got the chance to say anything (#412).
+      setSaveState({ kind: "ok", text: "Modifications enregistrées." });
     }
   }
 

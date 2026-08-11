@@ -5,6 +5,7 @@ import { adminFetch } from "@/lib/admin-api";
 import BilingualInput from "@/components/admin/BilingualInput";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 
 interface PageSummary {
   id: number;
@@ -29,6 +30,7 @@ export default function PagesAdminPage() {
   const [createError, setCreateError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>(null);
 
   async function loadPages() {
     setIsLoading(true);
@@ -63,13 +65,16 @@ export default function PagesAdminPage() {
       setCreateError("Une page avec ce slug existe déjà");
       return;
     }
-    if (data) {
-      setIsCreating(false);
-      setNewSlug("");
-      setNewTitleFr("");
-      setNewTitleEn("");
-      loadPages();
+    if (!data) {
+      // Any other failure used to leave the form untouched and silent (#412).
+      setCreateError("La création a échoué. Réessayez.");
+      return;
     }
+    setIsCreating(false);
+    setNewSlug("");
+    setNewTitleFr("");
+    setNewTitleEn("");
+    loadPages();
   }
 
   async function startEdit(page: PageSummary) {
@@ -80,7 +85,8 @@ export default function PagesAdminPage() {
   async function handleSave() {
     if (!editing) return;
     setIsSaving(true);
-    await adminFetch(`/pages/${editing.id}`, {
+    setSaveState(null);
+    const { status } = await adminFetch(`/pages/${editing.id}`, {
       method: "PUT",
       body: JSON.stringify({
         titleFr: editing.titleFr,
@@ -90,6 +96,12 @@ export default function PagesAdminPage() {
       }),
     });
     setIsSaving(false);
+    // Closing the editor regardless of the answer lost the edits and read as a
+    // success (#412) — keep it open on failure so they can be retried.
+    if (status !== 200) {
+      setSaveState({ kind: "error", text: "L'enregistrement a échoué. Réessayez." });
+      return;
+    }
     setEditing(null);
     loadPages();
   }
@@ -146,7 +158,7 @@ export default function PagesAdminPage() {
             </div>
           </div>
           {createError && (
-            <p className="text-sm text-terre-cuite">{createError}</p>
+            <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{createError}</p>
           )}
           <div className="flex gap-3">
             <button
@@ -187,7 +199,8 @@ export default function PagesAdminPage() {
             }
           />
 
-          <div className="flex justify-end">
+          <div className="flex items-center justify-end gap-3">
+            <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
               {isSaving ? "Sauvegarde..." : "Sauvegarder"}
             </button>
