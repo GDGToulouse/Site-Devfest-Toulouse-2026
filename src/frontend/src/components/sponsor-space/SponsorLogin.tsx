@@ -73,7 +73,7 @@ export default function SponsorLogin({
   async function handleSocial(provider: "google" | "github") {
     setIsLoading(true);
     setError(null);
-    const result = await signInWithSocial(provider);
+    const result = await signInWithSocial(provider, callbackURL);
     if (!result.ok) {
       setError(result.error || "Connexion impossible");
       setIsLoading(false);
@@ -163,14 +163,19 @@ export default function SponsorLogin({
         </button>
       </form>
 
-      <button
-        type="button"
-        onClick={handleMagicLink}
-        disabled={isLoading}
-        className="mt-4 w-full text-sm font-medium text-bleu hover:underline disabled:opacity-50"
-      >
-        Recevoir un lien de connexion par email
-      </button>
+      {/* Sign-in only: the magic link runs with disableSignUp, so on this screen
+          — where no account exists yet — it silently sends nothing and lands the
+          visitor back here (#408). */}
+      {mode === "signin" && (
+        <button
+          type="button"
+          onClick={handleMagicLink}
+          disabled={isLoading}
+          className="mt-4 w-full text-sm font-medium text-bleu hover:underline disabled:opacity-50"
+        >
+          Recevoir un lien de connexion par email
+        </button>
+      )}
 
       <p className="mt-6 text-center text-xs text-gris">
         {mode === "signup"
