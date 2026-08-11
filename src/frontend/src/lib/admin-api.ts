@@ -106,10 +106,15 @@ export async function purgeExpiredTrash(): Promise<{
 // authorization URL as JSON ({ url, redirect }) instead of issuing a 302. A
 // plain <a href> performed a GET and got back `null` (404). We POST, then
 // navigate to the returned URL.
+// path defaults to the back-office, but a sponsor signing in from its own space
+// must come back there: landing on /admin got them a 403 loop, and the page
+// that binds their invitation never reloaded, so the account stayed orphaned
+// (#409).
 export async function signInWithSocial(
   provider: "google" | "github",
+  path = "/admin",
 ): Promise<{ ok: boolean; error?: string }> {
-  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/admin` : "/admin";
+  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
   try {
     const res = await fetch(`/api/auth/sign-in/social`, {
       method: "POST",

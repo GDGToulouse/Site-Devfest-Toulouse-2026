@@ -156,7 +156,7 @@ export default function ProfilePage() {
           </div>
 
           {profileError && (
-            <div className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{profileError}</div>
+            <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{profileError}</div>
           )}
 
           <div className="flex items-center gap-4">
@@ -218,7 +218,7 @@ export default function ProfilePage() {
           </div>
 
           {passwordError && (
-            <div className="mt-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{passwordError}</div>
+            <div role="alert" aria-live="assertive" className="mt-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{passwordError}</div>
           )}
 
           <div className="flex items-center gap-4 mt-4">

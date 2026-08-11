@@ -166,7 +166,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         >
           {isSaving ? "Sauvegarde..." : "Sauvegarder"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
+        {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
 
       <ConfirmDialog

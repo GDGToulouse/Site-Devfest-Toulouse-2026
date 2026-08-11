@@ -159,7 +159,7 @@ export default function VenueTab({ edition, onSaved }: VenueTabProps) {
         >
           {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
-        {saved && <span className="text-sm text-malachite">Enregistré ✓</span>}
+        {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
     </div>
   );
