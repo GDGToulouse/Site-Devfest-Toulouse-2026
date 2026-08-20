@@ -49,6 +49,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     title: "Administration",
     items: [
       { label: "Éditions", path: "/admin/editions", icon: "calendar", roles: ["ADMIN"] },
+      // Next to Éditions rather than in Données: a venue and its rooms are
+      // configuration an edition points at, not content edited year by year (#105).
+      { label: "Lieux", path: "/admin/venues", icon: "map-pin", roles: ["ADMIN"] },
       { label: "Utilisateurs", path: "/admin/users", icon: "users", roles: ["ADMIN"] },
       { label: "Clés API", path: "/admin/api-keys", icon: "key", roles: ["ADMIN"] },
       // Both roles reach the page; ADMIN-only entities (users, editions…) are

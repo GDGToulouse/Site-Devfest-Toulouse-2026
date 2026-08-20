@@ -1,19 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { adminFetch } from "@/lib/admin-api";
-import FormField from "@/components/admin/FormField";
-import RichTextEditor from "@/components/admin/RichTextEditor";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
+import type { AdminVenue } from "@/lib/types";
 
 interface EditionVenue {
   id: number;
-  venueName: string | null;
-  venueAddress: string | null;
-  venueLat: number | null;
-  venueLng: number | null;
-  venueTransports: string | null;
-  venueParking: string | null;
-  venueDirectionsUrl: string | null;
+  venueId: number | null;
+  venue: { id: number; name: string; address: string | null } | null;
 }
 
 interface VenueTabProps {
@@ -21,146 +17,106 @@ interface VenueTabProps {
   onSaved: () => void;
 }
 
-// Edits the fields behind the public "Lieu & infos pratiques" page (#109):
-// coordinates for the map, transports/parking as rich text, and an itinerary
-// link. Name and address live in the Général tab and are only shown read-only
-// here for context.
+// Picks which venue hosts this edition (#105). The venue's own details — its
+// address, its map coordinates, its transports and parking (#109) — are edited
+// on the venue screen, because they belong to the place and not to the year.
+// Two editions at Diagora describing it differently is exactly what moving
+// these fields off the edition was meant to prevent.
 export default function VenueTab({ edition, onSaved }: VenueTabProps) {
-  const [form, setForm] = useState({
-    // Coordinates are kept as strings while editing; parsed on save.
-    venueLat: edition.venueLat?.toString() ?? "",
-    venueLng: edition.venueLng?.toString() ?? "",
-    venueTransports: edition.venueTransports ?? "",
-    venueParking: edition.venueParking ?? "",
-    venueDirectionsUrl: edition.venueDirectionsUrl ?? "",
-  });
+  const [venues, setVenues] = useState<AdminVenue[]>([]);
+  const [selectedId, setSelectedId] = useState<string>(edition.venueId?.toString() ?? "");
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<SaveState>(null);
 
-  // A blank coordinate clears it (null); a filled one must parse to a finite
-  // number, otherwise we refuse to save rather than store NaN.
-  function parseCoord(raw: string): number | null | "invalid" {
-    const trimmed = raw.trim();
-    if (trimmed === "") return null;
-    const n = Number(trimmed);
-    return Number.isFinite(n) ? n : "invalid";
-  }
+  const loadVenues = useCallback(async () => {
+    const { data } = await adminFetch<AdminVenue[]>("/venues");
+    setVenues(data ?? []);
+    setIsLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadVenues();
+  }, [loadVenues]);
 
   async function persist() {
-    const lat = parseCoord(form.venueLat);
-    const lng = parseCoord(form.venueLng);
-    if (lat === "invalid" || lng === "invalid") {
-      setError("Latitude et longitude doivent être des nombres (ex. 43.5497).");
-      return;
-    }
-    // The map needs both or neither — one lone coordinate places nothing.
-    if ((lat === null) !== (lng === null)) {
-      setError("Renseignez la latitude ET la longitude, ou laissez les deux vides.");
-      return;
-    }
-
     setIsSaving(true);
-    setSaved(false);
-    setError(null);
+    setFeedback(null);
 
-    // Rich-text / URL fields go as "" (not undefined) when cleared so the
-    // backend applies its "" → null branch and the key is not dropped (#166).
-    const { status } = await adminFetch(`/editions/${edition.id}`, {
+    const { status, error: backendError } = await adminFetch(`/editions/${edition.id}`, {
       method: "PUT",
-      body: JSON.stringify({
-        venueLat: lat,
-        venueLng: lng,
-        venueTransports: form.venueTransports,
-        venueParking: form.venueParking,
-        venueDirectionsUrl: form.venueDirectionsUrl,
-      }),
+      body: JSON.stringify({ venueId: selectedId === "" ? null : Number(selectedId) }),
     });
 
     setIsSaving(false);
-    if (status === 200) {
-      setSaved(true);
-      onSaved();
-    } else {
-      setError("Enregistrement impossible.");
+    // Anything but 200 failed, network included: a dropped connection comes
+    // back as status 0, which `>= 400` announced as a save (#428).
+    if (status !== 200) {
+      setFeedback({ kind: "error", text: backendError ?? "Le lieu n'a pas pu être enregistré." });
+      return;
     }
+    setFeedback({ kind: "ok", text: "Lieu enregistré." });
+    onSaved();
   }
+
+  const selected = venues.find((v) => v.id.toString() === selectedId) ?? null;
+  const isDirty = selectedId !== (edition.venueId?.toString() ?? "");
 
   return (
     <div className="space-y-6">
-      {(edition.venueName || edition.venueAddress) && (
-        <p className="text-sm text-gris">
-          Lieu : <span className="font-medium text-noir">{edition.venueName || "—"}</span>
-          {edition.venueAddress ? ` — ${edition.venueAddress}` : ""}
-          {" "}(modifiable dans l’onglet Général).
-        </p>
-      )}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <FormField
-          label="Latitude"
-          name="venueLat"
-          type="number"
-          step="any"
-          value={form.venueLat}
-          onChange={(v) => setForm({ ...form, venueLat: v })}
-          placeholder="43.5497"
-          helpText="Coordonnée de la carte. Laissez vide pour masquer la carte."
-        />
-        <FormField
-          label="Longitude"
-          name="venueLng"
-          type="number"
-          step="any"
-          value={form.venueLng}
-          onChange={(v) => setForm({ ...form, venueLng: v })}
-          placeholder="1.5119"
-        />
-      </div>
-
-      <FormField
-        label="Lien itinéraire"
-        name="venueDirectionsUrl"
-        type="url"
-        value={form.venueDirectionsUrl}
-        onChange={(v) => setForm({ ...form, venueDirectionsUrl: v })}
-        placeholder="https://maps.google.com/?q=..."
-        helpText="Bouton « Itinéraire » sur la page publique."
-      />
-
-      <RichTextEditor
-        label="Accès & transports"
-        name="venueTransports"
-        value={form.venueTransports}
-        onChange={(html) => setForm({ ...form, venueTransports: html })}
-        placeholder="Métro, tram, bus, gare…"
-      />
-
-      <RichTextEditor
-        label="Parking"
-        name="venueParking"
-        value={form.venueParking}
-        onChange={(html) => setForm({ ...form, venueParking: html })}
-        placeholder="Parkings à proximité, tarifs, covoiturage…"
-      />
-
-      {error && (
-        <p role="alert" className="text-sm text-terre-cuite">
-          {error}
-        </p>
-      )}
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={persist}
-          disabled={isSaving}
-          className="px-4 py-2 rounded-lg bg-malachite text-blanc text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+      <div>
+        <label htmlFor="venueId" className="block text-sm font-medium text-noir mb-1">
+          Lieu de l’édition
+        </label>
+        <select
+          id="venueId"
+          value={selectedId}
+          onChange={(e) => setSelectedId(e.target.value)}
+          disabled={isLoading}
+          className="w-full max-w-md rounded-[12px] border border-gris-clair px-3 py-2 text-base"
         >
-          {isSaving ? "Enregistrement…" : "Enregistrer"}
-        </button>
-        {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
+          <option value="">— Aucun lieu —</option>
+          {venues.map((venue) => (
+            <option key={venue.id} value={venue.id}>
+              {venue.name}
+              {venue.address ? ` — ${venue.address}` : ""}
+            </option>
+          ))}
+        </select>
+        <p className="mt-2 text-sm text-gris">
+          Un lieu est partagé entre les éditions. Son adresse, sa carte et ses infos pratiques
+          se modifient sur <Link href="/admin/venues" className="underline">l’écran des lieux</Link>.
+        </p>
       </div>
+
+      {selected && (
+        <div className="rounded-[12px] border border-gris-clair p-4">
+          <p className="text-sm font-medium text-noir">{selected.name}</p>
+          {selected.address && <p className="text-sm text-gris">{selected.address}</p>}
+          <p className="mt-2 text-sm text-gris">
+            {selected.rooms.length === 0
+              ? "Aucune salle déclarée — le programme ne pourra pas être établi."
+              : `${selected.rooms.length} salle${selected.rooms.length > 1 ? "s" : ""} : ${selected.rooms.map((r) => r.name).join(", ")}`}
+          </p>
+          <Link
+            href={`/admin/venues/${selected.id}`}
+            className="mt-3 inline-block text-sm text-bleu underline"
+          >
+            Modifier ce lieu et ses salles
+          </Link>
+        </div>
+      )}
+
+      <SaveFeedback state={feedback} onDismiss={() => setFeedback(null)} />
+
+      <button
+        type="button"
+        onClick={persist}
+        disabled={isSaving || !isDirty}
+        className="rounded-[12px] bg-malachite px-[18px] py-3 text-base font-bold text-blanc disabled:opacity-50"
+      >
+        {isSaving ? "Enregistrement…" : "Enregistrer"}
+      </button>
     </div>
   );
 }
