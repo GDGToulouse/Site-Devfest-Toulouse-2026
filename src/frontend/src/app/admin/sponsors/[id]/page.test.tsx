@@ -133,6 +133,35 @@ describe("Sponsor sheet — panels separate identity from participation (#393)",
   });
 });
 
+describe("Sponsor sheet — a save that never left says so (#428)", () => {
+  it("reports an error when the request does not reach the backend", async () => {
+    const user = userEvent.setup();
+    // What `adminFetch` returns when fetch itself throws: no answer, no body.
+    // The screen used to test `status >= 400`, which 0 does not satisfy, so a
+    // dropped connection displayed "Modifications enregistrées."
+    adminFetch.mockImplementation((path: string, init?: { method?: string }) => {
+      if (init?.method === "PUT") return Promise.resolve({ data: null, status: 0 });
+      if (path === "/sponsor-tiers") return Promise.resolve({ data: TIERS, status: 200 });
+      if (path === "/sponsors/42") return Promise.resolve({ data: SPONSOR, status: 200 });
+      return Promise.resolve({ data: [], status: 200 });
+    });
+
+    render(<SponsorEditorPage />);
+    await user.click(await screen.findByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByText("Échec de l'enregistrement. Réessayez.")).toBeInTheDocument();
+    expect(screen.queryByText("Modifications enregistrées.")).not.toBeInTheDocument();
+  });
+
+  it("still confirms a save that did reach the backend", async () => {
+    const user = userEvent.setup();
+    render(<SponsorEditorPage />);
+    await user.click(await screen.findByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByText("Modifications enregistrées.")).toBeInTheDocument();
+  });
+});
+
 describe("Sponsor sheet — a blocked save explains itself (#393)", () => {
   it("says which field is missing and where it lives", async () => {
     const user = userEvent.setup();

@@ -24,7 +24,7 @@ import {
   getHallOfFame,
   getIndexableSponsors,
 } from "@/lib/api";
-import sitemap from "./sitemap";
+import sitemap, { dynamic } from "./sitemap";
 
 const FEATURED = { id: 1, year: 2026 };
 
@@ -142,5 +142,15 @@ describe("sitemap — every article, not the first hundred (#379)", () => {
     // The old code called getArticles(1, 100) once and stopped there.
     expect(paths(entries)).toContain("/fr/actualites/article-1");
     expect(paths(entries)).toContain("/fr/actualites/article-3");
+  });
+});
+
+describe("sitemap — never served from the build (#426)", () => {
+  it("opts out of prerendering", async () => {
+    // `next build` has no backend: prerendering this route bakes in a sitemap
+    // holding the static routes and nothing else, and that is what the first
+    // crawler after a deployment receives. Observed on beta, 28 URLs against
+    // the 1310 a fresh render produces.
+    expect(dynamic).toBe("force-dynamic");
   });
 });

@@ -11,6 +11,21 @@ import {
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
+// Rendered per request, never prerendered (#426). `next build` runs with no
+// backend reachable — `fetchAPI` degrades to null there by design — so a
+// build-time render lists the static routes and nothing else. That empty
+// sitemap is then served to whoever asks first after a deployment, and stays
+// served until some request happens to trigger a revalidation: observed on
+// beta, 28 URLs for more than a day where a fresh render gives 1310. Measured
+// on a build made without a backend: 28 URLs prerendered, 122 rendered.
+//
+// The cost is one render per request, on a URL crawlers fetch a few times a
+// day — and the fetches keep their own hour-long cache, so a backend outage
+// serves the last good sitemap rather than a truncated one. Only a cold cache
+// and a dead backend together produce a 500, which a crawler retries; a 200
+// announcing a site with no content is what it would never question (#345).
+export const dynamic = "force-dynamic";
+
 type Locale = "fr" | "en";
 
 // Articles are read page by page rather than with a fixed ceiling: a hard

@@ -36,3 +36,24 @@ describe("translation placeholders", () => {
     }
   });
 });
+
+describe("page titles and the brand (#381)", () => {
+  // The layout appends " — DevFest Toulouse 2026" to every title. A `pageTitle`
+  // that already names the brand therefore ships it twice: /replays read
+  // "Replays — toutes les conférences filmées | DevFest Toulouse — DevFest
+  // Toulouse 2026", 83 characters, cut by Google mid-repetition.
+  it("does not name the brand in a title the template completes", () => {
+    for (const [name, messages] of locales) {
+      expect(messages.replays.pageTitle as string, `${name}: replays.pageTitle`).not.toMatch(/DevFest/);
+    }
+  });
+
+  // `bilan.pageTitle` is the exception and stays one: it also labels the
+  // breadcrumb, where "DevFest Toulouse 2025" is the right wording. The page
+  // opts out of the template with `title.absolute` instead.
+  it("keeps the brand in the edition label, which the breadcrumb needs", () => {
+    for (const [name, messages] of locales) {
+      expect(messages.bilan.pageTitle as string, `${name}: bilan.pageTitle`).toContain("DevFest Toulouse");
+    }
+  });
+});
