@@ -1,6 +1,6 @@
 {
   "name": "devfest-toulouse-frontend",
-  "version": "1.6.1-beta",
+  "version": "1.7.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
