@@ -19,6 +19,8 @@ import adminImportRoutes from "./import.js";
 import adminApiKeyRoutes from "./api-keys.js";
 import adminTranslateRoutes from "./translate.js";
 import adminTrashRoutes from "./trash.js";
+import adminVenueRoutes from "./venues.js";
+import adminScheduleRoutes from "./schedule.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -37,6 +39,9 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminSpeakerRoutes);
     await editorApp.register(adminCategoryRoutes);
     await editorApp.register(adminTalkRoutes);
+    // Scheduling sits with the talks: whoever places a session also places the
+    // breaks around it. Creating the rooms themselves stays ADMIN-only below.
+    await editorApp.register(adminScheduleRoutes);
     await editorApp.register(adminImportRoutes);
     // Editors may consult and restore; the purge route carries its own
     // ADMIN-only guard, since destroying a row for good is not theirs to do.
@@ -48,6 +53,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     adminApp.addHook("preHandler", requireAdminRole);
     await adminApp.register(adminCacheRoutes);
     await adminApp.register(adminEditionRoutes);
+    await adminApp.register(adminVenueRoutes);
     await adminApp.register(adminTicketRoutes);
     await adminApp.register(adminSettingsRoutes);
     await adminApp.register(adminUserRoutes);

@@ -18,7 +18,11 @@ interface TalkCreateBody {
   language: string;
   categoryId?: number | null;
   speakerIds?: number[];
-  room?: string;
+  // Scheduling (#105). `roomId: null` unassigns the room; the dates are ISO
+  // strings, `null` clears the slot.
+  roomId?: number | null;
+  startsAt?: string | null;
+  endsAt?: string | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
   isSpeakerEditable?: boolean;
 }
@@ -49,6 +53,36 @@ function serialize(t: {
   };
 }
 
+/**
+ * Resolve a room assignment for a talk (#105).
+ *
+ * A room belongs to a venue and a venue hosts editions, so a room is only
+ * assignable to a talk whose edition happens at that venue — otherwise a 2026
+ * session could be scheduled into a room the DevFest left behind in 2024.
+ *
+ * Returns the fields to write, or an error message to send back as a 422.
+ */
+async function resolveRoom(
+  roomId: number | null,
+  editionId: number,
+): Promise<{ data: { roomId: number | null; roomLabel: string | null } } | { error: string }> {
+  if (roomId === null) return { data: { roomId: null, roomLabel: null } };
+
+  const room = await prisma.room.findUnique({ where: { id: roomId } });
+  if (!room) return { error: "Cette salle n'existe pas." };
+
+  const edition = await prisma.edition.findUnique({
+    where: { id: editionId },
+    select: { venueId: true },
+  });
+  if (!edition || edition.venueId !== room.venueId) {
+    return { error: "Cette salle n'appartient pas au lieu de l'édition." };
+  }
+
+  // The label is frozen here, not read through at display time (#375).
+  return { data: { roomId: room.id, roomLabel: room.name } };
+}
+
 export default async function adminTalkRoutes(app: FastifyInstance) {
   // GET /api/admin/talks?editionId=X — editionId omitted lists all editions
   app.get<{ Querystring: TalkListQuery }>("/talks", {
@@ -65,6 +99,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         // trashed speaker would otherwise still show up on a live talk.
         speakers: { where: notDeleted, select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
+        room: { select: { id: true, name: true } },
         ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
       },
     });
@@ -82,6 +117,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       include: {
         speakers: { where: notDeleted, select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
+        room: { select: { id: true, name: true } },
         edition: { select: { id: true, year: true } },
       },
     });
@@ -115,6 +151,11 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     });
     const slug = uniqueSlug(slugify(body.title), new Set(existing.map((e) => e.slug)));
 
+    const roomAssignment = await resolveRoom(body.roomId ?? null, body.editionId);
+    if ("error" in roomAssignment) {
+      return reply.code(422).send({ error: "invalid_room", message: roomAssignment.error });
+    }
+
     const talk = await prisma.talk.create({
       data: {
         editionId: body.editionId,
@@ -124,7 +165,9 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         format: body.format,
         level: body.level ?? null,
         language: body.language.trim(),
-        room: body.room || null,
+        ...roomAssignment.data,
+        startsAt: body.startsAt ? new Date(body.startsAt) : null,
+        endsAt: body.endsAt ? new Date(body.endsAt) : null,
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
         isSpeakerEditable: body.isSpeakerEditable === true,
@@ -156,6 +199,23 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: `Invalid level. Allowed: ${LEVELS.join(", ")}` });
     }
 
+    // The room is validated against the talk's own edition, so the edition has
+    // to be read before the update rather than trusted from the request.
+    let roomData: { roomId: number | null; roomLabel: string | null } | undefined;
+    if (body.roomId !== undefined) {
+      const current = await prisma.talk.findUnique({
+        where: { id: Number(id) },
+        select: { editionId: true },
+      });
+      if (!current) return reply.code(404).send({ error: "Talk not found" });
+
+      const roomAssignment = await resolveRoom(body.roomId, current.editionId);
+      if ("error" in roomAssignment) {
+        return reply.code(422).send({ error: "invalid_room", message: roomAssignment.error });
+      }
+      roomData = roomAssignment.data;
+    }
+
     const talk = await prisma.talk.update({
       where: { id: Number(id) },
       data: {
@@ -164,7 +224,9 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.format !== undefined && { format: body.format }),
         ...(body.level !== undefined && { level: body.level ?? null }),
         ...(body.language !== undefined && { language: body.language.trim() }),
-        ...(body.room !== undefined && { room: body.room || null }),
+        ...(roomData ?? {}),
+        ...(body.startsAt !== undefined && { startsAt: body.startsAt ? new Date(body.startsAt) : null }),
+        ...(body.endsAt !== undefined && { endsAt: body.endsAt ? new Date(body.endsAt) : null }),
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
         ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),

@@ -59,6 +59,20 @@ export function revalidateEdition(year: number): Promise<void> {
   ]);
 }
 
+/**
+ * A venue changed (#105) — purge every page that prints it.
+ *
+ * `/lieu` had no purge at all until now: the practical-info page shipped with
+ * #109 without one, so a corrected address stayed stale for an hour. The home
+ * page carries the venue in its strap line, hence both.
+ */
+export function revalidateVenue(): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths("/lieu"),
+  ]);
+}
+
 export function revalidateBilletterie(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
