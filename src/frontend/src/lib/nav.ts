@@ -26,6 +26,15 @@ const JOB_OFFERS_CHILD: NavEntry = {
   labelKey: "jobOffers",
   href: "/offres-emploi-partenaires",
 };
+// The hall of fame hangs under Speakers (#369), the way the job offers hang
+// under Sponsors. It spans every edition rather than the current one, so it
+// rides on the parent's condition: no speakers announced, no menu, and the
+// footer link — which is always there — remains the way in.
+const HALL_OF_FAME_CHILD: NavEntry = {
+  key: "hall-of-fame",
+  labelKey: "hallOfFame",
+  href: "/hall-of-fame",
+};
 const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites" };
 // Venue & practical-info page (#109). Shown only once the edition has map
 // coordinates or a written transports/parking section (hasVenueInfo).
@@ -53,7 +62,7 @@ export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
     entries.push(CONFERENCES_ENTRY);
   }
 
-  if (edition?.hasSpeakers) entries.push(SPEAKERS_ENTRY);
+  if (edition?.hasSpeakers) entries.push({ ...SPEAKERS_ENTRY, children: [HALL_OF_FAME_CHILD] });
   if (edition?.hasSponsors) {
     entries.push(
       edition.hasJobOffers ? { ...SPONSORS_ENTRY, children: [JOB_OFFERS_CHILD] } : SPONSORS_ENTRY,

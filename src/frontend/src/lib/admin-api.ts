@@ -57,6 +57,10 @@ export async function adminFetch<T>(
     const data = await res.json();
     return { data, status: res.status };
   } catch {
+    // Status 0 means the request never reached the backend — a network
+    // failure, not an answer. Callers must not test `status >= 400` alone: 0
+    // slips through it, and the screen then reports a save that never happened
+    // (#428). Success is 200 on an update, 201 on a creation.
     return { data: null, status: 0 };
   }
 }

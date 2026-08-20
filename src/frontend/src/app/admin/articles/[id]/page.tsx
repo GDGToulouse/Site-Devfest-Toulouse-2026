@@ -174,7 +174,9 @@ export default function ArticleEditorPage() {
       setTranslateError("La traduction a cassé la structure du contenu. Réessayez ou corrigez manuellement.");
       return;
     }
-    if (status >= 400) {
+    // Anything but 200 failed, network included: a dropped connection comes
+    // back as status 0, which `>= 400` let through as a translation (#428).
+    if (status !== 200) {
       setTranslateError(translateApiError || "La traduction a échoué.");
       return;
     }

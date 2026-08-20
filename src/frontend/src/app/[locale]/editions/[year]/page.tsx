@@ -71,7 +71,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const locale = await getLocale();
   const t = await getTranslations("bilan");
   return {
-    title: t("pageTitle", { year }),
+    // Absolute: the label already carries the brand and the year, so the
+    // layout template turned it into "DevFest Toulouse 2025 — DevFest Toulouse
+    // 2026" — two different years in one title (#381). The same key feeds the
+    // breadcrumb, where the brand belongs, so the fix is here and not in the
+    // wording.
+    title: { absolute: t("pageTitle", { year }) },
     description: t("description", { year }),
     alternates: {
       canonical: `/${locale}/editions/${year}`,
