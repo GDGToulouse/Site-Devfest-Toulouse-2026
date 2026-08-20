@@ -173,7 +173,9 @@ export default function SponsorEditorPage() {
     } else {
       const { status } = await adminFetch(`/sponsors/${sponsorId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
-      if (status >= 400) {
+      // Anything but 200 failed, network included: a dropped connection comes
+      // back as status 0, which `>= 400` announced as a save (#428).
+      if (status !== 200) {
         setSaveState({ kind: "error", text: "Échec de l'enregistrement. Réessayez." });
         return;
       }
