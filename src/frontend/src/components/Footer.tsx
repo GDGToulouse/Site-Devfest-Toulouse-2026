@@ -72,10 +72,17 @@ export default async function Footer() {
             {(() => {
               // Flatten parent + children into one list (the footer has no
               // dropdowns); children render indented under their parent (#203).
-              const footerEntries = getPublicNavEntries(edition).flatMap((entry) => [
-                { ...entry, indented: false },
-                ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
-              ]);
+              const footerEntries = getPublicNavEntries(edition)
+                .flatMap((entry) => [
+                  { ...entry, indented: false },
+                  ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
+                ])
+                // The hall of fame joined the header under Speakers (#369), and
+                // the footer already lists it in the cross-edition column next
+                // to the replays — where it belongs, and where it stays visible
+                // before any speaker is announced. Flattening it here as well
+                // put it twice in the same footer.
+                .filter((entry) => entry.key !== "hall-of-fame");
               if (footerEntries.length === 0) return null;
               return (
                 <div>

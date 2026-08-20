@@ -2,6 +2,8 @@ import { describe, it, expect } from "vitest";
 
 import { getPublicNavEntries } from "./nav";
 import type { Edition } from "./types";
+import fr from "../../messages/fr.json";
+import en from "../../messages/en.json";
 
 // getPublicNavEntries drives which public menu links show. Its branches encode
 // real rules that have already caused bugs (#203 program nesting, #276 the
@@ -80,6 +82,34 @@ describe("getPublicNavEntries", () => {
   it("shows the venue link only when the edition has venue info (#109)", () => {
     expect(keys(getPublicNavEntries(edition()))).not.toContain("venue");
     expect(keys(getPublicNavEntries(edition({ hasVenueInfo: true })))).toEqual(["venue", "blog"]);
+  });
+
+  // A labelKey with no entry under the `nav` namespace renders as the raw key:
+  // the header shipped "nav.hallOfFame" to visitors while every structural test
+  // stayed green, because they all assert the key and never its translation.
+  // Caught in the browser, not here — hence this (#369).
+  it("gives every entry and child a label in both locales", () => {
+    const entries = getPublicNavEntries(
+      edition({
+        isScheduleReady: true,
+        isProgramPublished: true,
+        hasSpeakers: true,
+        hasSponsors: true,
+        hasJobOffers: true,
+        hasVenueInfo: true,
+      }),
+    );
+    const labelKeys = entries.flatMap((e) => [
+      e.labelKey,
+      ...(e.children?.map((c) => c.labelKey) ?? []),
+    ]);
+
+    for (const [name, messages] of [["fr", fr], ["en", en]] as const) {
+      const nav = messages.nav as Record<string, string | undefined>;
+      for (const key of labelKeys) {
+        expect(nav[key], `${name}: nav.${key} is missing`).toBeTruthy();
+      }
+    }
   });
 
   it("orders entries program → speakers → sponsors → venue → blog", () => {
