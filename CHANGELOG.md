@@ -12,6 +12,78 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.7.0] - 2026-08-20
+
+Après le speaker en 1.6.0, c'est au tour du **sponsor de devenir une entreprise
+suivie d'année en année** plutôt qu'une ligne recréée à chaque édition. Dans la
+foulée, le lien de modification anonyme laisse place à un **espace partenaire
+avec compte** : une entreprise gère sa fiche, son équipe et ses offres d'emploi
+depuis un accès nominatif.
+
+> ⚠️ **Cette version contient une migration destructrice** (`sponsor_identity`) :
+> onze colonnes quittent `Sponsor` pour `EditionSponsor` avant d'être supprimées,
+> et le slug d'un sponsor devient unique **globalement** au lieu de l'être par
+> édition. Sauvegarde de la base obligatoire avant déploiement.
+
+### Modifié
+
+- **Un sponsor est une entreprise, plus une ligne par édition** : `Sponsor` porte
+  l'identité (nom, slug, description, site) et `EditionSponsor` la participation à
+  une année, avec son niveau, son statut de publication et son kit com. Une
+  entreprise présente sur plusieurs éditions n'existe plus qu'une fois
+  (#123, #129, #130, #131, #132).
+- **Le logo et le libellé de niveau sont figés sur la participation** : ce qu'une
+  édition a affiché reste ce qu'elle affiche. Changer le logo d'une entreprise en
+  2027 ne repeint plus le mur de 2026 (#375).
+- **Fiche sponsor découpée en onglets** dans l'admin : l'écran unique était devenu
+  trop long pour être utilisable (#393).
+- **Plaquette servie dans la langue du demandeur**, au lieu du seul français (#401).
+- **Instructions de l'agent** : erreurs factuelles corrigées et contexte permanent
+  allégé (#399).
+
+### Ajouté
+
+- **Espace partenaire** : une entreprise reçoit une invitation depuis le
+  back-office, se connecte par email, Google ou GitHub, gère son équipe avec des
+  rôles par entreprise, met à jour sa fiche, publie ses offres d'emploi et dépose
+  ses fichiers. Il remplace le lien `/edit/<token>` anonyme pour les sponsors —
+  les speakers gardent le leur (#362).
+- **Sponsors des éditions passées** : la page d'une édition révolue affiche le mur
+  de sponsors de son année, avec les logos et les niveaux de l'époque (#370).
+- **Rattacher un sponsor existant à une édition** depuis la fiche sponsor comme
+  depuis l'édition, au lieu de recréer une entreprise (#389).
+- **Hall of fame accessible depuis le menu**, sous « Conférenciers », et plus
+  seulement depuis le pied de page (#369).
+- **Pages de contenu créées en admin servies sur `/[slug]`** (#421 — déjà en
+  production, livré par un correctif direct sur `main` entre deux versions).
+
+### Corrigé
+
+- **Le sitemap était servi vide après chaque déploiement** : il était prérendu au
+  build, sans backend joignable, et ce résultat tronqué restait servi pendant des
+  heures. Mesuré en bêta : 28 URL au lieu de 1310 (#426).
+- **Le sitemap ignorait les conférences et les sponsors** (#379).
+- **Un enregistrement perdu en réseau s'affichait comme réussi** : une requête qui
+  n'atteint jamais le backend remonte en `status 0`, que le test `>= 400` laissait
+  passer pour un succès. Six écrans admin étaient concernés (#428).
+- **Même défaut sur les pages, éditions, articles et fichiers** (#412).
+- **Aucune confirmation après l'enregistrement d'un sponsor** (#394).
+- **Le filtre par édition de la liste sponsors ignorait les années passées** (#395).
+- **Les messages d'erreur n'étaient pas annoncés aux lecteurs d'écran** — WCAG
+  2.1 AA (#413).
+- **Quatre suppressions sans confirmation**, dont deux irréversibles (#414).
+- **Retirer le dernier responsable d'un sponsor** laissait un espace ingérable,
+  sans avertissement (#407).
+- **Espace partenaire** : « Recevoir un lien de connexion » bouclait sur l'écran
+  d'inscription (#408), et la connexion Google/GitHub renvoyait le sponsor sur
+  `/admin` en boucle (#409).
+- **Admin sponsors** : une adresse email longue passait sous le badge de statut
+  (#406), l'aperçu d'un upload était bloqué par la CSP (#371), et l'écran de
+  création utilisait des types de champs inadaptés (#374).
+- **Titres SEO** : `/replays` ne double plus la marque, et la fiche d'une édition
+  passée n'affiche plus deux années différentes dans son titre (#381, partiel —
+  les métadonnées de l'accueil et les descriptions FR restent à faire).
+
 ## [1.6.0] - 2026-07-29
 
 Le fonds historique du DevFest devient consultable : **dix éditions de conférences
@@ -361,7 +433,8 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.6.0...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.7.0...dev
+[1.7.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.4.0...v1.5.0
 [1.4.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.3.0...v1.4.0
