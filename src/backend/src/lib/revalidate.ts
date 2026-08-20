@@ -70,6 +70,8 @@ export function revalidateVenue(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/lieu"),
+    // Renaming a room changes the grid's column headers (#106).
+    ...bilingualPaths("/programme"),
   ]);
 }
 
@@ -118,6 +120,10 @@ export function revalidateConferences(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/conferences"),
+    // The grid (#106) reads the same talks, plus the off-session entries the
+    // schedule screens write. Placing a session must show there immediately —
+    // the organisers publish the planning right up to the day before.
+    ...bilingualPaths("/programme"),
   ]);
 }
 
