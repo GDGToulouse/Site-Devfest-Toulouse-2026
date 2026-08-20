@@ -29,7 +29,27 @@ export function localInputToIso(value: string): string | null {
   return Number.isNaN(date.getTime()) ? null : date.toISOString();
 }
 
-/** UTC instant → `09:00`, for reading a schedule at a glance. */
-export function isoToLocalTime(iso: string): string {
-  return isoToLocalInput(iso).slice(11);
+/**
+ * The zone the schedule speaks in.
+ *
+ * Not the reader's, and above all not the server's: the grid is rendered on a
+ * container that runs on UTC, so formatting "locally" printed 08:50 for a
+ * session the signage calls 09:50. A time on a schedule is a place, not a
+ * moment relative to whoever is looking (#106).
+ */
+export const EVENT_TIME_ZONE = "Europe/Paris";
+
+// 24-hour in both locales: it is what the programme, the badges and the room
+// signage print, and an English visitor reading 3:15 PM would have to convert
+// back to match them.
+const eventTimeFormatter = new Intl.DateTimeFormat("fr-FR", {
+  timeZone: EVENT_TIME_ZONE,
+  hour: "2-digit",
+  minute: "2-digit",
+});
+
+/** UTC instant → `09:50` in Toulouse, whatever the machine formatting it. */
+export function formatEventTime(iso: string): string {
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "" : eventTimeFormatter.format(date);
 }

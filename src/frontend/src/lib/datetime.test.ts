@@ -1,16 +1,16 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 
-import { isoToLocalInput, localInputToIso, isoToLocalTime } from "./datetime";
+import { isoToLocalInput, localInputToIso, formatEventTime } from "./datetime";
 
 // The bug these lock down (#105): the talk editor loaded `startsAt` by slicing
 // the ISO string, which handed the datetime-local input a UTC wall-clock. The
 // input reads local, so saving converted it a second time and the start moved
 // back by the timezone offset — an hour, every save, silently.
 //
-// Nothing pins a timezone for these tests, and pinning one would weaken them:
-// in UTC the old sliced version passes. So nothing is asserted against a
-// literal local string — only that loading then saving changes nothing, which
-// has to hold in every zone, CI's included.
+// The round-trip assertions below never name a literal local hour: loading then
+// saving must change nothing, and that has to hold in every zone. The suite
+// runs on `TZ=Europe/Paris` (vitest.config.ts) because the sliced version does
+// pass under a zero offset, so a UTC runner could not tell the two apart.
 
 describe("datetime-local round trip", () => {
   it("returns the same instant after a load/save cycle", () => {
@@ -40,7 +40,35 @@ describe("datetime-local round trip", () => {
     expect(localInputToIso("pas une date")).toBeNull();
   });
 
-  it("reads a schedule time as hours and minutes", () => {
-    expect(isoToLocalTime("2026-11-19T08:00:00.000Z")).toMatch(/^\d{2}:\d{2}$/);
+});
+
+describe("schedule times (#106)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("reads a session time as hours and minutes, on the Toulouse clock", () => {
+    expect(formatEventTime("2026-11-19T08:50:00.000Z")).toBe("09:50");
+  });
+
+  it("says Toulouse time even when the server itself runs on UTC", async () => {
+    // This is not hypothetical: the frontend container has no TZ, so the grid
+    // is rendered by a process on UTC and printed 08:50 for the session the
+    // signage calls 09:50. The zone has to be in the formatter, not inherited.
+    vi.resetModules();
+    vi.stubEnv("TZ", "UTC");
+    const { formatEventTime: onUtcServer } = await import("./datetime");
+
+    expect(onUtcServer("2026-11-19T08:50:00.000Z")).toBe("09:50");
+  });
+
+  it("follows summer time — the offset is not a constant", () => {
+    // A June rehearsal or a spring meetup runs on CEST (+2), not CET (+1).
+    expect(formatEventTime("2026-06-18T08:50:00.000Z")).toBe("10:50");
+  });
+
+  it("treats an unparseable value as empty rather than printing NaN", () => {
+    expect(formatEventTime("pas une date")).toBe("");
   });
 });
