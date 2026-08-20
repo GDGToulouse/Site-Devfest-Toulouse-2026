@@ -167,8 +167,13 @@ describe("the public edition payload keeps its flat venue shape (#105)", () => {
   it("reports no venue info when the edition has no venue at all", async () => {
     // An edition detached from every venue must not crash the payload — it has
     // to answer null on each key, which is what the pages already handle.
+    //
+    // 1870 because `Edition.year` is @unique and the files run in parallel:
+    // 1990 belongs to admin-edition-sponsor-tiers, 16xx/17xx/19xx to the
+    // sponsor and speaker fixtures. Reusing one is the #292 failure, and it
+    // only shows in the full run.
     const edition = await prisma.edition.create({
-      data: { year: 1990, status: "PREPARATION" },
+      data: { year: 1870, status: "PREPARATION" },
     });
 
     try {

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import LoadingSpinner from "@/components/admin/LoadingSpinner";
@@ -84,7 +84,7 @@ export default function VenueDetailPage() {
 
     // Rich-text / URL fields go as "" (not undefined) when cleared so the
     // backend applies its "" → null branch and the key is not dropped (#166).
-    const { status, error } = await adminFetch(`/venues/${venueId}`, {
+    const result = await adminFetch(`/venues/${venueId}`, {
       method: "PUT",
       body: JSON.stringify({
         name: form.name,
@@ -100,8 +100,8 @@ export default function VenueDetailPage() {
     setIsSaving(false);
     // Anything but 200 failed, network included: a dropped connection comes
     // back as status 0, which `>= 400` announced as a save (#428).
-    if (status !== 200) {
-      setFeedback({ kind: "error", text: error ?? "Le lieu n'a pas pu être enregistré." });
+    if (result.status !== 200) {
+      setFeedback({ kind: "error", text: humanError(result, "Le lieu n'a pas pu être enregistré.") });
       return;
     }
     setFeedback({ kind: "ok", text: "Lieu enregistré." });
@@ -110,7 +110,7 @@ export default function VenueDetailPage() {
 
   async function addRoom() {
     if (!newRoom.name.trim()) return;
-    const { status, error } = await adminFetch(`/venues/${venueId}/rooms`, {
+    const result = await adminFetch(`/venues/${venueId}/rooms`, {
       method: "POST",
       body: JSON.stringify({
         name: newRoom.name.trim(),
@@ -118,8 +118,8 @@ export default function VenueDetailPage() {
         sortOrder: newRoom.sortOrder.trim() === "" ? 0 : Number(newRoom.sortOrder),
       }),
     });
-    if (status !== 201) {
-      setFeedback({ kind: "error", text: error ?? "La salle n'a pas pu être créée." });
+    if (result.status !== 201) {
+      setFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être créée.") });
       return;
     }
     setNewRoom({ name: "", capacity: "", sortOrder: "" });
@@ -132,11 +132,11 @@ export default function VenueDetailPage() {
     const room = pendingDelete;
     setPendingDelete(null);
 
-    const { status, error } = await adminFetch(`/rooms/${room.id}`, { method: "DELETE" });
-    if (status !== 204) {
+    const result = await adminFetch(`/rooms/${room.id}`, { method: "DELETE" });
+    if (result.status !== 204) {
       // The backend refuses with a readable reason when sessions are scheduled
       // in the room — surface it rather than a generic failure.
-      setFeedback({ kind: "error", text: error ?? "La salle n'a pas pu être supprimée." });
+      setFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être supprimée.") });
       return;
     }
     setFeedback({ kind: "ok", text: `Salle « ${room.name} » supprimée.` });

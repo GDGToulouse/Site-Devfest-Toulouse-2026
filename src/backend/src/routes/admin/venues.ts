@@ -203,7 +203,10 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
     if (room._count.talks > 0) {
       return reply.code(409).send({
         error: "room_in_use",
-        message: `${room._count.talks} conférence${room._count.talks > 1 ? "s sont programmées" : " est programmée"} dans cette salle. Déplacez-les avant de la supprimer.`,
+        message:
+          room._count.talks > 1
+            ? `${room._count.talks} conférences sont programmées dans cette salle. Déplacez-les avant de la supprimer.`
+            : "Une conférence est programmée dans cette salle. Déplacez-la avant de supprimer la salle.",
       });
     }
 

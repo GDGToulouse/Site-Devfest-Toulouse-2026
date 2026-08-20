@@ -2,10 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import LoadingSpinner from "@/components/admin/LoadingSpinner";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { isoToLocalTime, localInputToIso } from "@/lib/datetime";
 import type { ScheduleEntry } from "@/lib/types";
 
 interface ScheduleTabProps {
@@ -20,11 +21,6 @@ const KIND_LABELS: Record<ScheduleEntry["kind"], string> = {
   MEAL: "Repas",
   SOCIAL: "Soirée",
 };
-
-/** `2026-11-19T09:00:00.000Z` → `2026-11-19T09:00`, what datetime-local wants. */
-function toLocalInput(iso: string): string {
-  return iso.slice(0, 16);
-}
 
 // Everything on the schedule that is not a session (#105): welcome, warm-up,
 // breaks, lunch, the party. The sessions themselves are scheduled on their own
@@ -56,7 +52,7 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
     if (!draft.labelFr.trim() || !draft.startsAt || !draft.endsAt) return;
     setFeedback(null);
 
-    const { status, error } = await adminFetch("/schedule-entries", {
+    const result = await adminFetch("/schedule-entries", {
       method: "POST",
       body: JSON.stringify({
         editionId,
@@ -65,13 +61,13 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
         // The site is bilingual, so an English label is required. Falling back
         // to the French one is better than an empty cell on /en.
         labelEn: draft.labelEn.trim() || draft.labelFr.trim(),
-        startsAt: new Date(draft.startsAt).toISOString(),
-        endsAt: new Date(draft.endsAt).toISOString(),
+        startsAt: localInputToIso(draft.startsAt),
+        endsAt: localInputToIso(draft.endsAt),
       }),
     });
 
-    if (status !== 201) {
-      setFeedback({ kind: "error", text: error ?? "Le moment n'a pas pu être ajouté." });
+    if (result.status !== 201) {
+      setFeedback({ kind: "error", text: humanError(result, "Le moment n'a pas pu être ajouté.") });
       return;
     }
     setDraft({ kind: "BREAK", labelFr: "", labelEn: "", startsAt: "", endsAt: "" });
@@ -84,9 +80,9 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
     const entry = pendingDelete;
     setPendingDelete(null);
 
-    const { status, error } = await adminFetch(`/schedule-entries/${entry.id}`, { method: "DELETE" });
-    if (status !== 204) {
-      setFeedback({ kind: "error", text: error ?? "Le moment n'a pas pu être supprimé." });
+    const result = await adminFetch(`/schedule-entries/${entry.id}`, { method: "DELETE" });
+    if (result.status !== 204) {
+      setFeedback({ kind: "error", text: humanError(result, "Le moment n'a pas pu être supprimé.") });
       return;
     }
     setFeedback({ kind: "ok", text: "Moment supprimé." });
@@ -120,7 +116,7 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
             <li key={entry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-blanc shadow-card px-4 py-3">
               <span className="text-base text-noir">
                 <span className="text-gris">
-                  {toLocalInput(entry.startsAt).slice(11)} – {toLocalInput(entry.endsAt).slice(11)}
+                  {isoToLocalTime(entry.startsAt)} – {isoToLocalTime(entry.endsAt)}
                 </span>{" "}
                 {entry.labelFr}
                 <span className="text-gris"> · {KIND_LABELS[entry.kind]}</span>

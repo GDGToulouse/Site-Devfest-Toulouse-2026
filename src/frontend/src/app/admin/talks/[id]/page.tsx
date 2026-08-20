@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
+import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
@@ -60,9 +61,10 @@ export default function TalkEditorPage() {
           publicationStatus: data.publicationStatus,
           isSpeakerEditable: data.isSpeakerEditable,
           roomId: data.roomId ? String(data.roomId) : "",
-          // datetime-local wants `YYYY-MM-DDTHH:mm`, without zone or seconds.
-          startsAt: data.startsAt ? data.startsAt.slice(0, 16) : "",
-          endsAt: data.endsAt ? data.endsAt.slice(0, 16) : "",
+          // Through the helper, never by slicing: the input reads local time
+          // and the API stores UTC, so a slice loses the offset on save (#105).
+          startsAt: isoToLocalInput(data.startsAt),
+          endsAt: isoToLocalInput(data.endsAt),
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -116,8 +118,8 @@ export default function TalkEditorPage() {
       isSpeakerEditable: form.isSpeakerEditable,
       // `null` unschedules; a blank date clears the slot (#105).
       roomId: form.roomId ? Number(form.roomId) : null,
-      startsAt: form.startsAt ? new Date(form.startsAt).toISOString() : null,
-      endsAt: form.endsAt ? new Date(form.endsAt).toISOString() : null,
+      startsAt: localInputToIso(form.startsAt),
+      endsAt: localInputToIso(form.endsAt),
     };
 
     if (isNew) {

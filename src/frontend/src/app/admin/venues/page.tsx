@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import LoadingSpinner from "@/components/admin/LoadingSpinner";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -33,19 +33,19 @@ export default function VenuesPage() {
     setIsCreating(true);
     setFeedback(null);
 
-    const { data, status, error } = await adminFetch<AdminVenue>("/venues", {
+    const result = await adminFetch<AdminVenue>("/venues", {
       method: "POST",
       body: JSON.stringify({ name: newName.trim() }),
     });
 
     setIsCreating(false);
     // A creation answers 201; anything else failed, network included (#428).
-    if (status !== 201 || !data) {
-      setFeedback({ kind: "error", text: error ?? "Le lieu n'a pas pu être créé." });
+    if (result.status !== 201 || !result.data) {
+      setFeedback({ kind: "error", text: humanError(result, "Le lieu n'a pas pu être créé.") });
       return;
     }
     setNewName("");
-    setFeedback({ kind: "ok", text: `Lieu « ${data.name} » créé.` });
+    setFeedback({ kind: "ok", text: `Lieu « ${result.data.name} » créé.` });
     load();
   }
 
@@ -54,10 +54,10 @@ export default function VenuesPage() {
     const venue = pendingDelete;
     setPendingDelete(null);
 
-    const { status, error } = await adminFetch(`/venues/${venue.id}`, { method: "DELETE" });
+    const result = await adminFetch(`/venues/${venue.id}`, { method: "DELETE" });
     // A DELETE answers 204, not 200 — adminFetch returns it as-is.
-    if (status !== 204) {
-      setFeedback({ kind: "error", text: error ?? "Le lieu n'a pas pu être supprimé." });
+    if (result.status !== 204) {
+      setFeedback({ kind: "error", text: humanError(result, "Le lieu n'a pas pu être supprimé.") });
       return;
     }
     setFeedback({ kind: "ok", text: `Lieu « ${venue.name} » supprimé.` });

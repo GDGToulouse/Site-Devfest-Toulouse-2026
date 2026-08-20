@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { AdminVenue } from "@/lib/types";
 
@@ -43,7 +43,7 @@ export default function VenueTab({ edition, onSaved }: VenueTabProps) {
     setIsSaving(true);
     setFeedback(null);
 
-    const { status, error: backendError } = await adminFetch(`/editions/${edition.id}`, {
+    const result = await adminFetch(`/editions/${edition.id}`, {
       method: "PUT",
       body: JSON.stringify({ venueId: selectedId === "" ? null : Number(selectedId) }),
     });
@@ -51,8 +51,8 @@ export default function VenueTab({ edition, onSaved }: VenueTabProps) {
     setIsSaving(false);
     // Anything but 200 failed, network included: a dropped connection comes
     // back as status 0, which `>= 400` announced as a save (#428).
-    if (status !== 200) {
-      setFeedback({ kind: "error", text: backendError ?? "Le lieu n'a pas pu être enregistré." });
+    if (result.status !== 200) {
+      setFeedback({ kind: "error", text: humanError(result, "Le lieu n'a pas pu être enregistré.") });
       return;
     }
     setFeedback({ kind: "ok", text: "Lieu enregistré." });
