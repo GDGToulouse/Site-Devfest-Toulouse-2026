@@ -302,14 +302,25 @@ git show main:src/backend/src/lib/version.ts | grep APP_VERSION
 git tag -a v1.2.3 -m "Release v1.2.3"
 git push origin v1.2.3
 
-# Publier la release avec des notes auto-générées depuis les PR mergées
+# Le corps de la release EST la section du CHANGELOG, son titre `## [1.2.3]` retiré.
+awk '/^## \[1\.2\.3\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md | sed '/./,$!d' > /tmp/notes.md
+cat >> /tmp/notes.md <<'FOOTER'
+---
+
+[Changelog complet](https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/blob/main/CHANGELOG.md) · [Diff v1.2.2…v1.2.3](https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.2.2...v1.2.3) · PR de promotion #NNN
+FOOTER
+
 gh release create v1.2.3 \
   --repo GDGToulouse/Site-Devfest-Toulouse-2026 \
-  --title "v1.2.3" \
-  --generate-notes
+  --title "v1.2.3 — <résumé en une demi-ligne>" \
+  --notes-file /tmp/notes.md
 ```
 
-- `--generate-notes` compile les PR mergées depuis le tag précédent.
+- **Ne pas utiliser `--generate-notes`** : la liste de PR qu'il produit répète le
+  diff et rompt avec les releases v1.2.0 à v1.6.0. La release s'adresse à qui veut
+  savoir *ce qui change pour lui* — ce texte existe déjà, c'est le CHANGELOG.
+- Le **titre** porte un résumé, jamais le numéro seul : c'est lui qu'on lit dans la
+  liste des releases.
 - Le tag doit être **identique** à `APP_VERSION` (sinon l'admin et la release
   divergent) — vérifié **avant** le push ci-dessus.
 - **Un seul tag par version.** Ne jamais déplacer un tag déjà poussé.
