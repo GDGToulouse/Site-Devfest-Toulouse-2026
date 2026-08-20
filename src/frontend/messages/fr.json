@@ -13,6 +13,7 @@
     "conferences": "Conférences",
     "program": "Programme",
     "speakers": "Speakers",
+    "hallOfFame": "Hall of fame",
     "sponsors": "Sponsors",
     "jobOffers": "Offres d'emploi",
     "venue": "Lieu",
@@ -218,6 +219,7 @@
     "nextEdition": "Édition suivante",
     "speakers": "Speakers ({count})",
     "sessions": "Conférences ({count})",
+    "sponsors": "Partenaires ({count})",
     "replay": "Revoir",
     "allNews": "Voir toutes les actualités"
   },
@@ -340,6 +342,7 @@
     "home": "Accueil",
     "empty": "Les sponsors seront annoncés prochainement.",
     "visitWebsite": "Visiter le site",
+    "currentTier": "Sponsor {tier} de l'édition en cours",
     "speakersOf": "Speakers de {name}",
     "jobOffersTitle": "Offres d'emploi",
     "jobOfferCta": "Voir l'offre"
@@ -364,7 +367,7 @@
   },
   "replays": {
     "title": "Replays",
-    "pageTitle": "Replays — toutes les conférences filmées | DevFest Toulouse",
+    "pageTitle": "Replays — toutes les conférences filmées",
     "heading": "Replays",
     "description": "Revoyez les conférences filmées du DevFest Toulouse, toutes éditions confondues.",
     "home": "Accueil",

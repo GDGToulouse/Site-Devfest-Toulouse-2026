@@ -87,7 +87,7 @@ export default function CfpTab() {
         <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
           {isSaving ? "Sauvegarde..." : "Sauvegarder"}
         </button>
-        {saved && <span className="text-sm text-malachite">Sauvegardé !</span>}
+        {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
     </div>
   );

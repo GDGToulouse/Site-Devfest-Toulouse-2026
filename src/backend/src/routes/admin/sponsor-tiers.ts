@@ -139,8 +139,10 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
     const existing = await prisma.sponsorTier.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return notFound(reply, "Sponsor tier");
 
+    // The tier is bought per edition since #129, so "in use" is asked of the
+    // participation, not the sponsor identity.
     const [sponsorCount, linkCount] = await Promise.all([
-      prisma.sponsor.count({ where: { tierId: id, ...notDeleted } }),
+      prisma.editionSponsor.count({ where: { tierId: id, sponsor: notDeleted } }),
       prisma.editionSponsorTier.count({ where: { tierId: id } }),
     ]);
     if (sponsorCount > 0 || linkCount > 0) {

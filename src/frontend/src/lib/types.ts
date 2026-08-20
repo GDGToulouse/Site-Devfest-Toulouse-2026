@@ -43,6 +43,7 @@ export interface EditionSummary {
   status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
   archivedSiteUrl: string | null;
   startDate: string | null;
+  updatedAt: string;
 }
 
 export interface SocialLinks {
@@ -194,6 +195,19 @@ export interface Sponsor {
   locale: string;
   publicationStatus: "DRAFT" | "PUBLISHED";
   editionId: number;
+  // The flat fields above describe ONE participation — the most recent, or the
+  // one the query narrowed to. `editions` carries them all (#129), which is
+  // what a year filter has to read: a company sponsoring two editions would
+  // otherwise be matched on its latest year only (#395).
+  //
+  // Nested `edition` rather than a flat `year`, unlike SpeakerEdition: that is
+  // the shape the admin API returns.
+  editions?: {
+    editionId: number;
+    edition: { id: number; year: number };
+    tier: AdminSponsorTierRef;
+    publicationStatus: "DRAFT" | "PUBLISHED";
+  }[];
   // Private fields (#249) — organizers only, never on public pages.
   standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
   comKitReceived?: boolean;
@@ -237,7 +251,12 @@ export interface SponsorDetail {
   slug: string;
   name: string;
   logoUrl: string | null;
-  tier: SponsorTierRef;
+  // Null unless the company sponsors the featured edition (#129): the tier is
+  // a per-year fact, so it describes this year's participation only.
+  tier: SponsorTierRef | null;
+  // Years the company sponsored, newest first. Rendered as tags linking to
+  // each edition's page.
+  editions: number[];
   websiteUrl: string | null;
   descriptionFr: string | null;
   descriptionEn: string | null;
@@ -333,8 +352,17 @@ export interface EditionTalk {
   level: TalkLevel | null;
   language: string;
   videoUrl: string | null;
+  updatedAt: string;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null }[];
+}
+
+// One company that has a public page, for the sitemap (#379). Not the sponsor
+// wall: this spans every edition, so a company that only sponsored a past year
+// is here too.
+export interface IndexableSponsor {
+  slug: string;
+  updatedAt: string | null;
 }
 
 // Hall of replays (#102): a filmed talk, carrying the edition it was given in

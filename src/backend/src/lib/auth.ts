@@ -1,9 +1,16 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError } from "better-auth/api";
+// Configuring any plugin makes better-auth's inferred type reach into zod's,
+// which TypeScript must name in the emitted .d.ts (`declaration: true`). pnpm
+// isolation put zod out of reach, so it is a direct dependency now — declared
+// for its types, never imported (TS2742).
+import { magicLink } from "better-auth/plugins";
 import { prisma } from "./prisma.js";
 import { sendEmail, escapeHtml } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
+import { hasPendingInvitation, normalizeEmail } from "./sponsor-invitation.js";
+import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
   .split(",")
@@ -86,28 +93,90 @@ export const auth = betterAuth({
       clientSecret: process.env.OAUTH_GITHUB_CLIENT_SECRET || "",
     },
   },
+  user: {
+    additionalFields: {
+      // User.role exists in the Prisma schema but better-auth does not know it,
+      // so it drops the value the create hook sets — a sponsor account then
+      // fell back to the column default, EDITOR, which opens the back-office
+      // (#362). Declaring it here is what makes the hook's role stick.
+      //
+      // input: false — the role is never taken from the request body: a signup
+      // payload carrying `role: "ADMIN"` must not be able to grant itself one.
+      role: {
+        type: "string",
+        required: false,
+        input: false,
+      },
+    },
+  },
   account: {
     accountLinking: {
       enabled: true,
       trustedProviders: ["email-password", "google", "github"],
     },
   },
+  plugins: [
+    // Sign in to an EXISTING account without a password (#362) — not a way to
+    // create one: disableSignUp keeps the invitation the only door in, and
+    // stops this endpoint from becoming an email-enumeration oracle that mints
+    // accounts. Single-use and short-lived, unlike the 30-day edit link.
+    magicLink({
+      expiresIn: MAGIC_LINK_TTL_SECONDS,
+      disableSignUp: true,
+      sendMagicLink: async ({ email, url }) => {
+        await sendEmail({
+          to: [email],
+          subject: "DevFest Toulouse — Votre lien de connexion",
+          text: `Bonjour,\n\nCliquez sur ce lien pour vous connecter :\n${url}\n\nCe lien expire dans ${MAGIC_LINK_TTL_MINUTES} minutes et ne peut servir qu'une fois.\n\nSi vous n'avez pas demandé cette connexion, ignorez cet email.`,
+          html: `
+            ${emailHeading("Votre lien de connexion")}
+            <p>Bonjour,</p>
+            <p>Cliquez sur le bouton ci-dessous pour vous connecter à votre espace :</p>
+            ${emailButton(url, "Me connecter")}
+            <p>Ce lien expire dans ${MAGIC_LINK_TTL_MINUTES} minutes et ne peut servir qu'une fois.</p>
+            <p><em>Si vous n'avez pas demandé cette connexion, ignorez cet email.</em></p>
+          `,
+        });
+      },
+    }),
+  ],
   databaseHooks: {
     user: {
       create: {
         before: async (user) => {
-          // Only allow account creation if the email is in ADMIN_EMAILS
-          if (!user.email || !isAdminEmail(user.email)) {
+          // Sign-up stays closed (#362): an account is created only for an
+          // allow-listed admin, or for someone holding a live invitation to a
+          // sponsor space.
+          //
+          // This check belongs here rather than after the fact: rejecting later
+          // would leave an orphan User behind on every failed attempt — and for
+          // OAuth, an account the organisers never invited.
+          if (!user.email) {
             throw new APIError("FORBIDDEN", {
               message: "Inscription sur invitation uniquement. Contactez un administrateur.",
             });
           }
+          if (isAdminEmail(user.email)) return;
+
+          if (await hasPendingInvitation(user.email)) {
+            // Sponsors get a role that grants nothing in the back-office. The
+            // default is EDITOR, which requireAnyAuthenticated lets through —
+            // leaving it would hand /api/admin/* to every sponsor.
+            return { data: { ...user, role: "SPONSOR" } };
+          }
+
+          throw new APIError("FORBIDDEN", {
+            message: "Inscription sur invitation uniquement. Contactez un administrateur.",
+          });
         },
       },
     },
   },
 });
 
+// Normalized comparison: an admin typing "Prenom.Nom@gmail.com" into
+// ADMIN_EMAILS must still match what Google reports in lowercase.
 export function isAdminEmail(email: string): boolean {
-  return ADMIN_EMAILS.includes(email);
+  const normalized = normalizeEmail(email);
+  return ADMIN_EMAILS.some((e) => normalizeEmail(e) === normalized);
 }

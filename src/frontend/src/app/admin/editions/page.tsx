@@ -71,16 +71,26 @@ export default function EditionsPage() {
     const { status, error: apiError } = await adminFetch(`/editions/${deleteTarget.id}`, { method: "DELETE" });
     if (status === 409) {
       setError(apiError || "Impossible de supprimer cette édition");
+    } else if (status !== 204 && status !== 200) {
+      // Only the 409 used to speak up; any other failure closed the dialog and
+      // reloaded, so the edition came back with no explanation (#412).
+      setError("La suppression a échoué. Réessayez.");
     }
     setDeleteTarget(null);
     loadEditions();
   }
 
   async function handleSetFeatured(editionId: number) {
-    await adminFetch("/editions/featured", {
+    setError(null);
+    const { status } = await adminFetch("/editions/featured", {
       method: "PUT",
       body: JSON.stringify({ editionId }),
     });
+    // The badge used to move on its own authority, whatever the server said.
+    if (status !== 200) {
+      setError("La mise à la une a échoué. Réessayez.");
+      return;
+    }
     setFeaturedId(editionId);
   }
 
@@ -109,7 +119,7 @@ export default function EditionsPage() {
       </div>
 
       {error && (
-        <div className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
+        <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
       )}
 
       <div className="space-y-3">

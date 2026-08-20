@@ -11,7 +11,7 @@ interface AdminUser {
 export async function adminFetch<T>(
   path: string,
   options: RequestInit = {},
-): Promise<{ data: T | null; status: number; error?: string }> {
+): Promise<{ data: T | null; status: number; error?: string; errorBody?: Record<string, unknown> }> {
   try {
     const headers: Record<string, string> = {};
     if (options.body && !(options.body instanceof FormData)) {
@@ -37,7 +37,15 @@ export async function adminFetch<T>(
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       const error = body?.error || body?.message;
-      return { data: null, status: res.status, ...(error ? { error } : {}) };
+      // Some errors carry more than a message: the 409 on a taken sponsor slug
+      // returns the existing company's id, which the caller offers to attach
+      // rather than leaving the editor stuck (#389).
+      return {
+        data: null,
+        status: res.status,
+        ...(error ? { error } : {}),
+        ...(body && typeof body === "object" ? { errorBody: body as Record<string, unknown> } : {}),
+      };
     }
 
     // 204 No Content (e.g. a DELETE) has an empty body: res.json() would throw
@@ -49,6 +57,10 @@ export async function adminFetch<T>(
     const data = await res.json();
     return { data, status: res.status };
   } catch {
+    // Status 0 means the request never reached the backend — a network
+    // failure, not an answer. Callers must not test `status >= 400` alone: 0
+    // slips through it, and the screen then reports a save that never happened
+    // (#428). Success is 200 on an update, 201 on a creation.
     return { data: null, status: 0 };
   }
 }
@@ -98,10 +110,15 @@ export async function purgeExpiredTrash(): Promise<{
 // authorization URL as JSON ({ url, redirect }) instead of issuing a 302. A
 // plain <a href> performed a GET and got back `null` (404). We POST, then
 // navigate to the returned URL.
+// path defaults to the back-office, but a sponsor signing in from its own space
+// must come back there: landing on /admin got them a 403 loop, and the page
+// that binds their invitation never reloaded, so the account stayed orphaned
+// (#409).
 export async function signInWithSocial(
   provider: "google" | "github",
+  path = "/admin",
 ): Promise<{ ok: boolean; error?: string }> {
-  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}/admin` : "/admin";
+  const callbackURL = typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
   try {
     const res = await fetch(`/api/auth/sign-in/social`, {
       method: "POST",

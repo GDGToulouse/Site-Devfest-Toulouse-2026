@@ -1,9 +1,58 @@
 import type { MetadataRoute } from "next";
-import { getArticles, getContentPage, getEditions, getHallOfFame } from "@/lib/api";
+import {
+  getArticles,
+  getContentPage,
+  getCurrentEdition,
+  getEditions,
+  getEditionTalks,
+  getHallOfFame,
+  getIndexableSponsors,
+} from "@/lib/api";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
+// Rendered per request, never prerendered (#426). `next build` runs with no
+// backend reachable — `fetchAPI` degrades to null there by design — so a
+// build-time render lists the static routes and nothing else. That empty
+// sitemap is then served to whoever asks first after a deployment, and stays
+// served until some request happens to trigger a revalidation: observed on
+// beta, 28 URLs for more than a day where a fresh render gives 1310. Measured
+// on a build made without a backend: 28 URLs prerendered, 122 rendered.
+//
+// The cost is one render per request, on a URL crawlers fetch a few times a
+// day — and the fetches keep their own hour-long cache, so a backend outage
+// serves the last good sitemap rather than a truncated one. Only a cold cache
+// and a dead backend together produce a 500, which a crawler retries; a 200
+// announcing a site with no content is what it would never question (#345).
+export const dynamic = "force-dynamic";
+
 type Locale = "fr" | "en";
+
+// Articles are read page by page rather than with a fixed ceiling: a hard
+// `limit` silently drops everything past it, and a sitemap that quietly stops
+// listing content is the kind of bug nobody notices (#379).
+const ARTICLES_PER_PAGE = 100;
+const MAX_ARTICLE_PAGES = 50;
+
+async function getAllArticles() {
+  const first = await getArticles(1, ARTICLES_PER_PAGE);
+  const all = [...first.articles];
+  const pages = Math.min(first.totalPages, MAX_ARTICLE_PAGES);
+  for (let page = 2; page <= pages; page++) {
+    const next = await getArticles(page, ARTICLES_PER_PAGE);
+    all.push(...next.articles);
+  }
+  return all;
+}
+
+// `lastmod` must reflect a real modification. Sending `new Date()` claims every
+// page changed at the instant of the crawl, every crawl — a signal that is
+// always true tells a crawler nothing, so it gets discounted (#379).
+function toDate(value: string | null | undefined): Date | undefined {
+  if (!value) return undefined;
+  const date = new Date(value);
+  return isNaN(date.getTime()) ? undefined : date;
+}
 
 // Routes backed by CMS content that may not be translated yet. We skip the
 // /en entry when the EN content is empty to avoid indexing a FR-only page
@@ -13,19 +62,21 @@ const CMS_BACKED_ROUTES = [
   { path: "/mentions-legales", slug: "mentions-legales" },
 ] as const;
 
-async function getLocalesWithEnContent(slug: string): Promise<Locale[]> {
+async function getCmsRouteMeta(slug: string): Promise<{ locales: Locale[]; lastModified: Date | undefined }> {
   const page = await getContentPage(slug);
-  if (!page) return ["fr"];
-  return page.titleEn.trim() && page.contentEn.trim()
-    ? ["fr", "en"]
-    : ["fr"];
+  if (!page) return { locales: ["fr"], lastModified: undefined };
+  const locales: Locale[] =
+    page.titleEn.trim() && page.contentEn.trim() ? ["fr", "en"] : ["fr"];
+  return { locales, lastModified: toDate(page.updatedAt) };
 }
 
 function buildEntry(
   url: string,
   locales: Locale[],
   path: string,
-  lastModified: Date,
+  // Omitted rather than faked when the entity carries no date: no `lastmod` at
+  // all is honest, a wrong one is worse than none.
+  lastModified: Date | undefined,
   changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"],
   priority: number,
 ): MetadataRoute.Sitemap[number] {
@@ -48,10 +99,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/proposer-un-talk",
     "/contact",
     "/devenir-sponsor",
+    // Were missing while they carry full metadata and sit in the navigation.
+    "/editions",
+    "/offres-emploi-partenaires",
   ];
+
+  const featured = await getCurrentEdition();
+
+  // /lieu is conditional, not static: the page itself calls notFound() when the
+  // edition has no venue info, and the nav entry is hidden the same way. Listing
+  // it unconditionally would put a 404 in the sitemap.
+  if (featured?.hasVenueInfo) fullyTranslatedRoutes.push("/lieu");
+
   const entries: MetadataRoute.Sitemap = [];
 
-  // Routes available in both locales
+  // Routes available in both locales. These are code-backed pages with no row
+  // behind them, so there is no modification date to report — the index pages
+  // change whenever their content does, which `changeFrequency` already says.
   for (const locale of ["fr", "en"] as Locale[]) {
     for (const route of fullyTranslatedRoutes) {
       entries.push(
@@ -59,7 +123,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           `${BASE_URL}/${locale}${route}`,
           ["fr", "en"],
           route,
-          new Date(),
+          undefined,
           route === "" ? "weekly" : "monthly",
           route === "" ? 1.0 : 0.7,
         ),
@@ -69,14 +133,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // CMS-backed routes (legal pages): gate /en entry on EN content presence
   for (const { path, slug } of CMS_BACKED_ROUTES) {
-    const locales = await getLocalesWithEnContent(slug);
+    const { locales, lastModified } = await getCmsRouteMeta(slug);
     for (const locale of locales) {
       entries.push(
         buildEntry(
           `${BASE_URL}/${locale}${path}`,
           locales,
           path,
-          new Date(),
+          lastModified,
           "monthly",
           0.4,
         ),
@@ -94,8 +158,60 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           `${BASE_URL}/${locale}${path}`,
           ["fr", "en"],
           path,
-          new Date(),
+          toDate(edition.updatedAt),
           "yearly",
+          0.5,
+        ),
+      );
+    }
+  }
+
+  // Talk pages, the largest body of unique content on the site and until now
+  // absent entirely (#379). Two route families, because a talk of the featured
+  // edition and an archived one are served by different pages:
+  //
+  //   /conferences/{slug}                    → featured edition only
+  //   /editions/{year}/conferences/{slug}    → any other year
+  //
+  // Listing a past talk under /conferences/{slug} would emit a 404: that route
+  // resolves against the featured edition alone.
+  for (const edition of editions) {
+    const isFeatured = featured?.year === edition.year;
+    const talks = await getEditionTalks(edition.year);
+    for (const talk of talks) {
+      const path = isFeatured
+        ? `/conferences/${talk.slug}`
+        : `/editions/${edition.year}/conferences/${talk.slug}`;
+      for (const locale of ["fr", "en"] as Locale[]) {
+        entries.push(
+          buildEntry(
+            `${BASE_URL}/${locale}${path}`,
+            ["fr", "en"],
+            path,
+            toDate(talk.updatedAt),
+            isFeatured ? "monthly" : "yearly",
+            isFeatured ? 0.7 : 0.4,
+          ),
+        );
+      }
+    }
+  }
+
+  // Sponsor pages, across every edition — not the featured wall. A company that
+  // sponsored a past year but not the current one has no entry on the wall and
+  // yet its page answers 200, so reading /api/sponsors here would silently omit
+  // exactly the historical sponsors #370 made visible.
+  const sponsors = await getIndexableSponsors();
+  for (const sponsor of sponsors) {
+    const path = `/sponsors/${sponsor.slug}`;
+    for (const locale of ["fr", "en"] as Locale[]) {
+      entries.push(
+        buildEntry(
+          `${BASE_URL}/${locale}${path}`,
+          ["fr", "en"],
+          path,
+          toDate(sponsor.updatedAt),
+          "monthly",
           0.5,
         ),
       );
@@ -115,7 +231,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           `${BASE_URL}/${locale}${path}`,
           ["fr", "en"],
           path,
-          new Date(),
+          undefined,
           "yearly",
           0.5,
         ),
@@ -124,13 +240,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Dynamic article pages — gate /en on titleEn presence
-  const { articles } = await getArticles(1, 100);
+  const articles = await getAllArticles();
   for (const article of articles) {
     const path = `/actualites/${article.slug}`;
     const locales: Locale[] = article.titleEn.trim() ? ["fr", "en"] : ["fr"];
-    const lastModified = article.publishedAt
-      ? new Date(article.publishedAt)
-      : new Date();
+    const lastModified = toDate(article.publishedAt);
     for (const locale of locales) {
       entries.push(
         buildEntry(

@@ -1,6 +1,6 @@
 # Modèle de données — Historique DevFest Toulouse
 
-Description du fichier `data/devfest-history.json`.
+Description du fichier `src/backend/prisma/devfest-history.json`.
 
 ---
 

@@ -275,7 +275,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
         </div>
 
         {error && (
-          <div className="mx-4 mt-3 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
+          <div role="alert" aria-live="assertive" className="mx-4 mt-3 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
         )}
         {notice && (
           <div className="mx-4 mt-3 p-3 rounded-lg bg-malachite/10 text-malachite text-sm">

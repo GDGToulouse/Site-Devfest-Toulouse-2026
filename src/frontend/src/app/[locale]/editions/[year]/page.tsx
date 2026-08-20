@@ -3,7 +3,7 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { getEditionByYear, getEditions, getEditionSpeakers, getEditionTalks } from "@/lib/api";
+import { getEditionByYear, getEditions, getEditionSpeakers, getEditionSponsors, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -11,6 +11,7 @@ import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
 import EditionSpeakersGrid from "@/components/editions/EditionSpeakersGrid";
 import EditionTalksList from "@/components/editions/EditionTalksList";
+import SponsorWall from "@/components/sponsors/SponsorWall";
 import { Link } from "@/i18n/navigation";
 
 interface PageProps {
@@ -70,7 +71,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const locale = await getLocale();
   const t = await getTranslations("bilan");
   return {
-    title: t("pageTitle", { year }),
+    // Absolute: the label already carries the brand and the year, so the
+    // layout template turned it into "DevFest Toulouse 2025 — DevFest Toulouse
+    // 2026" — two different years in one title (#381). The same key feeds the
+    // breadcrumb, where the brand belongs, so the fix is here and not in the
+    // wording.
+    title: { absolute: t("pageTitle", { year }) },
     description: t("description", { year }),
     alternates: {
       canonical: `/${locale}/editions/${year}`,
@@ -96,11 +102,12 @@ export default async function BilanPage({ params }: PageProps) {
   const locale = await getLocale();
   const t = await getTranslations("bilan");
 
-  const [edition, allEditions, speakers, talks] = await Promise.all([
+  const [edition, allEditions, speakers, talks, sponsors] = await Promise.all([
     getEditionByYear(Number(year)),
     getEditions(),
     getEditionSpeakers(Number(year)),
     getEditionTalks(Number(year)),
+    getEditionSponsors(Number(year)),
   ]);
   if (!edition) notFound();
 
@@ -305,6 +312,17 @@ export default async function BilanPage({ params }: PageProps) {
                 {t("sessions", { count: talks.length })}
               </h2>
               <EditionTalksList talks={talks} replayLabel={t("replay")} year={edition.year} />
+            </section>
+          )}
+
+          {/* Sponsors of this edition (#370) — the logos as that year showed
+              them, not as the companies look today (#375). */}
+          {sponsors.length > 0 && (
+            <section className="mt-16">
+              <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
+                {t("sponsors", { count: sponsors.length })}
+              </h2>
+              <SponsorWall sponsors={sponsors} locale={locale} />
             </section>
           )}
 

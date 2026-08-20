@@ -85,7 +85,9 @@ export default function SponsorTierEditorPage() {
     } else {
       const { status } = await adminFetch(`/sponsor-tiers/${tierId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
-      if (status >= 400) {
+      // Anything but 200 failed, network included: a dropped connection comes
+      // back as status 0, which `>= 400` announced as a save (#428).
+      if (status !== 200) {
         setError("Échec de l'enregistrement.");
         return;
       }
@@ -109,7 +111,7 @@ export default function SponsorTierEditorPage() {
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
         <SponsorTierForm value={form} onChange={setForm} isNew={isNew} />
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}
 
         <div className="flex items-center gap-3 pt-2">
           <button

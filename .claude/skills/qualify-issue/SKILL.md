@@ -55,6 +55,8 @@ Structure du repo (voir [CLAUDE.md](../../../CLAUDE.md)) :
 
 Livrable de cette étape : une **cause racine confirmée**, avec `fichier:ligne` réels, et un correctif proposé.
 
+**Si l'investigation n'aboutit pas**, ne pas maquiller une hypothèse en diagnostic : utiliser la variante « qualification partielle » du template — ce qui a été écarté (avec les preuves), la piste qui reste, et ce qui manque pour trancher. Une qualification partielle honnête vaut mieux qu'une fausse certitude : elle évite au suivant de refaire les mêmes vérifications.
+
 ## Step 2 — Déterminer les labels
 
 À partir de la nature confirmée :
@@ -66,9 +68,23 @@ Si un label domaine pertinent n'existe pas encore, **proposer de le créer** (St
 
 ## Step 3 — (si nécessaire) Interviewer sur les choix ouverts
 
-Si la qualification révèle une décision qui appartient à l'utilisateur (scope d'une amélioration, articulation de plusieurs comportements, ampleur d'un fix systémique), poser 1-3 questions via `AskUserQuestion` — options mutuellement exclusives, un « (Recommandé) » par défaut.
+**Deux destinataires distincts — ne pas les confondre.**
+
+**a) Le propriétaire du projet (celui qui pilote la session), sur les choix de conception.** Si la qualification révèle une décision qui lui appartient (scope d'une amélioration, articulation de plusieurs comportements, ampleur d'un fix systémique), poser 1-3 questions via `AskUserQuestion` — options mutuellement exclusives, un « (Recommandé) » par défaut. Registre technique accepté.
 
 Ne pas bloquer sur des détails tranchables par un défaut raisonnable : choisir, le mentionner, continuer.
+
+**b) Le déclarant de l'issue, sur ce qu'il a observé.** Ces questions vont **dans le commentaire**, pas dans `AskUserQuestion` — le déclarant n'est pas dans la session. Il s'agit souvent d'un organisateur du DevFest, pas d'un développeur.
+
+Règles impératives — détail et lexique dans [references/vocabulaire-utilisateur.md](references/vocabulaire-utilisateur.md) :
+
+- **3 questions maximum**, une seule idée par question ;
+- **chaque question annonce sa valeur par défaut** (« sauf indication contraire, je pars du principe que c'est le site en ligne ») ;
+- **aucun jargon** : pas de console navigateur, pas de CSP, pas d'« environnement », pas de « chemins de code » ;
+- **demander une capture d'écran en premier** — elle répond souvent à tout le reste ;
+- **ne poser une question que si sa réponse change le diagnostic**.
+
+Le corps de la qualification reste technique : il s'adresse à qui implémentera. Seules les questions au déclarant changent de registre.
 
 ## Step 4 — Poster la qualification en commentaire
 
@@ -132,8 +148,11 @@ Pour un lot, présenter un tableau de synthèse (numéro, type, cause racine en 
 - **Ne pas poser `bug` ET `enhancement`** sur la même issue (mutuellement exclusifs).
 - **Ne pas qualifier en masse les user stories de backlog** sans demande explicite.
 - **Ne pas chaîner les commandes git/gh** dans un seul appel Bash.
+- **Ne pas poser au déclarant des questions de développeur** : lui demander son « environnement », d'ouvrir la console, de lire une erreur CSP ou de distinguer deux chemins de code. Il décrit ce qu'il voit, pas ce que fait le code.
+- **Ne pas poser une question sans valeur par défaut** — cela oblige à répondre pour que l'issue avance, alors que l'hypothèse par défaut peut être portée par la qualification.
 
 ## Référence
 
 - Labels du repo : [references/labels.md](references/labels.md)
+- Vocabulaire à employer avec le déclarant : [references/vocabulaire-utilisateur.md](references/vocabulaire-utilisateur.md)
 - Template de commentaire : [templates/qualification.md](templates/qualification.md)

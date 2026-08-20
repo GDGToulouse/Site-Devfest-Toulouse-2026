@@ -3,9 +3,6 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
-import RichTextEditor from "@/components/admin/RichTextEditor";
-import SponsorPrivateSection, { type SponsorPrivate } from "./SponsorPrivateSection";
-import SponsorJobOffers, { type JobOffersData } from "./SponsorJobOffers";
 
 type Locale = "fr" | "en";
 
@@ -27,16 +24,15 @@ interface EditTalk {
 }
 
 interface EditData {
-  kind: "speaker" | "sponsor";
+  // "sponsor-invitation" carries no profile: the token belonged to a sponsor,
+  // and the API turned it into an invitation to open an account (#362).
+  kind: "speaker" | "sponsor-invitation";
   locale?: Locale;
   name: string;
   fields: Record<string, unknown>;
   // Speaker only (#229, editable per talk since #289).
   talks?: EditTalk[];
-  // Sponsor only, private section (#249).
-  private?: SponsorPrivate;
-  // Sponsor only, job offers (#251).
-  jobOffers?: JobOffersData;
+  invitationUrl?: string;
 }
 
 type SocialLinks = Record<string, string>;
@@ -62,8 +58,6 @@ const T = {
     company: "Entreprise",
     city: "Ville",
     photo: "Photo",
-    websiteUrl: "Site web",
-    logo: "Logo",
     mySessions: "Mes sessions",
     mySessionsHint:
       "Vos conférences retenues. Lorsque la modification est ouverte, les changements sont publiés aussitôt sur le programme.",
@@ -71,9 +65,6 @@ const T = {
       "Cette conférence n'est pas modifiable. Contactez l'organisation pour toute correction.",
     talkTitle: "Titre",
     talkDescription: "Résumé",
-    talkFormat: "Format",
-    talkLevel: "Niveau",
-    talkLanguage: "Langue de présentation",
     levelAll: "Tous niveaux",
     format: { CONFERENCE: "Conférence", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
     level: { DEBUTANT: "Débutant", INTERMEDIAIRE: "Intermédiaire", CONFIRME: "Confirmé" },
@@ -81,46 +72,9 @@ const T = {
     talkSaved: "Conférence enregistrée !",
     talkRejected: "Le titre est obligatoire et le résumé doit rester sous 5 000 caractères.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Autre site" },
-    privateSection: "Informations privées",
-    privateHint: "Réservé à l'organisation — ces informations ne sont jamais affichées publiquement.",
-    standContacts: "Personnes présentes sur le stand",
-    standContactsHint: "Leurs réseaux sociaux, pour un relais le jour J.",
-    standName: "Nom",
-    addStandContact: "Ajouter une personne",
-    removeContact: "Retirer",
-    comKit: "Kit de communication",
-    comKitReceived: "Kit de com reçu",
-    comKitLogoWeb: "Logo (version Web)",
-    comKitLogoPrint: "Logo (version Print)",
-    comKitCharter: "Charte graphique",
-    comKitNotes: "Notes / autres supports",
-    comKitEmailIntro:
-      "Des fichiers ou informations complémentaires à transmettre qui ne tiennent pas dans un lien ? Envoyez-les par email à l'organisation.",
-    comKitEmailButton: "Envoyer par email",
-    comKitEmailSubject: "Compléments kit de communication — {name}",
-    comKitEmailBody:
-      "Bonjour,\n\nVeuillez trouver ci-joint des informations complémentaires pour {name}.\n\n[joindre les fichiers]\n",
-    platinumSection: "Réservé aux partenaires Platinum",
-    platinumPromoIdea: "Contenu promotionnel à mettre en avant",
-    platinumPromoIdeaHint: "Vidéo, produit, campagne… que nous pourrions relayer.",
-    platinumCoBuildIdea: "Idées de contenu à co-construire",
-    jobOffers: "Offres d'emploi à relayer",
-    jobOffersHint: "Publiées sur votre fiche et la page « Offres d'emploi des partenaires ».",
-    jobOfferTitle: "Intitulé du poste",
-    jobOfferDescription: "Description",
-    jobOfferUrl: "Lien vers l'offre complète",
-    addJobOffer: "Ajouter une offre",
-    removeJobOffer: "Supprimer",
-    jobOfferQuotaReached: "Vous avez atteint le nombre maximum d'offres pour votre niveau de partenariat.",
-    jobOfferSaved: "Offre enregistrée !",
-    jobOfferRejected: "Une valeur est invalide : le titre est obligatoire et le lien doit commencer par http:// ou https://.",
     upload: "Choisir une image…",
     uploading: "Envoi…",
     uploadHint: "JPEG, PNG, WebP ou GIF — 5 Mo max.",
-    // Sponsors only: a low-resolution or margin-padded logo renders badly once
-    // the higher tiers scale it up (#315). Informative, never blocking (#340).
-    logoHint:
-      "Logo en haute définition (largeur ≥ 1000 px), sans marge autour du logo. PNG ou WebP à fond transparent de préférence.",
     uploadError: "Envoi impossible : vérifiez que le fichier est une image de moins de 5 Mo.",
     currentImage: "Aperçu",
     orUrl: "ou collez l'adresse d'une image en ligne",
@@ -134,6 +88,9 @@ const T = {
         "Les modifications sont clôturées à l'approche de l'événement. Contactez l'organisation si un changement est indispensable.",
       locked: "Les modifications de votre fiche ont été suspendues. Contactez l'organisation.",
       blocked: "Les modifications sont actuellement clôturées. Contactez l'organisation si nécessaire.",
+      // A sponsor whose link converted earlier, or who was invited directly.
+      already_has_account:
+        "Vous avez déjà un compte pour gérer votre fiche. Connectez-vous sur devfesttoulouse.fr/sponsor.",
     },
   },
   en: {
@@ -153,8 +110,6 @@ const T = {
     company: "Company",
     city: "City",
     photo: "Photo",
-    websiteUrl: "Website",
-    logo: "Logo",
     mySessions: "My sessions",
     mySessionsHint:
       "Your accepted talks. When editing is open, changes are published to the programme right away.",
@@ -162,9 +117,6 @@ const T = {
       "This talk cannot be edited. Please contact the organizers for any correction.",
     talkTitle: "Title",
     talkDescription: "Abstract",
-    talkFormat: "Format",
-    talkLevel: "Level",
-    talkLanguage: "Talk language",
     levelAll: "All levels",
     format: { CONFERENCE: "Conference", QUICKIE: "Quickie", KEYNOTE: "Keynote", WORKSHOP: "Workshop" },
     level: { DEBUTANT: "Beginner", INTERMEDIAIRE: "Intermediate", CONFIRME: "Advanced" },
@@ -172,44 +124,9 @@ const T = {
     talkSaved: "Talk saved!",
     talkRejected: "A title is required and the abstract must stay under 5,000 characters.",
     social: { linkedin: "LinkedIn", twitter: "X (Twitter)", bluesky: "Bluesky", github: "GitHub", website: "Other website" },
-    privateSection: "Private information",
-    privateHint: "Organizers only — this information is never shown publicly.",
-    standContacts: "People staffing the booth",
-    standContactsHint: "Their social handles, for relaying on the day.",
-    standName: "Name",
-    addStandContact: "Add a person",
-    removeContact: "Remove",
-    comKit: "Communication kit",
-    comKitReceived: "Com kit received",
-    comKitLogoWeb: "Logo (web version)",
-    comKitLogoPrint: "Logo (print version)",
-    comKitCharter: "Brand guidelines",
-    comKitNotes: "Notes / other assets",
-    comKitEmailIntro:
-      "Extra files or information to share that don't fit in a link? Email them to the organisers.",
-    comKitEmailButton: "Send by email",
-    comKitEmailSubject: "Communication kit complements — {name}",
-    comKitEmailBody:
-      "Hello,\n\nPlease find attached some additional information for {name}.\n\n[attach the files]\n",
-    platinumSection: "Platinum partners only",
-    platinumPromoIdea: "Promotional content to highlight",
-    platinumPromoIdeaHint: "Video, product, campaign… we could relay.",
-    platinumCoBuildIdea: "Ideas for content to co-build",
-    jobOffers: "Job offers to relay",
-    jobOffersHint: "Published on your page and the “Partner job offers” page.",
-    jobOfferTitle: "Job title",
-    jobOfferDescription: "Description",
-    jobOfferUrl: "Link to the full offer",
-    addJobOffer: "Add an offer",
-    removeJobOffer: "Delete",
-    jobOfferQuotaReached: "You have reached the maximum number of offers for your sponsorship level.",
-    jobOfferSaved: "Offer saved!",
-    jobOfferRejected: "A value is invalid: the title is required and the link must start with http:// or https://.",
     upload: "Choose an image…",
     uploading: "Uploading…",
     uploadHint: "JPEG, PNG, WebP or GIF — 5 MB max.",
-    logoHint:
-      "High-resolution logo (width ≥ 1000 px), with no built-in margin. PNG or WebP with a transparent background preferred.",
     uploadError: "Upload failed: make sure the file is an image under 5 MB.",
     currentImage: "Preview",
     orUrl: "or paste the address of an online image",
@@ -223,6 +140,8 @@ const T = {
         "Editing is closed as the event approaches. Contact the organisers if a change is essential.",
       locked: "Editing of your profile has been suspended. Please contact the organisers.",
       blocked: "Editing is currently closed. Please contact the organisers if needed.",
+      already_has_account:
+        "You already have an account to manage your profile. Sign in at devfesttoulouse.fr/sponsor.",
     },
   },
 } as const;
@@ -273,6 +192,15 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           return;
         }
         const json: EditData = await res.json();
+
+        // A sponsor link from before accounts existed (#362). The API turned it
+        // into an invitation as we asked for it; follow that through. replace(),
+        // not push(): the old link is spent, going back to it would 404.
+        if (json.kind === "sponsor-invitation" && json.invitationUrl) {
+          window.location.replace(json.invitationUrl);
+          return;
+        }
+
         setData(json);
         if (json.locale) setLocale(json.locale);
         const f = json.fields;
@@ -347,8 +275,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
     );
   }
 
-  const isSpeaker = data!.kind === "speaker";
-  const imageField = isSpeaker ? "photoUrl" : "logoUrl";
+  const imageField = "photoUrl";
 
   return (
     <PageShell>
@@ -358,40 +285,20 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
         <p className="mt-4 max-w-prose text-sm text-gris">{t.intro}</p>
 
         <div className="mt-8 space-y-8">
-          {/* Description / biography — language tabs (#222). Captions come from
-              the recipient's locale dict, not next-intl (page is outside [locale]). */}
+          {/* Biography — language tabs (#222). Captions come from the
+              recipient's locale dict, not next-intl (page is outside [locale]). */}
           <BilingualTabs
-            label={isSpeaker ? t.bio : t.description}
+            label={t.bio}
             labels={{ fr: t.langFr, en: t.langEn }}
-            isEmpty={(lang) =>
-              isSpeaker
-                ? !(lang === "fr" ? form.bioFr : form.bioEn)?.trim()
-                : // Sponsor description is HTML — strip tags before the empty check.
-                  !(lang === "fr" ? form.descriptionFr : form.descriptionEn)?.replace(/<[^>]*>/g, "").trim()
-            }
+            isEmpty={(lang) => !(lang === "fr" ? form.bioFr : form.bioEn)?.trim()}
             renderPanel={(lang) => {
-              const field = isSpeaker
-                ? lang === "fr" ? "bioFr" : "bioEn"
-                : lang === "fr" ? "descriptionFr" : "descriptionEn";
-              // Sponsor description is rich text (#270); speaker bio stays plain.
-              if (isSpeaker) {
-                return (
-                  <textarea
-                    value={form[field] ?? ""}
-                    onChange={(e) => setForm({ ...form, [field]: e.target.value })}
-                    rows={5}
-                    className={inputClass}
-                  />
-                );
-              }
+              const field = lang === "fr" ? "bioFr" : "bioEn";
               return (
-                <RichTextEditor
-                  label=""
-                  name={`sponsor-${field}`}
+                <textarea
                   value={form[field] ?? ""}
-                  onChange={(html) => setForm({ ...form, [field]: html })}
-                  showImageButton={false}
-                  minHeight="180px"
+                  onChange={(e) => setForm({ ...form, [field]: e.target.value })}
+                  rows={5}
+                  className={inputClass}
                 />
               );
             }}
@@ -399,24 +306,17 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
 
           {/* Identity fields */}
           <div className="grid gap-5 md:grid-cols-2">
-            {isSpeaker ? (
-              <>
-                <Field label={t.company} value={form.company} onChange={(v) => setForm({ ...form, company: v })} />
-                <Field label={t.city} value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
-              </>
-            ) : (
-              <Field label={t.websiteUrl} value={form.websiteUrl} onChange={(v) => setForm({ ...form, websiteUrl: v })} />
-            )}
+            <Field label={t.company} value={form.company} onChange={(v) => setForm({ ...form, company: v })} />
+            <Field label={t.city} value={form.city} onChange={(v) => setForm({ ...form, city: v })} />
           </div>
 
-          {/* Logo / photo — upload with live preview, URL fallback. */}
+          {/* Photo — upload with live preview, URL fallback. */}
           <ImageField
-            label={isSpeaker ? t.photo : t.logo}
+            label={t.photo}
             token={token}
             value={form[imageField] ?? ""}
             onChange={(v) => setForm({ ...form, [imageField]: v })}
             t={t}
-            hint={isSpeaker ? undefined : t.logoHint}
           />
 
           {/* Social links — a responsive grid, no more raw lowercase labels. */}
@@ -437,7 +337,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           {/* Editable list of the speaker's accepted sessions (#260). Each talk
               is its own form with its own save button — the API updates one talk
               at a time and publishes it immediately. */}
-          {isSpeaker && data!.talks && data!.talks.length > 0 && (
+          {data!.talks && data!.talks.length > 0 && (
             <div className="border-t border-gris/15 pt-6">
               <p className="mb-1 text-sm font-semibold text-noir">{t.mySessions}</p>
               <p className="mb-4 text-sm text-gris">{t.mySessionsHint}</p>
@@ -460,19 +360,6 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             {saved && <span className="font-medium text-malachite">{t.saved}</span>}
           </div>
 
-          {/* Sponsor private section (#249) — organizers only, own save button.
-              Rendered after the public save so the public/private boundary is
-              visually explicit. */}
-          {!isSpeaker && data!.private && (
-            <SponsorPrivateSection token={token} sponsorName={data!.name} initial={data!.private} t={t} />
-          )}
-
-          {/* Job offers (#251) — sponsor only, published directly. */}
-          {!isSpeaker && data!.jobOffers && (
-            <div className="border-t border-gris/15 pt-6">
-              <SponsorJobOffers token={token} initial={data!.jobOffers} t={t} />
-            </div>
-          )}
           {saveError && (
             <p role="alert" className="font-medium text-terre-cuite">
               {saveError}

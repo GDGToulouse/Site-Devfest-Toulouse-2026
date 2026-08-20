@@ -1,23 +1,20 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
+import { isEditingFrozen, isEditTokenExpired, generateInvitationToken } from "../lib/edit-token.js";
+import { resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import {
   revalidateConferences,
-  revalidateJobOffers,
   revalidateSpeakers,
   revalidateSpeaker,
-  revalidateSponsor,
-  revalidateSponsors,
   revalidateTalk,
 } from "../lib/revalidate.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
-import { getSponsorContactRecipients } from "../lib/sponsor-contact.js";
-import { sanitizeRichHtml } from "../lib/sanitize.js";
+import { cleanSocial } from "../lib/sponsor-write.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -26,22 +23,17 @@ const TEXT_MAX = 5_000;
 const SHORT_MAX = 200;
 const URL_MAX = 2_048;
 
-// Logo/photo upload through a token (#241). This endpoint is unauthenticated —
-// the token is the only credential — so it long refused SVG outright: an
-// uploaded one is served same-origin with its native content-type and would run
-// JS in a visitor's browser.
-//
-// Allowed again since #346, because storeImageBuffer strips scripts, handlers
-// and remote references before the file reaches the disk, and .svg is served
-// under a sandbox CSP. A vector logo is exactly what a sponsor has to hand, so
-// the narrower rule cost more than it protected once the payload was neutered.
+// Photo upload through a token (#241). Raster only: SVG (#346) and PDF (#374)
+// were here for the sponsor logo and com-kit charter, which now go through the
+// authenticated space (#362). A speaker sends a photograph, and this endpoint
+// is unauthenticated — the token is the only credential — so the narrower list
+// is the right one again.
 const UPLOAD_MAX_SIZE = 5_000_000; // 5 MB
 const UPLOAD_MIMES = new Set([
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
-  "image/svg+xml",
 ]);
 
 const SOCIAL_KEYS = ["linkedin", "twitter", "bluesky", "github", "website"] as const;
@@ -67,55 +59,7 @@ const speakerBodySchema = {
   },
 };
 
-// Booth staff whose social handles the organizers relay on the day (#249).
-// Private: never rendered publicly. A bounded list of bounded strings.
-const STAND_CONTACTS_MAX = 20;
-const standContactsSchema = {
-  type: "array",
-  maxItems: STAND_CONTACTS_MAX,
-  items: {
-    type: "object",
-    additionalProperties: false,
-    properties: {
-      name: { type: "string", maxLength: SHORT_MAX },
-      linkedin: { type: "string", maxLength: URL_MAX },
-      twitter: { type: "string", maxLength: URL_MAX },
-      bluesky: { type: "string", maxLength: URL_MAX },
-    },
-  },
-};
-
-const sponsorBodySchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    descriptionFr: { type: "string", maxLength: TEXT_MAX },
-    descriptionEn: { type: "string", maxLength: TEXT_MAX },
-    websiteUrl: { type: "string", maxLength: URL_MAX },
-    logoUrl: { type: "string", maxLength: URL_MAX },
-    socialLinks: socialLinksSchema,
-    // Private fields (#249) — organizers only, never exposed on public pages.
-    standContacts: standContactsSchema,
-    comKitReceived: { type: "boolean" },
-    comKitLogoWebUrl: { type: "string", maxLength: URL_MAX },
-    comKitLogoPrintUrl: { type: "string", maxLength: URL_MAX },
-    comKitCharterUrl: { type: "string", maxLength: URL_MAX },
-    comKitNotes: { type: "string", maxLength: TEXT_MAX },
-    // Platinum-only (#252). The allowlist accepts them for any sponsor; the
-    // PUT ignores them unless the sponsor is Platinum, and the UI only shows
-    // them to Platinum sponsors.
-    platinumPromoIdea: { type: "string", maxLength: TEXT_MAX },
-    platinumCoBuildIdea: { type: "string", maxLength: TEXT_MAX },
-  },
-};
-
-// The token resolves to either kind, so the body schema can't be picked by
-// Fastify upfront — accept the union and validate the rest by hand.
-const editBodySchema = {
-  type: "object",
-  additionalProperties: false,
-  properties: { ...speakerBodySchema.properties, ...sponsorBodySchema.properties },
-};
+const editBodySchema = speakerBodySchema;
 
 const ALLOWED_FIELDS = Object.keys(editBodySchema.properties);
 
@@ -177,83 +121,21 @@ function findForbiddenKey(body: Record<string, unknown>): string | null {
 // An empty string clears the field; anything else must be a safe URL. Returns
 // the offending field name, or null when every URL is acceptable.
 function findUnsafeUrl(body: Record<string, unknown>): string | null {
-  for (const field of [
-    "photoUrl",
-    "logoUrl",
-    "websiteUrl",
-    // Private com-kit links (#249) — same http(s) allowlist as public URLs.
-    "comKitLogoWebUrl",
-    "comKitLogoPrintUrl",
-    "comKitCharterUrl",
-  ]) {
-    const value = body[field];
-    if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
-  }
+  const value = body.photoUrl;
+  if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return "photoUrl";
+
   const social = body.socialLinks;
   if (social && typeof social === "object") {
-    for (const [key, value] of Object.entries(social as Record<string, unknown>)) {
-      if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return `socialLinks.${key}`;
-    }
-  }
-  // Booth contacts carry their own social URLs (#249).
-  const stand = body.standContacts;
-  if (Array.isArray(stand)) {
-    for (const [i, contact] of stand.entries()) {
-      if (!contact || typeof contact !== "object") continue;
-      for (const key of ["linkedin", "twitter", "bluesky"]) {
-        const value = (contact as Record<string, unknown>)[key];
-        if (typeof value === "string" && value.trim() && !isSafeUrl(value)) {
-          return `standContacts[${i}].${key}`;
-        }
-      }
+    for (const [key, entry] of Object.entries(social as Record<string, unknown>)) {
+      if (typeof entry === "string" && entry.trim() && !isSafeUrl(entry)) return `socialLinks.${key}`;
     }
   }
   return null;
 }
 
-// Drop empty social entries so clearing a field doesn't persist "".
-function cleanSocial(social: Record<string, string> | undefined): string | null {
-  if (!social) return null;
-  const kept = Object.entries(social).filter(([, v]) => typeof v === "string" && v.trim());
-  return kept.length ? JSON.stringify(Object.fromEntries(kept)) : null;
-}
-
-interface StandContact {
-  name?: string;
-  linkedin?: string;
-  twitter?: string;
-  bluesky?: string;
-}
-
-// Trim entries and drop those with no content at all, so an empty row the
-// sponsor left behind isn't persisted (#249). Returns null when nothing remains.
-function cleanStandContacts(contacts: StandContact[] | undefined): string | null {
-  if (!contacts) return null;
-  const kept = contacts
-    .map((c) => {
-      const entry: StandContact = {};
-      for (const key of ["name", "linkedin", "twitter", "bluesky"] as const) {
-        const v = c[key];
-        if (typeof v === "string" && v.trim()) entry[key] = v.trim();
-      }
-      return entry;
-    })
-    .filter((c) => Object.keys(c).length > 0);
-  return kept.length ? JSON.stringify(kept) : null;
-}
-
-function parseStandContacts(raw: string | null): StandContact[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as unknown;
-    return Array.isArray(parsed) ? (parsed as StandContact[]) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Resolve a modification token to either a speaker or a sponsor. Returns null
-// if no entity carries this token.
+// Resolve a modification token to the speaker who holds it. Returns null if no
+// speaker carries it — the token may still be a sponsor one, which GET turns
+// into an invitation rather than serving (#362).
 async function resolveToken(token: string) {
   const speaker = await prisma.speaker.findUnique({
     where: { editToken: token },
@@ -301,39 +183,65 @@ async function resolveToken(token: string) {
     };
   }
 
-  // Sponsors resolve through their contacts (#250): the token lives on a
-  // SponsorContact, and the lock/send-date are per-contact. We flatten the
-  // contact's token fields onto the sponsor so the rest of the route (which
-  // reads entity.tier, entity.standContacts, entity.id, entity.editLinkLocked,
-  // …) keeps working unchanged, and expose contactId/contactEmail for the
-  // notification Reply-To.
+  // Sponsors no longer resolve here (#362): a company edits its page from an
+  // account, not from a link anyone holding the URL can use. GET /edit/:token
+  // still recognises a sponsor token — to turn it into an invitation — but
+  // nothing downstream of this function serves sponsors any more.
+  return null;
+}
+
+// A sponsor token still sitting in a mailbox (#362). The link no longer edits
+// anything, so opening it mints the invitation that replaces it and burns the
+// token: whoever holds the link was, by definition, someone we wrote to.
+//
+// This lives in GET only. resolveToken is called by seven handlers, some of
+// them writes — converting from there would consume the token on a concurrent
+// PUT, or on a browser prefetch.
+type SponsorTokenConversion =
+  | { outcome: "invited"; invitationToken: string; locale: string }
+  | { outcome: "has_account" }
+  | { outcome: "locked" }
+  | null;
+
+async function convertSponsorEditToken(token: string): Promise<SponsorTokenConversion> {
   const contact = await prisma.sponsorContact.findUnique({
     where: { editToken: token },
-    include: {
-      sponsor: {
-        include: {
-          edition: { select: { startDate: true, endDate: true } },
-          // Tier drives the job-offer quota and the promo-ideas gating (#317).
-          tier: { select: { key: true, nameFr: true, nameEn: true, jobOfferQuota: true, allowsPromoIdeas: true } },
-          // Job offers the sponsor can manage from the link (#251).
-          jobOffers: { orderBy: { createdAt: "asc" } },
-        },
-      },
+    include: { sponsor: { select: { id: true, name: true, locale: true, deletedAt: true } } },
+  });
+  if (!contact) return null;
+  // A company in the bin hands out nothing, same rule as findPendingInvitation.
+  if (contact.sponsor.deletedAt) return null;
+
+  // Revoking a link is the only lever organisers have over one already sent
+  // (RG-245). Letting it open an account instead would take that back.
+  if (contact.editLinkLocked) return { outcome: "locked" };
+
+  // An account already exists: nothing to mint, and the token stays untouched
+  // so closing the tab and coming back still explains the situation.
+  if (contact.userId) return { outcome: "has_account" };
+
+  // An expired link converts anyway. It proves we wrote to this person, and the
+  // invitation it produces carries its own, shorter deadline — refusing would
+  // strand a sponsor whose only fault is having read their mail late.
+  const invitationToken = generateInvitationToken();
+  const promoted = await resolveInitialAccessRole(contact.sponsorId, contact.id);
+
+  // Single use, by compare-and-swap: two clicks on the same link race here and
+  // exactly one sees a row updated.
+  const claimed = await prisma.sponsorContact.updateMany({
+    where: { id: contact.id, editToken: token },
+    data: {
+      editToken: null,
+      editTokenSentAt: null,
+      invitationToken,
+      invitationSentAt: new Date(),
+      invitationAcceptedAt: null,
+      ...(promoted ? { accessRole: promoted } : {}),
     },
   });
-  if (contact) {
-    const entity = {
-      ...contact.sponsor,
-      editLinkLocked: contact.editLinkLocked,
-      editTokenSentAt: contact.editTokenSentAt,
-      contactId: contact.id,
-      // The link recipient's own address wins over the sponsor's default.
-      contactEmail: contact.email || contact.sponsor.contactEmail,
-    };
-    return { kind: "sponsor" as const, entity };
-  }
+  if (claimed.count === 0) return null;
 
-  return null;
+  return { outcome: "invited", invitationToken, locale: contact.sponsor.locale };
 }
 
 function parseSocial(raw: string | null): Record<string, string> {
@@ -368,23 +276,6 @@ interface SpeakerEditBody {
   photoUrl?: string;
   socialLinks?: Record<string, string>;
 }
-interface SponsorEditBody {
-  descriptionFr?: string;
-  descriptionEn?: string;
-  websiteUrl?: string;
-  logoUrl?: string;
-  socialLinks?: Record<string, string>;
-  // Private fields (#249).
-  standContacts?: StandContact[];
-  comKitReceived?: boolean;
-  comKitLogoWebUrl?: string;
-  comKitLogoPrintUrl?: string;
-  comKitCharterUrl?: string;
-  comKitNotes?: string;
-  platinumPromoIdea?: string;
-  platinumCoBuildIdea?: string;
-}
-
 // Notify the organizers that a speaker changed a session. Sent to the
 // configurable CFP address (#260); the link points to the admin talk page so
 // they can review the change in one click.
@@ -421,8 +312,29 @@ export default async function editRoutes(app: FastifyInstance) {
     schema: { params: { type: "object", required: ["token"], properties: { token: { type: "string" } } } },
   }, async (request, reply) => {
     const resolved = await resolveToken(request.params.token);
-    // Invalid/unknown token -> 404 (RG-249 cas limite).
-    if (!resolved) return reply.code(404).send({ error: "invalid_token" });
+
+    if (!resolved) {
+      // Not a speaker link. It may be a sponsor one, still in a mailbox from
+      // before accounts existed (#362) — hand back the invitation that replaces
+      // it rather than a dead end. 200, not a redirect: the client fetches this
+      // endpoint, and a 302 would be followed into the JSON parser.
+      const converted = await convertSponsorEditToken(request.params.token);
+      if (converted?.outcome === "invited") {
+        return {
+          kind: "sponsor-invitation" as const,
+          locale: normalizeLocale(converted.locale),
+          invitationUrl: `/sponsor/invitation/${converted.invitationToken}`,
+        };
+      }
+      if (converted?.outcome === "has_account") {
+        return reply.code(409).send({ error: "already_has_account" });
+      }
+      if (converted?.outcome === "locked") {
+        return reply.code(403).send({ error: "locked" });
+      }
+      // Invalid/unknown token -> 404 (RG-249 cas limite).
+      return reply.code(404).send({ error: "invalid_token" });
+    }
 
     const { kind, entity } = resolved;
     const locale = normalizeLocale(entity.locale);
@@ -431,84 +343,29 @@ export default async function editRoutes(app: FastifyInstance) {
     const blocked = editingBlockedReason(entity);
     if (blocked) return reply.code(403).send({ error: blocked, locale });
 
-    if (kind === "speaker") {
-      return {
-        kind,
-        locale,
-        name: entity.name,
-        fields: {
-          bioFr: entity.bioFr,
-          bioEn: entity.bioEn,
-          company: entity.company,
-          city: entity.city,
-          photoUrl: entity.photoUrl,
-          socialLinks: parseSocial(entity.socialLinks),
-        },
-        // Editable sessions (#260). The numeric id is required so the client
-        // can target PUT /edit/:token/talks/:id; ownership is re-checked
-        // server-side on every write, so exposing it opens no door the token
-        // didn't already open.
-        talks: entity.talks,
-      };
-    }
-    // Where the sponsor should email complements that don't fit as links (#271):
-    // the sponsoring contact address, so the client can build a mailto: link.
-    const sponsorContactEmail = (await getSponsorContactRecipients())[0];
     return {
       kind,
       locale,
       name: entity.name,
       fields: {
-        descriptionFr: entity.descriptionFr,
-        descriptionEn: entity.descriptionEn,
-        websiteUrl: entity.websiteUrl,
-        logoUrl: entity.logoUrl,
+        bioFr: entity.bioFr,
+        bioEn: entity.bioEn,
+        company: entity.company,
+        city: entity.city,
+        photoUrl: entity.photoUrl,
         socialLinks: parseSocial(entity.socialLinks),
       },
-      // Private fields (#249) — served to the token holder so they can edit
-      // them, kept in a separate block so the UI can render them apart. The
-      // public sponsor route never returns these.
-      private: {
-        // The sponsoring tier: drives the promo-idea gating and the label shown
-        // to the sponsor. Replaces the former legacy `level` string (#321).
-        tier: {
-          key: entity.tier.key,
-          nameFr: entity.tier.nameFr,
-          nameEn: entity.tier.nameEn,
-          allowsPromoIdeas: entity.tier.allowsPromoIdeas,
-        },
-        standContacts: parseStandContacts(entity.standContacts),
-        comKitReceived: entity.comKitReceived,
-        comKitLogoWebUrl: entity.comKitLogoWebUrl,
-        comKitLogoPrintUrl: entity.comKitLogoPrintUrl,
-        comKitCharterUrl: entity.comKitCharterUrl,
-        comKitNotes: entity.comKitNotes,
-        // Promo-idea fields (#252). Sent for every sponsor; the UI shows them
-        // only when the tier allows promo ideas.
-        platinumPromoIdea: entity.platinumPromoIdea,
-        platinumCoBuildIdea: entity.platinumCoBuildIdea,
-        // Address the sponsor should email complements to (#271). The UI builds
-        // a mailto: link from it — no server-side send for this case anymore.
-        sponsorContactEmail,
-      },
-      // Job offers (#251): the sponsor's offers plus its tier quota, so the
-      // UI can disable "add" at the cap.
-      jobOffers: {
-        items: entity.jobOffers.map((o) => ({
-          id: o.id,
-          title: o.title,
-          descriptionFr: o.descriptionFr,
-          descriptionEn: o.descriptionEn,
-          url: o.url,
-        })),
-        quota: entity.tier.jobOfferQuota,
-      },
+      // Editable sessions (#260). The numeric id is required so the client
+      // can target PUT /edit/:token/talks/:id; ownership is re-checked
+      // server-side on every write, so exposing it opens no door the token
+      // didn't already open.
+      talks: entity.talks,
     };
   });
 
   // PUT /api/edit/:token — save the editable fields. Name, sessions, level and
   // publication status are NOT editable here (RG-247).
-  app.put<{ Params: { token: string }; Body: SpeakerEditBody | SponsorEditBody }>("/edit/:token", {
+  app.put<{ Params: { token: string }; Body: SpeakerEditBody }>("/edit/:token", {
     config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
     schema: {
       params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
@@ -527,7 +384,7 @@ export default async function editRoutes(app: FastifyInstance) {
     const resolved = await resolveToken(request.params.token);
     if (!resolved) return reply.code(404).send({ error: "invalid_token" });
 
-    const { kind, entity } = resolved;
+    const { entity } = resolved;
     const blocked = editingBlockedReason(entity);
     if (blocked) return reply.code(403).send({ error: blocked });
 
@@ -538,67 +395,23 @@ export default async function editRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "invalid_url", field: unsafeField });
     }
 
-    if (kind === "speaker") {
-      const body = request.body as SpeakerEditBody;
-      // A field absent from the body is left untouched; an empty string clears it.
-      await prisma.speaker.update({
-        where: { id: entity.id },
-        data: {
-          ...(body.bioFr !== undefined && { bioFr: body.bioFr || null }),
-          ...(body.bioEn !== undefined && { bioEn: body.bioEn || null }),
-          ...(body.company !== undefined && { company: body.company || null }),
-          ...(body.city !== undefined && { city: body.city || null }),
-          ...(body.photoUrl !== undefined && { photoUrl: body.photoUrl || null }),
-          ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
-        },
-      });
-      revalidateSpeakers();
-      // Their own page too (#352), or the bio they just fixed stays stale for an
-      // hour on the very page the link is meant to update.
-      revalidateSpeaker(entity.slug);
-    } else {
-      const body = request.body as SponsorEditBody;
-      await prisma.sponsor.update({
-        where: { id: entity.id },
-        data: {
-          // Rich-text HTML (#270): sanitized on write, like article content.
-          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) || null }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) || null }),
-          ...(body.websiteUrl !== undefined && { websiteUrl: body.websiteUrl || null }),
-          ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }),
-          ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
-          // Private fields (#249).
-          ...(body.standContacts !== undefined && { standContacts: cleanStandContacts(body.standContacts) }),
-          ...(body.comKitReceived !== undefined && { comKitReceived: body.comKitReceived }),
-          ...(body.comKitLogoWebUrl !== undefined && { comKitLogoWebUrl: body.comKitLogoWebUrl || null }),
-          ...(body.comKitLogoPrintUrl !== undefined && { comKitLogoPrintUrl: body.comKitLogoPrintUrl || null }),
-          ...(body.comKitCharterUrl !== undefined && { comKitCharterUrl: body.comKitCharterUrl || null }),
-          ...(body.comKitNotes !== undefined && { comKitNotes: body.comKitNotes || null }),
-          // Promo-idea fields (#252): silently ignored for tiers that don't
-          // allow them, so the field can't be set by tampering with the payload.
-          ...(entity.tier.allowsPromoIdeas && body.platinumPromoIdea !== undefined && {
-            platinumPromoIdea: body.platinumPromoIdea || null,
-          }),
-          ...(entity.tier.allowsPromoIdeas && body.platinumCoBuildIdea !== undefined && {
-            platinumCoBuildIdea: body.platinumCoBuildIdea || null,
-          }),
-        },
-      });
-      // Only public-facing changes need cache revalidation; a private-only
-      // save (com kit, stand contacts) changes nothing on the public pages.
-      const touchesPublic =
-        body.descriptionFr !== undefined ||
-        body.descriptionEn !== undefined ||
-        body.websiteUrl !== undefined ||
-        body.logoUrl !== undefined ||
-        body.socialLinks !== undefined;
-      if (touchesPublic) {
-        revalidateSponsors();
-        // The company's own page too (#360) — editing from the magic link is
-        // precisely when someone watches for their change to appear.
-        revalidateSponsor(entity.slug);
-      }
-    }
+    const body = request.body as SpeakerEditBody;
+    // A field absent from the body is left untouched; an empty string clears it.
+    await prisma.speaker.update({
+      where: { id: entity.id },
+      data: {
+        ...(body.bioFr !== undefined && { bioFr: body.bioFr || null }),
+        ...(body.bioEn !== undefined && { bioEn: body.bioEn || null }),
+        ...(body.company !== undefined && { company: body.company || null }),
+        ...(body.city !== undefined && { city: body.city || null }),
+        ...(body.photoUrl !== undefined && { photoUrl: body.photoUrl || null }),
+        ...(body.socialLinks !== undefined && { socialLinks: cleanSocial(body.socialLinks) }),
+      },
+    });
+    revalidateSpeakers();
+    // Their own page too (#352), or the bio they just fixed stays stale for an
+    // hour on the very page the link is meant to update.
+    revalidateSpeaker(entity.slug);
 
     return { saved: true };
   });
@@ -680,145 +493,6 @@ export default async function editRoutes(app: FastifyInstance) {
       }
 
       return { saved: true };
-    },
-  );
-
-  // --- Job offers (#251): a sponsor manages the offers we relay for them,
-  // from the same link, capped by its level. Direct publication + revalidation.
-  const jobOfferBodySchema = {
-    type: "object",
-    additionalProperties: false,
-    required: ["title", "url"],
-    properties: {
-      title: { type: "string", maxLength: SHORT_MAX },
-      descriptionFr: { type: "string", maxLength: TEXT_MAX },
-      descriptionEn: { type: "string", maxLength: TEXT_MAX },
-      url: { type: "string", maxLength: URL_MAX },
-    },
-  };
-
-  // POST /api/edit/:token/job-offers — create an offer, enforcing the quota.
-  app.post<{ Params: { token: string }; Body: { title: string; descriptionFr?: string; descriptionEn?: string; url: string } }>(
-    "/edit/:token/job-offers",
-    {
-      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
-      schema: {
-        params: { type: "object", required: ["token"], properties: { token: { type: "string" } } },
-        body: jobOfferBodySchema,
-      },
-    },
-    async (request, reply) => {
-      const resolved = await resolveToken(request.params.token);
-      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
-      const { entity } = resolved;
-      const blocked = editingBlockedReason(entity);
-      if (blocked) return reply.code(403).send({ error: blocked });
-
-      const { title, url } = request.body;
-      if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
-      if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
-
-      // Quota is per tier (#251). Count what's already there; a lowered tier
-      // keeps existing offers but blocks new ones beyond the new cap.
-      const quota = entity.tier.jobOfferQuota;
-      if (entity.jobOffers.length >= quota) {
-        return reply.code(409).send({ error: "quota_reached", quota });
-      }
-
-      const offer = await prisma.sponsorJobOffer.create({
-        data: {
-          sponsorId: entity.id,
-          title: title.trim(),
-          descriptionFr: sanitizeRichHtml(request.body.descriptionFr),
-          descriptionEn: sanitizeRichHtml(request.body.descriptionEn),
-          url: url.trim(),
-        },
-      });
-      revalidateSponsors();
-      revalidateJobOffers();
-      return reply.code(201).send({
-        id: offer.id,
-        title: offer.title,
-        descriptionFr: offer.descriptionFr,
-        descriptionEn: offer.descriptionEn,
-        url: offer.url,
-      });
-    },
-  );
-
-  // PUT /api/edit/:token/job-offers/:offerId — edit one of the sponsor's offers.
-  app.put<{ Params: { token: string; offerId: string }; Body: { title?: string; descriptionFr?: string; descriptionEn?: string; url?: string } }>(
-    "/edit/:token/job-offers/:offerId",
-    {
-      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
-      schema: {
-        params: {
-          type: "object",
-          required: ["token", "offerId"],
-          properties: { token: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
-        },
-        body: { type: "object", additionalProperties: false, properties: jobOfferBodySchema.properties },
-      },
-    },
-    async (request, reply) => {
-      const resolved = await resolveToken(request.params.token);
-      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
-      const { entity } = resolved;
-      const blocked = editingBlockedReason(entity);
-      if (blocked) return reply.code(403).send({ error: blocked });
-
-      // Ownership: only offers already attached to this sponsor.
-      const offerId = Number(request.params.offerId);
-      const offer = entity.jobOffers.find((o) => o.id === offerId);
-      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
-
-      const body = request.body;
-      if (body.title !== undefined && !body.title.trim()) return reply.code(400).send({ error: "empty_title" });
-      if (body.url !== undefined && !isSafeUrl(body.url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
-
-      await prisma.sponsorJobOffer.update({
-        where: { id: offer.id },
-        data: {
-          ...(body.title !== undefined && { title: body.title.trim() }),
-          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) }),
-          ...(body.url !== undefined && { url: body.url.trim() }),
-        },
-      });
-      revalidateSponsors();
-      revalidateJobOffers();
-      return { saved: true };
-    },
-  );
-
-  // DELETE /api/edit/:token/job-offers/:offerId — remove an offer.
-  app.delete<{ Params: { token: string; offerId: string } }>(
-    "/edit/:token/job-offers/:offerId",
-    {
-      config: { rateLimit: { max: 20, timeWindow: "1 minute" } },
-      schema: {
-        params: {
-          type: "object",
-          required: ["token", "offerId"],
-          properties: { token: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
-        },
-      },
-    },
-    async (request, reply) => {
-      const resolved = await resolveToken(request.params.token);
-      if (!resolved || resolved.kind !== "sponsor") return reply.code(404).send({ error: "invalid_token" });
-      const { entity } = resolved;
-      const blocked = editingBlockedReason(entity);
-      if (blocked) return reply.code(403).send({ error: blocked });
-
-      const offerId = Number(request.params.offerId);
-      const offer = entity.jobOffers.find((o) => o.id === offerId);
-      if (!offer) return reply.code(404).send({ error: "offer_not_found" });
-
-      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
-      revalidateSponsors();
-      revalidateJobOffers();
-      return reply.code(204).send();
     },
   );
 

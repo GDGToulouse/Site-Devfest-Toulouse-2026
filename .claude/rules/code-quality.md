@@ -1,25 +1,28 @@
 # Code Quality
 
-## Backwards Compatibility
-- Do not add backwards-compatibility hacks: no renaming to `_unused`, no re-exporting dead types, no `// removed` comments
-- If something is unused, delete it completely
+Write code that reads like the code around it: match its naming, its comment density, its idiom.
+The existing files are the specification — a new component in `src/frontend/src/components/admin/`
+should be indistinguishable in style from its neighbours.
 
-## Imports
-- Order: external packages → internal modules → relative imports, separated by blank lines
-- No unused imports — let the linter enforce this
+## Delete, don't deprecate
 
-## Size Guidelines
-- Functions: if it doesn't fit on one screen (~40 lines), consider splitting
-- Files: if it exceeds ~300 lines, look for extraction opportunities
+No backwards-compatibility scaffolding: no renaming to `_unused`, no re-exporting dead types, no
+`// removed` comments, no shim kept "just in case". If something is unused, delete it. This is a
+young codebase with one consumer — a stale shim costs more than a rewrite.
 
-## Duplication
-- Tolerate 2-3 similar occurrences before extracting
-- Extract only when the duplicated logic has a single reason to change
+## Comments carry the why
 
-## Documentation lookup
-- **Always** use Context7 MCP to fetch up-to-date documentation before using any library, framework, or API
-- This applies to all dependencies, even well-known ones (React, Next.js, Prisma, etc.) — training data may be outdated
-- Prefer Context7 docs over training data for: API syntax, configuration, version migration, setup instructions
+The code says what it does. A comment earns its place by saying what the code cannot: why this
+approach over the obvious one, which bug it prevents, which constraint forced it. Reference the
+issue when there is one — `(#375)` tells the next reader where to look.
 
-## Performance
-- Be mindful of N+1 queries, unbounded loops, and memory leaks
+Do not add docstrings, type annotations or comments to code you did not otherwise change.
+
+## Abstraction
+
+Tolerate two or three similar occurrences before extracting. Extract when the duplicated logic
+has a single reason to change, not when it merely looks alike. Three similar lines beat a
+premature abstraction.
+
+Watch for N+1 queries, unbounded reads on tables that keep growing, and unbounded loops. When a
+query needs a ceiling, make it a guard well above the real volume and say so in a comment.

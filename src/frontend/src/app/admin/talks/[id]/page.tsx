@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
 
@@ -27,6 +28,8 @@ export default function TalkEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Feedback after a save (#394), shown in place instead of redirecting away.
+  const [saveState, setSaveState] = useState<SaveState>(null);
 
   useEffect(() => {
     if (isNew) {
@@ -103,11 +106,16 @@ export default function TalkEditorPage() {
     } else {
       const { status } = await adminFetch(`/talks/${talkId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
-      if (status >= 400) {
+      // Anything but 200 failed, network included: a dropped connection comes
+      // back as status 0, which `>= 400` announced as a save (#428).
+      if (status !== 200) {
         setError("Échec de l'enregistrement.");
         return;
       }
-      router.push("/admin/talks");
+      // Staying put, like the sponsor and speaker sheets (#394): creating left
+      // the editor on the talk, saving then threw them back to the list, and
+      // the SaveFeedback below never got the chance to say anything (#412).
+      setSaveState({ kind: "ok", text: "Modifications enregistrées." });
     }
   }
 
@@ -142,7 +150,9 @@ export default function TalkEditorPage() {
 
         <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} />
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
+
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button

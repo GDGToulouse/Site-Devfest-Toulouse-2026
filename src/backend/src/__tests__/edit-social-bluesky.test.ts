@@ -2,29 +2,32 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
-import { createSponsorWithToken, tierIdByKey } from "./sponsor-test-helpers.js";
 
-// Bluesky is part of the shared socialLinks allowlist (#253). A sponsor (and a
-// speaker) can save it via their edit link; an unknown social key stays rejected.
+// Bluesky is part of the shared socialLinks allowlist (#253); an unknown social
+// key stays rejected. Exercised on a speaker: the rule is the same for both, and
+// sponsors no longer reach this route at all (#362).
 
-const TOKEN = "test-edit-bluesky-sponsor-token-a1b2c3d4e5f6a7b8";
-let editionId: number;
-let sponsorId: number;
+const TOKEN = "test-edit-bluesky-speaker-token-a1b2c3d4e5f6a7b8";
+let speakerId: number;
 
 describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
   beforeAll(async () => {
     const edition = await getSeededEdition();
-    editionId = edition.id;
 
-    const sponsor = await createSponsorWithToken({
-      name: "Bluesky Test Sponsor", slug: "bluesky-test-sponsor", editionId, tierId: await tierIdByKey("gold"),
-      publicationStatus: "PUBLISHED",
-    }, TOKEN);
-    sponsorId = sponsor.id;
+    const speaker = await prisma.speaker.create({
+      data: {
+        name: "Bluesky Test Speaker",
+        slug: `bluesky-test-speaker-${Date.now()}`,
+        editToken: TOKEN,
+        editTokenSentAt: new Date(),
+        editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
+      },
+    });
+    speakerId = speaker.id;
   });
 
   afterAll(async () => {
-    await prisma.sponsor.deleteMany({ where: { id: sponsorId } });
+    await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("accepts and persists a bluesky link", async () => {
@@ -36,8 +39,8 @@ describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
     });
     expect(res.statusCode).toBe(200);
 
-    const sponsor = await prisma.sponsor.findUnique({ where: { id: sponsorId } });
-    const social = JSON.parse(sponsor?.socialLinks ?? "{}");
+    const speaker = await prisma.speaker.findUnique({ where: { id: speakerId } });
+    const social = JSON.parse(speaker?.socialLinks ?? "{}");
     expect(social.bluesky).toBe("https://bsky.app/profile/devfest.example");
     await app.close();
   });

@@ -13,6 +13,7 @@ interface EditionSettings {
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
   sponsorBrochureUrl: string | null;
+  sponsorBrochureUrlEn: string | null;
   sponsorHeroImageUrl: string | null;
 }
 
@@ -49,17 +50,20 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
   const [rows, setRows] = useState<EditionTierRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTierId, setSavingTierId] = useState<number | null>(null);
+  const [tierError, setTierError] = useState("");
 
   // Page settings (status, temporary form URL, brochure/hero) — live on Edition.
   const [settings, setSettings] = useState<EditionSettings>({
     sponsorPageStatus: "PRE_ANNOUNCEMENT",
     sponsorTemporaryFormUrl: null,
     sponsorBrochureUrl: null,
+    sponsorBrochureUrlEn: null,
     sponsorHeroImageUrl: null,
   });
   const [isSettingsSaving, setIsSettingsSaving] = useState(false);
   const [settingsSaved, setSettingsSaved] = useState(false);
   const [isBrochurePickerOpen, setIsBrochurePickerOpen] = useState(false);
+  const [isBrochureEnPickerOpen, setIsBrochureEnPickerOpen] = useState(false);
   const [isHeroPickerOpen, setIsHeroPickerOpen] = useState(false);
 
   async function loadSettings() {
@@ -69,6 +73,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         sponsorPageStatus: data.sponsorPageStatus ?? "PRE_ANNOUNCEMENT",
         sponsorTemporaryFormUrl: data.sponsorTemporaryFormUrl ?? null,
         sponsorBrochureUrl: data.sponsorBrochureUrl ?? null,
+        sponsorBrochureUrlEn: data.sponsorBrochureUrlEn ?? null,
         sponsorHeroImageUrl: data.sponsorHeroImageUrl ?? null,
       });
     }
@@ -109,19 +114,24 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
 
   // The single checkbox: checking publishes the offer on /devenir-sponsor (PUT
   // the link, visible), unchecking removes the link entirely.
+  // No confirmation on a checkbox — asking on every tick would be worse than the
+  // mistake it prevents. But the box used to move whatever the server answered,
+  // so a refused change left it showing a state the edition did not have (#412).
   async function toggleOffered(row: EditionTierRow) {
     setSavingTierId(row.tier.id);
-    if (row.offered) {
-      await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, { method: "DELETE" });
-      patchRow(row.tier.id, { offered: false });
-    } else {
-      await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
-        method: "PUT",
-        body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
-      });
-      patchRow(row.tier.id, { offered: true });
-    }
+    setTierError("");
+    const { status } = row.offered
+      ? await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, { method: "DELETE" })
+      : await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
+          method: "PUT",
+          body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
+        });
     setSavingTierId(null);
+    if (status !== 200 && status !== 204) {
+      setTierError("La modification a échoué. Réessayez.");
+      return;
+    }
+    patchRow(row.tier.id, { offered: !row.offered });
   }
 
   // Persist the price/order of an already-published offer, on blur.
@@ -144,6 +154,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         sponsorPageStatus: settings.sponsorPageStatus,
         sponsorTemporaryFormUrl: settings.sponsorTemporaryFormUrl ?? "",
         sponsorBrochureUrl: settings.sponsorBrochureUrl ?? "",
+        sponsorBrochureUrlEn: settings.sponsorBrochureUrlEn ?? "",
         sponsorHeroImageUrl: settings.sponsorHeroImageUrl ?? "",
       }),
     });
@@ -229,34 +240,76 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
           />
         </div>
 
-        <div>
-          <label className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</label>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsBrochurePickerOpen(true)}
-              className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
-            >
-              {settings.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
-            </button>
-            {settings.sponsorBrochureUrl && (
-              <button
-                type="button"
-                onClick={() => setSettings({ ...settings, sponsorBrochureUrl: null })}
-                className="text-sm text-terre-cuite hover:underline"
-              >
-                Supprimer
-              </button>
-            )}
+        {/* One brochure per language (#401): the tracked link in the
+            confirmation email resolves the file from the locale the requester
+            filled the form in. */}
+        <fieldset>
+          <legend className="block text-sm font-medium text-noir mb-1">Plaquette sponsors (PDF)</legend>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <p className="text-sm text-noir mb-1">Français</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBrochurePickerOpen(true)}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+                >
+                  {settings.sponsorBrochureUrl ? "Changer le fichier" : "Choisir un fichier"}
+                </button>
+                {settings.sponsorBrochureUrl && (
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, sponsorBrochureUrl: null })}
+                    className="text-sm text-terre-cuite hover:underline"
+                  >
+                    Supprimer <span className="sr-only">la plaquette française</span>
+                  </button>
+                )}
+              </div>
+              {settings.sponsorBrochureUrl && <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>}
+            </div>
+
+            <div>
+              <p className="text-sm text-noir mb-1">Anglais (optionnel)</p>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBrochureEnPickerOpen(true)}
+                  className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
+                >
+                  {settings.sponsorBrochureUrlEn ? "Changer le fichier" : "Choisir un fichier"}
+                </button>
+                {settings.sponsorBrochureUrlEn && (
+                  <button
+                    type="button"
+                    onClick={() => setSettings({ ...settings, sponsorBrochureUrlEn: null })}
+                    className="text-sm text-terre-cuite hover:underline"
+                  >
+                    Supprimer <span className="sr-only">la plaquette anglaise</span>
+                  </button>
+                )}
+              </div>
+              {settings.sponsorBrochureUrlEn && <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrlEn}</p>}
+            </div>
           </div>
-          {settings.sponsorBrochureUrl && <p className="mt-1 text-xs text-gris">{settings.sponsorBrochureUrl}</p>}
+          {!settings.sponsorBrochureUrlEn && (
+            <p className="mt-2 text-xs text-gris">
+              Sans plaquette anglaise, les demandes faites en anglais reçoivent la plaquette française.
+            </p>
+          )}
           <FilePickerDialog
             open={isBrochurePickerOpen}
             onClose={() => setIsBrochurePickerOpen(false)}
             onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrl: url })}
-            title="Bibliothèque de plaquettes"
+            title="Bibliothèque de plaquettes — français"
           />
-        </div>
+          <FilePickerDialog
+            open={isBrochureEnPickerOpen}
+            onClose={() => setIsBrochureEnPickerOpen(false)}
+            onSelect={(url) => setSettings({ ...settings, sponsorBrochureUrlEn: url })}
+            title="Bibliothèque de plaquettes — anglais"
+          />
+        </fieldset>
 
         <div className="flex items-center gap-3">
           <button
@@ -281,6 +334,12 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
           d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ».
         </p>
       </div>
+
+      {tierError && (
+        <p role="alert" aria-live="assertive" className="rounded-lg bg-terre-cuite/10 px-3 py-2 text-sm text-terre-cuite">
+          {tierError}
+        </p>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-gris text-sm">

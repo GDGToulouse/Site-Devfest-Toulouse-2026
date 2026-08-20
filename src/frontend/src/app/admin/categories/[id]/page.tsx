@@ -76,7 +76,11 @@ export default function CategoryEditorPage() {
       setError(apiError ?? "Une catégorie porte déjà ce nom.");
       return;
     }
-    if (status >= 400 || (isNew && !data)) {
+    // Creation answers 201 and an update 200, so only the update can be pinned
+    // to a status; on create it is the absent body that proves the failure.
+    // Either way a dropped connection lands here as status 0, which `>= 400`
+    // announced as a success (#428).
+    if (isNew ? !data : status !== 200) {
       setError(apiError ?? (isNew ? "Échec de la création." : "Échec de l'enregistrement."));
       return;
     }
@@ -97,7 +101,7 @@ export default function CategoryEditorPage() {
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
         <CategoryForm value={form} onChange={setForm} editions={editions} />
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}
 
         <div className="flex items-center gap-3 pt-2">
           <button

@@ -8,7 +8,7 @@ import { localizedField } from "@/lib/i18n-helpers";
 import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
-import { jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -68,7 +68,8 @@ export default async function SponsorDetailPage({
     "@context": "https://schema.org",
     "@type": "Organization",
     name: sponsor.name,
-    ...(sponsor.logoUrl ? { logo: sponsor.logoUrl } : {}),
+    // Schema.org wants an absolute URL; the stored logo is site-relative.
+    ...(sponsor.logoUrl ? { logo: absoluteUrl(sponsor.logoUrl) } : {}),
     ...(sponsor.websiteUrl ? { url: sponsor.websiteUrl } : {}),
     ...(Object.values(sponsor.socialLinks).length > 0
       ? { sameAs: Object.values(sponsor.socialLinks) }
@@ -85,6 +86,33 @@ export default async function SponsorDetailPage({
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">{sponsor.name}</h1>
+
+        {/* Sponsoring this year is the headline fact (#129), so the tier gets a
+            badge in the tier's own colour. Past editions stay plain tags below:
+            their tier belongs to that year's wall, not to the company today. */}
+        {sponsor.tier && (
+          <p
+            className="mt-4 inline-block rounded-[12px] px-3 py-1 text-sm font-bold text-blanc"
+            style={{ backgroundColor: sponsor.tier.color }}
+          >
+            {t("currentTier", { tier: localizedField(sponsor.tier, "name", locale) })}
+          </p>
+        )}
+
+        {sponsor.editions.length > 0 && (
+          <ul className="mt-6 flex flex-wrap gap-2">
+            {sponsor.editions.map((year) => (
+              <li key={year}>
+                <Link
+                  href={`/editions/${year}`}
+                  className="rounded-[12px] bg-blanc-casse px-3 py-1 text-sm text-gris hover:text-noir transition-colors"
+                >
+                  {year}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
 
         <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-[1fr_320px]">
           {/* Left: description. Rich-text HTML for new content (#270); older

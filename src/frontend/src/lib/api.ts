@@ -15,6 +15,7 @@ import type {
   SponsorTierPublic,
   SponsorPublic,
   SponsorDetail,
+  IndexableSponsor,
   SponsorWithOffers,
   SpeakerPublic,
   SpeakerDetail,
@@ -218,6 +219,13 @@ export async function getSponsorBySlug(slug: string): Promise<SponsorDetail | nu
   return fetchAPI<SponsorDetail>(`/api/sponsors/${slug}`);
 }
 
+// Every company with a public page (#379). getSponsors() is the featured
+// edition's wall, so it would miss a company that only sponsored a past year —
+// yet its page answers 200. The sitemap needs the second set, not the first.
+export async function getIndexableSponsors(): Promise<IndexableSponsor[]> {
+  return (await fetchAPI<IndexableSponsor[]>("/api/sponsors/indexable")) || [];
+}
+
 export async function getJobOffers(): Promise<SponsorWithOffers[]> {
   return (await fetchAPI<SponsorWithOffers[]>("/api/job-offers")) || [];
 }
@@ -252,6 +260,12 @@ export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]
 
 export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
+}
+
+// Sponsors of a past edition (#370). Same payload as getSponsors() — the values
+// are frozen per edition (#375) — so both feed the same SponsorWall.
+export async function getEditionSponsors(year: number): Promise<SponsorPublic[]> {
+  return (await fetchAPI<SponsorPublic[]>(`/api/editions/${year}/sponsors`)) || [];
 }
 
 // Detail of one past talk (#343). Scoped by year: slugs are unique per edition,

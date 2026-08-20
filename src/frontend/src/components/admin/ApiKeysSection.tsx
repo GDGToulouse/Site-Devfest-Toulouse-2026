@@ -257,7 +257,7 @@ export default function ApiKeysSection() {
       )}
 
       {error && (
-        <div className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
+        <div role="alert" aria-live="assertive" className="mb-4 p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">{error}</div>
       )}
 
       {/* Keys list */}

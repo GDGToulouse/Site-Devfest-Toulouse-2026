@@ -11,6 +11,7 @@ import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
+import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
 import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
 
 interface EditionData {
@@ -50,7 +51,10 @@ const TABS = [
   { key: "general", label: "Général" },
   { key: "venue", label: "Lieu" },
   { key: "ticketing", label: "Billetterie" },
+  // "Sponsoring" configures the tiers offered (#320); "Sponsors" lists the
+  // companies actually signed for the edition (#389). Neighbouring, distinct.
   { key: "sponsoring", label: "Sponsoring" },
+  { key: "sponsors", label: "Sponsors" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
 ];
@@ -130,6 +134,9 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "sponsoring" && (
           <SponsoringTab editionId={edition.id} />
+        )}
+        {activeTab === "sponsors" && (
+          <EditionSponsorsTab editionId={edition.id} />
         )}
         {activeTab === "cfp" && (
           <CfpTab />

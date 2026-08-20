@@ -13,6 +13,7 @@
     "conferences": "Talks",
     "program": "Schedule",
     "speakers": "Speakers",
+    "hallOfFame": "Hall of fame",
     "sponsors": "Sponsors",
     "jobOffers": "Job offers",
     "venue": "Venue",
@@ -218,6 +219,7 @@
     "nextEdition": "Next edition",
     "speakers": "Speakers ({count})",
     "sessions": "Talks ({count})",
+    "sponsors": "Partners ({count})",
     "replay": "Watch",
     "allNews": "See all news"
   },
@@ -340,6 +342,7 @@
     "home": "Home",
     "empty": "Sponsors will be announced soon.",
     "visitWebsite": "Visit website",
+    "currentTier": "{tier} sponsor of the current edition",
     "speakersOf": "Speakers from {name}",
     "jobOffersTitle": "Job offers",
     "jobOfferCta": "View offer"
@@ -364,7 +367,7 @@
   },
   "replays": {
     "title": "Replays",
-    "pageTitle": "Replays — every recorded talk | DevFest Toulouse",
+    "pageTitle": "Replays — every recorded talk",
     "heading": "Replays",
     "description": "Watch again the recorded talks from DevFest Toulouse, across all editions.",
     "home": "Home",
