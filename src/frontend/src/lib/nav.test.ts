@@ -54,6 +54,15 @@ describe("getPublicNavEntries", () => {
     expect(keys(getPublicNavEntries(edition({ hasSpeakers: true })))).toEqual(["speakers", "blog"]);
   });
 
+  it("nests the hall of fame under Speakers (#369)", () => {
+    const entries = getPublicNavEntries(edition({ hasSpeakers: true }));
+    const speakers = entries.find((e) => e.key === "speakers");
+    expect(speakers?.children?.map((c) => c.key)).toEqual(["hall-of-fame"]);
+    // Under the parent, not beside it: a second top-level entry is what #276
+    // cost us on Sponsors.
+    expect(keys(entries)).not.toContain("hall-of-fame");
+  });
+
   it("shows Sponsors without a submenu when there are no job offers", () => {
     const entries = getPublicNavEntries(edition({ hasSponsors: true }));
     const sponsors = entries.find((e) => e.key === "sponsors");
