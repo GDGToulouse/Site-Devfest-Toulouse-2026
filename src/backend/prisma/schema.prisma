@@ -86,17 +86,12 @@ model Edition {
   startDate               DateTime?
   endDate                 DateTime?
   status                  EditionStatus     @default(PREPARATION)
-  venueName               String?
-  venueAddress            String?
-  // Venue & practical-info page (#109). Coordinates drive the Leaflet/OSM map;
-  // transports/parking are rich-text HTML (sanitized on write like sponsor
-  // descriptions); directionsUrl is an external itinerary link. All optional —
-  // the public page and its map only show once coordinates are set.
-  venueLat                Float?
-  venueLng                Float?
-  venueTransports         String?
-  venueParking            String?
-  venueDirectionsUrl      String?
+  // The venue is shared between editions (#105): the DevFest comes back to the
+  // same place for years at a time, and its rooms come back with it. The seven
+  // flat `venue*` columns that used to sit here moved onto Venue; the public
+  // payload still exposes them flattened, so no page had to change.
+  venueId                 Int?
+  venue                   Venue?            @relation(fields: [venueId], references: [id])
   heroImageUrl            String?
   sponsorFormUrl          String?
   aftermovieUrl           String?
@@ -130,8 +125,97 @@ model Edition {
   talks           Talk[]
   editionSponsors EditionSponsor[]
   categories      EditionCategory[]
+  scheduleEntries ScheduleEntry[]
 
   @@index([deletedAt])
+  @@index([venueId])
+}
+
+// --- Venue, rooms and schedule (#105) ---
+
+/// Where an edition takes place. Shared across editions on purpose
+/// (docs/modele-donnees-metier.md): the DevFest returns to the same congress
+/// centre several years running, and re-typing its rooms every year would
+/// invite typos in the very labels the schedule prints.
+model Venue {
+  id            Int     @id @default(autoincrement())
+  name          String  @unique
+  address       String?
+  // Coordinates drive the Leaflet/OSM map; transports and parking are
+  // rich-text HTML sanitized on write, like sponsor descriptions;
+  // directionsUrl is an external itinerary link (#109).
+  lat           Float?
+  lng           Float?
+  transports    String?
+  parking       String?
+  directionsUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  rooms    Room[]
+  editions Edition[]
+}
+
+/// A room inside a venue. Not every room is used every year — the 2025 grid
+/// showed five of them where the venue has eight — so the schedule derives the
+/// columns it displays from the talks actually scheduled, not from this list.
+model Room {
+  id        Int    @id @default(autoincrement())
+  name      String
+  capacity  Int?
+  /// Column order in the schedule grid, ascending.
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  venueId Int
+  venue   Venue @relation(fields: [venueId], references: [id], onDelete: Cascade)
+
+  talks          Talk[]
+  scheduleEntries ScheduleEntry[]
+
+  @@unique([venueId, name])
+  @@index([venueId])
+}
+
+enum ScheduleEntryKind {
+  BREAK
+  MEAL
+  PLENARY
+  SOCIAL
+  OTHER
+}
+
+/// Everything on the grid that is not a talk: welcome, warm-up, breaks, lunch,
+/// the closing party. The 2026 day is mostly made of these, and a grid that
+/// omitted them would leave unexplained gaps at exactly the hours sponsors
+/// expect visitors on their stands.
+///
+/// An entry does NOT block its time range: in 2025 lunch ran 12h45–14h15 while
+/// quickies played at 12h55 and 13h50. Whether a slot is free is decided by the
+/// absence of talks on it, never by a property of the entry.
+model ScheduleEntry {
+  id       Int               @id @default(autoincrement())
+  kind     ScheduleEntryKind
+  labelFr  String
+  labelEn  String
+  startsAt DateTime
+  endsAt   DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  /// Null means the entry spans the whole grid — the usual case for a break.
+  roomId Int?
+  room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  @@index([editionId])
+  @@index([roomId])
 }
 
 // --- Key Figures ---
@@ -638,10 +722,24 @@ model Talk {
   // by talk. Format, level and language stay with the organizers regardless.
   isSpeakerEditable Boolean @default(false)
 
-  // Room and time slot are assigned in Lot 3 (Programme) — optional here (RG-216).
-  room     String?
+  // Room and time slot (#105). Optional (RG-216): the 244 imported historical
+  // talks have neither, and a talk exists long before it is scheduled.
+  //
+  // `startsAt` stays on the talk rather than moving to a slot table because
+  // `isScheduleReady` counts published talks that have one, and that count is
+  // what promotes the flat "Conférences" link to a "Programme" menu (#203).
   startsAt DateTime?
   endsAt   DateTime?
+
+  roomId Int?
+  room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  // The room name as this edition printed it, frozen when the talk is
+  // scheduled (#375 again). Venues are shared and mutable: renaming a room in
+  // 2027 would otherwise rewrite the 2026 grid, which has to keep saying what
+  // the signage said that year. Null means "not scheduled yet, read the live
+  // room".
+  roomLabel String?
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -662,6 +760,7 @@ model Talk {
   @@index([editionId])
   @@index([categoryId])
   @@index([deletedAt])
+  @@index([roomId])
 }
 
 // --- Sponsors (RG-220 to RG-231) ---

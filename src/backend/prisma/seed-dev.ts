@@ -12,6 +12,42 @@ async function seedDev() {
 
   console.log("Seeding dev data...");
 
+  // --- Venues (#105) ---
+  // Upsert by name: the venue is the shared entity, so re-seeding must find the
+  // existing row rather than fail on the unique name.
+  const diagora = await prisma.venue.upsert({
+    where: { name: "Diagora" },
+    update: {},
+    create: { name: "Diagora", address: "Labège", lat: 43.5497, lng: 1.5119 },
+  });
+
+  // The eight rooms of the 2026 edition, with their real capacities — the
+  // schedule grid orders its columns by sortOrder.
+  const rooms2026 = [
+    { name: "Amphithéâtre", capacity: 500, sortOrder: 1 },
+    { name: "Agora 1", capacity: 500, sortOrder: 2 },
+    { name: "Hémicycle", capacity: 150, sortOrder: 3 },
+    { name: "Pastel", capacity: 200, sortOrder: 4 },
+    { name: "Lauragais", capacity: 200, sortOrder: 5 },
+    { name: "Ellipse", capacity: 100, sortOrder: 6 },
+    { name: "Salle Quickies", capacity: 80, sortOrder: 7 },
+    { name: "Salle Communautés", capacity: 80, sortOrder: 8 },
+  ];
+  for (const room of rooms2026) {
+    await prisma.room.upsert({
+      where: { venueId_name: { venueId: diagora.id, name: room.name } },
+      update: { capacity: room.capacity, sortOrder: room.sortOrder },
+      create: { ...room, venueId: diagora.id },
+    });
+  }
+  console.log(`Venue created: ${diagora.name} (${rooms2026.length} rooms)`);
+
+  const pierreBaudis = await prisma.venue.upsert({
+    where: { name: "Centre de Congrès Pierre Baudis" },
+    update: {},
+    create: { name: "Centre de Congrès Pierre Baudis", address: "Toulouse" },
+  });
+
   // --- Edition 2026 ---
   const edition = await prisma.edition.upsert({
     where: { year: 2026 },
@@ -21,8 +57,7 @@ async function seedDev() {
       startDate: new Date("2026-11-19T09:00:00Z"),
       endDate: new Date("2026-11-19T18:00:00Z"),
       status: "ANNOUNCEMENT",
-      venueName: "Diagora",
-      venueAddress: "Labège",
+      venueId: diagora.id,
       sponsorFormUrl: "https://forms.gle/devfest-sponsor",
       aftermovieUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     },
@@ -187,8 +222,7 @@ async function seedDev() {
       status: "SEE_YOU_NEXT_YEAR",
       startDate: new Date("2025-11-06T09:00:00Z"),
       endDate: new Date("2025-11-06T18:00:00Z"),
-      venueName: "Centre de Congrès Pierre Baudis",
-      venueAddress: "Toulouse",
+      venueId: pierreBaudis.id,
       aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
       galleryUrl: "https://photos.app.goo.gl/devfest2025",
       archivedSiteUrl: "https://2025.devfesttoulouse.fr",
@@ -198,8 +232,7 @@ async function seedDev() {
       startDate: new Date("2025-11-06T09:00:00Z"),
       endDate: new Date("2025-11-06T18:00:00Z"),
       status: "SEE_YOU_NEXT_YEAR",
-      venueName: "Centre de Congrès Pierre Baudis",
-      venueAddress: "Toulouse",
+      venueId: pierreBaudis.id,
       aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
       galleryUrl: "https://photos.app.goo.gl/devfest2025",
       archivedSiteUrl: "https://2025.devfesttoulouse.fr",
@@ -696,6 +729,61 @@ async function seedDev() {
     },
   });
   console.log("Talks created: 2");
+
+  // --- Schedule (#105) ---
+  // Both talks get an hour and a room so the "Programme" menu shows up (#203)
+  // and the grid has something to draw. Times follow the 2026 day plan of the
+  // sponsor guide; the dates are UTC, an hour behind the local schedule.
+  const amphitheatre = await prisma.room.findUnique({
+    where: { venueId_name: { venueId: diagora.id, name: "Amphithéâtre" } },
+  });
+  const hemicycle = await prisma.room.findUnique({
+    where: { venueId_name: { venueId: diagora.id, name: "Hémicycle" } },
+  });
+  await prisma.talk.update({
+    where: { editionId_slug: { editionId: edition.id, slug: "kubernetes-en-production" } },
+    data: {
+      roomId: amphitheatre?.id,
+      roomLabel: amphitheatre?.name,
+      startsAt: new Date("2026-11-19T08:00:00Z"),
+      endsAt: new Date("2026-11-19T08:40:00Z"),
+    },
+  });
+  await prisma.talk.update({
+    where: { editionId_slug: { editionId: edition.id, slug: "react-server-components" } },
+    data: {
+      roomId: hemicycle?.id,
+      roomLabel: hemicycle?.name,
+      startsAt: new Date("2026-11-19T08:00:00Z"),
+      endsAt: new Date("2026-11-19T08:15:00Z"),
+    },
+  });
+
+  // Everything that is not a session. Lunch is the one that matters for the
+  // grid: it spans every room, and in 2026 no quickie runs under it.
+  await prisma.scheduleEntry.deleteMany({ where: { editionId: edition.id } });
+  const scheduleEntries = [
+    { kind: "OTHER" as const, labelFr: "Accueil et petit déjeuner", labelEn: "Welcome and breakfast", startsAt: "06:30", endsAt: "07:45" },
+    { kind: "PLENARY" as const, labelFr: "Keynote d'ouverture", labelEn: "Opening keynote", startsAt: "08:00", endsAt: "08:45" },
+    { kind: "BREAK" as const, labelFr: "Pause du matin", labelEn: "Morning break", startsAt: "09:35", endsAt: "10:00" },
+    { kind: "MEAL" as const, labelFr: "Déjeuner", labelEn: "Lunch", startsAt: "11:45", endsAt: "13:15" },
+    { kind: "BREAK" as const, labelFr: "Pause de l'après-midi", labelEn: "Afternoon break", startsAt: "15:00", endsAt: "15:30" },
+    { kind: "PLENARY" as const, labelFr: "Keynote de clôture", labelEn: "Closing keynote", startsAt: "16:30", endsAt: "17:15" },
+    { kind: "SOCIAL" as const, labelFr: "Soirée « 10 ans »", labelEn: "\"10 years\" party", startsAt: "17:30", endsAt: "20:00" },
+  ];
+  for (const entry of scheduleEntries) {
+    await prisma.scheduleEntry.create({
+      data: {
+        editionId: edition.id,
+        kind: entry.kind,
+        labelFr: entry.labelFr,
+        labelEn: entry.labelEn,
+        startsAt: new Date(`2026-11-19T${entry.startsAt}:00Z`),
+        endsAt: new Date(`2026-11-19T${entry.endsAt}:00Z`),
+      },
+    });
+  }
+  console.log(`Schedule entries created: ${scheduleEntries.length}`);
 
   // --- Social Links ---
   const socialSettings = [

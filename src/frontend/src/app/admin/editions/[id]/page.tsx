@@ -12,6 +12,7 @@ import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
+import ScheduleTab from "@/components/admin/edition-detail/ScheduleTab";
 import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
 
 interface EditionData {
@@ -20,14 +21,11 @@ interface EditionData {
   startDate: string | null;
   endDate: string | null;
   status: string;
-  venueName: string | null;
-  venueAddress: string | null;
-  // Venue & practical-info page (#109), edited in the dedicated "Lieu" tab.
-  venueLat: number | null;
-  venueLng: number | null;
-  venueTransports: string | null;
-  venueParking: string | null;
-  venueDirectionsUrl: string | null;
+  // Which venue hosts this edition (#105). Its address, map and practical
+  // info (#109) are edited on the venue's own screen — an edition only picks
+  // one, so two years at the same place cannot describe it differently.
+  venueId: number | null;
+  venue: { id: number; name: string; address: string | null } | null;
   heroImageUrl: string | null;
   sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
@@ -50,6 +48,7 @@ const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange"
 const TABS = [
   { key: "general", label: "Général" },
   { key: "venue", label: "Lieu" },
+  { key: "schedule", label: "Programme" },
   { key: "ticketing", label: "Billetterie" },
   // "Sponsoring" configures the tiers offered (#320); "Sponsors" lists the
   // companies actually signed for the edition (#389). Neighbouring, distinct.
@@ -128,6 +127,9 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "venue" && (
           <VenueTab edition={edition} onSaved={loadEdition} />
+        )}
+        {activeTab === "schedule" && (
+          <ScheduleTab editionId={edition.id} venueId={edition.venueId} />
         )}
         {activeTab === "ticketing" && (
           <TicketingTab editionId={edition.id} />

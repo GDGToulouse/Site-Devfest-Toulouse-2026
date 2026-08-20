@@ -353,8 +353,47 @@ export interface EditionTalk {
   language: string;
   videoUrl: string | null;
   updatedAt: string;
+  // Scheduling (#105). `room` is the label frozen when the talk was placed, so
+  // an archive keeps the name that year's signage carried (#375). All three are
+  // null until the talk is scheduled — the imported historical talks never are.
+  room: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null }[];
+}
+
+// A room used by the grid of one year, in column order (#105).
+export interface ScheduleRoom {
+  id: number | null;
+  name: string;
+  sortOrder: number;
+}
+
+// Everything on the grid that is not a talk: welcome, breaks, lunch, the party.
+// `roomId` null means it spans every column, the usual case for a break.
+export interface ScheduleEntry {
+  id: number;
+  kind: "BREAK" | "MEAL" | "PLENARY" | "SOCIAL" | "OTHER";
+  labelFr: string;
+  labelEn: string;
+  startsAt: string;
+  endsAt: string;
+  roomId: number | null;
+  room: string | null;
+}
+
+// The whole grid of one edition, as /api/editions/:year/schedule serves it.
+export interface EditionSchedule {
+  year: number;
+  rooms: ScheduleRoom[];
+  talks: (Pick<EditionTalk, "slug" | "title" | "format" | "level" | "language" | "category" | "speakers"> & {
+    room: string | null;
+    roomId: number | null;
+    startsAt: string;
+    endsAt: string | null;
+  })[];
+  entries: ScheduleEntry[];
 }
 
 // One company that has a public page, for the sitemap (#379). Not the sponsor
@@ -425,7 +464,13 @@ export interface Talk {
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
-  room: string | null;
+  // Scheduling (#105). `roomLabel` is what the grid prints — frozen at the
+  // moment the talk was placed, so renaming the room later leaves it alone.
+  roomId: number | null;
+  roomLabel: string | null;
+  room: { id: number; name: string } | null;
+  startsAt: string | null;
+  endsAt: string | null;
   categoryId: number | null;
   category: { id: number; nameFr: string; color: string } | null;
   speakerIds: number[];
@@ -434,6 +479,32 @@ export interface Talk {
   // Whether the speaker may edit the wording from their magic link (#289).
   isSpeakerEditable: boolean;
   editionId: number;
+}
+
+// --- Venues and rooms (#105) ---
+
+// A venue is shared across editions: the DevFest returns to the same congress
+// centre for years at a time, and its rooms come back with it.
+export interface AdminVenue {
+  id: number;
+  name: string;
+  address: string | null;
+  lat: number | null;
+  lng: number | null;
+  transports: string | null;
+  parking: string | null;
+  directionsUrl: string | null;
+  rooms: AdminRoom[];
+  editions?: { id: number; year: number }[];
+  _count?: { editions: number };
+}
+
+export interface AdminRoom {
+  id: number;
+  name: string;
+  capacity: number | null;
+  sortOrder: number;
+  venueId: number;
 }
 
 // Session category / track.

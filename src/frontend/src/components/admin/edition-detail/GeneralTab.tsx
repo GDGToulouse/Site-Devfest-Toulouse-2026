@@ -12,8 +12,6 @@ interface EditionData {
   startDate: string | null;
   endDate: string | null;
   status: string;
-  venueName: string | null;
-  venueAddress: string | null;
   heroImageUrl: string | null;
   sponsorFormUrl: string | null;
   aftermovieUrl: string | null;
@@ -37,8 +35,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
     status: edition.status,
     startDate: edition.startDate?.split("T")[0] || "",
     endDate: edition.endDate?.split("T")[0] || "",
-    venueName: edition.venueName || "",
-    venueAddress: edition.venueAddress || "",
     heroImageUrl: edition.heroImageUrl || "",
     sponsorFormUrl: edition.sponsorFormUrl || "",
     aftermovieUrl: edition.aftermovieUrl || "",
@@ -67,8 +63,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
         status: form.status,
         startDate: form.startDate || undefined,
         endDate: form.endDate || undefined,
-        venueName: form.venueName,
-        venueAddress: form.venueAddress,
         heroImageUrl: form.heroImageUrl,
         sponsorFormUrl: form.sponsorFormUrl,
         aftermovieUrl: form.aftermovieUrl,
@@ -113,8 +107,6 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField label="Nom du lieu" name="venueName" value={form.venueName} onChange={(v) => setForm({ ...form, venueName: v })} />
-        <FormField label="Adresse / Ville" name="venueAddress" value={form.venueAddress} onChange={(v) => setForm({ ...form, venueAddress: v })} />
       </div>
 
       <div>
