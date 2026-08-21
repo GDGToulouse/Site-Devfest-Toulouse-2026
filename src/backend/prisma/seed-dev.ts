@@ -15,10 +15,18 @@ async function seedDev() {
   // --- Venues (#105) ---
   // Upsert by name: the venue is the shared entity, so re-seeding must find the
   // existing row rather than fail on the unique name.
+  //
+  // `update` carries the same fields as `create` (#452). With an empty update,
+  // the row the #105 migration had backfilled from `Edition.venueName` — with
+  // no coordinates, because the local edition had none — was never repaired:
+  // `hasVenueInfo` stayed false, /fr/lieu answered 404 and the "Lieu" menu
+  // entry never appeared. A dev seed has to converge on the state it describes,
+  // or "replay the seed" stops meaning anything.
+  const diagoraFields = { address: "Labège", lat: 43.5497, lng: 1.5119 };
   const diagora = await prisma.venue.upsert({
     where: { name: "Diagora" },
-    update: {},
-    create: { name: "Diagora", address: "Labège", lat: 43.5497, lng: 1.5119 },
+    update: diagoraFields,
+    create: { name: "Diagora", ...diagoraFields },
   });
 
   // The eight rooms of the 2026 edition, with their real capacities — the
@@ -44,7 +52,7 @@ async function seedDev() {
 
   const pierreBaudis = await prisma.venue.upsert({
     where: { name: "Centre de Congrès Pierre Baudis" },
-    update: {},
+    update: { address: "Toulouse" },
     create: { name: "Centre de Congrès Pierre Baudis", address: "Toulouse" },
   });
 
