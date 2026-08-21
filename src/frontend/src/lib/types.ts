@@ -435,6 +435,11 @@ export interface TalkDetail {
   format: TalkFormat;
   level: TalkLevel | null;
   language: string;
+  // When and where (#443) — null until the session is placed on the grid.
+  room: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  year: number;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }
@@ -451,6 +456,9 @@ export interface EditionTalkDetail {
   language: string;
   videoUrl: string | null;
   year: number;
+  room: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }

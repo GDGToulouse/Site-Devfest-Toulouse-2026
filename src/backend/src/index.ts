@@ -13,6 +13,7 @@ import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
 import { APP_VERSION, APP_ENVIRONMENT, APP_COMMIT } from "./lib/version.js";
 import editionRoutes from "./routes/editions.js";
+import calendarRoutes from "./routes/calendar.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
@@ -282,6 +283,7 @@ app.route({
 
 // Public API routes
 await app.register(editionRoutes, { prefix: "/api" });
+await app.register(calendarRoutes, { prefix: "/api" });
 await app.register(articleRoutes, { prefix: "/api" });
 await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });

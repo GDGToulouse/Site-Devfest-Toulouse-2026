@@ -39,6 +39,7 @@ export default async function ProgrammePage({
   const t = await getTranslations("programme");
   const tc = await getTranslations("conferences");
   const tf = await getTranslations("favourites");
+  const tcal = await getTranslations("calendar");
   const edition = await getCurrentEdition();
 
   if (!edition) notFound();
@@ -105,6 +106,8 @@ export default async function ProgrammePage({
                 favouriteAdd: tf("add"),
                 favouriteRemove: tf("remove"),
                 empty: tf("empty"),
+                exportAll: tcal("exportAll"),
+                exportMine: tcal("exportMine"),
               }}
               initialFavourites={parseFavourites(first(sp.fav))}
               initialView={parseView(first(sp.view))}

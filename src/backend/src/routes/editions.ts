@@ -368,6 +368,10 @@ export default async function editionRoutes(app: FastifyInstance) {
       language: talk.language,
       videoUrl: talk.videoUrl,
       year: edition.year,
+      // When and where (#443), same as the current-edition detail route.
+      room: talk.roomLabel,
+      startsAt: talk.startsAt,
+      endsAt: talk.endsAt,
       category: visibleCategory(talk.category),
       speakers: talk.speakers,
     };
