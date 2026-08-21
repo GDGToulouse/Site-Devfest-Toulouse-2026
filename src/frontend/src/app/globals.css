@@ -491,3 +491,59 @@ body {
 .section-y h2 {
   text-box: trim-both cap alphabetic;
 }
+
+/* ========================================
+ * Print (#108)
+ *
+ * The printable schedule is the browser's own Save-as-PDF, driven by a
+ * stylesheet rather than a generator: no Chromium in the backend image, no
+ * layout re-implemented by hand, and a printed page that cannot drift from the
+ * one on screen because it is the one on screen.
+ *
+ * What prints is the chronological agenda, not the grid: eight rooms at 180 px
+ * come to more than 1500 px, which no sheet of A4 holds without cutting.
+ * ======================================== */
+@media print {
+  /* Site chrome carries nothing onto paper — navigation least of all. */
+  header,
+  footer,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+  }
+
+  /* The grid gives way to the agenda, whatever the width of the screen this is
+     printed from. Both overrides live here rather than in Tailwind `print:`
+     variants — those emitted no CSS at all in this setup, and a class that
+     produces nothing fails without a word. */
+  .print-grid {
+    display: none !important;
+  }
+
+  .print-agenda {
+    display: block !important;
+  }
+
+  /* Ink, not screen colours: pale grey on white survives neither a laser
+     printer nor a photocopy. */
+  .print-agenda,
+  .print-agenda * {
+    color: #000 !important;
+  }
+
+  /* A session must not be cut across two sheets. */
+  .print-agenda a,
+  .print-agenda section {
+    break-inside: avoid;
+  }
+
+  /* A shadow prints as a grey smear; a hairline says the same thing. */
+  .print-agenda a {
+    box-shadow: none !important;
+    border: 1px solid #999;
+  }
+}

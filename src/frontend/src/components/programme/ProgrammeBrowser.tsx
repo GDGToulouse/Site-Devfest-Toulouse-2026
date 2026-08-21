@@ -25,6 +25,7 @@ interface Labels {
   empty: string;
   exportAll: string;
   exportMine: string;
+  print: string;
 }
 
 interface ProgrammeBrowserProps {
@@ -132,7 +133,7 @@ export default function ProgrammeBrowser({
 
   return (
     <div>
-      <div className="mb-6 flex flex-wrap items-center gap-4">
+      <div className="no-print mb-6 flex flex-wrap items-center gap-4">
         {/* A radio group, not three buttons: the three views are one choice, and
             a screen reader has to hear it that way. Nothing else may live inside
             it — hence the export link as a sibling. */}
@@ -163,6 +164,16 @@ export default function ProgrammeBrowser({
         >
           {exportsSelection ? labels.exportMine : labels.exportAll}
         </a>
+
+        {/* The printable version is the browser's own (#108): what it prints is
+            this very page, minus its controls. */}
+        <button
+          type="button"
+          onClick={() => window.print()}
+          className="rounded-[12px] px-2 py-2 text-sm font-bold text-bleu hover:underline focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        >
+          {labels.print}
+        </button>
       </div>
 
       {/* On `matched`, not on the length of the selection: a link bookmarked

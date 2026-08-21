@@ -383,6 +383,7 @@
     "intro": "The day, room by room. Click a session to read its details.",
     "timeColumn": "Time",
     "roomTba": "Room to be confirmed",
+    "print": "Print or save as PDF",
     "allSessions": "See every session as a list",
     "comingSoonTitle": "The schedule is on its way",
     "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final."

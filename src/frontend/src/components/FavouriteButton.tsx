@@ -30,7 +30,8 @@ export default function FavouriteButton({
       // and aria-pressed carries the state.
       aria-label={label}
       title={label}
-      className={`inline-flex size-8 items-center justify-center rounded-full text-lg transition-colors hover:bg-blanc-casse focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
+      // no-print (#108): a star is a control, and a control on paper is noise.
+      className={`no-print inline-flex size-8 items-center justify-center rounded-full text-lg transition-colors hover:bg-blanc-casse focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
         isFavourite ? "text-orange" : "text-gris"
       } ${className}`}
     >
