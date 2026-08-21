@@ -10,6 +10,10 @@ interface ScheduleGridProps {
   locale: string;
   formatLabels: Record<string, string>;
   labels: { timeColumn: string; roomTba: string };
+  /** Favourites (#442) — passed straight down to the cards. */
+  favourites: Set<string>;
+  onToggleFavourite: (slug: string) => void;
+  favouriteLabels: { add: string; remove: string };
 }
 
 // The desktop grid (#106): rooms across, start times down.
@@ -32,6 +36,9 @@ export default function ScheduleGrid({
   locale,
   formatLabels,
   labels,
+  favourites,
+  onToggleFavourite,
+  favouriteLabels,
 }: ScheduleGridProps) {
   return (
     // Scrolls inside its own box: the page body must never scroll sideways.
@@ -101,6 +108,9 @@ export default function ScheduleGrid({
                           talk={talk}
                           locale={locale}
                           formatLabels={formatLabels}
+                          isFavourite={favourites.has(talk.slug)}
+                          onToggleFavourite={() => onToggleFavourite(talk.slug)}
+                          favouriteLabels={favouriteLabels}
                         />
                       ))}
                     </div>

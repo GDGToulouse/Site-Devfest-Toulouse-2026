@@ -5,6 +5,7 @@ import { getCurrentEdition, getEditionTalks } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ConferencesBrowser from "@/components/conferences/ConferencesBrowser";
 import { localizedField } from "@/lib/i18n-helpers";
+import { parseFavourites } from "@/lib/favourites";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,6 +31,7 @@ export default async function ConferencesPage({
 }) {
   const locale = await getLocale();
   const t = await getTranslations("conferences");
+  const tf = await getTranslations("favourites");
   const edition = await getCurrentEdition();
   const year = edition?.year ?? new Date().getFullYear();
   const talks = edition ? await getEditionTalks(edition.year) : [];
@@ -84,6 +86,7 @@ export default async function ConferencesPage({
     formatLabels,
     levelLabels,
     languageLabels: { fr: t("filters.langFr"), en: t("filters.langEn") },
+    favouriteLabels: { add: tf("add"), remove: tf("remove") },
   };
 
   return (
@@ -104,6 +107,7 @@ export default async function ConferencesPage({
               languages={languages}
               labels={labels}
               initial={initial}
+              initialFavourites={parseFavourites(first(sp.fav))}
             />
           </div>
         ) : (
