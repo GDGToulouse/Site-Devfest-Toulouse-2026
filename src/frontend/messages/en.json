@@ -391,7 +391,13 @@
     "noResults": "No session matches these filters.",
     "allSessions": "See every session as a list",
     "comingSoonTitle": "The schedule is on its way",
-    "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final."
+    "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final.",
+    "printGroupingLabel": "Print",
+    "printByTime": "By time",
+    "printByRoom": "By room",
+    "printSource": "Session details: {url}",
+    "printSelection": "Personal selection — this document is not the whole schedule.",
+    "printCommon": "Shared moments"
   },
   "venue": {
     "pageTitle": "Venue & practical info",

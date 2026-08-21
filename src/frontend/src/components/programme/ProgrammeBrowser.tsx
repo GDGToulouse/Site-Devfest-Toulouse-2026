@@ -9,6 +9,8 @@ import { serializeFavourites, toggleFavourite, type ScheduleView } from "@/lib/f
 import { applyFiltersToParams, matchesFilters, type TalkFilters } from "@/lib/talk-filters";
 import { localizedField } from "@/lib/i18n-helpers";
 import ProgrammeControls, { type ControlLabels } from "./ProgrammeControls";
+import ProgrammePrint, { type PrintLabels } from "./ProgrammePrint";
+import type { PrintGrouping } from "@/lib/print";
 import ScheduleGrid from "./ScheduleGrid";
 import ScheduleAgenda from "./ScheduleAgenda";
 
@@ -21,6 +23,7 @@ interface Labels extends ControlLabels {
   noResults: string;
   exportAllTitle: string;
   exportMineTitle: string;
+  print: PrintLabels;
 }
 
 interface ProgrammeBrowserProps {
@@ -31,6 +34,7 @@ interface ProgrammeBrowserProps {
   initialFavourites: string[];
   initialView: ScheduleView;
   initialFilters: TalkFilters;
+  initialPrintGrouping: PrintGrouping;
 }
 
 // The interactive layer over the schedule (#442, #448).
@@ -52,18 +56,26 @@ export default function ProgrammeBrowser({
   initialFavourites,
   initialView,
   initialFilters,
+  initialPrintGrouping,
 }: ProgrammeBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [favourites, setFavourites] = useState<string[]>(initialFavourites);
   const [view, setView] = useState<ScheduleView>(initialView);
   const [filters, setFilters] = useState<TalkFilters>(initialFilters);
+  const [printGrouping, setPrintGrouping] = useState<PrintGrouping>(initialPrintGrouping);
 
-  function syncUrl(nextFavourites: string[], nextView: ScheduleView, nextFilters: TalkFilters) {
+  function syncUrl(
+    nextFavourites: string[],
+    nextView: ScheduleView,
+    nextFilters: TalkFilters,
+    nextPrint: PrintGrouping = printGrouping,
+  ) {
     const params = new URLSearchParams();
     const fav = serializeFavourites(nextFavourites);
     if (fav) params.set("fav", fav);
     if (nextView !== "all") params.set("view", nextView);
+    if (nextPrint !== "time") params.set("print", nextPrint);
     applyFiltersToParams(params, nextFilters);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
@@ -137,6 +149,9 @@ export default function ProgrammeBrowser({
   );
 
   const favouriteLabels = { add: labels.favouriteAdd, remove: labels.favouriteRemove };
+  // A printed sheet leaves the browser: it has to say when it is a subset, or
+  // it reads as the whole programme in someone else's hands.
+  const hasActiveFilters = Object.values(filters).some(Boolean);
 
   // The export follows what is on screen rather than adding a second control
   // that could disagree with it (#443).
@@ -161,7 +176,26 @@ export default function ProgrammeBrowser({
           exportTitle: exportsSelection ? labels.exportMineTitle : labels.exportAllTitle,
         }}
         icsHref={icsHref}
+        printGrouping={printGrouping}
+        onChangePrintGrouping={(next) => {
+          setPrintGrouping(next);
+          syncUrl(favourites, view, filters, next);
+        }}
       />
+
+      {/* The printed document: absent from the screen, and from its
+          accessibility tree, until the moment it is printed (#449). */}
+      {matched > 0 && (
+        <ProgrammePrint
+          rows={rows}
+          rooms={rooms}
+          grouping={printGrouping}
+          locale={locale}
+          formatLabels={formatLabels}
+          labels={labels.print}
+          isSelection={view !== "all" || hasActiveFilters}
+        />
+      )}
 
       {/* Two different silences: nothing starred yet, or a filter that matches
           nothing. `matched` counts what survives *both*, so the two are told

@@ -8,7 +8,13 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ProgrammeBrowser from "@/components/programme/ProgrammeBrowser";
 import { parseFavourites, parseView } from "@/lib/favourites";
 import { parseFilters } from "@/lib/talk-filters";
+import { formatEventDate } from "@/lib/datetime";
+import { parsePrintGrouping } from "@/lib/print";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
+
+// Absolute: the printed header carries it onto paper, where a relative path
+// means nothing (#449).
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -69,7 +75,8 @@ export default async function ProgrammePage({
 
   return (
     <div className="px-6 py-8 lg:py-12">
-      <div className={READING_COLUMN}>
+      {/* no-print: the printed document carries its own header (#449). */}
+      <div className={`${READING_COLUMN} no-print`}>
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-[64px] lg:leading-[120%] font-bold text-noir">
@@ -131,10 +138,27 @@ export default async function ProgrammePage({
                 exportTitle: tcal("exportAll"),
                 printShort: t("print"),
                 printTitle: t("printTitle"),
+                printGroupingLabel: t("printGroupingLabel"),
+                printByTime: t("printByTime"),
+                printByRoom: t("printByRoom"),
+                print: {
+                  title: `DevFest Toulouse ${edition.year}`,
+                  subtitle: [
+                    edition.startDate ? formatEventDate(edition.startDate, locale) : "",
+                    [edition.venueName, edition.venueAddress].filter(Boolean).join(", "),
+                  ]
+                    .filter(Boolean)
+                    .join(" — "),
+                  source: t("printSource", { url: `${BASE_URL}/${locale}/programme` }),
+                  selectionNote: t("printSelection"),
+                  roomTba: t("roomTba"),
+                  common: t("printCommon"),
+                },
               }}
               initialFavourites={parseFavourites(first(sp.fav))}
               initialView={parseView(first(sp.view))}
               initialFilters={parseFilters((key) => first(sp[key]))}
+              initialPrintGrouping={parsePrintGrouping(first(sp.print))}
             />
           </div>
 
