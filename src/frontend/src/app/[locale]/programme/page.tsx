@@ -28,6 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
 
+// The width every other page of the site reads at. The grid is the exception.
+const READING_COLUMN = "mx-auto max-w-7xl";
+
 export default async function ProgrammePage() {
   const locale = await getLocale();
   const t = await getTranslations("programme");
@@ -50,7 +53,7 @@ export default async function ProgrammePage() {
 
   return (
     <div className="px-6 py-8 lg:py-12">
-      <div className="mx-auto max-w-7xl">
+      <div className={READING_COLUMN}>
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-[64px] lg:leading-[120%] font-bold text-noir">
@@ -68,26 +71,34 @@ export default async function ProgrammePage() {
             </p>
           </div>
         ) : (
-          <>
-            <p className="mt-4 text-lg text-gris">{t("intro")}</p>
+          <p className="mt-4 text-lg text-gris">{t("intro")}</p>
+        )}
+      </div>
 
-            <div className="mt-8">
-              <ScheduleGrid
-                rows={rows}
-                rooms={schedule!.rooms}
-                locale={locale}
-                formatLabels={formatLabels}
-                labels={{ timeColumn: t("timeColumn"), roomTba: t("roomTba") }}
-              />
-              <ScheduleAgenda
-                rows={rows}
-                rooms={schedule!.rooms}
-                locale={locale}
-                formatLabels={formatLabels}
-                labels={{ roomTba: t("roomTba") }}
-              />
-            </div>
+      {rows.length > 0 && (
+        <>
+          {/* The grid leaves the reading column (#441): eight rooms inside
+              max-w-7xl gave 130 px per column, and a wider screen changed
+              nothing at all. Everything else on the page stays aligned with
+              the rest of the site. */}
+          <div className="mx-auto mt-8 max-w-[110rem]">
+            <ScheduleGrid
+              rows={rows}
+              rooms={schedule!.rooms}
+              locale={locale}
+              formatLabels={formatLabels}
+              labels={{ timeColumn: t("timeColumn"), roomTba: t("roomTba") }}
+            />
+            <ScheduleAgenda
+              rows={rows}
+              rooms={schedule!.rooms}
+              locale={locale}
+              formatLabels={formatLabels}
+              labels={{ roomTba: t("roomTba") }}
+            />
+          </div>
 
+          <div className={READING_COLUMN}>
             {/* The searchable list is the other way in (#107) — the grid answers
                 "when and where", the list answers "what is there on my topic". */}
             <Link
@@ -96,9 +107,9 @@ export default async function ProgrammePage() {
             >
               {t("allSessions")}
             </Link>
-          </>
-        )}
-      </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

@@ -25,13 +25,16 @@ export default function SessionCard({ talk, locale, formatLabels, roomName }: Se
       href={`/conferences/${talk.slug}`}
       className="flex h-full flex-col rounded-2xl bg-blanc p-3 shadow-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50"
     >
+      {/* whitespace-nowrap: at eight rooms a column is narrow enough to split
+          "Cloud & DevOps" across two lines mid-label (#441). The badge wraps to
+          its own line instead, and truncates only if the name is very long. */}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className="rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
+        <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
           {formatLabels[talk.format]}
         </span>
         {categoryName && (
           <span
-            className="rounded-full px-2 py-0.5 text-xs font-bold"
+            className="max-w-full truncate whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold"
             style={{ backgroundColor: `${talk.category!.color}20`, color: talk.category!.color }}
           >
             {categoryName}
