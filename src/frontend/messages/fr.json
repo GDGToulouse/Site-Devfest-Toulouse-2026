@@ -357,6 +357,15 @@
     "cta": "Voir l'offre",
     "offersAt": "Offres chez {name}"
   },
+  "favourites": {
+    "add": "Ajouter à mes favoris",
+    "remove": "Retirer de mes favoris",
+    "viewLabel": "Affichage du programme",
+    "viewAll": "Tout le programme",
+    "viewMine": "Mes favoris et les moments communs",
+    "viewMineOnly": "Mes favoris seuls",
+    "empty": "Vous n'avez encore choisi aucune session. Ajoutez celles qui vous intéressent pour composer votre journée — votre sélection tient dans l'adresse de la page, gardez-la en favori pour la retrouver."
+  },
   "programme": {
     "title": "Programme",
     "pageTitle": "Programme — la grille horaire",

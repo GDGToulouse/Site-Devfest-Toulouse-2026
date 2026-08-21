@@ -10,6 +10,10 @@ interface ScheduleAgendaProps {
   locale: string;
   formatLabels: Record<string, string>;
   labels: { roomTba: string };
+  /** Favourites (#442) — passed straight down to the cards. */
+  favourites: Set<string>;
+  onToggleFavourite: (slug: string) => void;
+  favouriteLabels: { add: string; remove: string };
 }
 
 // The same schedule read on a phone (#106): one column, chronological, each
@@ -20,6 +24,9 @@ export default function ScheduleAgenda({
   locale,
   formatLabels,
   labels,
+  favourites,
+  onToggleFavourite,
+  favouriteLabels,
 }: ScheduleAgendaProps) {
   return (
     <div className="space-y-6 lg:hidden">
@@ -45,6 +52,9 @@ export default function ScheduleAgenda({
                     locale={locale}
                     formatLabels={formatLabels}
                     roomName={rooms[index]?.name || labels.roomTba}
+                    isFavourite={favourites.has(talk.slug)}
+                    onToggleFavourite={() => onToggleFavourite(talk.slug)}
+                    favouriteLabels={favouriteLabels}
                   />
                 )),
               )}

@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import type { EditionTalk, TalkFormat, TalkLevel } from "@/lib/types";
 import { localizedField } from "@/lib/i18n-helpers";
+import { serializeFavourites, toggleFavourite } from "@/lib/favourites";
 import ConferencesList from "./ConferencesList";
 
 const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
@@ -29,6 +30,7 @@ interface Labels {
   formatLabels: Record<string, string>;
   levelLabels: Record<string, string>;
   languageLabels: Record<string, string>; // { fr, en }
+  favouriteLabels: { add: string; remove: string };
 }
 
 interface Filters {
@@ -46,6 +48,8 @@ interface ConferencesBrowserProps {
   languages: string[];
   labels: Labels;
   initial: Filters;
+  /** The selection carried by the URL (#442), shared with /programme. */
+  initialFavourites: string[];
 }
 
 // Client layer over the SSR-rendered list (#107): search + toggleable chips
@@ -58,10 +62,12 @@ export default function ConferencesBrowser({
   languages,
   labels,
   initial,
+  initialFavourites,
 }: ConferencesBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [filters, setFilters] = useState<Filters>(initial);
+  const [favourites, setFavourites] = useState<string[]>(initialFavourites);
   // Level + language live behind a "more filters" disclosure to keep the bar
   // compact (#246). Open it on mount if one of them was already active via URL.
   const [showMore, setShowMore] = useState(Boolean(initial.level || initial.language));
@@ -75,7 +81,7 @@ export default function ConferencesBrowser({
   // Toggle a chip (empty value clears it) and reflect the whole filter state in
   // the URL. replace (not push) so the back button doesn't step through every
   // chip click. scroll:false keeps the viewport where the user is filtering.
-  function update(next: Partial<Filters>) {
+  function update(next: Partial<Filters>, nextFavourites = favourites) {
     const merged = { ...filters, ...next };
     setFilters(merged);
     const params = new URLSearchParams();
@@ -84,8 +90,18 @@ export default function ConferencesBrowser({
     if (merged.level) params.set("level", merged.level);
     if (merged.language) params.set("language", merged.language);
     if (merged.category) params.set("category", merged.category);
+    // Carried through every filter change: a selection started here has to
+    // survive to /programme, and losing it on a chip click would be silent.
+    const fav = serializeFavourites(nextFavourites);
+    if (fav) params.set("fav", fav);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }
+
+  function onToggleFavourite(slug: string) {
+    const next = toggleFavourite(favourites, slug);
+    setFavourites(next);
+    update({}, next);
   }
 
   function toggle(key: keyof Filters, value: string) {
@@ -108,6 +124,8 @@ export default function ConferencesBrowser({
     (filters.level ? 1 : 0) +
     (hasLanguageFilter && filters.language ? 1 : 0) +
     (filters.category ? 1 : 0);
+
+  const selected = useMemo(() => new Set(favourites), [favourites]);
 
   const filtered = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
@@ -259,7 +277,14 @@ export default function ConferencesBrowser({
 
       <div className="mt-8">
         {filtered.length > 0 ? (
-          <ConferencesList talks={filtered} locale={locale} formatLabels={labels.formatLabels} />
+          <ConferencesList
+            talks={filtered}
+            locale={locale}
+            formatLabels={labels.formatLabels}
+            favourites={selected}
+            onToggleFavourite={onToggleFavourite}
+            favouriteLabels={labels.favouriteLabels}
+          />
         ) : (
           <p className="rounded-2xl bg-blanc p-8 text-center text-gris shadow-card">
             {labels.noResults}
