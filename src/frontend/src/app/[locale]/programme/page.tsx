@@ -7,7 +7,8 @@ import { getCurrentEdition, getEditionSchedule } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ProgrammeBrowser from "@/components/programme/ProgrammeBrowser";
 import { parseFavourites, parseView } from "@/lib/favourites";
-import type { TalkFormat } from "@/lib/types";
+import { parseFilters } from "@/lib/talk-filters";
+import type { TalkFormat, TalkLevel } from "@/lib/types";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -26,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
+const TALK_LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 
 // The width every other page of the site reads at. The grid is the exception.
 const READING_COLUMN = "mx-auto max-w-7xl";
@@ -50,9 +52,13 @@ export default async function ProgrammePage({
   const formatLabels = Object.fromEntries(
     TALK_FORMATS.map((format) => [format, tc(`format.${format}`)]),
   );
+  const levelLabels = Object.fromEntries(
+    TALK_LEVELS.map((level) => [level, tc(`level.${level}`)]),
+  );
 
-  // Read the selection from the URL on the server, so a bookmarked link renders
-  // its selection before hydration rather than flashing the whole programme.
+  // Read the selection and the filters from the URL on the server, so a
+  // bookmarked link renders them before hydration rather than flashing the
+  // whole programme.
   const sp = await searchParams;
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
@@ -99,6 +105,19 @@ export default async function ProgrammePage({
               labels={{
                 timeColumn: t("timeColumn"),
                 roomTba: t("roomTba"),
+                filterZone: t("filterZone"),
+                actionZone: t("actionZone"),
+                noResults: t("noResults"),
+                filters: tc("filters.filters"),
+                reset: tc("filters.reset"),
+                format: tc("filters.format"),
+                level: tc("filters.level"),
+                language: tc("filters.language"),
+                category: tc("filters.category"),
+                moreFilters: tc("filters.moreFilters"),
+                formatLabels,
+                levelLabels,
+                languageLabels: { fr: tc("filters.langFr"), en: tc("filters.langEn") },
                 viewLabel: tf("viewLabel"),
                 viewAll: tf("viewAll"),
                 viewMine: tf("viewMine"),
@@ -106,12 +125,16 @@ export default async function ProgrammePage({
                 favouriteAdd: tf("add"),
                 favouriteRemove: tf("remove"),
                 empty: tf("empty"),
-                exportAll: tcal("exportAll"),
-                exportMine: tcal("exportMine"),
-                print: t("print"),
+                exportShort: tcal("export"),
+                exportAllTitle: tcal("exportAll"),
+                exportMineTitle: tcal("exportMine"),
+                exportTitle: tcal("exportAll"),
+                printShort: t("print"),
+                printTitle: t("printTitle"),
               }}
               initialFavourites={parseFavourites(first(sp.fav))}
               initialView={parseView(first(sp.view))}
+              initialFilters={parseFilters((key) => first(sp[key]))}
             />
           </div>
 
