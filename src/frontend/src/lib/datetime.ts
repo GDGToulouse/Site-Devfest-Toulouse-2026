@@ -53,3 +53,17 @@ export function formatEventTime(iso: string): string {
   const date = new Date(iso);
   return Number.isNaN(date.getTime()) ? "" : eventTimeFormatter.format(date);
 }
+
+/**
+ * UTC instant → `19 novembre 2026`, in the reader's language but the event's
+ * zone (#449). The header of a printed programme has to name the day, and a
+ * midnight-adjacent instant would name the wrong one under any other zone.
+ */
+export function formatEventDate(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+    timeZone: EVENT_TIME_ZONE,
+    dateStyle: "long",
+  }).format(date);
+}

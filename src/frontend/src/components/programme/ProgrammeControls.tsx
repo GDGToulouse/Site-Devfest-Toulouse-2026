@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Chip, ChipRow } from "@/components/FilterChip";
 import { activeFilterCount, type TalkFilters } from "@/lib/talk-filters";
 import type { ScheduleView } from "@/lib/favourites";
+import type { PrintGrouping } from "@/lib/print";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
 
 const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
@@ -36,6 +37,9 @@ export interface ControlLabels {
   exportTitle: string;
   printShort: string;
   printTitle: string;
+  printGroupingLabel: string;
+  printByTime: string;
+  printByRoom: string;
 }
 
 interface ProgrammeControlsProps {
@@ -47,6 +51,8 @@ interface ProgrammeControlsProps {
   languages: string[];
   labels: ControlLabels;
   icsHref: string;
+  printGrouping: PrintGrouping;
+  onChangePrintGrouping: (grouping: PrintGrouping) => void;
 }
 
 // Everything above the grid, in two zones (#448): what filters it, and what
@@ -63,6 +69,8 @@ export default function ProgrammeControls({
   languages,
   labels,
   icsHref,
+  printGrouping,
+  onChangePrintGrouping,
 }: ProgrammeControlsProps) {
   // Same two disclosures as the session list (#246, #256): level and language
   // behind "more filters", and the whole panel collapsed on mobile. Open on
@@ -243,15 +251,29 @@ export default function ProgrammeControls({
         >
           {labels.exportShort}
         </a>
-        <button
-          type="button"
-          onClick={() => window.print()}
-          title={labels.printTitle}
-          aria-label={labels.printTitle}
-          className="rounded-[12px] bg-blanc px-4 py-2 text-sm font-bold text-noir shadow-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50"
-        >
-          {labels.printShort}
-        </button>
+        {/* The grouping is chosen before printing, not after (#449): a sheet
+            pinned on a door and a programme folded into a pocket are not the
+            same document. */}
+        <span className="inline-flex items-center gap-2 rounded-[12px] bg-blanc px-2 py-1 shadow-card">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            title={labels.printTitle}
+            aria-label={labels.printTitle}
+            className="rounded-[12px] px-2 py-1 text-sm font-bold text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          >
+            {labels.printShort}
+          </button>
+          <select
+            value={printGrouping}
+            onChange={(event) => onChangePrintGrouping(event.target.value as PrintGrouping)}
+            aria-label={labels.printGroupingLabel}
+            className="rounded-[12px] bg-blanc-casse px-2 py-1 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          >
+            <option value="time">{labels.printByTime}</option>
+            <option value="room">{labels.printByRoom}</option>
+          </select>
+        </span>
       </section>
     </div>
   );
