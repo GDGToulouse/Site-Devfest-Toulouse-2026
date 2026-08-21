@@ -362,8 +362,9 @@
     "google": "Google Calendar",
     "outlook": "Outlook",
     "download": "Download the file (.ics)",
-    "exportAll": "The whole schedule in my calendar",
-    "exportMine": "My favourites in my calendar"
+    "export": "Export",
+    "exportAll": "Export the whole schedule to my calendar",
+    "exportMine": "Export my favourites to my calendar"
   },
   "favourites": {
     "add": "Add to my favourites",
@@ -383,7 +384,11 @@
     "intro": "The day, room by room. Click a session to read its details.",
     "timeColumn": "Time",
     "roomTba": "Room to be confirmed",
-    "print": "Print or save as PDF",
+    "print": "Print",
+    "printTitle": "Print the schedule or save it as a PDF",
+    "filterZone": "Filter the schedule",
+    "actionZone": "Schedule actions",
+    "noResults": "No session matches these filters.",
     "allSessions": "See every session as a list",
     "comingSoonTitle": "The schedule is on its way",
     "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final."

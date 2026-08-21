@@ -4,8 +4,9 @@ import { useMemo, useState } from "react";
 
 import { useRouter, usePathname } from "@/i18n/navigation";
 import type { EditionTalk, TalkFormat, TalkLevel } from "@/lib/types";
-import { localizedField } from "@/lib/i18n-helpers";
+import { matchesFilters, type TalkFilters } from "@/lib/talk-filters";
 import { serializeFavourites, toggleFavourite } from "@/lib/favourites";
+import { Chip, ChipRow } from "@/components/FilterChip";
 import ConferencesList from "./ConferencesList";
 
 const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
@@ -33,21 +34,13 @@ interface Labels {
   favouriteLabels: { add: string; remove: string };
 }
 
-interface Filters {
-  q: string;
-  format: string;
-  level: string;
-  language: string;
-  category: string;
-}
-
 interface ConferencesBrowserProps {
   talks: EditionTalk[];
   locale: string;
   categories: CategoryOption[];
   languages: string[];
   labels: Labels;
-  initial: Filters;
+  initial: TalkFilters;
   /** The selection carried by the URL (#442), shared with /programme. */
   initialFavourites: string[];
 }
@@ -66,7 +59,7 @@ export default function ConferencesBrowser({
 }: ConferencesBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [filters, setFilters] = useState<Filters>(initial);
+  const [filters, setFilters] = useState<TalkFilters>(initial);
   const [favourites, setFavourites] = useState<string[]>(initialFavourites);
   // Level + language live behind a "more filters" disclosure to keep the bar
   // compact (#246). Open it on mount if one of them was already active via URL.
@@ -81,7 +74,7 @@ export default function ConferencesBrowser({
   // Toggle a chip (empty value clears it) and reflect the whole filter state in
   // the URL. replace (not push) so the back button doesn't step through every
   // chip click. scroll:false keeps the viewport where the user is filtering.
-  function update(next: Partial<Filters>, nextFavourites = favourites) {
+  function update(next: Partial<TalkFilters>, nextFavourites = favourites) {
     const merged = { ...filters, ...next };
     setFilters(merged);
     const params = new URLSearchParams();
@@ -104,8 +97,8 @@ export default function ConferencesBrowser({
     update({}, next);
   }
 
-  function toggle(key: keyof Filters, value: string) {
-    update({ [key]: filters[key] === value ? "" : value } as Partial<Filters>);
+  function toggle(key: keyof TalkFilters, value: string) {
+    update({ [key]: filters[key] === value ? "" : value } as Partial<TalkFilters>);
   }
 
   const hasActiveFilter =
@@ -127,26 +120,13 @@ export default function ConferencesBrowser({
 
   const selected = useMemo(() => new Set(favourites), [favourites]);
 
-  const filtered = useMemo(() => {
-    const q = filters.q.trim().toLowerCase();
-    return talks.filter((talk) => {
-      if (filters.format && talk.format !== filters.format) return false;
-      if (filters.level && talk.level !== filters.level) return false;
-      if (filters.language && talk.language !== filters.language) return false;
-      if (filters.category) {
-        const cat = talk.category ? localizedField(talk.category, "name", locale) : "";
-        // Categories carry no slug on the public payload; match on the localized
-        // name we surfaced as the chip value.
-        if (cat !== filters.category) return false;
-      }
-      if (q) {
-        const title = talk.title.toLowerCase();
-        const speakers = talk.speakers.map((s) => s.name).join(" ").toLowerCase();
-        if (!title.includes(q) && !speakers.includes(q)) return false;
-      }
-      return true;
-    });
-  }, [talks, filters, locale]);
+  // The predicate is shared with the grid (#448): both views filter the same
+  // sessions on the same families, and a selection made in one holds in the
+  // other.
+  const filtered = useMemo(
+    () => talks.filter((talk) => matchesFilters(talk, filters, locale)),
+    [talks, filters, locale],
+  );
 
   return (
     <div>
@@ -292,39 +272,5 @@ export default function ConferencesBrowser({
         )}
       </div>
     </div>
-  );
-}
-
-function ChipRow({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-      <span className="shrink-0 text-sm font-semibold text-noir sm:w-24">{label}</span>
-      <div className="flex flex-wrap gap-2">{children}</div>
-    </div>
-  );
-}
-
-function Chip({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
-        active
-          ? "bg-malachite text-blanc"
-          : "bg-blanc-casse text-noir hover:bg-gris/15"
-      }`}
-    >
-      {children}
-    </button>
   );
 }

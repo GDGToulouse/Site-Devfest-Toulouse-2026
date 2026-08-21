@@ -362,8 +362,9 @@
     "google": "Google Agenda",
     "outlook": "Outlook",
     "download": "Télécharger le fichier (.ics)",
-    "exportAll": "Tout le programme dans mon agenda",
-    "exportMine": "Mes favoris dans mon agenda"
+    "export": "Exporter",
+    "exportAll": "Exporter tout le programme vers mon agenda",
+    "exportMine": "Exporter mes favoris vers mon agenda"
   },
   "favourites": {
     "add": "Ajouter à mes favoris",
@@ -383,7 +384,11 @@
     "intro": "Le programme de la journée, salle par salle. Cliquez sur une session pour en lire le détail.",
     "timeColumn": "Horaire",
     "roomTba": "Salle à préciser",
-    "print": "Imprimer ou enregistrer en PDF",
+    "print": "Imprimer",
+    "printTitle": "Imprimer ou enregistrer le programme en PDF",
+    "filterZone": "Filtrer le programme",
+    "actionZone": "Actions sur le programme",
+    "noResults": "Aucune session ne correspond à ces filtres.",
     "allSessions": "Voir toutes les sessions en liste",
     "comingSoonTitle": "La grille horaire arrive bientôt",
     "comingSoonBody": "Les sessions du DevFest Toulouse {year} sont en cours de placement. La grille sera publiée ici dès qu'elle sera figée."

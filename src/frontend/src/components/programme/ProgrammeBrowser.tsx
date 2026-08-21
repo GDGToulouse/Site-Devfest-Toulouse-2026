@@ -5,27 +5,22 @@ import { useMemo, useState } from "react";
 import { useRouter, usePathname } from "@/i18n/navigation";
 import type { EditionSchedule } from "@/lib/types";
 import { buildScheduleRows } from "@/lib/schedule";
-import {
-  serializeFavourites,
-  toggleFavourite,
-  type ScheduleView,
-} from "@/lib/favourites";
+import { serializeFavourites, toggleFavourite, type ScheduleView } from "@/lib/favourites";
+import { applyFiltersToParams, matchesFilters, type TalkFilters } from "@/lib/talk-filters";
+import { localizedField } from "@/lib/i18n-helpers";
+import ProgrammeControls, { type ControlLabels } from "./ProgrammeControls";
 import ScheduleGrid from "./ScheduleGrid";
 import ScheduleAgenda from "./ScheduleAgenda";
 
-interface Labels {
+interface Labels extends ControlLabels {
   timeColumn: string;
   roomTba: string;
-  viewLabel: string;
-  viewAll: string;
-  viewMine: string;
-  viewMineOnly: string;
   favouriteAdd: string;
   favouriteRemove: string;
   empty: string;
-  exportAll: string;
-  exportMine: string;
-  print: string;
+  noResults: string;
+  exportAllTitle: string;
+  exportMineTitle: string;
 }
 
 interface ProgrammeBrowserProps {
@@ -35,20 +30,20 @@ interface ProgrammeBrowserProps {
   labels: Labels;
   initialFavourites: string[];
   initialView: ScheduleView;
+  initialFilters: TalkFilters;
 }
 
-const VIEWS: ScheduleView[] = ["all", "mine", "mine-only"];
-
-// The interactive layer over the schedule (#442).
+// The interactive layer over the schedule (#442, #448).
 //
-// It owns the selection and mirrors it into the querystring, the same way the
-// session filters do (#107). Two consequences worth keeping in mind:
+// It owns the selection, the view and the filters, and mirrors all three into
+// the querystring — the same mechanism as the session filters (#107). Two
+// consequences worth keeping in mind:
 //
 //   - the filtering happens here, in the browser, on the payload the server
 //     already rendered. The HTML is identical for every visitor, so the page
-//     stays cacheable instead of forking into one variant per selection;
+//     stays cacheable instead of forking into one variant per combination;
 //   - `replace`, never `push`: with `push` the back button would walk back
-//     through every star the visitor clicked.
+//     through every star and every chip the visitor clicked.
 export default function ProgrammeBrowser({
   schedule,
   locale,
@@ -56,17 +51,20 @@ export default function ProgrammeBrowser({
   labels,
   initialFavourites,
   initialView,
+  initialFilters,
 }: ProgrammeBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [favourites, setFavourites] = useState<string[]>(initialFavourites);
   const [view, setView] = useState<ScheduleView>(initialView);
+  const [filters, setFilters] = useState<TalkFilters>(initialFilters);
 
-  function syncUrl(nextFavourites: string[], nextView: ScheduleView) {
+  function syncUrl(nextFavourites: string[], nextView: ScheduleView, nextFilters: TalkFilters) {
     const params = new URLSearchParams();
     const fav = serializeFavourites(nextFavourites);
     if (fav) params.set("fav", fav);
     if (nextView !== "all") params.set("view", nextView);
+    applyFiltersToParams(params, nextFilters);
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
@@ -74,26 +72,31 @@ export default function ProgrammeBrowser({
   function onToggleFavourite(slug: string) {
     const next = toggleFavourite(favourites, slug);
     setFavourites(next);
-    syncUrl(next, view);
+    syncUrl(next, view, filters);
   }
 
   function onChangeView(next: ScheduleView) {
     setView(next);
-    syncUrl(favourites, next);
+    syncUrl(favourites, next, filters);
+  }
+
+  function onChangeFilters(next: Partial<TalkFilters>) {
+    const merged = { ...filters, ...next };
+    setFilters(merged);
+    syncUrl(favourites, view, merged);
   }
 
   const selected = useMemo(() => new Set(favourites), [favourites]);
 
   // Filtering the payload rather than the rows: the row builder then recomputes
-  // the columns too, so a selection spread over three rooms draws three columns
-  // instead of eight mostly-empty ones. Rows and columns come out of the same
-  // call — they index into each other and must never be derived apart.
+  // the columns too, so a filter that empties a room drops its column instead of
+  // leaving eight mostly-blank ones. Rows and columns come out of the same call
+  // — they index into each other and must never be derived apart.
   const { rows, rooms, matched } = useMemo(() => {
-    if (view === "all") {
-      return { rows: buildScheduleRows(schedule), rooms: schedule.rooms, matched: 0 };
-    }
-
-    const talks = schedule.talks.filter((talk) => selected.has(talk.slug));
+    const talks = schedule.talks.filter(
+      (talk) =>
+        matchesFilters(talk, filters, locale) && (view === "all" || selected.has(talk.slug)),
+    );
     const kept = new Set(
       talks.map((talk) => (talk.roomId != null ? `id:${talk.roomId}` : `label:${talk.room ?? ""}`)),
     );
@@ -107,19 +110,32 @@ export default function ProgrammeBrowser({
         talks,
         rooms: visibleRooms,
         // The shared moments — welcome, keynotes, breaks, lunch, the party —
-        // are never starred: they concern everyone. They show, or they do not.
-        entries: view === "mine" ? schedule.entries : [],
+        // are never starred and never filtered: they concern everyone. They
+        // frame the day, unless the visitor asked for their sessions alone.
+        entries: view === "mine-only" ? [] : schedule.entries,
       }),
       rooms: visibleRooms,
       matched: talks.length,
     };
-  }, [schedule, selected, view]);
+  }, [schedule, selected, view, filters, locale]);
 
-  const viewLabels: Record<ScheduleView, string> = {
-    all: labels.viewAll,
-    mine: labels.viewMine,
-    "mine-only": labels.viewMineOnly,
-  };
+  // Only the values an edition actually uses become chips: a filter that
+  // matches nothing is worse than no filter at all (#107).
+  const categories = useMemo(
+    () => [
+      ...new Set(
+        schedule.talks
+          .map((talk) => (talk.category ? localizedField(talk.category, "name", locale) : ""))
+          .filter(Boolean),
+      ),
+    ],
+    [schedule.talks, locale],
+  );
+  const languages = useMemo(
+    () => [...new Set(schedule.talks.map((talk) => talk.language).filter(Boolean))],
+    [schedule.talks],
+  );
+
   const favouriteLabels = { add: labels.favouriteAdd, remove: labels.favouriteRemove };
 
   // The export follows what is on screen rather than adding a second control
@@ -133,57 +149,28 @@ export default function ProgrammeBrowser({
 
   return (
     <div>
-      <div className="no-print mb-6 flex flex-wrap items-center gap-4">
-        {/* A radio group, not three buttons: the three views are one choice, and
-            a screen reader has to hear it that way. Nothing else may live inside
-            it — hence the export link as a sibling. */}
-        <div
-          role="radiogroup"
-          aria-label={labels.viewLabel}
-          className="inline-flex flex-wrap gap-2 rounded-2xl bg-blanc-casse p-1"
-        >
-          {VIEWS.map((value) => (
-            <button
-              key={value}
-              type="button"
-              role="radio"
-              aria-checked={view === value}
-              onClick={() => onChangeView(value)}
-              className={`rounded-[12px] px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
-                view === value ? "bg-blanc text-noir shadow-card" : "text-gris hover:text-noir"
-              }`}
-            >
-              {viewLabels[value]}
-            </button>
-          ))}
-        </div>
+      <ProgrammeControls
+        view={view}
+        onChangeView={onChangeView}
+        filters={filters}
+        onChangeFilters={onChangeFilters}
+        categories={categories}
+        languages={languages}
+        labels={{
+          ...labels,
+          exportTitle: exportsSelection ? labels.exportMineTitle : labels.exportAllTitle,
+        }}
+        icsHref={icsHref}
+      />
 
-        <a
-          href={icsHref}
-          className="rounded-[12px] px-2 py-2 text-sm font-bold text-bleu hover:underline focus:outline-none focus:ring-2 focus:ring-malachite/50"
-        >
-          {exportsSelection ? labels.exportMine : labels.exportAll}
-        </a>
-
-        {/* The printable version is the browser's own (#108): what it prints is
-            this very page, minus its controls. */}
-        <button
-          type="button"
-          onClick={() => window.print()}
-          className="rounded-[12px] px-2 py-2 text-sm font-bold text-bleu hover:underline focus:outline-none focus:ring-2 focus:ring-malachite/50"
-        >
-          {labels.print}
-        </button>
-      </div>
-
-      {/* On `matched`, not on the length of the selection: a link bookmarked
-          weeks ago may name only sessions that have since been cancelled, and
-          showing the day's skeleton with nothing in it would explain nothing.
-          aria-live because switching view changes the page under a screen
-          reader that would otherwise hear no result at all. */}
-      {view !== "all" && matched === 0 ? (
+      {/* Two different silences: nothing starred yet, or a filter that matches
+          nothing. `matched` counts what survives *both*, so the two are told
+          apart rather than sharing one vague sentence.
+          aria-live because a chip or a view change rewrites the page under a
+          screen reader that would otherwise hear no result at all. */}
+      {matched === 0 ? (
         <p className="rounded-3xl bg-blanc p-6 text-lg text-gris shadow-card" aria-live="polite">
-          {labels.empty}
+          {view !== "all" && favourites.length === 0 ? labels.empty : labels.noResults}
         </p>
       ) : (
         <>
