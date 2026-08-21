@@ -793,6 +793,42 @@ async function seedDev() {
       description: "Génériques, inférence et types conditionnels, pas à pas.",
       format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
       speaker: speakerJean.id, room: "Agora 1", start: "15:30", end: "16:10" },
+    // The four rooms below exist only to fill the grid's remaining columns
+    // (#441): with four salles the layout looked fine and hid the fact that a
+    // column falls to 130 px at eight. The demo day has to reach eight, or the
+    // defect stays invisible in dev.
+    { slug: "nix-pour-les-presses", title: "Nix pour les gens pressés",
+      description: "Un environnement reproductible sans y passer le trimestre.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Lauragais", start: "08:50", end: "09:30" },
+    { slug: "rust-cote-serveur", title: "Rust côté serveur : le prix d'entrée",
+      description: "Ce qu'on gagne, ce qu'on paie, et quand ça ne vaut pas le coup.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Ellipse", start: "08:50", end: "09:30" },
+    { slug: "refactoring-en-binome", title: "Refactoring en binôme",
+      description: "Quinze minutes pour montrer ce qu'un pas de deux change au code.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "08:50", end: "09:10" },
+    { slug: "faire-vivre-une-communaute", title: "Faire vivre une communauté locale",
+      description: "Ce qui tient une communauté au-delà du premier semestre.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Salle Communautés", start: "10:00", end: "10:40" },
+    { slug: "sqlite-en-production", title: "SQLite en production, vraiment ?",
+      description: "Les cas où c'est le bon choix, et ceux où c'est un piège.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Lauragais", start: "10:55", end: "11:35" },
+    { slug: "css-moderne-vos-hacks", title: "Le CSS moderne a rattrapé vos hacks",
+      description: "Container queries, :has(), subgrid : ce qu'on peut enfin supprimer.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Ellipse", start: "13:15", end: "13:55" },
+    { slug: "documenter-sans-y-passer-ses-vendredis", title: "Documenter sans y passer ses vendredis",
+      description: "Écrire le strict nécessaire, au moment où ça coûte le moins cher.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Salle Quickies", start: "13:15", end: "13:35" },
+    { slug: "organiser-un-meetup-qui-dure", title: "Organiser un meetup qui dure",
+      description: "Retour sur dix ans de rendez-vous mensuels, sans s'épuiser.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Salle Communautés", start: "14:10", end: "14:50" },
   ] as const;
 
   const roomsByName = new Map(
