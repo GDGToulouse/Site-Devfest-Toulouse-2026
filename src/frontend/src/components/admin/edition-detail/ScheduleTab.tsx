@@ -6,7 +6,7 @@ import { adminFetch, humanError } from "@/lib/admin-api";
 import LoadingSpinner from "@/components/admin/LoadingSpinner";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import { isoToLocalTime, localInputToIso } from "@/lib/datetime";
+import { formatEventTime, localInputToIso } from "@/lib/datetime";
 import type { ScheduleEntry } from "@/lib/types";
 
 interface ScheduleTabProps {
@@ -116,7 +116,7 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
             <li key={entry.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-blanc shadow-card px-4 py-3">
               <span className="text-base text-noir">
                 <span className="text-gris">
-                  {isoToLocalTime(entry.startsAt)} – {isoToLocalTime(entry.endsAt)}
+                  {formatEventTime(entry.startsAt)} – {formatEventTime(entry.endsAt)}
                 </span>{" "}
                 {entry.labelFr}
                 <span className="text-gris"> · {KIND_LABELS[entry.kind]}</span>

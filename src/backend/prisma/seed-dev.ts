@@ -728,36 +728,115 @@ async function seedDev() {
       speakers: { connect: [{ id: speakerJean.id }] },
     },
   });
-  console.log("Talks created: 2");
+  // --- Schedule (#105, rendered by #106) ---
+  //
+  // A day dense enough for the grid to be worth looking at: six session slots
+  // across four rooms. Diagora holds eight, and four staying empty is the case
+  // the endpoint derives its columns for — a venue's room list is not a grid.
+  //
+  // Times are UTC, an hour behind the November wall clock in Toulouse, and fit
+  // between the off-session moments of the 2026 sponsor guide below.
+  const sessions = [
+    { slug: "observabilite-opentelemetry", title: "Observabilité : OpenTelemetry en pratique",
+      description: "Instrumenter une application sans se noyer dans les traces.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "08:50", end: "09:30" },
+    { slug: "design-system-tailwind", title: "Un design system qui survit à ses auteurs",
+      description: "Tokens, composants et conventions : ce qui tient dans la durée.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "08:50", end: "09:30" },
+    { slug: "postgres-plan-execution", title: "Postgres : lire un plan d'exécution",
+      description: "EXPLAIN ANALYZE, ligne par ligne, sur des requêtes réelles.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "08:50", end: "09:30" },
+    { slug: "accessibilite-par-ou-commencer", title: "Accessibilité : par où commencer",
+      description: "Les quelques gestes qui changent tout, avant l'audit complet.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Pastel", start: "08:50", end: "09:10" },
+    { slug: "terraform-sans-douleur", title: "Terraform sans douleur",
+      description: "Modules, états partagés et revues : industrialiser sans se figer.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "10:00", end: "10:40" },
+    { slug: "server-actions-limites", title: "Server Actions : jusqu'où aller",
+      description: "Ce que les Server Actions résolvent, et ce qu'elles compliquent.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "10:00", end: "10:40" },
+    { slug: "edge-computing-really-buys", title: "Edge computing: what it actually buys you",
+      description: "Measuring the latency you gain, and the complexity you pay.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "en", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "10:55", end: "11:35" },
+    { slug: "web-components-renouveau", title: "Web Components : le renouveau",
+      description: "Les nouvelles API navigateur qui les rendent enfin utilisables.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Pastel", start: "10:55", end: "11:15" },
+    { slug: "finops-reprendre-la-main", title: "FinOps : reprendre la main sur la facture",
+      description: "Attribuer les coûts, puis décider — dans cet ordre.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "13:15", end: "13:55" },
+    { slug: "tests-end-to-end-playwright", title: "Tests end-to-end : arrêter de les subir",
+      description: "Écrire des tests qui échouent pour une bonne raison seulement.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "13:15", end: "13:55" },
+    { slug: "vos-secrets-sont-en-clair", title: "Vos secrets sont en clair (et vous l'ignorez)",
+      description: "Là où les jetons finissent vraiment : logs, images, tickets.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "14:10", end: "14:50" },
+    { slug: "islands-architecture-production", title: "Islands architecture in production",
+      description: "Shipping less JavaScript without giving up interactivity.",
+      format: "CONFERENCE", level: "CONFIRME", language: "en", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "14:10", end: "14:50" },
+    { slug: "green-it-mesurer-avant", title: "Green IT : mesurer avant d'optimiser",
+      description: "Ce qu'on croit économiser, et ce qu'on économise vraiment.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "15:30", end: "16:10" },
+    { slug: "typescript-types-avances", title: "TypeScript : les types avancés sans peur",
+      description: "Génériques, inférence et types conditionnels, pas à pas.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "15:30", end: "16:10" },
+  ] as const;
 
-  // --- Schedule (#105) ---
-  // Both talks get an hour and a room so the "Programme" menu shows up (#203)
-  // and the grid has something to draw. Times follow the 2026 day plan of the
-  // sponsor guide; the dates are UTC, an hour behind the local schedule.
-  const amphitheatre = await prisma.room.findUnique({
-    where: { venueId_name: { venueId: diagora.id, name: "Amphithéâtre" } },
-  });
-  const hemicycle = await prisma.room.findUnique({
-    where: { venueId_name: { venueId: diagora.id, name: "Hémicycle" } },
-  });
-  await prisma.talk.update({
-    where: { editionId_slug: { editionId: edition.id, slug: "kubernetes-en-production" } },
-    data: {
-      roomId: amphitheatre?.id,
-      roomLabel: amphitheatre?.name,
-      startsAt: new Date("2026-11-19T08:00:00Z"),
-      endsAt: new Date("2026-11-19T08:40:00Z"),
-    },
-  });
-  await prisma.talk.update({
-    where: { editionId_slug: { editionId: edition.id, slug: "react-server-components" } },
-    data: {
-      roomId: hemicycle?.id,
-      roomLabel: hemicycle?.name,
-      startsAt: new Date("2026-11-19T08:00:00Z"),
-      endsAt: new Date("2026-11-19T08:15:00Z"),
-    },
-  });
+  const roomsByName = new Map(
+    (await prisma.room.findMany({ where: { venueId: diagora.id } })).map((r) => [r.name, r]),
+  );
+  const placedAt = (time: string) => new Date(`2026-11-19T${time}:00Z`);
+
+  for (const session of sessions) {
+    const room = roomsByName.get(session.room);
+    await prisma.talk.create({
+      data: {
+        slug: session.slug, title: session.title, description: session.description,
+        format: session.format, level: session.level, language: session.language,
+        publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: session.category,
+        speakers: { connect: [{ id: session.speaker }] },
+        roomId: room?.id,
+        // Frozen at placement time (#375): renaming the room in 2027 must not
+        // rewrite what the 2026 grid says.
+        roomLabel: room?.name,
+        startsAt: placedAt(session.start),
+        endsAt: placedAt(session.end),
+      },
+    });
+  }
+
+  // The two talks created above get their slot too — one of them is the only
+  // English quickie, and both are the ones the speaker-edit fixtures point at.
+  const placements = [
+    { slug: "kubernetes-en-production", room: "Amphithéâtre", start: "10:55", end: "11:35" },
+    { slug: "react-server-components", room: "Pastel", start: "13:15", end: "13:35" },
+  ];
+  for (const placement of placements) {
+    const room = roomsByName.get(placement.room);
+    await prisma.talk.update({
+      where: { editionId_slug: { editionId: edition.id, slug: placement.slug } },
+      data: {
+        roomId: room?.id,
+        roomLabel: room?.name,
+        startsAt: placedAt(placement.start),
+        endsAt: placedAt(placement.end),
+      },
+    });
+  }
+  console.log(`Talks created: ${sessions.length + 2}`);
 
   // Everything that is not a session. Lunch is the one that matters for the
   // grid: it spans every room, and in 2026 no quickie runs under it.

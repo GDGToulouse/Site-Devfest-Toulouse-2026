@@ -111,6 +111,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // it unconditionally would put a 404 in the sitemap.
   if (featured?.hasVenueInfo) fullyTranslatedRoutes.push("/lieu");
 
+  // /programme renders a "coming soon" card rather than 404ing before the grid
+  // is placed (#106), so listing it early would only index an empty page.
+  if (featured?.isScheduleReady) fullyTranslatedRoutes.push("/programme");
+
   const entries: MetadataRoute.Sitemap = [];
 
   // Routes available in both locales. These are code-backed pages with no row

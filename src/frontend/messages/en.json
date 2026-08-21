@@ -357,6 +357,19 @@
     "cta": "View offer",
     "offersAt": "Offers at {name}"
   },
+  "programme": {
+    "title": "Schedule",
+    "pageTitle": "Schedule — the full grid",
+    "description": "The DevFest Toulouse {year} schedule: every session, room by room.",
+    "heading": "DevFest Toulouse {year} schedule",
+    "home": "Home",
+    "intro": "The day, room by room. Click a session to read its details.",
+    "timeColumn": "Time",
+    "roomTba": "Room to be confirmed",
+    "allSessions": "See every session as a list",
+    "comingSoonTitle": "The schedule is on its way",
+    "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final."
+  },
   "venue": {
     "pageTitle": "Venue & practical info",
     "description": "How to reach DevFest Toulouse, where to park and how to get around.",
