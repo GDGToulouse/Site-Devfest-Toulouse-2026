@@ -42,7 +42,7 @@ export default function ScheduleGrid({
 }: ScheduleGridProps) {
   return (
     // Scrolls inside its own box: the page body must never scroll sideways.
-    <div className="hidden overflow-x-auto lg:block">
+    <div className="print-grid hidden overflow-x-auto lg:block">
       <table className="w-full border-separate border-spacing-2">
         <thead>
           <tr>

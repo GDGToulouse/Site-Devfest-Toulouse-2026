@@ -29,7 +29,12 @@ export default function ScheduleAgenda({
   favouriteLabels,
 }: ScheduleAgendaProps) {
   return (
-    <div className="space-y-6 lg:hidden">
+    // `print-agenda` (#108): on paper this is the schedule, whatever the width
+    // of the screen it was printed from — the grid does not fit on A4. The rule
+    // that swaps them lives in globals.css, not in a Tailwind `print:` variant:
+    // the variant generated nothing here, and a class that produces no CSS
+    // fails silently.
+    <div className="print-agenda space-y-6 lg:hidden">
       {rows.map((row) =>
         row.type === "band" ? (
           <div key={row.key} className="rounded-2xl bg-blanc-casse px-4 py-3">

@@ -108,6 +108,7 @@ export default async function ProgrammePage({
                 empty: tf("empty"),
                 exportAll: tcal("exportAll"),
                 exportMine: tcal("exportMine"),
+                print: t("print"),
               }}
               initialFavourites={parseFavourites(first(sp.fav))}
               initialView={parseView(first(sp.view))}
@@ -119,7 +120,7 @@ export default async function ProgrammePage({
                 "when and where", the list answers "what is there on my topic". */}
             <Link
               href="/conferences"
-              className="mt-8 inline-flex items-center gap-2 rounded-[12px] bg-bismarck px-4 py-2 text-sm font-bold text-blanc hover:bg-bismarck/90"
+              className="no-print mt-8 inline-flex items-center gap-2 rounded-[12px] bg-bismarck px-4 py-2 text-sm font-bold text-blanc hover:bg-bismarck/90"
             >
               {t("allSessions")}
             </Link>
