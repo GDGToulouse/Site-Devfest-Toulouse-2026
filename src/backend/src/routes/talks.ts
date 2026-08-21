@@ -52,6 +52,12 @@ export default async function talkRoutes(app: FastifyInstance) {
       format: talk.format,
       level: talk.level,
       language: talk.language,
+      // When and where (#443): what the "add to my calendar" buttons need.
+      // `room` is the label frozen when the talk was placed (#375).
+      room: talk.roomLabel,
+      startsAt: talk.startsAt,
+      endsAt: talk.endsAt,
+      year: edition.year,
       category: visibleCategory(talk.category),
       speakers: talk.speakers,
     };

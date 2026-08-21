@@ -357,6 +357,14 @@
     "cta": "Voir l'offre",
     "offersAt": "Offres chez {name}"
   },
+  "calendar": {
+    "heading": "Ajouter à mon agenda",
+    "google": "Google Agenda",
+    "outlook": "Outlook",
+    "download": "Télécharger le fichier (.ics)",
+    "exportAll": "Tout le programme dans mon agenda",
+    "exportMine": "Mes favoris dans mon agenda"
+  },
   "favourites": {
     "add": "Ajouter à mes favoris",
     "remove": "Retirer de mes favoris",

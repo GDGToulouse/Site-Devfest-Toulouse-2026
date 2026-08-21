@@ -23,6 +23,8 @@ interface Labels {
   favouriteAdd: string;
   favouriteRemove: string;
   empty: string;
+  exportAll: string;
+  exportMine: string;
 }
 
 interface ProgrammeBrowserProps {
@@ -119,29 +121,48 @@ export default function ProgrammeBrowser({
   };
   const favouriteLabels = { add: labels.favouriteAdd, remove: labels.favouriteRemove };
 
+  // The export follows what is on screen rather than adding a second control
+  // that could disagree with it (#443).
+  const exportsSelection = view !== "all" && favourites.length > 0;
+  const icsHref = exportsSelection
+    ? `/api/editions/${schedule.year}/schedule.ics?talks=${encodeURIComponent(
+        serializeFavourites(favourites),
+      )}`
+    : `/api/editions/${schedule.year}/schedule.ics`;
+
   return (
     <div>
-      {/* A radio group, not three buttons: the three views are one choice, and
-          a screen reader has to hear it that way. */}
-      <div
-        role="radiogroup"
-        aria-label={labels.viewLabel}
-        className="mb-6 inline-flex flex-wrap gap-2 rounded-2xl bg-blanc-casse p-1"
-      >
-        {VIEWS.map((value) => (
-          <button
-            key={value}
-            type="button"
-            role="radio"
-            aria-checked={view === value}
-            onClick={() => onChangeView(value)}
-            className={`rounded-[12px] px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
-              view === value ? "bg-blanc text-noir shadow-card" : "text-gris hover:text-noir"
-            }`}
-          >
-            {viewLabels[value]}
-          </button>
-        ))}
+      <div className="mb-6 flex flex-wrap items-center gap-4">
+        {/* A radio group, not three buttons: the three views are one choice, and
+            a screen reader has to hear it that way. Nothing else may live inside
+            it — hence the export link as a sibling. */}
+        <div
+          role="radiogroup"
+          aria-label={labels.viewLabel}
+          className="inline-flex flex-wrap gap-2 rounded-2xl bg-blanc-casse p-1"
+        >
+          {VIEWS.map((value) => (
+            <button
+              key={value}
+              type="button"
+              role="radio"
+              aria-checked={view === value}
+              onClick={() => onChangeView(value)}
+              className={`rounded-[12px] px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
+                view === value ? "bg-blanc text-noir shadow-card" : "text-gris hover:text-noir"
+              }`}
+            >
+              {viewLabels[value]}
+            </button>
+          ))}
+        </div>
+
+        <a
+          href={icsHref}
+          className="rounded-[12px] px-2 py-2 text-sm font-bold text-bleu hover:underline focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        >
+          {exportsSelection ? labels.exportMine : labels.exportAll}
+        </a>
       </div>
 
       {/* On `matched`, not on the length of the selection: a link bookmarked

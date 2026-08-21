@@ -357,6 +357,14 @@
     "cta": "View offer",
     "offersAt": "Offers at {name}"
   },
+  "calendar": {
+    "heading": "Add to my calendar",
+    "google": "Google Calendar",
+    "outlook": "Outlook",
+    "download": "Download the file (.ics)",
+    "exportAll": "The whole schedule in my calendar",
+    "exportMine": "My favourites in my calendar"
+  },
   "favourites": {
     "add": "Add to my favourites",
     "remove": "Remove from my favourites",
