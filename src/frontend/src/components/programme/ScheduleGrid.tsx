@@ -32,26 +32,32 @@ interface ScheduleGridProps {
 // viewport when it must, and the wrapper scrolls.
 const MIN_COLUMN = "min-w-[180px]";
 
-// Pinning the room row took a scroll container of our own, and that is not a
-// stylistic preference (#455).
+// Horizontal only, and the height is left alone (#460).
 //
-// The obvious fix — `sticky top-[60px]`, parking the row under the site header —
-// cannot work here. `overflow-x: auto` on the wrapper makes CSS compute
-// `overflow-y` to `auto` as well, so the wrapper *is* a scroll container, and a
-// sticky child resolves against it rather than the viewport. Measured on the
-// page: the row scrolled away exactly as before. `overflow-y: clip` does not
-// save it either — next to a scrolling axis it is normalised to `hidden`, which
-// is still a scroll container.
+// #455 bounded this box to `calc(100vh-5rem)` so the room row could pin to it.
+// The cost was a second vertical scrollbar beside the page's own, and the pin
+// it bought was never the one wanted: the row sticks to the *box*, so scrolling
+// the page carried it off screen anyway — measured at `scrollY = 900`, the row
+// sat at `top = -392`. Two scrollbars for a pin that only held while scrolling
+// inside the box.
 //
-// So the grid scrolls inside a box of its own, bounded to the viewport, and the
-// headers pin to that box on both axes. The page keeps its own scroll for
-// everything around it.
-const GRID_VIEWPORT = "max-h-[calc(100vh-5rem)] overflow-auto";
+// Pinning it to the viewport is not available here. `overflow-x: auto` makes
+// CSS compute `overflow-y` to `auto` too, so this element is a scroll container
+// whatever its height, and a sticky child resolves against it rather than the
+// viewport — verified twice on the page, and `overflow-y: clip` is normalised
+// to `hidden` beside a scrolling axis, which is still a scroll container. The
+// way out is a second, duplicated header row outside this box, synced on
+// `scrollLeft`; that is its own piece of work.
+//
+// Unbounded, the box never scrolls vertically, so only the page does. The time
+// column keeps its horizontal pin, which is the one that matters on a grid this
+// wide.
+const GRID_VIEWPORT = "overflow-x-auto";
 
-// `border-spacing-2` leaves 8 px of nothing between cells, and scrolled content
-// shows through those gaps behind a sticky header. This lays an opaque backdrop
-// that overflows the cell by half a gap on each side, and a full gap below,
-// where the first row of cards arrives.
+// `border-spacing-2` leaves 8 px of nothing between cells, and content scrolled
+// under the pinned time column shows through those gaps. This lays an opaque
+// backdrop that overflows the cell by half a gap on each side, and a full gap
+// below, where the first row of cards arrives.
 const STICKY_BACKDROP =
   "before:absolute before:-inset-x-1 before:-top-1 before:-bottom-2 before:bg-blanc before:content-['']";
 
@@ -108,12 +114,12 @@ export default function ScheduleGrid({
         <table className="w-full border-separate border-spacing-2">
           <thead>
             <tr>
-              {/* Sticky on both axes, and above the room row it crosses: the
-                  hour stays readable while the rooms scroll past, the rooms
-                  while the hours do. Opaque, or cards slide visibly under. */}
+              {/* Pinned horizontally, and above the room row it crosses: the
+                  hour stays readable however far right you have scrolled.
+                  Opaque, or cards slide visibly under. */}
               <th
                 scope="col"
-                className={`sticky left-0 top-0 z-30 w-24 min-w-24 bg-blanc text-left text-sm font-bold text-gris ${STICKY_BACKDROP}`}
+                className={`sticky left-0 z-30 w-24 min-w-24 bg-blanc text-left text-sm font-bold text-gris ${STICKY_BACKDROP}`}
               >
                 <span className="relative">{labels.timeColumn}</span>
               </th>
@@ -121,11 +127,9 @@ export default function ScheduleGrid({
                 <th
                   key={room.id ?? `label:${room.name}`}
                   scope="col"
-                  className={`${MIN_COLUMN} sticky top-0 z-20 ${STICKY_BACKDROP}`}
+                  className={MIN_COLUMN}
                 >
-                  {/* The pill is an inner box so the backdrop above can sit
-                      behind it without swallowing its rounded corners. */}
-                  <div className="relative rounded-2xl bg-blanc-casse px-3 py-2 text-left text-sm font-bold text-noir">
+                  <div className="rounded-2xl bg-blanc-casse px-3 py-2 text-left text-sm font-bold text-noir">
                     {room.name || labels.roomTba}
                   </div>
                 </th>

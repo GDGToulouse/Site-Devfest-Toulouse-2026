@@ -54,7 +54,9 @@ const props = {
 
 /** Declare the scroll geometry jsdom will not compute, then let the grid read it. */
 function setScrollGeometry(scrollWidth: number, clientWidth: number, scrollLeft = 0) {
-  const scroller = document.querySelector(".overflow-auto") as HTMLElement;
+  // The table's parent, not a utility class: the class changed with #460 and
+  // took four tests down with it, for a rename that changed no behaviour.
+  const scroller = document.querySelector("table")!.parentElement as HTMLElement;
   Object.defineProperty(scroller, "scrollWidth", { value: scrollWidth, configurable: true });
   Object.defineProperty(scroller, "clientWidth", { value: clientWidth, configurable: true });
   scroller.scrollLeft = scrollLeft;
