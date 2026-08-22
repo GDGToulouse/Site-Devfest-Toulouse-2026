@@ -137,8 +137,15 @@ export default function ScheduleGrid({
 
           A copy, because the real one cannot be: it lives inside a horizontal
           scroll container, and a sticky child of one resolves against that box
-          rather than the page. This copy lives outside it, so `top-60px` means
-          what it says — under the site header, which keeps z-40.
+          rather than the page. This copy lives outside it, so its `top` means
+          what it says.
+
+          52px, not the site header's 60: the box carries one `border-spacing`
+          of lead above its pills, so pinning at 52 puts the pills themselves at
+          60, flush under the header, and tucks that lead behind it. The header
+          keeps z-40 and paints over. That lead has to be hidden now the box is
+          transparent, or the row scrolling underneath shows through it as a
+          strip of cut-off text.
 
           `h-0` keeps it out of the flow: it takes no space, and its child
           paints downward over the real row, which it covers exactly. There is
@@ -150,9 +157,14 @@ export default function ScheduleGrid({
           Hidden from assistive technology: the real `<th scope="col">` cells
           underneath are what announce a cell's room, scrolled or not. */}
       {header.columns.length > 0 && (
-        <div aria-hidden className="sticky top-[60px] z-20 h-0">
+        <div aria-hidden className="sticky top-[52px] z-20 h-0">
+          {/* No background of its own (#460): the pills are opaque, and an
+              opaque strip behind them hid the row passing underneath in the
+              8 px between each one. Only the hour cell below stays opaque — it
+              is pinned across the horizontal scroll, and the room pills would
+              otherwise slide visibly under its label. */}
           <div
-            className="relative overflow-hidden bg-blanc"
+            className="relative overflow-hidden"
             style={{ height: header.height + CELL_GAP }}
           >
             <div
