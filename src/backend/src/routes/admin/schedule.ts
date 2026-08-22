@@ -10,7 +10,7 @@ import { revalidateConferences } from "../../lib/revalidate.js";
 // is clear. Both have to render, so "is this slot free" is answered by the
 // talks on it, never by a flag here.
 
-const KINDS = ["BREAK", "MEAL", "PLENARY", "SOCIAL", "OTHER"] as const;
+const KINDS = ["BREAK", "MEAL", "SOCIAL", "OTHER"] as const;
 type ScheduleEntryKind = (typeof KINDS)[number];
 
 interface ScheduleEntryBody {
