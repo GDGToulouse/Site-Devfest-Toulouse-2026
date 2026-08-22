@@ -1,10 +1,65 @@
 import { seedBase, prisma, auth } from "./seed.js";
+import {
+  describeRoomClash,
+  findRoomClash,
+  type RoomOccupation,
+} from "../src/lib/room-clash.js";
 
 // Dev-only test accounts — see docs/comptes-dev-local.md
 const DEV_ACCOUNTS = [
   { name: "Admin DevFest", email: "admin@devfesttoulouse.fr", password: "admin1234!dev", role: "ADMIN" as const },
   { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", password: "editor1234!dev", role: "EDITOR" as const },
 ];
+
+/**
+ * Refuses to leave two sessions overlapping in one room (#462).
+ *
+ * The day is placed from three lists written independently — `sessions`,
+ * `placements` and `keynotes` — and nothing compares them, which is how a
+ * conference once landed on the exact range another already held in the
+ * Amphitheatre. The database is the only place the three meet, so the check
+ * belongs here, after all of them have run.
+ *
+ * Two sessions *following* each other in a room is the nominal 2026 shape —
+ * two 20-minute quickies inside a 40-minute slot — and must pass. Only a real
+ * overlap is a mistake, and it stops the seed rather than producing a day that
+ * cannot happen.
+ *
+ * A relay room counts as occupied: a keynote on a screen there still fills it.
+ */
+async function assertNoRoomClash(editionId: number) {
+  const placed = await prisma.talk.findMany({
+    where: { editionId, startsAt: { not: null }, endsAt: { not: null } },
+    select: {
+      slug: true,
+      roomId: true,
+      roomLabel: true,
+      startsAt: true,
+      endsAt: true,
+      simulcasts: { select: { roomId: true, roomLabel: true } },
+    },
+  });
+
+  const occupations: RoomOccupation[] = placed.flatMap((talk) =>
+    [{ roomId: talk.roomId, roomLabel: talk.roomLabel }, ...talk.simulcasts].flatMap(
+      ({ roomId, roomLabel }) =>
+        roomId == null
+          ? []
+          : [
+              {
+                slug: talk.slug,
+                room: roomLabel ?? `#${roomId}`,
+                roomId,
+                start: talk.startsAt!,
+                end: talk.endsAt!,
+              },
+            ],
+    ),
+  );
+
+  const clash = findRoomClash(occupations);
+  if (clash) throw new Error(`Seed inconsistency in ${describeRoomClash(clash)}`);
+}
 
 async function seedDev() {
   // Run base seed first (contact categories, admin accounts)
@@ -862,10 +917,35 @@ async function seedDev() {
     // Two more, so IA & Data and Sécurité each carry a session in the main room
     // rather than only reassigned leftovers (#460). Both land on Amphithéâtre
     // slots that were free, so the empty cells the grid marker needs remain.
+    // Agora 1 rather than the Amphithéâtre, which is booked solid: `kubernetes-
+    // en-production` already holds it on this range, from the `placements` list
+    // below (#462).
     { slug: "llm-en-production", title: "Un LLM en production, et la facture qui va avec",
       description: "Latence, coût au jeton et garde-fous : ce que le prototype ne dit pas.",
       format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catData.id,
-      speaker: speakerMarie.id, room: "Amphithéâtre", start: "10:55", end: "11:35" },
+      speaker: speakerMarie.id, room: "Agora 1", start: "10:55", end: "11:35" },
+    // Three quickies that pair up with an existing one, so a room fills the
+    // 40 minutes of the conferences beside it in two goes (#462). This is the
+    // nominal 2026 shape, and without it in the demo day the grid was never
+    // asked to draw a session reaching across two rows.
+    //
+    // Two quickies are deliberately left on their own — `accessibilite-par-ou-
+    // commencer` and `react-server-components`, both in Pastel. The
+    // organisation aims for pairs but does not promise them, and a room that
+    // frees up halfway has to keep rendering. Both cases now land in the same
+    // row: at 09:10 the Salle Quickies is busy and Pastel is genuinely free.
+    { slug: "revue-de-code-sans-drame", title: "La revue de code sans drame",
+      description: "Ce qu'on écrit dans un commentaire, et ce qui se dit de vive voix.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "09:10", end: "09:30" },
+    { slug: "feature-flags-vingt-minutes", title: "Les feature flags en vingt minutes",
+      description: "Livrer sans déployer, et surtout : retirer le drapeau ensuite.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Pastel", start: "11:15", end: "11:35" },
+    { slug: "audit-de-dependances", title: "Auditer ses dépendances sans y passer la semaine",
+      description: "Trier ce qui est exploitable de ce qui encombre le rapport.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catSecu.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "13:35", end: "13:55" },
     { slug: "chaine-appro-logicielle", title: "Votre chaîne d'approvisionnement logicielle",
       description: "Dépendances, artefacts et signatures : par où un audit commence.",
       format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catSecu.id,
@@ -952,6 +1032,8 @@ async function seedDev() {
   }
 
   console.log(`Talks created: ${sessions.length + 2 + keynotes.length}`);
+
+  await assertNoRoomClash(edition.id);
 
   // Everything that is not a session. Lunch is the one that matters for the
   // grid: it spans every room, and in 2026 no quickie runs under it.
