@@ -54,6 +54,8 @@ interface ProgrammeControlsProps {
   onChangeView: (view: ScheduleView) => void;
   filters: TalkFilters;
   onChangeFilters: (next: Partial<TalkFilters>) => void;
+  /** Clears the filters and the view in one write — see `onReset` there (#460). */
+  onReset: () => void;
   categories: string[];
   languages: string[];
   labels: ControlLabels;
@@ -72,6 +74,7 @@ export default function ProgrammeControls({
   onChangeView,
   filters,
   onChangeFilters,
+  onReset,
   categories,
   languages,
   labels,
@@ -88,7 +91,11 @@ export default function ProgrammeControls({
   // 1440 px screen carried ~200 px of chips nobody had asked for above a grid
   // that got 363. Still opens on mount when a shared link already carries a
   // filter — otherwise the visitor reads a filtered grid without being told.
-  const [showPanel, setShowPanel] = useState(activeFilterCount(filters, FAMILIES) > 0);
+  // The view counts as one since #460 moved it in here: `?view=mine-only`
+  // hides most of the programme, and that has to be visible on arrival.
+  const [showPanel, setShowPanel] = useState(
+    activeFilterCount(filters, FAMILIES) > 0 || view !== "all",
+  );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [shareState, setShareState] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -176,7 +183,12 @@ export default function ProgrammeControls({
   }
 
   const hasLanguageFilter = languages.length > 1;
-  const badge = activeFilterCount(filters, hasLanguageFilter ? FAMILIES : ["format", "category", "level"]);
+  // The view is counted here, not in `activeFilterCount`: it is not a member of
+  // `TalkFilters` and must not become one (#442). Folding it away without the
+  // badge is what #459 refused to do — this is the price of moving it in.
+  const badge =
+    activeFilterCount(filters, hasLanguageFilter ? FAMILIES : ["format", "category", "level"]) +
+    (view !== "all" ? 1 : 0);
   const collapsedCount =
     (filters.level ? 1 : 0) + (hasLanguageFilter && filters.language ? 1 : 0);
 
@@ -196,31 +208,6 @@ export default function ProgrammeControls({
       {/* ---- Filtrer ---- */}
       <section aria-label={labels.filterZone} className="flex-1">
         <div className="flex flex-wrap items-center gap-3">
-          {/* Outside the panel, and staying there (#459). This is not a filter
-              but the view selector, and it is the whole point of favourites
-              (#442): folded away with the chips, someone who starred sessions
-              would have no visible way to show them on their own. */}
-          <div
-            role="radiogroup"
-            aria-label={labels.viewLabel}
-            className="inline-flex flex-wrap gap-2 rounded-2xl bg-blanc-casse p-1"
-          >
-            {VIEWS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                role="radio"
-                aria-checked={view === value}
-                onClick={() => onChangeView(value)}
-                className={`rounded-[12px] px-4 py-2 text-sm font-bold transition-colors focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
-                  view === value ? "bg-blanc text-noir shadow-card" : "text-gris hover:text-noir"
-                }`}
-              >
-                {viewLabels[value]}
-              </button>
-            ))}
-          </div>
-
           <button
             type="button"
             onClick={() => setShowPanel((v) => !v)}
@@ -250,6 +237,36 @@ export default function ProgrammeControls({
           hidden={!showPanel}
           className="mt-3 space-y-4 rounded-2xl bg-blanc p-5 shadow-card"
         >
+          {/* A select rather than the three-button pill it used to be (#460):
+              the longest label runs 34 characters, and the pill pushed the
+              `Filtres` button onto a second line.
+
+              It sits among the filters but is not one of them — it restricts by
+              the visitor's own selection, not by a field of the session — so it
+              keeps its own `view` URL parameter and stays out of `TalkFilters`
+              (#442). What it borrows from them is the badge: folded, a view
+              other than "everything" still has to announce itself. */}
+          <div>
+            <label
+              htmlFor="programme-view"
+              className="mb-2 block text-sm font-bold text-noir"
+            >
+              {labels.viewLabel}
+            </label>
+            <select
+              id="programme-view"
+              value={view}
+              onChange={(event) => onChangeView(event.target.value as ScheduleView)}
+              className="w-full rounded-[12px] border border-gris-clair/40 bg-blanc px-4 py-2 text-sm font-medium text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50 sm:w-auto"
+            >
+              {VIEWS.map((value) => (
+                <option key={value} value={value}>
+                  {viewLabels[value]}
+                </option>
+              ))}
+            </select>
+          </div>
+
           <ChipRow label={labels.format}>
             {FORMATS.map((format) => (
               <Chip
@@ -327,9 +344,7 @@ export default function ProgrammeControls({
           {badge > 0 && (
             <button
               type="button"
-              onClick={() =>
-                onChangeFilters({ format: "", level: "", language: "", category: "" })
-              }
+              onClick={onReset}
               className="text-sm font-medium text-bleu hover:underline"
             >
               {labels.reset}
@@ -368,10 +383,15 @@ export default function ProgrammeControls({
             </span>
           </button>
 
+          {/* Anchored left below `lg`, right above it — the section itself
+              switches from `items-start` to `items-end` there. Pinned right on
+              a phone, the panel's 256 px unfolded leftwards from a button
+              sitting at the page margin, and half of it landed off-screen
+              (#460). */}
           <div
             id="programme-export-menu"
             hidden={!isMenuOpen}
-            className="absolute right-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl bg-blanc py-1 shadow-lg"
+            className="absolute left-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl bg-blanc py-1 shadow-lg lg:left-auto lg:right-0"
           >
             <button type="button" onClick={share} title={labels.shareTitle} className={ITEM}>
               {labels.share}

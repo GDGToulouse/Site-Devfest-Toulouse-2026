@@ -99,6 +99,17 @@ export default function ProgrammeBrowser({
     syncUrl(favourites, view, merged);
   }
 
+  // One handler rather than the two calls in a row the reset button used to
+  // make (#460): each writes the URL from its own closure, so the second one
+  // rebuilt the query string from a `filters` React had not updated yet and put
+  // the category back that the first had just removed.
+  function onReset() {
+    const cleared = { ...filters, format: "", level: "", language: "", category: "" };
+    setFilters(cleared);
+    setView("all");
+    syncUrl(favourites, "all", cleared);
+  }
+
   const selected = useMemo(() => new Set(favourites), [favourites]);
 
   // Filtering the payload rather than the rows: the row builder then recomputes
@@ -178,6 +189,7 @@ export default function ProgrammeBrowser({
         onChangeView={onChangeView}
         filters={filters}
         onChangeFilters={onChangeFilters}
+        onReset={onReset}
         categories={categories}
         languages={languages}
         labels={{

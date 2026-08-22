@@ -48,6 +48,7 @@ function setup(over: Partial<React.ComponentProps<typeof ProgrammeControls>> = {
       onChangeView={() => {}}
       filters={noFilters}
       onChangeFilters={() => {}}
+      onReset={() => {}}
       categories={["Cloud & DevOps"]}
       languages={["fr"]}
       labels={labels}
@@ -95,14 +96,53 @@ describe("the filter panel", () => {
 });
 
 describe("the view selector", () => {
-  it("stays out of the panel — folding it away would hide the favourites", () => {
-    setup();
+  it("is a select inside the panel, and drives the view", async () => {
+    const user = userEvent.setup();
+    const onChangeView = vi.fn();
+    setup({ onChangeView });
 
-    // The panel is closed; the three states must still be reachable, or someone
-    // who starred sessions has no visible way to show them alone (#442).
-    const group = screen.getByRole("radiogroup", { name: "Vue" });
-    expect(group).toBeVisible();
-    expect(screen.getByRole("radio", { name: "Mes favoris seuls" })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /Filtres/ }));
+    const select = screen.getByRole("combobox", { name: "Vue" });
+    expect(document.getElementById("programme-filter-panel")?.contains(select)).toBe(true);
+
+    await user.selectOptions(select, "mine-only");
+    expect(onChangeView).toHaveBeenCalledWith("mine-only");
+  });
+
+  it("counts toward the badge, so folding it away does not silence it", () => {
+    // #459 kept this selector out of the panel precisely because folded meant
+    // invisible: someone who starred sessions would have no visible sign that
+    // most of the programme is being hidden (#442). Moving it in (#460) is only
+    // acceptable while the closed button still says a restriction is applied.
+    setup({ view: "mine-only" });
+
+    expect(screen.getByRole("button", { name: /Filtres/ })).toHaveTextContent("1");
+  });
+
+  it("opens the panel on arrival when the link carries a view", () => {
+    setup({ view: "mine" });
+
+    expect(screen.getByRole("button", { name: /Filtres/ })).toHaveAttribute(
+      "aria-expanded",
+      "true",
+    );
+  });
+
+  it("clears the view and the filters through a single handler", async () => {
+    const user = userEvent.setup();
+    const onReset = vi.fn();
+    const onChangeView = vi.fn();
+    const onChangeFilters = vi.fn();
+    setup({ view: "mine-only", onReset, onChangeView, onChangeFilters });
+
+    await user.click(screen.getByRole("button", { name: "Réinitialiser" }));
+
+    // Not two calls in a row: each writes the URL from its own closure, and the
+    // second rebuilt the query string from a state React had not updated yet —
+    // observed in the browser, the category came back after being cleared.
+    expect(onReset).toHaveBeenCalledTimes(1);
+    expect(onChangeView).not.toHaveBeenCalled();
+    expect(onChangeFilters).not.toHaveBeenCalled();
   });
 });
 

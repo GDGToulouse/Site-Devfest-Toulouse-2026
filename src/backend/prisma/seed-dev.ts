@@ -386,14 +386,36 @@ async function seedDev() {
     update: { nameEn: "Web & Mobile", color: "#EC6839" },
     create: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839" },
   });
+  // Two categories alternating session by session said nothing about what a
+  // real grid renders (#460): not the chip row wrapping, not two colour dots
+  // side by side on a card, not a category filter that actually empties the
+  // grid. Colours come from the palette in `docs/design-system.md`.
+  const catData = await prisma.category.upsert({
+    where: { nameFr: "IA & Data" },
+    update: { nameEn: "AI & Data", color: "#109E6E" },
+    create: { nameFr: "IA & Data", nameEn: "AI & Data", color: "#109E6E" },
+  });
+  const catCraft = await prisma.category.upsert({
+    where: { nameFr: "Craft & Architecture" },
+    update: { nameEn: "Craft & Architecture", color: "#F8AB06" },
+    create: { nameFr: "Craft & Architecture", nameEn: "Craft & Architecture", color: "#F8AB06" },
+  });
+  const catSecu = await prisma.category.upsert({
+    where: { nameFr: "Sécurité" },
+    update: { nameEn: "Security", color: "#B94420" },
+    create: { nameFr: "Sécurité", nameEn: "Security", color: "#B94420" },
+  });
   await prisma.editionCategory.createMany({
     data: [
       { editionId: edition.id, categoryId: catCloud.id, sortOrder: 0 },
       { editionId: edition.id, categoryId: catWeb.id, sortOrder: 1 },
+      { editionId: edition.id, categoryId: catData.id, sortOrder: 2 },
+      { editionId: edition.id, categoryId: catCraft.id, sortOrder: 3 },
+      { editionId: edition.id, categoryId: catSecu.id, sortOrder: 4 },
     ],
     skipDuplicates: true,
   });
-  console.log("Categories created: 2");
+  console.log("Categories created: 5");
 
   // A realistic sponsor wall: 4 Platinum, 16 Gold, 8 Soutien. Every field is
   // filled (logo, both descriptions, website, socials, contact email) so the
@@ -755,7 +777,7 @@ async function seedDev() {
       speaker: speakerJean.id, room: "Agora 1", start: "08:50", end: "09:30" },
     { slug: "postgres-plan-execution", title: "Postgres : lire un plan d'exécution",
       description: "EXPLAIN ANALYZE, ligne par ligne, sur des requêtes réelles.",
-      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catData.id,
       speaker: speakerMarie.id, room: "Hémicycle", start: "08:50", end: "09:30" },
     { slug: "accessibilite-par-ou-commencer", title: "Accessibilité : par où commencer",
       description: "Les quelques gestes qui changent tout, avant l'audit complet.",
@@ -783,11 +805,11 @@ async function seedDev() {
       speaker: speakerMarie.id, room: "Amphithéâtre", start: "13:15", end: "13:55" },
     { slug: "tests-end-to-end-playwright", title: "Tests end-to-end : arrêter de les subir",
       description: "Écrire des tests qui échouent pour une bonne raison seulement.",
-      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCraft.id,
       speaker: speakerJean.id, room: "Agora 1", start: "13:15", end: "13:55" },
     { slug: "vos-secrets-sont-en-clair", title: "Vos secrets sont en clair (et vous l'ignorez)",
       description: "Là où les jetons finissent vraiment : logs, images, tickets.",
-      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catSecu.id,
       speaker: speakerMarie.id, room: "Amphithéâtre", start: "14:10", end: "14:50" },
     { slug: "islands-architecture-production", title: "Islands architecture in production",
       description: "Shipping less JavaScript without giving up interactivity.",
@@ -799,7 +821,7 @@ async function seedDev() {
       speaker: speakerMarie.id, room: "Hémicycle", start: "15:30", end: "16:10" },
     { slug: "typescript-types-avances", title: "TypeScript : les types avancés sans peur",
       description: "Génériques, inférence et types conditionnels, pas à pas.",
-      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCraft.id,
       speaker: speakerJean.id, room: "Agora 1", start: "15:30", end: "16:10" },
     // The four rooms below exist only to fill the grid's remaining columns
     // (#441): with four salles the layout looked fine and hid the fact that a
@@ -815,7 +837,7 @@ async function seedDev() {
       speaker: speakerMarie.id, room: "Ellipse", start: "08:50", end: "09:30" },
     { slug: "refactoring-en-binome", title: "Refactoring en binôme",
       description: "Quinze minutes pour montrer ce qu'un pas de deux change au code.",
-      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
       speaker: speakerJean.id, room: "Salle Quickies", start: "08:50", end: "09:10" },
     { slug: "faire-vivre-une-communaute", title: "Faire vivre une communauté locale",
       description: "Ce qui tient une communauté au-delà du premier semestre.",
@@ -823,7 +845,7 @@ async function seedDev() {
       speaker: speakerJean.id, room: "Salle Communautés", start: "10:00", end: "10:40" },
     { slug: "sqlite-en-production", title: "SQLite en production, vraiment ?",
       description: "Les cas où c'est le bon choix, et ceux où c'est un piège.",
-      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catData.id,
       speaker: speakerMarie.id, room: "Lauragais", start: "10:55", end: "11:35" },
     { slug: "css-moderne-vos-hacks", title: "Le CSS moderne a rattrapé vos hacks",
       description: "Container queries, :has(), subgrid : ce qu'on peut enfin supprimer.",
@@ -831,12 +853,23 @@ async function seedDev() {
       speaker: speakerJean.id, room: "Ellipse", start: "13:15", end: "13:55" },
     { slug: "documenter-sans-y-passer-ses-vendredis", title: "Documenter sans y passer ses vendredis",
       description: "Écrire le strict nécessaire, au moment où ça coûte le moins cher.",
-      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCloud.id,
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
       speaker: speakerMarie.id, room: "Salle Quickies", start: "13:15", end: "13:35" },
     { slug: "organiser-un-meetup-qui-dure", title: "Organiser un meetup qui dure",
       description: "Retour sur dix ans de rendez-vous mensuels, sans s'épuiser.",
       format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catWeb.id,
       speaker: speakerJean.id, room: "Salle Communautés", start: "14:10", end: "14:50" },
+    // Two more, so IA & Data and Sécurité each carry a session in the main room
+    // rather than only reassigned leftovers (#460). Both land on Amphithéâtre
+    // slots that were free, so the empty cells the grid marker needs remain.
+    { slug: "llm-en-production", title: "Un LLM en production, et la facture qui va avec",
+      description: "Latence, coût au jeton et garde-fous : ce que le prototype ne dit pas.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catData.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "10:55", end: "11:35" },
+    { slug: "chaine-appro-logicielle", title: "Votre chaîne d'approvisionnement logicielle",
+      description: "Dépendances, artefacts et signatures : par où un audit commence.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catSecu.id,
+      speaker: speakerJean.id, room: "Amphithéâtre", start: "15:30", end: "16:10" },
   ] as const;
 
   const roomsByName = new Map(
