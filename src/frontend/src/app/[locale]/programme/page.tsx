@@ -79,7 +79,11 @@ export default async function ProgrammePage({
       <div className={`${READING_COLUMN} no-print`}>
         <Breadcrumb items={breadcrumbItems} />
 
-        <h1 className="mt-6 text-3xl lg:text-[64px] lg:leading-[120%] font-bold text-noir">
+        {/* Smaller than the site's usual display size (#455): at 64 px the
+            title, the breadcrumb and the intro pushed the grid to y=537, so a
+            1440×900 screen opened on two break bands and half a row of
+            sessions. The grid is what the page is for. */}
+        <h1 className="mt-6 text-3xl font-bold text-noir lg:text-[40px] lg:leading-[120%]">
           {t("heading", { year: edition.year })}
         </h1>
 

@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
-import { isoToLocalInput, localInputToIso, formatEventTime } from "./datetime";
+import {
+  isoToLocalInput,
+  localInputToIso,
+  formatEventTime,
+  formatEventDuration,
+} from "./datetime";
 
 // The bug these lock down (#105): the talk editor loaded `startsAt` by slicing
 // the ISO string, which handed the datetime-local input a UTC wall-clock. The
@@ -70,5 +75,36 @@ describe("schedule times (#106)", () => {
 
   it("treats an unparseable value as empty rather than printing NaN", () => {
     expect(formatEventTime("pas une date")).toBe("");
+  });
+});
+
+describe("session duration (#457)", () => {
+  it("gives the length of a conference in minutes", () => {
+    expect(formatEventDuration("2026-11-19T08:50:00.000Z", "2026-11-19T09:30:00.000Z")).toBe(
+      "40 min",
+    );
+  });
+
+  it("separates a quickie from a conference — the point of showing it at all", () => {
+    // Both start at 09:50 and the row header says so; the duration is the only
+    // thing left on the card that tells the two apart.
+    expect(formatEventDuration("2026-11-19T08:50:00.000Z", "2026-11-19T09:10:00.000Z")).toBe(
+      "20 min",
+    );
+  });
+
+  it("stays in minutes past the hour, so no locale has to spell the unit", () => {
+    expect(formatEventDuration("2026-11-19T08:00:00.000Z", "2026-11-19T09:30:00.000Z")).toBe(
+      "90 min",
+    );
+  });
+
+  it("says nothing when the talk has no end — 244 imported talks have none", () => {
+    expect(formatEventDuration("2026-11-19T08:50:00.000Z", null)).toBeNull();
+  });
+
+  it("says nothing rather than a negative or empty span", () => {
+    expect(formatEventDuration("2026-11-19T09:30:00.000Z", "2026-11-19T08:50:00.000Z")).toBeNull();
+    expect(formatEventDuration("2026-11-19T08:50:00.000Z", "pas une date")).toBeNull();
   });
 });

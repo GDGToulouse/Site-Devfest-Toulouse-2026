@@ -31,8 +31,13 @@ export default function FavouriteButton({
       aria-label={label}
       title={label}
       // no-print (#108): a star is a control, and a control on paper is noise.
-      className={`no-print inline-flex size-8 items-center justify-center rounded-full text-lg transition-colors hover:bg-blanc-casse focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
-        isFavourite ? "text-orange" : "text-gris"
+      //
+      // Sized and filled to be seen (#457): at size-8 with a hairline outline
+      // it was the faintest mark on a card whose whole point is that you can
+      // pick it. A set favourite now carries its own tinted disc, so "chosen"
+      // reads across a full grid without hunting star by star.
+      className={`no-print inline-flex size-9 items-center justify-center rounded-full text-xl transition-colors hover:bg-blanc-casse focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
+        isFavourite ? "bg-orange/15 text-orange" : "text-gris"
       } ${className}`}
     >
       <span aria-hidden>{isFavourite ? "★" : "☆"}</span>
