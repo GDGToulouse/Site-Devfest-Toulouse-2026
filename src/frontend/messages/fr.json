@@ -373,6 +373,8 @@
     "viewAll": "Tout le programme",
     "viewMine": "Mes favoris et les moments communs",
     "viewMineOnly": "Mes favoris seuls",
+    "restoreNotice": "Vous regardez la sélection d'un lien partagé.",
+    "restoreAction": "Reprendre ma sélection",
     "empty": "Vous n'avez encore choisi aucune session. Ajoutez celles qui vous intéressent pour composer votre journée — votre sélection tient dans l'adresse de la page, gardez-la en favori pour la retrouver."
   },
   "programme": {

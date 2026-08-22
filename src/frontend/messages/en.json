@@ -373,6 +373,8 @@
     "viewAll": "The whole schedule",
     "viewMine": "My favourites and the shared moments",
     "viewMineOnly": "My favourites only",
+    "restoreNotice": "You're looking at a shared link's selection.",
+    "restoreAction": "Bring back my selection",
     "empty": "You haven't picked a session yet. Add the ones you're interested in to build your day — your selection lives in the page address, so bookmark it to find it again."
   },
   "programme": {

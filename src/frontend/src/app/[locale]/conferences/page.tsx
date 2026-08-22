@@ -108,6 +108,7 @@ export default async function ConferencesPage({
               labels={labels}
               initial={initial}
               initialFavourites={parseFavourites(first(sp.fav))}
+              editionYear={year}
             />
           </div>
         ) : (

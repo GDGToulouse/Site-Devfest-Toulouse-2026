@@ -6,6 +6,9 @@ import { useRouter, usePathname } from "@/i18n/navigation";
 import type { EditionSchedule } from "@/lib/types";
 import { buildScheduleRows } from "@/lib/schedule";
 import { serializeFavourites, toggleFavourite, type ScheduleView } from "@/lib/favourites";
+import { writeStoredFavourites } from "@/lib/favourites-storage";
+import { useFavouritesMemory } from "@/lib/use-favourites-memory";
+import FavouritesRestoreNotice from "@/components/FavouritesRestoreNotice";
 import { applyFiltersToParams, matchesFilters, type TalkFilters } from "@/lib/talk-filters";
 import { localizedField } from "@/lib/i18n-helpers";
 import ProgrammeControls, { type ControlLabels } from "./ProgrammeControls";
@@ -82,10 +85,31 @@ export default function ProgrammeBrowser({
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
+  // Remembered locally as well as put in the URL (#461). The URL stays the
+  // shareable truth; the store is only what survives clicking away in the menu
+  // and coming back without the querystring.
+  const { superseded, dismiss } = useFavouritesMemory(
+    schedule.year,
+    initialFavourites,
+    (stored) => {
+      setFavourites(stored);
+      syncUrl(stored, view, filters);
+    },
+  );
+
   function onToggleFavourite(slug: string) {
     const next = toggleFavourite(favourites, slug);
     setFavourites(next);
+    writeStoredFavourites(schedule.year, next);
     syncUrl(next, view, filters);
+  }
+
+  function restoreSuperseded() {
+    if (!superseded) return;
+    setFavourites(superseded);
+    writeStoredFavourites(schedule.year, superseded);
+    syncUrl(superseded, view, filters);
+    dismiss();
   }
 
   function onChangeView(next: ScheduleView) {
@@ -184,6 +208,10 @@ export default function ProgrammeBrowser({
 
   return (
     <div>
+      {superseded && (
+        <FavouritesRestoreNotice onRestore={restoreSuperseded} onDismiss={dismiss} />
+      )}
+
       <ProgrammeControls
         view={view}
         onChangeView={onChangeView}

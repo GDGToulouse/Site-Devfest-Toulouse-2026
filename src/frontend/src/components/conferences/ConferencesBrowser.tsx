@@ -6,7 +6,10 @@ import { useRouter, usePathname } from "@/i18n/navigation";
 import type { EditionTalk, TalkFormat, TalkLevel } from "@/lib/types";
 import { matchesFilters, type TalkFilters } from "@/lib/talk-filters";
 import { serializeFavourites, toggleFavourite } from "@/lib/favourites";
+import { writeStoredFavourites } from "@/lib/favourites-storage";
+import { useFavouritesMemory } from "@/lib/use-favourites-memory";
 import { Chip, ChipRow } from "@/components/FilterChip";
+import FavouritesRestoreNotice from "@/components/FavouritesRestoreNotice";
 import ConferencesList from "./ConferencesList";
 
 const FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
@@ -43,6 +46,8 @@ interface ConferencesBrowserProps {
   initial: TalkFilters;
   /** The selection carried by the URL (#442), shared with /programme. */
   initialFavourites: string[];
+  /** Scopes the remembered selection — one store per edition (#461). */
+  editionYear: number;
 }
 
 // Client layer over the SSR-rendered list (#107): search + toggleable chips
@@ -56,6 +61,7 @@ export default function ConferencesBrowser({
   labels,
   initial,
   initialFavourites,
+  editionYear,
 }: ConferencesBrowserProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -91,10 +97,30 @@ export default function ConferencesBrowser({
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   }
 
+  // The same local memory as the grid (#461), and the same store: a selection
+  // started here has to be there on /programme without going through a link.
+  const { superseded, dismiss } = useFavouritesMemory(
+    editionYear,
+    initialFavourites,
+    (stored) => {
+      setFavourites(stored);
+      update({}, stored);
+    },
+  );
+
   function onToggleFavourite(slug: string) {
     const next = toggleFavourite(favourites, slug);
     setFavourites(next);
+    writeStoredFavourites(editionYear, next);
     update({}, next);
+  }
+
+  function restoreSuperseded() {
+    if (!superseded) return;
+    setFavourites(superseded);
+    writeStoredFavourites(editionYear, superseded);
+    update({}, superseded);
+    dismiss();
   }
 
   function toggle(key: keyof TalkFilters, value: string) {
@@ -130,6 +156,10 @@ export default function ConferencesBrowser({
 
   return (
     <div>
+      {superseded && (
+        <FavouritesRestoreNotice onRestore={restoreSuperseded} onDismiss={dismiss} />
+      )}
+
       {/* Mobile-only trigger: the whole panel is collapsed by default (#256). */}
       <button
         type="button"
