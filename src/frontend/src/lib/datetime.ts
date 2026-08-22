@@ -55,6 +55,24 @@ export function formatEventTime(iso: string): string {
 }
 
 /**
+ * How long a session runs, in minutes (`40 min`).
+ *
+ * The grid card shows this rather than the start time (#457): the row already
+ * announces the start, so repeating it in every cell said nothing — while the
+ * duration is what separates a quickie from a conference at a glance.
+ *
+ * Minutes all the way up, including past the hour: `90 min` needs no unit
+ * grammar, and the two locales would not spell `1 h 30` the same way.
+ */
+export function formatEventDuration(startIso: string, endIso: string | null): string | null {
+  if (!endIso) return null;
+  const start = new Date(startIso).getTime();
+  const end = new Date(endIso).getTime();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null;
+  return `${Math.round((end - start) / 60000)} min`;
+}
+
+/**
  * UTC instant → `19 novembre 2026`, in the reader's language but the event's
  * zone (#449). The header of a printed programme has to name the day, and a
  * midnight-adjacent instant would name the wrong one under any other zone.

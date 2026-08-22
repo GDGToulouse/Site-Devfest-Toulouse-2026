@@ -2,7 +2,7 @@ import { Link } from "@/i18n/navigation";
 
 import type { ScheduleTalk } from "@/lib/schedule";
 import { localizedField } from "@/lib/i18n-helpers";
-import { formatEventTime } from "@/lib/datetime";
+import { formatEventDuration, formatEventTime } from "@/lib/datetime";
 import FavouriteButton from "@/components/FavouriteButton";
 
 interface SessionCardProps {
@@ -11,6 +11,19 @@ interface SessionCardProps {
   // Pre-resolved labels: the page owns the translation namespaces, so this stays
   // a plain server component — same arrangement as ConferencesList.
   formatLabels: Record<string, string>;
+  /**
+   * What the card has room for (#457).
+   *
+   * `grid` is a 180 px column: it carries the category, the title, and a last
+   * line of format and duration — nothing else. The start time went because the
+   * row header already says it, the format badge because the same line names
+   * the format in words, and the speakers because at that width they cost a
+   * line the title needs more.
+   *
+   * `agenda` is the mobile list, where the width is not the constraint and the
+   * room has to be named — there is no column to do it.
+   */
+  variant?: "grid" | "agenda";
   /** Shown on the mobile agenda, where there is no column to say which room. */
   roomName?: string;
   /** Favourites (#442). Absent when the caller renders no star at all. */
@@ -25,6 +38,7 @@ export default function SessionCard({
   talk,
   locale,
   formatLabels,
+  variant = "agenda",
   roomName,
   isFavourite = false,
   onToggleFavourite,
@@ -32,6 +46,8 @@ export default function SessionCard({
 }: SessionCardProps) {
   const categoryName = talk.category ? localizedField(talk.category, "name", locale) : null;
   const endsAt = talk.endsAt ? formatEventTime(talk.endsAt) : null;
+  const isGrid = variant === "grid";
+  const duration = formatEventDuration(talk.startsAt, talk.endsAt ?? null);
 
   return (
     // The star lives beside the link, not inside it (#442) — a button nested in
@@ -45,10 +61,17 @@ export default function SessionCard({
             "Cloud & DevOps" across two lines mid-label (#441). The badge wraps to
             its own line instead, and truncates only if the name is very long.
             The right padding keeps them clear of the star. */}
-        <div className={`flex flex-wrap items-center gap-1.5 ${onToggleFavourite ? "pr-8" : ""}`}>
-          <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
-            {formatLabels[talk.format]}
-          </span>
+        <div className={`flex flex-wrap items-center gap-1.5 ${onToggleFavourite ? "pr-9" : ""}`}>
+          {/* One badge in the grid, not two (#457). Twenty-four sessions used to
+              put forty-eight pastel pills on screen, all at a tenth of their
+              opacity — colour spent everywhere signals nothing. The category
+              keeps its badge because it is the only one carrying meaning; the
+              format moved to the last line, in words. */}
+          {!isGrid && (
+            <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
+              {formatLabels[talk.format]}
+            </span>
+          )}
           {categoryName && (
             <span
               className="max-w-full truncate whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold"
@@ -62,14 +85,20 @@ export default function SessionCard({
         {/* The title is not localized (#293) — a talk is given in one language. */}
         <p className="mt-2 text-sm font-bold leading-snug text-noir">{talk.title}</p>
 
-        {talk.speakers.length > 0 && (
+        {!isGrid && talk.speakers.length > 0 && (
           <p className="mt-1 text-xs text-gris">{talk.speakers.map((s) => s.name).join(", ")}</p>
         )}
 
-        <p className="mt-auto pt-2 text-xs text-gris">
-          {formatEventTime(talk.startsAt)}
-          {endsAt ? ` – ${endsAt}` : ""}
-          {roomName ? ` · ${roomName}` : ""}
+        <p className="mt-auto pt-2 text-xs tabular-nums text-gris">
+          {isGrid ? (
+            [formatLabels[talk.format], duration].filter(Boolean).join(" · ")
+          ) : (
+            <>
+              {formatEventTime(talk.startsAt)}
+              {endsAt ? ` – ${endsAt}` : ""}
+              {roomName ? ` · ${roomName}` : ""}
+            </>
+          )}
         </p>
       </Link>
 

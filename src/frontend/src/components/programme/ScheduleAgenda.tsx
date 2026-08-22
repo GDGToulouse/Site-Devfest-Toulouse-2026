@@ -41,13 +41,15 @@ export default function ScheduleAgenda({
             <p className="text-sm font-bold text-noir">
               {localizedField(row.entry, "label", locale)}
             </p>
-            <p className="mt-1 text-xs text-gris">
+            <p className="mt-1 text-xs tabular-nums text-gris">
               {formatEventTime(row.entry.startsAt)} – {formatEventTime(row.entry.endsAt)}
             </p>
           </div>
         ) : (
           <section key={row.key}>
-            <h2 className="text-lg font-bold text-noir">{formatEventTime(row.startsAt)}</h2>
+            <h2 className="text-lg font-bold tabular-nums text-noir">
+              {formatEventTime(row.startsAt)}
+            </h2>
             <div className="mt-3 space-y-3">
               {row.cells.flatMap((talks, index) =>
                 talks.map((talk) => (
