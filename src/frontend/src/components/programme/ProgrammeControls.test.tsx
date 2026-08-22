@@ -28,10 +28,14 @@ const labels: ControlLabels = {
   languageLabels: { fr: "Français", en: "English" },
   exportMenu: "Exporter",
   exportMenuTitle: "Partager, exporter ou imprimer le programme",
-  share: "Partager",
+  share: "Partager les favoris",
   shareTitle: "Copier le lien de cette page, avec mes favoris",
   shareCopied: "Lien copié.",
   shareFailed: "La copie n'a pas fonctionné. Copiez l'adresse depuis la barre du navigateur.",
+  shareEmptyTitle: "Aucun favori pour l'instant",
+  shareEmptyBody: "Le lien partagera le programme complet.",
+  shareEmptyChoose: "Choisir des favoris",
+  shareEmptyConfirm: "Partager sans favoris",
   calendar: "Calendrier",
   exportTitle: "Exporter tout le programme vers mon agenda",
   printByTimeAction: "Imprimer par heure",
@@ -53,6 +57,7 @@ function setup(over: Partial<React.ComponentProps<typeof ProgrammeControls>> = {
       languages={["fr"]}
       labels={labels}
       icsHref="/api/editions/2026/schedule.ics"
+      hasFavourites
       printGrouping="time"
       onChangePrintGrouping={() => {}}
       {...over}
@@ -153,7 +158,7 @@ describe("the export menu", () => {
 
     await user.click(screen.getByRole("button", { name: /Exporter/ }));
 
-    expect(screen.getByRole("button", { name: "Partager" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Partager les favoris" })).toBeVisible();
     expect(screen.getByRole("link", { name: "Calendrier" })).toHaveAttribute(
       "href",
       "/api/editions/2026/schedule.ics",
@@ -222,7 +227,7 @@ describe("sharing the link", () => {
     setup();
 
     fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Partager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
     await act(async () => {});
 
     expect(writeText).toHaveBeenCalledWith(window.location.href);
@@ -235,7 +240,7 @@ describe("sharing the link", () => {
     setup();
 
     fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Partager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
     await act(async () => {});
     expect(screen.getByRole("status")).toBeInTheDocument();
 
@@ -249,7 +254,7 @@ describe("sharing the link", () => {
     setup();
 
     fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Partager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
     // The rejection settles on the microtask queue, which fake timers do not
     // hold back — flushing it is enough to get the message rendered.
     await act(async () => {});
@@ -272,7 +277,7 @@ describe("sharing the link", () => {
     setup();
 
     fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Partager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
     await act(async () => {});
 
     expect(writeText).toHaveBeenCalled();
@@ -289,7 +294,7 @@ describe("sharing the link", () => {
     setup();
 
     fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
-    fireEvent.click(screen.getByRole("button", { name: "Partager" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
     await act(async () => {});
 
     // Closing the sheet is a decision, not a failure to report.
@@ -297,5 +302,65 @@ describe("sharing the link", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
 
     Reflect.deleteProperty(navigator, "share");
+  });
+});
+
+describe("sharing with nothing starred", () => {
+  it("asks instead of copying, since the entry promises a selection", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    withClipboard(writeText);
+    setup({ hasFavourites: false });
+
+    fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
+
+    expect(screen.getByText("Aucun favori pour l'instant")).toBeVisible();
+    expect(screen.getByRole("button", { name: "Choisir des favoris" })).toBeVisible();
+    // Nothing has been sent: the question is asked before anything happens.
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("copies anyway once the visitor confirms", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    withClipboard(writeText);
+    setup({ hasFavourites: false });
+
+    fireEvent.click(screen.getByRole("button", { name: /Exporter/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
+    fireEvent.click(screen.getByRole("button", { name: "Partager sans favoris" }));
+    await act(async () => {});
+
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(screen.getByRole("status")).toHaveTextContent("Lien copié.");
+  });
+
+  it("closes and hands focus back when the visitor goes to pick some", () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    withClipboard(writeText);
+    setup({ hasFavourites: false });
+    const trigger = screen.getByRole("button", { name: /Exporter/ });
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
+    fireEvent.click(screen.getByRole("button", { name: "Choisir des favoris" }));
+
+    // The stars are on the cards, a step away — closing is the whole action.
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(trigger).toHaveFocus();
+    expect(writeText).not.toHaveBeenCalled();
+  });
+
+  it("drops the question when the menu is closed and reopened", () => {
+    setup({ hasFavourites: false });
+    const trigger = screen.getByRole("button", { name: /Exporter/ });
+
+    fireEvent.click(trigger);
+    fireEvent.click(screen.getByRole("button", { name: "Partager les favoris" }));
+    fireEvent.click(trigger);
+    fireEvent.click(trigger);
+
+    // Reopening on a half-answered question would be a state nobody asked for.
+    expect(screen.queryByText("Aucun favori pour l'instant")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Partager les favoris" })).toBeVisible();
   });
 });

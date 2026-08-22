@@ -197,6 +197,7 @@ export default function ProgrammeBrowser({
           exportTitle: exportsSelection ? labels.exportMineTitle : labels.exportAllTitle,
         }}
         icsHref={icsHref}
+        hasFavourites={favourites.length > 0}
         printGrouping={printGrouping}
         onChangePrintGrouping={(next) => {
           setPrintGrouping(next);

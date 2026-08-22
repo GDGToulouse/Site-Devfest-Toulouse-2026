@@ -42,6 +42,10 @@ export interface ControlLabels {
   shareTitle: string;
   shareCopied: string;
   shareFailed: string;
+  shareEmptyTitle: string;
+  shareEmptyBody: string;
+  shareEmptyChoose: string;
+  shareEmptyConfirm: string;
   calendar: string;
   exportTitle: string;
   printByTimeAction: string;
@@ -60,6 +64,8 @@ interface ProgrammeControlsProps {
   languages: string[];
   labels: ControlLabels;
   icsHref: string;
+  /** Whether anything is starred — what `Partager les favoris` shares (#460). */
+  hasFavourites: boolean;
   printGrouping: PrintGrouping;
   onChangePrintGrouping: (grouping: PrintGrouping) => void;
 }
@@ -79,6 +85,7 @@ export default function ProgrammeControls({
   languages,
   labels,
   icsHref,
+  hasFavourites,
   printGrouping,
   onChangePrintGrouping,
 }: ProgrammeControlsProps) {
@@ -98,6 +105,10 @@ export default function ProgrammeControls({
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Sharing with nothing starred asks before it acts (#460). The entry says
+  // "share my favourites", so doing nothing would look broken and sharing the
+  // whole programme silently would send something other than what it promised.
+  const [isConfirmingEmptyShare, setIsConfirmingEmptyShare] = useState(false);
   const [shareState, setShareState] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   // The print document is rendered from `printGrouping`. Printing in the same
   // tick as the change would print the previous one, so the click records what
@@ -120,11 +131,11 @@ export default function ProgrammeControls({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
-      setIsMenuOpen(false);
+      closeMenu();
       triggerRef.current?.focus();
     };
     const onPointerDown = (event: MouseEvent) => {
-      if (!menuRef.current?.contains(event.target as Node)) setIsMenuOpen(false);
+      if (!menuRef.current?.contains(event.target as Node)) closeMenu();
     };
 
     document.addEventListener("keydown", onKeyDown);
@@ -143,8 +154,24 @@ export default function ProgrammeControls({
     return () => clearTimeout(timer);
   }, [shareState]);
 
-  async function share() {
+  function closeMenu() {
     setIsMenuOpen(false);
+    setIsConfirmingEmptyShare(false);
+  }
+
+  function share() {
+    // Nothing starred: ask rather than send a link that promises a selection
+    // and carries the whole programme. The menu stays open and swaps its
+    // contents, so focus stays where the visitor left it.
+    if (!hasFavourites) {
+      setIsConfirmingEmptyShare(true);
+      return;
+    }
+    void copyOrShare();
+  }
+
+  async function copyOrShare() {
+    closeMenu();
     const url = window.location.href;
     try {
       // `navigator.share` existing does NOT mean a phone: Chrome on Windows and
@@ -173,7 +200,7 @@ export default function ProgrammeControls({
   }
 
   function printWith(grouping: PrintGrouping) {
-    setIsMenuOpen(false);
+    closeMenu();
     if (printGrouping === grouping) {
       window.print();
       return;
@@ -371,7 +398,7 @@ export default function ProgrammeControls({
           <button
             ref={triggerRef}
             type="button"
-            onClick={() => setIsMenuOpen((v) => !v)}
+            onClick={() => (isMenuOpen ? closeMenu() : setIsMenuOpen(true))}
             aria-expanded={isMenuOpen}
             aria-controls="programme-export-menu"
             title={labels.exportMenuTitle}
@@ -393,38 +420,77 @@ export default function ProgrammeControls({
             hidden={!isMenuOpen}
             className="absolute left-0 z-20 mt-2 w-64 overflow-hidden rounded-2xl bg-blanc py-1 shadow-lg lg:left-auto lg:right-0"
           >
-            <button type="button" onClick={share} title={labels.shareTitle} className={ITEM}>
+            <button
+              type="button"
+              onClick={share}
+              title={labels.shareTitle}
+              className={ITEM}
+              hidden={isConfirmingEmptyShare}
+            >
               {labels.share}
             </button>
-            {/* A real link: the .ics is a file, and Cmd-click has to work. */}
-            <a
-              href={icsHref}
-              title={labels.exportTitle}
-              onClick={() => setIsMenuOpen(false)}
-              className={`${ITEM} block`}
-            >
-              {labels.calendar}
-            </a>
-            {/* Two entries rather than a dropdown wedged inside the button
-                (#449, #459): a sheet pinned on a door and a programme folded
-                into a pocket are not the same document, and each entry now
-                names the one it produces. */}
-            <button
-              type="button"
-              onClick={() => printWith("time")}
-              title={labels.printTitle}
-              className={ITEM}
-            >
-              {labels.printByTimeAction}
-            </button>
-            <button
-              type="button"
-              onClick={() => printWith("room")}
-              title={labels.printTitle}
-              className={ITEM}
-            >
-              {labels.printByRoomAction}
-            </button>
+
+            {/* Swapped in, not stacked on: a second panel over the first would
+                need its own focus trap, and the question belongs to the entry
+                that raised it. */}
+            {isConfirmingEmptyShare && (
+              <div className="px-4 py-3">
+                <p className="text-sm font-bold text-noir">{labels.shareEmptyTitle}</p>
+                <p className="mt-1 text-sm leading-snug text-gris">{labels.shareEmptyBody}</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {/* Closing is the whole action: the stars are on the cards,
+                      a step away, and nothing here can pick them for you. */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      closeMenu();
+                      triggerRef.current?.focus();
+                    }}
+                    className="rounded-[12px] bg-noir px-3 py-1.5 text-sm font-bold text-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  >
+                    {labels.shareEmptyChoose}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void copyOrShare()}
+                    className="rounded-[12px] px-3 py-1.5 text-sm font-medium text-bleu hover:underline focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  >
+                    {labels.shareEmptyConfirm}
+                  </button>
+                </div>
+              </div>
+            )}
+            <div hidden={isConfirmingEmptyShare}>
+              {/* A real link: the .ics is a file, and Cmd-click has to work. */}
+              <a
+                href={icsHref}
+                title={labels.exportTitle}
+                onClick={closeMenu}
+                className={`${ITEM} block`}
+              >
+                {labels.calendar}
+              </a>
+              {/* Two entries rather than a dropdown wedged inside the button
+                  (#449, #459): a sheet pinned on a door and a programme folded
+                  into a pocket are not the same document, and each entry now
+                  names the one it produces. */}
+              <button
+                type="button"
+                onClick={() => printWith("time")}
+                title={labels.printTitle}
+                className={ITEM}
+              >
+                {labels.printByTimeAction}
+              </button>
+              <button
+                type="button"
+                onClick={() => printWith("room")}
+                title={labels.printTitle}
+                className={ITEM}
+              >
+                {labels.printByRoomAction}
+              </button>
+            </div>
           </div>
         </div>
 
