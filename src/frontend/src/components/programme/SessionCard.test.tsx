@@ -53,6 +53,16 @@ describe("SessionCard in the grid", () => {
     expect(screen.queryByText("Conférence")).not.toBeInTheDocument();
   });
 
+  it("lets a long category name wrap rather than widen its column (#460)", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    // jsdom has no layout, so the class is all there is to assert on — but the
+    // decision is worth pinning: kept on one line, the badge's intrinsic width
+    // becomes the column's floor, and "Craft & Architecture" pushed two columns
+    // from 180 px to 192, widening the whole grid by 24 px at 1650.
+    expect(screen.getByText("Cloud & DevOps").className).not.toMatch(/whitespace-nowrap/);
+  });
+
   it("drops the speakers, which cost the title a line at 180 px", () => {
     render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
 

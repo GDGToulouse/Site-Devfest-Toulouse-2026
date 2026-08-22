@@ -70,10 +70,15 @@ export default function SessionCard({
             : "bg-blanc shadow-card"
         }`}
       >
-        {/* whitespace-nowrap: at eight rooms a column is narrow enough to split
-            "Cloud & DevOps" across two lines mid-label (#441). The badge wraps to
-            its own line instead, and truncates only if the name is very long.
-            The right padding keeps them clear of the star. */}
+        {/* The right padding keeps the badges clear of the star.
+
+            In the grid the category badge must be allowed to wrap (#460). Kept
+            on one line, its intrinsic width becomes the column's floor: the
+            table is auto-laid-out, so "Craft & Architecture" pushed its two
+            columns from 180 px to 192 and widened the whole grid by 24 px. Two
+            lines cost nothing; truncating would hide the half of the name that
+            distinguishes it. Short names such as "Cloud & DevOps" still fit on
+            one line, which is what #441 was after. */}
         <div className={`flex flex-wrap items-center gap-1.5 ${onToggleFavourite ? "pr-9" : ""}`}>
           {/* One badge in the grid, not two (#457). Twenty-four sessions used to
               put forty-eight pastel pills on screen, all at a tenth of their
@@ -87,7 +92,9 @@ export default function SessionCard({
           )}
           {categoryName && (
             <span
-              className="max-w-full truncate whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-bold"
+              className={`max-w-full rounded-full px-2 py-0.5 text-xs font-bold ${
+                isGrid ? "break-words" : "truncate whitespace-nowrap"
+              }`}
               style={{ backgroundColor: `${talk.category!.color}20`, color: talk.category!.color }}
             >
               {categoryName}
