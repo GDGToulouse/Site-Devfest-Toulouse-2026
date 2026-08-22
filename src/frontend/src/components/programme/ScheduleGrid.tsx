@@ -95,7 +95,14 @@ export default function ScheduleGrid({
   }, [rooms.length, rows.length]);
 
   return (
-    <div className="print-grid relative hidden lg:block">
+    // `-mx-6` cancels the page's own `px-6` for the grid alone (#460): eight
+    // rooms need 1616 px and a 1650 px window offered 1572, so it scrolled by
+    // 44 px on a screen wide enough to hold it. Everything else on the page
+    // stays aligned with the rest of the site. The table's `border-spacing`
+    // still leaves 8 px between the cards and the window edge, so full bleed
+    // does not mean flush. Below 1646 px the grid scrolls regardless — that is
+    // the #441 trade, readability over compression.
+    <div className="print-grid relative -mx-6 hidden lg:block">
       {/* Scrolls inside its own box: the page body must never scroll sideways. */}
       <div ref={scroller} className={GRID_VIEWPORT}>
         <table className="w-full border-separate border-spacing-2">
