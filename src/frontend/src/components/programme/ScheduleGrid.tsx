@@ -251,13 +251,21 @@ export default function ScheduleGrid({
                   >
                     {formatEventTime(row.startsAt)}
                   </th>
-                  {row.cells.map((cells, index) => (
+                  {row.cells.map((cells, index) =>
+                    // No cell at all where a session from an earlier row is
+                    // still running (#462): the one above spans onto this one,
+                    // and a second `<td>` would push the whole row sideways.
+                    cells.length === 0 && row.covered[index] ? null : (
                     // `h-px` is not a height, it is the way to give the cell one:
                     // a table cell has no resolvable height of its own, so a card
                     // asking for `h-full` inside it stays at its content size and
                     // the row ends up ragged. Declaring a nominal height makes the
                     // browser resolve it against the row it actually computed.
-                    <td key={rooms[index]?.id ?? index} className={`${MIN_COLUMN} h-px align-top`}>
+                    <td
+                      key={rooms[index]?.id ?? index}
+                      rowSpan={cells[0]?.rowSpan}
+                      className={`${MIN_COLUMN} h-px align-top`}
+                    >
                       {cells.length === 0 ? (
                         // A hole in an otherwise full row reads as "the page did
                         // not finish loading" as readily as "nothing here". The
@@ -289,7 +297,8 @@ export default function ScheduleGrid({
                       </div>
                       )}
                     </td>
-                  ))}
+                    ),
+                  )}
                 </tr>
               ),
             )}

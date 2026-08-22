@@ -28,6 +28,7 @@ const rows: ScheduleRow[] = [
     key: "slot:1",
     startsAt: "2026-11-19T08:50:00.000Z",
     cells: [[], []],
+    covered: [false, false],
   },
 ];
 
@@ -117,7 +118,8 @@ describe("a room with nothing on at that hour", () => {
         type: "slot",
         key: "slot:1",
         startsAt: "2026-11-19T08:50:00.000Z",
-        cells: [[{ talk, isSimulcast: false }], []],
+        cells: [[{ talk, isSimulcast: false, rowSpan: 1 }], []],
+        covered: [false, false],
       },
     ];
     const { container } = render(<ScheduleGrid {...props} rows={filled} />);
@@ -125,6 +127,45 @@ describe("a room with nothing on at that hour", () => {
     // One gap left, not two: the marker must not sit under a session.
     expect(container.querySelectorAll("td > [aria-hidden]")).toHaveLength(1);
     expect(screen.getByText("Terraform sans douleur")).toBeInTheDocument();
+  });
+});
+
+describe("a session reaching across two rows", () => {
+  const spanning: ScheduleRow[] = [
+    {
+      type: "slot",
+      key: "slot:1",
+      startsAt: "2026-11-19T08:50:00.000Z",
+      cells: [[{ talk, isSimulcast: false, rowSpan: 2 }], []],
+      covered: [false, false],
+    },
+    {
+      type: "slot",
+      key: "slot:2",
+      startsAt: "2026-11-19T09:10:00.000Z",
+      cells: [[], []],
+      covered: [true, false],
+    },
+  ];
+
+  it("draws one cell, told how far it reaches", () => {
+    const { container } = render(<ScheduleGrid {...props} rows={spanning} />);
+
+    const cell = container.querySelector("tbody td");
+    expect(cell).toHaveAttribute("rowspan", "2");
+    expect(screen.getAllByText("Terraform sans douleur")).toHaveLength(1);
+  });
+
+  it("draws no cell at all where it still runs", () => {
+    const { container } = render(<ScheduleGrid {...props} rows={spanning} />);
+    const rows = container.querySelectorAll("tbody tr");
+
+    // A second `<td>` under a spanning one pushes the whole row sideways —
+    // every room after it would be drawn under the wrong column (#462).
+    expect(rows[0].querySelectorAll("td")).toHaveLength(2);
+    expect(rows[1].querySelectorAll("td")).toHaveLength(1);
+    // And the one cell it does draw is the free room, with its marker.
+    expect(rows[1].querySelectorAll("td > [aria-hidden]")).toHaveLength(1);
   });
 });
 
