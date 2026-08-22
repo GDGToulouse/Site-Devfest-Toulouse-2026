@@ -162,6 +162,19 @@ export default function ScheduleGrid({
                     // the row ends up ragged. Declaring a nominal height makes the
                     // browser resolve it against the row it actually computed.
                     <td key={rooms[index]?.id ?? index} className={`${MIN_COLUMN} h-px align-top`}>
+                      {cells.length === 0 ? (
+                        // A hole in an otherwise full row reads as "the page did
+                        // not finish loading" as readily as "nothing here". The
+                        // dash makes the emptiness deliberate. Decorative only:
+                        // an empty cell already announces as blank, and a screen
+                        // reader hearing "dash" once per gap would be worse.
+                        <div
+                          aria-hidden
+                          className="flex h-full items-center justify-center text-sm text-gris-clair/60"
+                        >
+                          —
+                        </div>
+                      ) : (
                       <div className="flex h-full flex-col gap-2">
                         {cells.map(({ talk, isSimulcast }) => (
                           <SessionCard
@@ -178,6 +191,7 @@ export default function ScheduleGrid({
                           />
                         ))}
                       </div>
+                      )}
                     </td>
                   ))}
                 </tr>

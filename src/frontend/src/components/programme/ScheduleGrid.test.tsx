@@ -31,6 +31,16 @@ const rows: ScheduleRow[] = [
   },
 ];
 
+const talk = {
+  slug: "terraform-sans-douleur",
+  title: "Terraform sans douleur",
+  format: "CONFERENCE",
+  startsAt: "2026-11-19T08:50:00.000Z",
+  endsAt: "2026-11-19T09:30:00.000Z",
+  speakers: [],
+  category: null,
+} as unknown as ScheduleRow extends { cells: (infer C)[][] } ? C : never;
+
 const props = {
   rows,
   rooms,
@@ -83,5 +93,35 @@ describe("ScheduleGrid overflow cue", () => {
     // The cue is decorative: the table is complete either way, so a screen
     // reader never depends on scrolling to hear the last room.
     expect(screen.getByRole("columnheader", { name: "Salle Communautés" })).toBeInTheDocument();
+  });
+});
+
+describe("a room with nothing on at that hour", () => {
+  it("marks the gap instead of leaving a blank", () => {
+    // In a grid that is otherwise full — which is what the real programme looks
+    // like — a white hole reads as "not loaded yet" as readily as "nothing
+    // scheduled". Only the grid has the problem: the agenda and the by-hour
+    // print are lists, where an absent room leaves no gap at all.
+    const { container } = render(<ScheduleGrid {...props} />);
+
+    const marks = container.querySelectorAll("td > [aria-hidden]");
+    expect(marks).toHaveLength(2);
+    expect(marks[0]).toHaveTextContent("—");
+  });
+
+  it("leaves an occupied cell alone", () => {
+    const filled: ScheduleRow[] = [
+      {
+        type: "slot",
+        key: "slot:1",
+        startsAt: "2026-11-19T08:50:00.000Z",
+        cells: [[{ talk, isSimulcast: false }], []],
+      },
+    ];
+    const { container } = render(<ScheduleGrid {...props} rows={filled} />);
+
+    // One gap left, not two: the marker must not sit under a session.
+    expect(container.querySelectorAll("td > [aria-hidden]")).toHaveLength(1);
+    expect(screen.getByText("Terraform sans douleur")).toBeInTheDocument();
   });
 });
