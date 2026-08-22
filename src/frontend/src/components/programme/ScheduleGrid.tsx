@@ -41,17 +41,16 @@ const MIN_COLUMN = "min-w-[180px]";
 // sat at `top = -392`. Two scrollbars for a pin that only held while scrolling
 // inside the box.
 //
-// Pinning it to the viewport is not available here. `overflow-x: auto` makes
-// CSS compute `overflow-y` to `auto` too, so this element is a scroll container
-// whatever its height, and a sticky child resolves against it rather than the
-// viewport — verified twice on the page, and `overflow-y: clip` is normalised
-// to `hidden` beside a scrolling axis, which is still a scroll container. The
-// way out is a second, duplicated header row outside this box, synced on
-// `scrollLeft`; that is its own piece of work.
+// No sticky child of this element can ever pin to the viewport. `overflow-x:
+// auto` makes CSS compute `overflow-y` to `auto` too, so it is a scroll
+// container whatever its height — verified twice on the page — and
+// `overflow-y: clip` is normalised to `hidden` beside a scrolling axis, which
+// is still a scroll container. The room row is therefore pinned by a copy that
+// lives outside this box; see it below.
 //
 // Unbounded, the box never scrolls vertically, so only the page does. The time
-// column keeps its horizontal pin, which is the one that matters on a grid this
-// wide.
+// column keeps its horizontal pin, which resolves against this box and is the
+// one that has to.
 const GRID_VIEWPORT = "overflow-x-auto";
 
 // `border-spacing-2` leaves 8 px of nothing between cells, and content scrolled
@@ -60,6 +59,12 @@ const GRID_VIEWPORT = "overflow-x-auto";
 // below, where the first row of cards arrives.
 const STICKY_BACKDROP =
   "before:absolute before:-inset-x-1 before:-top-1 before:-bottom-2 before:bg-blanc before:content-['']";
+
+// The `border-spacing-2` above, in pixels. The pinned copy of the room row has
+// to account for it: the table's first row starts one gap below the table's own
+// top edge, so a copy laid out from the top of the grid sat 8 px high and let
+// the real row peek out underneath (#460).
+const CELL_GAP = 8;
 
 export default function ScheduleGrid({
   rows,
@@ -72,28 +77,47 @@ export default function ScheduleGrid({
   favouriteLabels,
 }: ScheduleGridProps) {
   const scroller = useRef<HTMLDivElement>(null);
+  const headerRow = useRef<HTMLTableRowElement>(null);
   // Whether the grid continues past each edge (#455). Eight rooms need 1616 px
   // and a 1440 px screen offers 1377: two rooms sat outside the viewport with
   // nothing at all to say so, and a visitor concluded the DevFest had six.
   const [overflow, setOverflow] = useState({ left: false, right: false });
+  // What the pinned copy of the room row needs to line up with the real one
+  // (#460): where the grid is scrolled to, how tall the row is, and how wide
+  // each column came out. Widths are read rather than assumed — the columns are
+  // laid out automatically, so a long title or a long category name decides
+  // them, not `MIN_COLUMN`.
+  const [header, setHeader] = useState({ scrollLeft: 0, height: 0, columns: [] as number[] });
 
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
 
-    const measure = () =>
+    const measure = () => {
       setOverflow({
         left: el.scrollLeft > 1,
         // A pixel of slack: fractional widths never land exactly on the end.
         right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
       });
 
+      const row = headerRow.current;
+      if (row) {
+        setHeader({
+          scrollLeft: el.scrollLeft,
+          height: row.getBoundingClientRect().height,
+          columns: [...row.children].map((cell) => cell.getBoundingClientRect().width),
+        });
+      }
+    };
+
     measure();
     el.addEventListener("scroll", measure, { passive: true });
     // The room count is not the only thing that changes the answer — filtering
-    // drops columns, and the window resizes.
+    // drops columns, and the window resizes. The row is observed too: its
+    // columns move when the table relayouts, even at a constant box width.
     const observer = new ResizeObserver(measure);
     observer.observe(el);
+    if (headerRow.current) observer.observe(headerRow.current);
     return () => {
       el.removeEventListener("scroll", measure);
       observer.disconnect();
@@ -109,11 +133,60 @@ export default function ScheduleGrid({
     // does not mean flush. Below 1646 px the grid scrolls regardless — that is
     // the #441 trade, readability over compression.
     <div className="print-grid relative -mx-6 hidden lg:block">
+      {/* The room row, pinned to the viewport (#460).
+
+          A copy, because the real one cannot be: it lives inside a horizontal
+          scroll container, and a sticky child of one resolves against that box
+          rather than the page. This copy lives outside it, so `top-60px` means
+          what it says — under the site header, which keeps z-40.
+
+          `h-0` keeps it out of the flow: it takes no space, and its child
+          paints downward over the real row, which it covers exactly. There is
+          therefore nothing to show or hide as the page scrolls — the copy is
+          always exactly where the real row would be, or pinned under the
+          header once that has scrolled past. Sticky stops at the bottom of
+          this container, so it never outlives its own grid.
+
+          Hidden from assistive technology: the real `<th scope="col">` cells
+          underneath are what announce a cell's room, scrolled or not. */}
+      {header.columns.length > 0 && (
+        <div aria-hidden className="sticky top-[60px] z-20 h-0">
+          <div
+            className="relative overflow-hidden bg-blanc"
+            style={{ height: header.height + CELL_GAP }}
+          >
+            <div
+              className="flex items-center gap-2 px-2 pt-2"
+              style={{ transform: `translateX(${-header.scrollLeft}px)` }}
+            >
+              {/* Placeholder for the hour column: the real label is painted on
+                  top of it, unmoved, so it stays put as the rooms slide by. */}
+              <div style={{ width: header.columns[0], flex: "0 0 auto" }} />
+              {rooms.map((room, index) => (
+                <div
+                  key={room.id ?? `label:${room.name}`}
+                  style={{ width: header.columns[index + 1], flex: "0 0 auto" }}
+                  className="rounded-2xl bg-blanc-casse px-3 py-2 text-left text-sm font-bold text-noir"
+                >
+                  {room.name || labels.roomTba}
+                </div>
+              ))}
+            </div>
+            <div
+              className="absolute bottom-0 left-0 top-2 flex items-center bg-blanc pl-2 text-sm font-bold text-gris"
+              style={{ width: header.columns[0] + CELL_GAP * 2 }}
+            >
+              {labels.timeColumn}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Scrolls inside its own box: the page body must never scroll sideways. */}
       <div ref={scroller} className={GRID_VIEWPORT}>
         <table className="w-full border-separate border-spacing-2">
           <thead>
-            <tr>
+            <tr ref={headerRow}>
               {/* Pinned horizontally, and above the room row it crosses: the
                   hour stays readable however far right you have scrolled.
                   Opaque, or cards slide visibly under. */}

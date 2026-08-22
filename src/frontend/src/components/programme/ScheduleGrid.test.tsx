@@ -127,3 +127,35 @@ describe("a room with nothing on at that hour", () => {
     expect(screen.getByText("Terraform sans douleur")).toBeInTheDocument();
   });
 });
+
+describe("the room row pinned to the viewport", () => {
+  it("copies the rooms without duplicating them for a screen reader", () => {
+    const { container } = render(<ScheduleGrid {...props} />);
+
+    // A copy is the only way to pin this row (#460): the real one lives inside
+    // a horizontal scroll container, and a sticky child of one resolves against
+    // that box rather than the page — so it followed the box out of view.
+    const pinned = container.querySelector("[aria-hidden].sticky");
+    expect(pinned).toHaveTextContent("Amphithéâtre");
+    expect(pinned).toHaveTextContent("Salle Communautés");
+
+    // Exactly one of the two is announced, and it is the real `<th>`: a copy in
+    // the accessibility tree would read every room name twice.
+    expect(screen.getAllByRole("columnheader", { name: "Amphithéâtre" })).toHaveLength(1);
+  });
+
+  it("shifts with the horizontal scroll, or it would name the wrong columns", () => {
+    render(<ScheduleGrid {...props} />);
+    const scroller = document.querySelector("table")!.parentElement as HTMLElement;
+    const row = document.querySelector("[aria-hidden].sticky > div > div") as HTMLElement;
+
+    expect(row.style.transform).toBe("translateX(0px)");
+
+    scroller.scrollLeft = 240;
+    act(() => {
+      scroller.dispatchEvent(new Event("scroll"));
+    });
+
+    expect(row.style.transform).toBe("translateX(-240px)");
+  });
+});
