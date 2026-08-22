@@ -17,6 +17,7 @@ function talk(over: Partial<EditionSchedule["talks"][number]>): EditionSchedule[
     speakers: [],
     room: AMPHI.name,
     roomId: AMPHI.id,
+    simulcasts: [],
     startsAt: "2026-11-19T08:00:00.000Z",
     endsAt: "2026-11-19T08:40:00.000Z",
     ...over,
@@ -41,8 +42,8 @@ describe("buildScheduleRows", () => {
     expect(rows).toHaveLength(1);
     const slot = rows[0];
     if (slot.type !== "slot") throw new Error("expected a slot row");
-    expect(slot.cells[0].map((t) => t.slug)).toEqual(["a"]);
-    expect(slot.cells[1].map((t) => t.slug)).toEqual(["b"]);
+    expect(slot.cells[0].map((c) => c.talk.slug)).toEqual(["a"]);
+    expect(slot.cells[1].map((c) => c.talk.slug)).toEqual(["b"]);
   });
 
   it("groups talks that start at the same moment into one row", () => {
@@ -99,6 +100,72 @@ describe("buildScheduleRows", () => {
 
     const slot = rows[0];
     if (slot.type !== "slot") throw new Error("expected a slot row");
-    expect(slot.cells[0].map((t) => t.slug)).toEqual(["old"]);
+    expect(slot.cells[0].map((c) => c.talk.slug)).toEqual(["old"]);
+  });
+});
+
+describe("relayed talks (#456)", () => {
+  it("draws the keynote in the room it is given in and in every relay room", () => {
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [
+          talk({
+            slug: "keynote",
+            format: "KEYNOTE",
+            simulcasts: [{ roomId: HEMI.id, room: HEMI.name }],
+          }),
+        ],
+      }),
+    );
+
+    const slot = rows[0];
+    if (slot.type !== "slot") throw new Error("expected a slot row");
+    expect(slot.cells[0].map((c) => c.talk.slug)).toEqual(["keynote"]);
+    expect(slot.cells[1].map((c) => c.talk.slug)).toEqual(["keynote"]);
+  });
+
+  it("marks the relay, so the grid can say it is a screen and not the speaker", () => {
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [
+          talk({ slug: "keynote", simulcasts: [{ roomId: HEMI.id, room: HEMI.name }] }),
+        ],
+      }),
+    );
+
+    const slot = rows[0];
+    if (slot.type !== "slot") throw new Error("expected a slot row");
+    expect(slot.cells[0][0].isSimulcast).toBe(false);
+    expect(slot.cells[1][0].isSimulcast).toBe(true);
+  });
+
+  it("reads the relay by its frozen label when the room is gone (#375)", () => {
+    // The room was deleted, so only the name printed that year survives — the
+    // endpoint builds the column the same way, from the same frozen label.
+    const rows = buildScheduleRows(
+      schedule({
+        rooms: [AMPHI, { id: null, name: "Agora 1", sortOrder: 9 }],
+        talks: [talk({ slug: "keynote", simulcasts: [{ roomId: null, room: "Agora 1" }] })],
+      }),
+    );
+
+    const slot = rows[0];
+    if (slot.type !== "slot") throw new Error("expected a slot row");
+    expect(slot.cells[1].map((c) => c.talk.slug)).toEqual(["keynote"]);
+  });
+
+  it("drops a relay the grid has no column for rather than parking it in the first", () => {
+    // Unlike the room a talk is given in, a relay with nowhere to go is not
+    // worth inventing a position for — it would land on top of another room.
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [talk({ slug: "keynote", simulcasts: [{ roomId: 99, room: "Salle inconnue" }] })],
+      }),
+    );
+
+    const slot = rows[0];
+    if (slot.type !== "slot") throw new Error("expected a slot row");
+    expect(slot.cells[0].map((c) => c.talk.slug)).toEqual(["keynote"]);
+    expect(slot.cells[1]).toEqual([]);
   });
 });

@@ -51,8 +51,13 @@ export default function ScheduleAgenda({
               {formatEventTime(row.startsAt)}
             </h2>
             <div className="mt-3 space-y-3">
-              {row.cells.flatMap((talks, index) =>
-                talks.map((talk) => (
+              {row.cells.flatMap((cells, index) =>
+                // Relays are skipped here (#456): a linear list has no columns,
+                // so drawing the keynote once per relay room would just repeat
+                // it. The card names the room it is given in.
+                cells
+                  .filter((cell) => !cell.isSimulcast)
+                  .map(({ talk }) => (
                   <SessionCard
                     key={talk.slug}
                     talk={talk}

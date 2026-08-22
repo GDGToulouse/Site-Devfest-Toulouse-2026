@@ -21,6 +21,9 @@ interface TalkCreateBody {
   // Scheduling (#105). `roomId: null` unassigns the room; the dates are ISO
   // strings, `null` clears the slot.
   roomId?: number | null;
+  // Rooms the talk is relayed to (#456). The whole list every time — an empty
+  // array clears it. Omitted leaves the relays untouched.
+  simulcastRoomIds?: number[];
   startsAt?: string | null;
   endsAt?: string | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
@@ -45,11 +48,16 @@ interface TalkBulkBody {
 
 function serialize(t: {
   speakers?: { id: number; name: string }[];
+  simulcasts?: { roomId: number | null }[];
   [k: string]: unknown;
 }) {
   return {
     ...t,
     speakerIds: t.speakers?.map((s) => s.id) ?? [],
+    // Flat ids, the shape the form posts back (#456). A relay whose room was
+    // deleted keeps only its frozen label and cannot be re-selected, so it
+    // drops out here rather than reappearing as a blank choice.
+    simulcastRoomIds: t.simulcasts?.map((sc) => sc.roomId).filter((id): id is number => id !== null) ?? [],
   };
 }
 
@@ -81,6 +89,36 @@ async function resolveRoom(
 
   // The label is frozen here, not read through at display time (#375).
   return { data: { roomId: room.id, roomLabel: room.name } };
+}
+
+/**
+ * The relay rooms of a talk (#456), validated the same way as its main room and
+ * with their labels frozen the same way.
+ *
+ * The main room is dropped if it appears in the list: a talk is not relayed to
+ * the room it is given in, and letting it through would draw the keynote twice
+ * in one column.
+ */
+async function resolveSimulcasts(
+  roomIds: number[],
+  mainRoomId: number | null,
+  editionId: number,
+): Promise<{ data: { roomId: number; roomLabel: string }[] } | { error: string }> {
+  const wanted = [...new Set(roomIds)].filter((id) => id !== mainRoomId);
+  if (wanted.length === 0) return { data: [] };
+
+  const edition = await prisma.edition.findUnique({
+    where: { id: editionId },
+    select: { venueId: true },
+  });
+  const rooms = await prisma.room.findMany({ where: { id: { in: wanted } } });
+
+  if (rooms.length !== wanted.length) return { error: "Une salle de retransmission n'existe pas." };
+  if (rooms.some((room) => !edition || edition.venueId !== room.venueId)) {
+    return { error: "Une salle de retransmission n'appartient pas au lieu de l'édition." };
+  }
+
+  return { data: rooms.map((room) => ({ roomId: room.id, roomLabel: room.name })) };
 }
 
 export default async function adminTalkRoutes(app: FastifyInstance) {
@@ -118,6 +156,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         speakers: { where: notDeleted, select: { id: true, name: true } },
         category: { select: { id: true, nameFr: true, color: true } },
         room: { select: { id: true, name: true } },
+        simulcasts: { select: { roomId: true } },
         edition: { select: { id: true, year: true } },
       },
     });
@@ -156,6 +195,15 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "invalid_room", message: roomAssignment.error });
     }
 
+    const simulcasts = await resolveSimulcasts(
+      body.simulcastRoomIds ?? [],
+      roomAssignment.data.roomId,
+      body.editionId,
+    );
+    if ("error" in simulcasts) {
+      return reply.code(422).send({ error: "invalid_room", message: simulcasts.error });
+    }
+
     const talk = await prisma.talk.create({
       data: {
         editionId: body.editionId,
@@ -174,10 +222,15 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
+        ...(simulcasts.data.length > 0 ? { simulcasts: { create: simulcasts.data } } : {}),
       },
       // The year comes along so the dated URL can be purged too (#360): a talk
       // answers on both /conferences/<slug> and /editions/<year>/conferences/<slug>.
-      include: { speakers: { select: { id: true, name: true } }, edition: { select: { year: true } } },
+      include: {
+        speakers: { select: { id: true, name: true } },
+        simulcasts: { select: { roomId: true } },
+        edition: { select: { year: true } },
+      },
     });
 
     revalidateConferences();
@@ -216,6 +269,29 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       roomData = roomAssignment.data;
     }
 
+    // Relays are replaced wholesale, and validated against the room the talk
+    // ends up in — the one being written if the request moves it, the stored
+    // one otherwise. Reading it back is what stops a relay surviving in the
+    // room the talk was just moved into.
+    let simulcastData: { roomId: number; roomLabel: string }[] | undefined;
+    if (body.simulcastRoomIds !== undefined) {
+      const current = await prisma.talk.findUnique({
+        where: { id: Number(id) },
+        select: { editionId: true, roomId: true },
+      });
+      if (!current) return reply.code(404).send({ error: "Talk not found" });
+
+      const simulcasts = await resolveSimulcasts(
+        body.simulcastRoomIds,
+        roomData ? roomData.roomId : current.roomId,
+        current.editionId,
+      );
+      if ("error" in simulcasts) {
+        return reply.code(422).send({ error: "invalid_room", message: simulcasts.error });
+      }
+      simulcastData = simulcasts.data;
+    }
+
     const talk = await prisma.talk.update({
       where: { id: Number(id) },
       data: {
@@ -233,10 +309,17 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),
+        ...(simulcastData !== undefined && {
+          simulcasts: { deleteMany: {}, create: simulcastData },
+        }),
       },
       // The year comes along so the dated URL can be purged too (#360): a talk
       // answers on both /conferences/<slug> and /editions/<year>/conferences/<slug>.
-      include: { speakers: { select: { id: true, name: true } }, edition: { select: { year: true } } },
+      include: {
+        speakers: { select: { id: true, name: true } },
+        simulcasts: { select: { roomId: true } },
+        edition: { select: { year: true } },
+      },
     });
 
     revalidateConferences();

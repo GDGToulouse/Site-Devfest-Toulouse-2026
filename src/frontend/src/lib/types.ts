@@ -390,6 +390,8 @@ export interface EditionSchedule {
   talks: (Pick<EditionTalk, "slug" | "title" | "format" | "level" | "language" | "category" | "speakers"> & {
     room: string | null;
     roomId: number | null;
+    /** Rooms the talk is relayed to (#456), with their labels frozen (#375). */
+    simulcasts: { roomId: number | null; room: string | null }[];
     startsAt: string;
     endsAt: string | null;
   })[];

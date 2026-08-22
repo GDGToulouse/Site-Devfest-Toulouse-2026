@@ -36,7 +36,7 @@ const props = {
   rooms,
   locale: "fr",
   formatLabels: { CONFERENCE: "Conférence" },
-  labels: { timeColumn: "Horaire", roomTba: "À venir" },
+  labels: { timeColumn: "Horaire", roomTba: "À venir", simulcast: "Retransmission" },
   favourites: new Set<string>(),
   onToggleFavourite: () => {},
   favouriteLabels: { add: "Ajouter", remove: "Retirer" },

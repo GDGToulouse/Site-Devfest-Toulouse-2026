@@ -11,7 +11,7 @@ interface ScheduleGridProps {
   rooms: ScheduleRoom[];
   locale: string;
   formatLabels: Record<string, string>;
-  labels: { timeColumn: string; roomTba: string };
+  labels: { timeColumn: string; roomTba: string; simulcast: string };
   /** Favourites (#442) — passed straight down to the cards. */
   favourites: Set<string>;
   onToggleFavourite: (slug: string) => void;
@@ -155,7 +155,7 @@ export default function ScheduleGrid({
                   >
                     {formatEventTime(row.startsAt)}
                   </th>
-                  {row.cells.map((talks, index) => (
+                  {row.cells.map((cells, index) => (
                     // `h-px` is not a height, it is the way to give the cell one:
                     // a table cell has no resolvable height of its own, so a card
                     // asking for `h-full` inside it stays at its content size and
@@ -163,13 +163,15 @@ export default function ScheduleGrid({
                     // browser resolve it against the row it actually computed.
                     <td key={rooms[index]?.id ?? index} className={`${MIN_COLUMN} h-px align-top`}>
                       <div className="flex h-full flex-col gap-2">
-                        {talks.map((talk) => (
+                        {cells.map(({ talk, isSimulcast }) => (
                           <SessionCard
                             key={talk.slug}
                             talk={talk}
                             locale={locale}
                             formatLabels={formatLabels}
                             variant="grid"
+                            isSimulcast={isSimulcast}
+                            simulcastLabel={labels.simulcast}
                             isFavourite={favourites.has(talk.slug)}
                             onToggleFavourite={() => onToggleFavourite(talk.slug)}
                             favouriteLabels={favouriteLabels}

@@ -23,6 +23,8 @@ export interface TalkFormValue {
   categoryId: string;
   // Scheduling (#105). Empty string means "not scheduled" for all three.
   roomId: string;
+  /** Rooms the talk is relayed to (#456). Ids, as the API takes them. */
+  simulcastRoomIds: number[];
   startsAt: string;
   endsAt: string;
   speakerIds: number[];
@@ -38,6 +40,7 @@ export const emptyTalkForm: TalkFormValue = {
   language: "fr",
   categoryId: "",
   roomId: "",
+  simulcastRoomIds: [],
   startsAt: "",
   endsAt: "",
   speakerIds: [],
@@ -138,6 +141,43 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms 
               <span className="block text-sm font-medium text-noir mb-1">Fin</span>
               <input type="datetime-local" value={value.endsAt} onChange={(e) => onChange({ ...value, endsAt: e.target.value })} className={inputClass} />
             </label>
+          </div>
+        )}
+
+        {/* Relay rooms (#456). A keynote fills the amphitheatre and plays on
+            screens elsewhere; those rooms are running this session, not another
+            one. The room the talk is given in is not offered here — it would
+            draw the keynote twice in its own column, and the API drops it. */}
+        {rooms.length > 0 && (
+          <div className="mt-4">
+            <span className="block text-sm font-medium text-noir mb-1">
+              Retransmise dans
+            </span>
+            <p className="mb-2 text-sm text-gris">
+              Les salles où la session est diffusée sur écran. À laisser vide pour une
+              session ordinaire.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {rooms
+                .filter((r) => String(r.id) !== value.roomId)
+                .map((r) => (
+                  <label key={r.id} className="inline-flex items-center gap-2 text-sm text-noir">
+                    <input
+                      type="checkbox"
+                      checked={value.simulcastRoomIds.includes(r.id)}
+                      onChange={(e) =>
+                        onChange({
+                          ...value,
+                          simulcastRoomIds: e.target.checked
+                            ? [...value.simulcastRoomIds, r.id]
+                            : value.simulcastRoomIds.filter((id) => id !== r.id),
+                        })
+                      }
+                    />
+                    {r.name}
+                  </label>
+                ))}
+            </div>
           </div>
         )}
       </fieldset>

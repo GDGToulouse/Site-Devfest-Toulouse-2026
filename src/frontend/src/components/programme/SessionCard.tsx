@@ -26,6 +26,13 @@ interface SessionCardProps {
   variant?: "grid" | "agenda";
   /** Shown on the mobile agenda, where there is no column to say which room. */
   roomName?: string;
+  /**
+   * True in a column the talk is only relayed to (#456). Same talk, same slug,
+   * same favourite — the card is dimmed and captioned so the reader knows to
+   * expect a screen rather than the speaker.
+   */
+  isSimulcast?: boolean;
+  simulcastLabel?: string;
   /** Favourites (#442). Absent when the caller renders no star at all. */
   isFavourite?: boolean;
   onToggleFavourite?: () => void;
@@ -40,6 +47,8 @@ export default function SessionCard({
   formatLabels,
   variant = "agenda",
   roomName,
+  isSimulcast = false,
+  simulcastLabel,
   isFavourite = false,
   onToggleFavourite,
   favouriteLabels,
@@ -55,7 +64,11 @@ export default function SessionCard({
     <div className="relative h-full">
       <Link
         href={`/conferences/${talk.slug}`}
-        className="flex h-full flex-col rounded-2xl bg-blanc p-3 shadow-card transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        className={`flex h-full flex-col rounded-2xl p-3 transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
+          isSimulcast
+            ? "border border-dashed border-gris/40 bg-blanc-casse"
+            : "bg-blanc shadow-card"
+        }`}
       >
         {/* whitespace-nowrap: at eight rooms a column is narrow enough to split
             "Cloud & DevOps" across two lines mid-label (#441). The badge wraps to
@@ -87,6 +100,12 @@ export default function SessionCard({
 
         {!isGrid && talk.speakers.length > 0 && (
           <p className="mt-1 text-xs text-gris">{talk.speakers.map((s) => s.name).join(", ")}</p>
+        )}
+
+        {isSimulcast && simulcastLabel && (
+          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-gris-sur-creme">
+            {simulcastLabel}
+          </p>
         )}
 
         <p className="mt-auto pt-2 text-xs tabular-nums text-gris">

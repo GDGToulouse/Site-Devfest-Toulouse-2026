@@ -175,15 +175,40 @@ model Room {
 
   talks          Talk[]
   scheduleEntries ScheduleEntry[]
+  simulcasts      TalkSimulcast[]
 
   @@unique([venueId, name])
   @@index([venueId])
 }
 
+/// One room a talk is relayed to (#456).
+///
+/// A join model rather than an implicit many-to-many, because it has to carry
+/// `roomLabel`: rooms are shared between editions and can be renamed, and the
+/// 2026 grid must keep saying what the 2026 signage said (#375). Same reason
+/// `Talk.roomLabel` exists, same freezing moment — when the talk is scheduled.
+model TalkSimulcast {
+  id Int @id @default(autoincrement())
+
+  talkId Int
+  talk   Talk @relation(fields: [talkId], references: [id], onDelete: Cascade)
+
+  /// Null once the room is deleted — the frozen label is then all that is left.
+  roomId Int?
+  room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  roomLabel String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([talkId, roomId])
+  @@index([talkId])
+  @@index([roomId])
+}
+
 enum ScheduleEntryKind {
   BREAK
   MEAL
-  PLENARY
   SOCIAL
   OTHER
 }
@@ -740,6 +765,11 @@ model Talk {
   // the signage said that year. Null means "not scheduled yet, read the live
   // room".
   roomLabel String?
+
+  // Rooms this talk is relayed to (#456). A keynote fills the amphitheatre and
+  // plays on screens elsewhere; those rooms are not running another session,
+  // they are running this one. `roomId` above stays the room it is given in.
+  simulcasts TalkSimulcast[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

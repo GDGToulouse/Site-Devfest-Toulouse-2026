@@ -14,12 +14,25 @@ import type { EditionSchedule, ScheduleEntry } from "./types";
 
 export type ScheduleTalk = EditionSchedule["talks"][number];
 
+/**
+ * One talk as it occupies one room at one time.
+ *
+ * A keynote occupies several (#456): the room it is given in, and the rooms it
+ * is relayed to. The relay is the same session, not another one — so it is the
+ * same talk, the same slug, one favourite, one calendar entry — and only the
+ * grid, which has a column per room, has any reason to draw it more than once.
+ */
+export interface ScheduleCell {
+  talk: ScheduleTalk;
+  isSimulcast: boolean;
+}
+
 export interface ScheduleSlotRow {
   type: "slot";
   key: string;
   startsAt: string;
   /** One bucket per room, in column order. Normally 0 or 1 talk each. */
-  cells: ScheduleTalk[][];
+  cells: ScheduleCell[][];
 }
 
 export interface ScheduleBandRow {
@@ -62,7 +75,16 @@ export function buildScheduleRows(schedule: EditionSchedule): ScheduleRow[] {
     // derives the columns from these very talks, so this cannot happen — but
     // dropping one silently is the kind of failure nobody notices, so it lands
     // in the first column rather than nowhere.
-    slot.cells[column === -1 ? 0 : column].push(talk);
+    slot.cells[column === -1 ? 0 : column].push({ talk, isSimulcast: false });
+
+    // The relay rooms carry the same talk (#456). A relay whose column is
+    // missing is dropped rather than parked in column zero: unlike the room a
+    // talk is given in, a relay the grid cannot place is not worth inventing a
+    // position for.
+    for (const relay of talk.simulcasts ?? []) {
+      const relayColumn = columns.indexOf(roomKey(relay.roomId, relay.room));
+      if (relayColumn !== -1) slot.cells[relayColumn].push({ talk, isSimulcast: true });
+    }
   }
 
   // The model lets an entry name a room; no screen writes one today, so every

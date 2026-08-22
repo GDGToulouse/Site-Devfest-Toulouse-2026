@@ -116,6 +116,7 @@ export default async function ProgrammePage({
               labels={{
                 timeColumn: t("timeColumn"),
                 roomTba: t("roomTba"),
+                simulcast: t("simulcast"),
                 filterZone: t("filterZone"),
                 actionZone: t("actionZone"),
                 noResults: t("noResults"),
@@ -156,6 +157,7 @@ export default async function ProgrammePage({
                   source: t("printSource", { url: `${BASE_URL}/${locale}/programme` }),
                   selectionNote: t("printSelection"),
                   roomTba: t("roomTba"),
+                  simulcast: t("simulcast"),
                   common: t("printCommon"),
                 },
               }}
