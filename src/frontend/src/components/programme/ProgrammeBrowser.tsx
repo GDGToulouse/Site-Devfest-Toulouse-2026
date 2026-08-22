@@ -17,6 +17,7 @@ import ScheduleAgenda from "./ScheduleAgenda";
 interface Labels extends ControlLabels {
   timeColumn: string;
   roomTba: string;
+  simulcast: string;
   favouriteAdd: string;
   favouriteRemove: string;
   empty: string;
@@ -109,8 +110,16 @@ export default function ProgrammeBrowser({
       (talk) =>
         matchesFilters(talk, filters, locale) && (view === "all" || selected.has(talk.slug)),
     );
+    // A relay room is used too (#456): a room whose only occupation is showing
+    // the keynote on a screen still needs its column, or the keynote is dropped
+    // from it.
     const kept = new Set(
-      talks.map((talk) => (talk.roomId != null ? `id:${talk.roomId}` : `label:${talk.room ?? ""}`)),
+      talks.flatMap((talk) => [
+        talk.roomId != null ? `id:${talk.roomId}` : `label:${talk.room ?? ""}`,
+        ...(talk.simulcasts ?? []).map((relay) =>
+          relay.roomId != null ? `id:${relay.roomId}` : `label:${relay.room ?? ""}`,
+        ),
+      ]),
     );
     const visibleRooms = schedule.rooms.filter((room) =>
       kept.has(room.id != null ? `id:${room.id}` : `label:${room.name}`),
@@ -213,7 +222,11 @@ export default function ProgrammeBrowser({
             rooms={rooms}
             locale={locale}
             formatLabels={formatLabels}
-            labels={{ timeColumn: labels.timeColumn, roomTba: labels.roomTba }}
+            labels={{
+              timeColumn: labels.timeColumn,
+              roomTba: labels.roomTba,
+              simulcast: labels.simulcast,
+            }}
             favourites={selected}
             onToggleFavourite={onToggleFavourite}
             favouriteLabels={favouriteLabels}

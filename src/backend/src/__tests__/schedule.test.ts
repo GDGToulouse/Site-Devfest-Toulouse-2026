@@ -55,6 +55,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  await prisma.talkSimulcast.deleteMany({ where: { talk: { editionId } } });
   await prisma.talk.deleteMany({ where: { editionId } });
   await prisma.scheduleEntry.deleteMany({ where: { editionId } });
   await prisma.edition.deleteMany({ where: { id: editionId } });
@@ -208,6 +209,128 @@ describe("GET /editions/:year/schedule", () => {
     const res = await app.inject({ method: "GET", url: `/api/editions/${TEST_YEAR}/schedule` });
     expect(res.json().talks).toHaveLength(0);
     expect(res.json().rooms).toHaveLength(0);
+
+    await app.close();
+  });
+});
+
+// Keynotes are talks relayed to other rooms (#456). #105 had ruled the opposite
+// — one room per session, a relayed keynote declared as an off-session entry —
+// and that held until the grid was finished: as a band, a keynote had no detail
+// page, no favourite, no calendar export, and weighed as much as a coffee break.
+
+describe("relaying a talk to other rooms (#456)", () => {
+  it("stores the relay rooms and freezes their labels", async () => {
+    const app = await buildApp(adminTalkRoutes);
+    const agora = await prisma.room.create({
+      data: { venueId, name: "Agora 1", capacity: 500, sortOrder: 2 },
+    });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { roomId, simulcastRoomIds: [agora.id], startsAt: "2026-11-19T09:00:00.000Z" },
+    });
+    expect(res.statusCode).toBe(200);
+
+    const stored = await prisma.talkSimulcast.findMany({ where: { talkId } });
+    expect(stored).toHaveLength(1);
+    expect(stored[0].roomId).toBe(agora.id);
+    expect(stored[0].roomLabel).toBe("Agora 1");
+
+    await app.close();
+  });
+
+  it("keeps saying what the signage said when the room is renamed (#375)", async () => {
+    const app = await buildApp(adminTalkRoutes);
+    const agora = await prisma.room.create({ data: { venueId, name: "Agora 1", sortOrder: 2 } });
+
+    await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { roomId, simulcastRoomIds: [agora.id], startsAt: "2026-11-19T09:00:00.000Z" },
+    });
+    await prisma.room.update({ where: { id: agora.id }, data: { name: "Agora Principale" } });
+
+    const stored = await prisma.talkSimulcast.findMany({ where: { talkId } });
+    expect(stored[0].roomLabel).toBe("Agora 1");
+
+    await app.close();
+  });
+
+  it("refuses a relay room from another venue", async () => {
+    const app = await buildApp(adminTalkRoutes);
+    const elsewhere = await prisma.venue.create({ data: { name: `Ailleurs ${TEST_YEAR}` } });
+    const foreign = await prisma.room.create({ data: { venueId: elsewhere.id, name: "Salle X" } });
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { roomId, simulcastRoomIds: [foreign.id] },
+    });
+    expect(res.statusCode).toBe(422);
+
+    await prisma.room.deleteMany({ where: { venueId: elsewhere.id } });
+    await prisma.venue.deleteMany({ where: { id: elsewhere.id } });
+    await app.close();
+  });
+
+  it("drops the main room from the relays rather than drawing the talk twice", async () => {
+    const app = await buildApp(adminTalkRoutes);
+
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { roomId, simulcastRoomIds: [roomId] },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(await prisma.talkSimulcast.count({ where: { talkId } })).toBe(0);
+
+    await app.close();
+  });
+
+  it("replaces the whole list, so an empty array clears the relays", async () => {
+    const app = await buildApp(adminTalkRoutes);
+    const agora = await prisma.room.create({ data: { venueId, name: "Agora 1", sortOrder: 2 } });
+
+    await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { roomId, simulcastRoomIds: [agora.id] },
+    });
+    await app.inject({
+      method: "PUT",
+      url: `/api/admin/talks/${talkId}`,
+      payload: { simulcastRoomIds: [] },
+    });
+
+    expect(await prisma.talkSimulcast.count({ where: { talkId } })).toBe(0);
+    await app.close();
+  });
+
+  it("gives a relay room its own column, even with nothing else in it", async () => {
+    // The grid derives its columns from the talks actually scheduled. A room
+    // whose only occupation of the day is showing the keynote on a screen would
+    // otherwise have no column, and the keynote would land nowhere.
+    const agora = await prisma.room.create({ data: { venueId, name: "Agora 1", sortOrder: 2 } });
+    await prisma.talk.update({
+      where: { id: talkId },
+      data: {
+        roomId,
+        roomLabel: "Amphithéâtre",
+        format: "KEYNOTE",
+        startsAt: new Date("2026-11-19T09:00:00.000Z"),
+        endsAt: new Date("2026-11-19T09:45:00.000Z"),
+        simulcasts: { create: [{ roomId: agora.id, roomLabel: "Agora 1" }] },
+      },
+    });
+
+    const app = Fastify({ logger: false });
+    await app.register(editionRoutes, { prefix: "/api" });
+    const body = (await app.inject({ method: "GET", url: `/api/editions/${TEST_YEAR}/schedule` })).json();
+
+    expect(body.rooms.map((r: { name: string }) => r.name)).toEqual(["Amphithéâtre", "Agora 1"]);
+    expect(body.talks[0].simulcasts).toEqual([{ roomId: agora.id, room: "Agora 1" }]);
 
     await app.close();
   });

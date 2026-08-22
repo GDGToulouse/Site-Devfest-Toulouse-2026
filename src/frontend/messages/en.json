@@ -384,6 +384,7 @@
     "intro": "The day, room by room. Click a session to read its details.",
     "timeColumn": "Time",
     "roomTba": "Room to be confirmed",
+    "simulcast": "Live relay",
     "print": "Print",
     "printTitle": "Print the schedule or save it as a PDF",
     "filterZone": "Filter the schedule",

@@ -880,18 +880,54 @@ async function seedDev() {
       },
     });
   }
-  console.log(`Talks created: ${sessions.length + 2}`);
+  // The keynotes are talks, not bands (#456), and they are the reason relay
+  // rooms exist: the amphitheatre seats 500 and the DevFest sells more than
+  // that, so the opening plays on a screen in Agora 1 as well. Seeded here or
+  // the case never appears in a development database — which is exactly how
+  // eight rooms went unnoticed until #441.
+  const keynotes = [
+    { slug: "keynote-ouverture", title: "Keynote d'ouverture",
+      description: "Dix ans de DevFest Toulouse, et ce que la décennie qui vient nous prépare.",
+      speaker: speakerMarie.id, start: "08:00", end: "08:45",
+      room: "Amphithéâtre", relays: ["Agora 1"] },
+    { slug: "keynote-cloture", title: "Keynote de clôture",
+      description: "Ce qu'on retient de la journée, et rendez-vous à la soirée.",
+      speaker: speakerJean.id, start: "16:30", end: "17:15",
+      room: "Amphithéâtre", relays: ["Agora 1", "Hémicycle"] },
+  ];
+  for (const keynote of keynotes) {
+    const room = roomsByName.get(keynote.room);
+    await prisma.talk.create({
+      data: {
+        slug: keynote.slug, title: keynote.title, description: keynote.description,
+        format: "KEYNOTE", level: null, language: "fr",
+        publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catCloud.id,
+        speakers: { connect: [{ id: keynote.speaker }] },
+        roomId: room?.id,
+        roomLabel: room?.name,
+        startsAt: placedAt(keynote.start),
+        endsAt: placedAt(keynote.end),
+        simulcasts: {
+          create: keynote.relays.flatMap((name) => {
+            const relay = roomsByName.get(name);
+            // Frozen here too (#375), same reason as roomLabel above.
+            return relay ? [{ roomId: relay.id, roomLabel: relay.name }] : [];
+          }),
+        },
+      },
+    });
+  }
+
+  console.log(`Talks created: ${sessions.length + 2 + keynotes.length}`);
 
   // Everything that is not a session. Lunch is the one that matters for the
   // grid: it spans every room, and in 2026 no quickie runs under it.
   await prisma.scheduleEntry.deleteMany({ where: { editionId: edition.id } });
   const scheduleEntries = [
     { kind: "OTHER" as const, labelFr: "Accueil et petit déjeuner", labelEn: "Welcome and breakfast", startsAt: "06:30", endsAt: "07:45" },
-    { kind: "PLENARY" as const, labelFr: "Keynote d'ouverture", labelEn: "Opening keynote", startsAt: "08:00", endsAt: "08:45" },
     { kind: "BREAK" as const, labelFr: "Pause du matin", labelEn: "Morning break", startsAt: "09:35", endsAt: "10:00" },
     { kind: "MEAL" as const, labelFr: "Déjeuner", labelEn: "Lunch", startsAt: "11:45", endsAt: "13:15" },
     { kind: "BREAK" as const, labelFr: "Pause de l'après-midi", labelEn: "Afternoon break", startsAt: "15:00", endsAt: "15:30" },
-    { kind: "PLENARY" as const, labelFr: "Keynote de clôture", labelEn: "Closing keynote", startsAt: "16:30", endsAt: "17:15" },
     { kind: "SOCIAL" as const, labelFr: "Soirée « 10 ans »", labelEn: "\"10 years\" party", startsAt: "17:30", endsAt: "20:00" },
   ];
   for (const entry of scheduleEntries) {

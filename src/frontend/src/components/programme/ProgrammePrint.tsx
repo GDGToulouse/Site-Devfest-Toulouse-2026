@@ -14,6 +14,8 @@ export interface PrintLabels {
   /** Shown instead of the whole programme when a selection is printed. */
   selectionNote: string;
   roomTba: string;
+  /** "Retransmission" (#456), shown beside a talk on a room it is relayed to. */
+  simulcast: string;
   common: string;
 }
 
@@ -89,8 +91,11 @@ function ByTime({
           <section key={row.key} className="print-slot">
             <h3>{formatEventTime(row.startsAt)}</h3>
             <ul>
-              {row.cells.flatMap((talks, index) =>
-                talks.map((talk) => (
+              {row.cells.flatMap((cells, index) =>
+                // By hour, the keynote is one line, not one per relay room.
+                cells
+                  .filter((cell) => !cell.isSimulcast)
+                  .map(({ talk }) => (
                   <PrintedSession
                     key={talk.slug}
                     talk={talk}
@@ -122,8 +127,10 @@ function ByRoom({
   formatLabels,
   labels,
 }: Omit<ProgrammePrintProps, "grouping" | "isSelection">) {
+  // By room, a relay does belong on the page: someone reading the Agora sheet
+  // needs to know the keynote plays there (#456).
   const perRoom = rooms.map((_, index) =>
-    rows.flatMap((row) => (row.type === "slot" ? row.cells[index] ?? [] : [])),
+    rows.flatMap((row) => (row.type === "slot" ? (row.cells[index] ?? []) : [])),
   );
   const bands = rows.filter((row) => row.type === "band");
 
@@ -140,7 +147,7 @@ function ByRoom({
               {labels.title} — {labels.subtitle}
             </p>
             <ul>
-              {perRoom[index].map((talk) => (
+              {perRoom[index].map(({ talk, isSimulcast }) => (
                 <PrintedSession
                   key={talk.slug}
                   talk={talk}
@@ -148,7 +155,7 @@ function ByRoom({
                   formatLabels={formatLabels}
                   aside={`${formatEventTime(talk.startsAt)}${
                     talk.endsAt ? ` – ${formatEventTime(talk.endsAt)}` : ""
-                  }`}
+                  }${isSimulcast ? ` · ${labels.simulcast}` : ""}`}
                 />
               ))}
             </ul>

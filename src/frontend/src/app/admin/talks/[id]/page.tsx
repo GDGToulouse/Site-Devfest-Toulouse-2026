@@ -11,6 +11,8 @@ import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/
 
 interface TalkData extends Talk {
   edition?: { id: number; year: number };
+  /** Relay rooms (#456), flattened to ids by the admin endpoint. */
+  simulcastRoomIds?: number[];
 }
 
 export default function TalkEditorPage() {
@@ -61,6 +63,7 @@ export default function TalkEditorPage() {
           publicationStatus: data.publicationStatus,
           isSpeakerEditable: data.isSpeakerEditable,
           roomId: data.roomId ? String(data.roomId) : "",
+          simulcastRoomIds: data.simulcastRoomIds ?? [],
           // Through the helper, never by slicing: the input reads local time
           // and the API stores UTC, so a slice loses the offset on save (#105).
           startsAt: isoToLocalInput(data.startsAt),
@@ -118,6 +121,9 @@ export default function TalkEditorPage() {
       isSpeakerEditable: form.isSpeakerEditable,
       // `null` unschedules; a blank date clears the slot (#105).
       roomId: form.roomId ? Number(form.roomId) : null,
+      // Always sent, so clearing every relay reaches the API (#456): an omitted
+      // field means "leave them alone", an empty array means "none".
+      simulcastRoomIds: form.simulcastRoomIds,
       startsAt: localInputToIso(form.startsAt),
       endsAt: localInputToIso(form.endsAt),
     };

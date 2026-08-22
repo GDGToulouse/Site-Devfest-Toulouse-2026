@@ -384,6 +384,7 @@
     "intro": "Le programme de la journée, salle par salle. Cliquez sur une session pour en lire le détail.",
     "timeColumn": "Horaire",
     "roomTba": "Salle à préciser",
+    "simulcast": "Retransmission",
     "print": "Imprimer",
     "printTitle": "Imprimer ou enregistrer le programme en PDF",
     "filterZone": "Filtrer le programme",

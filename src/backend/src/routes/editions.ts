@@ -261,6 +261,9 @@ export default async function editionRoutes(app: FastifyInstance) {
           },
           category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
           room: { select: { id: true, sortOrder: true } },
+          // Rooms a keynote is relayed to (#456): they occupy a column of the
+          // grid at that hour just as the main room does.
+          simulcasts: { include: { room: { select: { id: true, sortOrder: true } } } },
         },
       }),
       prisma.scheduleEntry.findMany({
@@ -273,13 +276,21 @@ export default async function editionRoutes(app: FastifyInstance) {
     // One entry per room actually used, in grid order. A talk placed before its
     // room existed — or whose room was later deleted — keeps its frozen label
     // and lands in a column of its own rather than disappearing.
+    //
+    // A relay room counts as used (#456): a room whose only occupation of the
+    // day is showing the keynote on a screen still needs its column, or the
+    // keynote lands nowhere.
+    const usedRooms = talks.flatMap((t) => [
+      { id: t.room?.id ?? null, name: t.roomLabel ?? "", sortOrder: t.room?.sortOrder ?? 0 },
+      ...t.simulcasts.map((s) => ({
+        id: s.room?.id ?? null,
+        name: s.roomLabel ?? "",
+        sortOrder: s.room?.sortOrder ?? 0,
+      })),
+    ]);
+
     const rooms = [
-      ...new Map(
-        talks.map((t) => [
-          t.room?.id ?? `label:${t.roomLabel ?? ""}`,
-          { id: t.room?.id ?? null, name: t.roomLabel ?? "", sortOrder: t.room?.sortOrder ?? 0 },
-        ]),
-      ).values(),
+      ...new Map(usedRooms.map((r) => [r.id ?? `label:${r.name}`, r])).values(),
     ].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
 
     return {
@@ -293,6 +304,9 @@ export default async function editionRoutes(app: FastifyInstance) {
         language: t.language,
         room: t.roomLabel,
         roomId: t.roomId,
+        // Frozen labels here too (#375): the grid must read a relay room the
+        // way the signage did that year, not the way it is named today.
+        simulcasts: t.simulcasts.map((s) => ({ roomId: s.roomId, room: s.roomLabel })),
         startsAt: t.startsAt,
         endsAt: t.endsAt,
         category: visibleCategory(t.category),
