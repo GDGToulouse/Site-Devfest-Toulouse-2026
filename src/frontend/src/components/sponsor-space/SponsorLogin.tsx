@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
 import { requestMagicLink, signUpWithEmail } from "@/lib/sponsor-api";
+import SponsorFeedback from "@/components/sponsor-space/SponsorFeedback";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
 // account holds no back-office role, and landing on a page titled "DevFest
@@ -84,7 +85,9 @@ export default function SponsorLogin({
   if (linkSent) {
     return (
       <Shell mode={mode}>
-        <p className="text-center text-noir">
+        {/* This replaces the form rather than sitting beside it, so nothing
+            about the swap is announced on its own (#427). */}
+        <p role="status" aria-live="polite" className="text-center text-noir">
           Si un compte existe pour <strong>{email.trim()}</strong>, un lien de connexion vient d&apos;y
           être envoyé. Il est valable 60 minutes et ne peut servir qu&apos;une fois.
         </p>
@@ -152,7 +155,7 @@ export default function SponsorLogin({
           />
         </label>
 
-        {error && <p className="text-sm text-terre-cuite">{error}</p>}
+        <SponsorFeedback message={error ? { isOk: false, text: error } : null} />
 
         <button
           type="submit"

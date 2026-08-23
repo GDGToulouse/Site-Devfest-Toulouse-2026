@@ -10,6 +10,7 @@ import {
   type SponsorAccessRole,
   type SponsorTeamMember,
 } from "@/lib/sponsor-api";
+import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
 import { SPONSOR_ROLE_OPTIONS } from "@/lib/sponsor-roles";
 
 // Who may act on this space, and as what (#362). RESPONSABLE only — inviting is
@@ -21,7 +22,7 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
   const [name, setName] = useState("");
   const [accessRole, setAccessRole] = useState<SponsorAccessRole>("EDITEUR");
   const [isBusy, setIsBusy] = useState(false);
-  const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<SponsorMessage | null>(null);
 
   async function load() {
     const { data } = await getSponsorTeam(sponsorId);
@@ -199,11 +200,7 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
         </p>
       </div>
 
-      {message && (
-        <p className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}>
-          {message.text}
-        </p>
-      )}
+      <SponsorFeedback message={message} />
     </div>
   );
 }

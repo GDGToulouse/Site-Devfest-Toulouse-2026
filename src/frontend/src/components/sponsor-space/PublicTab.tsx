@@ -6,6 +6,7 @@ import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import { saveSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
 import SponsorFileField from "@/components/sponsor-space/SponsorFileField";
+import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
 
 // What the public site shows about the company (#362). Read-only for STAND:
 // the booth team sees the page without being able to rewrite it.
@@ -31,7 +32,7 @@ export default function PublicTab({
   const [logoUrl, setLogoUrl] = useState(profile.logoUrl ?? "");
   const [social, setSocial] = useState<Record<string, string>>(profile.socialLinks ?? {});
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<SponsorMessage | null>(null);
 
   async function save() {
     setIsSaving(true);
@@ -163,11 +164,7 @@ export default function PublicTab({
         </div>
       )}
 
-      {message && (
-        <p className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}>
-          {message.text}
-        </p>
-      )}
+      <SponsorFeedback message={message} />
 
       {canEdit && (
         <button
