@@ -12,6 +12,36 @@ const DEV_ACCOUNTS = [
 ];
 
 /**
+ * Puts the documented password back on an account that already exists (#433).
+ *
+ * `seedBase()` runs first and provisions those same two addresses from
+ * `ADMIN_EMAILS` with a random password. This script then found them present,
+ * logged "exists", and never reached its own `signUpEmail` — so the password
+ * CLAUDE.md documents was not merely lost after a reseed, as the note there
+ * claimed: it had never been set, not once, not even on a brand-new database.
+ *
+ * `updatePassword` alone would not do: on a user with no credential row it
+ * writes nothing and reports nothing, and the seed would go on printing a
+ * password that signs no one in.
+ */
+async function applyDevPassword(userId: string, password: string): Promise<void> {
+  const ctx = await auth.$context;
+  const hash = await ctx.password.hash(password);
+  const credential = await prisma.account.findFirst({ where: { userId, providerId: "credential" } });
+
+  if (credential) {
+    await ctx.internalAdapter.updatePassword(userId, hash);
+    return;
+  }
+  await ctx.internalAdapter.createAccount({
+    userId,
+    providerId: "credential",
+    accountId: userId,
+    password: hash,
+  });
+}
+
+/**
  * Refuses to leave two sessions overlapping in one room (#462).
  *
  * The day is placed from three lists written independently — `sessions`,
@@ -62,8 +92,18 @@ async function assertNoRoomClash(editionId: number) {
 }
 
 async function seedDev() {
-  // Run base seed first (contact categories, admin accounts)
-  await seedBase();
+  // This script wipes the edition's talks, sponsors and categories, and since
+  // #433 it also forces a known password onto two addresses that are real
+  // administrator accounts in production. Both were already reasons never to
+  // point it at a live database; the second makes the guard worth writing down.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("seed-dev.ts is destructive and sets known passwords — never run it in production.");
+  }
+
+  // Run base seed first (contact categories, admin accounts) — but not the two
+  // accounts below, which this script owns and gives a documented password
+  // (#433). Any other address in ADMIN_EMAILS is still provisioned there.
+  await seedBase({ skipAccountEmails: DEV_ACCOUNTS.map((a) => a.email) });
 
   console.log("Seeding dev data...");
 
@@ -1140,7 +1180,13 @@ async function seedDev() {
   // --- Dev test accounts (with passwords) ---
   for (const account of DEV_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
-    if (!existing) {
+    if (existing) {
+      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
+      await applyDevPassword(existing.id, account.password);
+      console.log(`Dev account repaired: ${account.email} (${account.role}) — password: ${account.password}`);
+      continue;
+    }
+    {
       try {
         await auth.api.signUpEmail({
           body: {
@@ -1160,9 +1206,6 @@ async function seedDev() {
         });
         console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
       }
-    } else {
-      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
-      console.log(`Dev account exists: ${account.email} (${existing.role})`);
     }
   }
 

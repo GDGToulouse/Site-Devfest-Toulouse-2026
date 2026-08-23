@@ -57,8 +57,10 @@ Provisionnés par `src/backend/prisma/seed-dev.ts` (lancé à la main) — conne
 | ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` |
 | EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` |
 
-Après un reseed, `seed.ts` l'emporte sur `seed-dev.ts` et le mot de passe admin ne marche plus :
-recréer le compte via l'API auth. Détails dans `docs/comptes-dev-local.md`.
+Ces mots de passe marchent, y compris après un reseed : `seed-dev.ts` les repose sur les comptes
+existants (#433). Ce n'était pas le cas avant — `seed.ts` créait les deux adresses avec un mot de
+passe aléatoire et `seed-dev.ts` les sautait, donc le mot de passe documenté n'était jamais posé,
+dès la première installation. Détails dans `docs/comptes-dev-local.md`.
 
 ## Documentation
 
