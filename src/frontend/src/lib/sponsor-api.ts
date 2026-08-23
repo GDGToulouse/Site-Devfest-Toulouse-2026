@@ -20,6 +20,10 @@ export interface SponsorSpaceParticipation {
   tier: { key: string; nameFr: string; nameEn: string };
 }
 
+// A map from an /uploads/ URL to the name the file had when it was sent
+// (#378). Absent for anything uploaded before that was kept.
+export type SponsorFileNames = Record<string, string>;
+
 export interface SponsorSpaceProfile {
   id: number;
   slug: string;
@@ -31,9 +35,11 @@ export interface SponsorSpaceProfile {
   socialLinks: Record<string, string>;
   editions: SponsorSpaceParticipation[];
   accessRole: SponsorAccessRole;
+  fileNames: SponsorFileNames;
 }
 
 export interface SponsorSpacePrivate {
+  fileNames: SponsorFileNames;
   standContacts: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];
   editions: {
     editionId: number;
@@ -186,7 +192,10 @@ export function deleteSponsorJobOffer(sponsorId: number, offerId: number) {
 
 // Outside call(): that helper forces Content-Type: application/json, which would
 // strip the multipart boundary the browser sets for us.
-export async function uploadSponsorFile(sponsorId: number, file: File): Promise<Result<{ url: string }>> {
+export async function uploadSponsorFile(
+  sponsorId: number,
+  file: File,
+): Promise<Result<{ url: string; originalName?: string }>> {
   try {
     const form = new FormData();
     form.append("file", file);

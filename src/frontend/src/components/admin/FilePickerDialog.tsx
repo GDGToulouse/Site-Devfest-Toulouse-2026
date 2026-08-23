@@ -15,6 +15,9 @@ interface FileInfo {
   size: number;
   uploadedAt: string;
   ext: string;
+  // #378 — `<timestamp>-<random>.pdf` names every document alike, and a PDF
+  // has no thumbnail to tell them apart by.
+  originalName: string | null;
 }
 
 interface UploadResponse {
@@ -198,8 +201,11 @@ export default function FilePickerDialog({
                         }`}
                       >
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm font-medium text-noir truncate" title={f.filename}>
-                            {f.filename}
+                          <p
+                            className="text-sm font-medium text-noir truncate"
+                            title={f.originalName ? `${f.originalName} — ${f.filename}` : f.filename}
+                          >
+                            {f.originalName ?? f.filename}
                           </p>
                           <p className="text-xs text-gris">
                             {formatKb(f.size)} · {new Date(f.uploadedAt).toLocaleDateString("fr-FR")}

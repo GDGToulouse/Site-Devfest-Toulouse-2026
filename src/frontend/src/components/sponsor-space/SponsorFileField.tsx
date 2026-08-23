@@ -15,6 +15,7 @@ export default function SponsorFileField({
   hint,
   accept,
   value,
+  fileName,
   sponsorId,
   canEdit,
   onChange,
@@ -23,6 +24,13 @@ export default function SponsorFileField({
   hint?: string;
   accept: string;
   value: string;
+  /**
+   * Name the file had on the sponsor's machine (#378), when it is known.
+   *
+   * Stored names are `<timestamp>-<random>.<ext>`, so a com kit reads as three
+   * interchangeable links — and a PDF has no thumbnail to tell them apart by.
+   */
+  fileName?: string;
   sponsorId: number;
   canEdit: boolean;
   onChange: (url: string) => void;
@@ -30,6 +38,10 @@ export default function SponsorFileField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The name of the file just sent, before the parent form is saved and the
+  // payload comes back carrying it.
+  const [uploadedName, setUploadedName] = useState<string | null>(null);
+  const shownName = uploadedName ?? fileName ?? null;
 
   async function pick(file: File | undefined) {
     if (!file) return;
@@ -38,6 +50,7 @@ export default function SponsorFileField({
     const { data, status } = await uploadSponsorFile(sponsorId, file);
     setIsUploading(false);
     if (data) {
+      setUploadedName(data.originalName ?? file.name);
       onChange(data.url);
       return;
     }
@@ -65,7 +78,10 @@ export default function SponsorFileField({
         {value && canEdit && (
           <button
             type="button"
-            onClick={() => onChange("")}
+            onClick={() => {
+              setUploadedName(null);
+              onChange("");
+            }}
             className="min-h-[24px] text-sm text-terre-cuite hover:underline"
           >
             Retirer<span className="sr-only"> {label}</span>
@@ -85,9 +101,18 @@ export default function SponsorFileField({
       </div>
 
       {value && (
+        // The link used to read `/uploads/1782114756366-b8f56c93.pdf`, which
+        // named nothing (#378). `download` makes the browser save it under the
+        // name the sponsor knows, rather than the stored one.
         <p className="mt-1 break-all text-xs text-gris">
-          <a href={value} target="_blank" rel="noopener noreferrer" className="hover:underline">
-            {value}
+          <a
+            href={value}
+            target="_blank"
+            rel="noopener noreferrer"
+            {...(shownName ? { download: shownName } : {})}
+            className="hover:underline"
+          >
+            {shownName ?? value}
           </a>
         </p>
       )}

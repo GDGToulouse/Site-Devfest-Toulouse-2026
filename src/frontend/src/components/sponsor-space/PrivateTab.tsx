@@ -86,6 +86,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="PNG, WebP ou SVG, fond transparent de préférence."
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 value={logoWebUrl}
+                fileName={data.fileNames?.[logoWebUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setLogoWebUrl}
@@ -95,6 +96,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="Version haute définition ou vectorielle, pour l'impression."
                 accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
                 value={logoPrintUrl}
+                fileName={data.fileNames?.[logoPrintUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setLogoPrintUrl}
@@ -104,6 +106,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="PDF."
                 accept="application/pdf"
                 value={charterUrl}
+                fileName={data.fileNames?.[charterUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setCharterUrl}

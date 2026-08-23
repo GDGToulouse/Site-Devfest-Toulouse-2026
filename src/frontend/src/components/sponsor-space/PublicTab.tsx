@@ -116,6 +116,7 @@ export default function PublicTab({
           hint="Haute définition (largeur ≥ 1000 px), sans marge autour du logo, PNG ou WebP à fond transparent de préférence."
           accept="image/png,image/jpeg,image/webp,image/svg+xml"
           value={logoUrl}
+          fileName={profile.fileNames?.[logoUrl]}
           sponsorId={profile.id}
           canEdit={canEdit}
           onChange={setLogoUrl}

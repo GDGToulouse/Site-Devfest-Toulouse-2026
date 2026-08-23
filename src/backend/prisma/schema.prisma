@@ -627,10 +627,16 @@ model TranslationLog {
 // a separate table so we don't need to alter the filesystem layout.
 // Only created on demand — files without metadata simply have no row.
 model FileMetadata {
-  filename  String   @id
-  alt       String? // Default alt text for accessibility
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  filename String  @id
+  alt      String? // Default alt text for accessibility
+  // The name the file had on the uploader's machine (#378). Stored names are
+  // `<timestamp>-<random>.<ext>`, which identifies nothing — and a PDF has no
+  // thumbnail to recognise it by either. Nullable: files uploaded before this
+  // column existed have no name to recover, and the UI falls back to the
+  // stored one.
+  originalName String?
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
 }
 
 // ============================================
