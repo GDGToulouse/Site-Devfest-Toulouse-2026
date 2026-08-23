@@ -11,6 +11,7 @@ import { parseFilters } from "@/lib/talk-filters";
 import { formatEventDate } from "@/lib/datetime";
 import { parsePrintGrouping } from "@/lib/print";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
+import { pageMetadata } from "@/lib/page-metadata";
 
 // Absolute: the printed header carries it onto paper, where a relative path
 // means nothing (#449).
@@ -25,10 +26,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description", { year }),
-    alternates: {
-      canonical: `/${locale}/programme`,
-      languages: { fr: "/fr/programme", en: "/en/programme", "x-default": "/fr/programme" },
-    },
+    ...(await pageMetadata(locale, "/programme")),
   };
 }
 

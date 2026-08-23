@@ -4,6 +4,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getContentPage } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -12,10 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/mentions-legales`,
-      languages: { fr: "/fr/mentions-legales", en: "/en/mentions-legales", "x-default": "/fr/mentions-legales" },
-    },
+    ...(await pageMetadata(locale, "/mentions-legales")),
   };
 }
 

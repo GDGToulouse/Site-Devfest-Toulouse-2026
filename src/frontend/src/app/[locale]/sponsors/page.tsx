@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getSponsors } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import SponsorWall from "@/components/sponsors/SponsorWall";
 import { Link } from "@/i18n/navigation";
@@ -12,10 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/sponsors`,
-      languages: { fr: "/fr/sponsors", en: "/en/sponsors", "x-default": "/fr/sponsors" },
-    },
+    ...(await pageMetadata(locale, "/sponsors")),
   };
 }
 

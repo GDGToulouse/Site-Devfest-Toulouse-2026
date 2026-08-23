@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
 import { Link } from "@/i18n/navigation";
@@ -31,16 +32,9 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `/${locale}/conferences/${slug}`,
-      languages: {
-        fr: `/fr/conferences/${slug}`,
-        en: `/en/conferences/${slug}`,
-        "x-default": `/fr/conferences/${slug}`,
-      },
-    },
-    // OG image generated dynamically by ./opengraph-image (RG-215).
-    openGraph: { title, description },
+    // OG image generated dynamically by ./opengraph-image (RG-215); og:title
+    // and og:description come from the two fields above.
+    ...(await pageMetadata(locale, `/conferences/${slug}`)),
   };
 }
 

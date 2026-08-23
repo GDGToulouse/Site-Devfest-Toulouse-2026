@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getJobOffers } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
@@ -12,14 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/offres-emploi-partenaires`,
-      languages: {
-        fr: "/fr/offres-emploi-partenaires",
-        en: "/en/offres-emploi-partenaires",
-        "x-default": "/fr/offres-emploi-partenaires",
-      },
-    },
+    ...(await pageMetadata(locale, "/offres-emploi-partenaires")),
   };
 }
 

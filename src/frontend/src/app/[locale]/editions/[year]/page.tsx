@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { getEditionByYear, getEditions, getEditionSpeakers, getEditionSponsors, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
@@ -78,14 +79,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // wording.
     title: { absolute: t("pageTitle", { year }) },
     description: t("description", { year }),
-    alternates: {
-      canonical: `/${locale}/editions/${year}`,
-      languages: {
-        fr: `/fr/editions/${year}`,
-        en: `/en/editions/${year}`,
-        "x-default": `/fr/editions/${year}`,
-      },
-    },
+    ...(await pageMetadata(locale, `/editions/${year}`)),
   };
 }
 

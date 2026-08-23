@@ -8,6 +8,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import { Link } from "@/i18n/navigation";
 import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata({
   params,
@@ -25,16 +26,8 @@ export async function generateMetadata({
   return {
     title: speaker.name,
     description,
-    alternates: {
-      canonical: `/${locale}/speakers/${slug}`,
-      languages: {
-        fr: `/fr/speakers/${slug}`,
-        en: `/en/speakers/${slug}`,
-        "x-default": `/fr/speakers/${slug}`,
-      },
-    },
     // OG image is generated dynamically by ./opengraph-image (RG-208).
-    openGraph: { title: speaker.name, description },
+    ...(await pageMetadata(locale, `/speakers/${slug}`)),
   };
 }
 

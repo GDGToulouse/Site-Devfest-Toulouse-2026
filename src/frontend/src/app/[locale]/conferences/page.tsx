@@ -7,6 +7,7 @@ import ConferencesBrowser from "@/components/conferences/ConferencesBrowser";
 import { localizedField } from "@/lib/i18n-helpers";
 import { parseFavourites } from "@/lib/favourites";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -14,10 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/conferences`,
-      languages: { fr: "/fr/conferences", en: "/en/conferences", "x-default": "/fr/conferences" },
-    },
+    ...(await pageMetadata(locale, "/conferences")),
   };
 }
 

@@ -9,6 +9,7 @@ import { looksLikeHtml, htmlToText } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata({
   params,
@@ -27,20 +28,10 @@ export async function generateMetadata({
   return {
     title: sponsor.name,
     description,
-    alternates: {
-      canonical: `/${locale}/sponsors/${slug}`,
-      languages: {
-        fr: `/fr/sponsors/${slug}`,
-        en: `/en/sponsors/${slug}`,
-        "x-default": `/fr/sponsors/${slug}`,
-      },
-    },
     // OG image = sponsor logo (RG-229).
-    openGraph: {
-      title: sponsor.name,
-      description,
+    ...(await pageMetadata(locale, `/sponsors/${slug}`, {
       ...(sponsor.logoUrl ? { images: [{ url: sponsor.logoUrl }] } : {}),
-    },
+    })),
   };
 }
 

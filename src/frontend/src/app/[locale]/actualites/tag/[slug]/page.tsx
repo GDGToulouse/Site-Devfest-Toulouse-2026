@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getArticles } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import ArticleCard from "@/components/ArticleCard";
 import Pagination from "@/components/Pagination";
@@ -16,10 +17,7 @@ export async function generateMetadata({
   const t = await getTranslations("articles");
   return {
     title: `${t("taggedWith")} ${slug}`,
-    alternates: {
-      canonical: `/${locale}/actualites/tag/${slug}`,
-      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}`, "x-default": `/fr/actualites/tag/${slug}` },
-    },
+    ...(await pageMetadata(locale, `/actualites/tag/${slug}`)),
   };
 }
 

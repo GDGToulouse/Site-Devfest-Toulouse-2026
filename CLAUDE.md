@@ -86,8 +86,9 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 
 ## Décisions structurantes
 
-- **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`),
-  invalidation à la demande depuis l'admin ; SSR+SPA hybride sur les pages authentifiées.
+- **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`,
+  **sauf l'accueil à `s-maxage=300`** — RG-003), invalidation à la demande depuis l'admin ;
+  SSR+SPA hybride sur les pages authentifiées.
 - **Accueil** : contenu conditionné par le statut de l'édition (préparation / annonce / à l'année prochaine).
 - **Rôles** : admin, sponsor, speaker — un sponsor gère sa fiche depuis un **compte**
   (invitation, rôles par entreprise) ; un speaker garde le lien de modification `/edit/<token>`.
