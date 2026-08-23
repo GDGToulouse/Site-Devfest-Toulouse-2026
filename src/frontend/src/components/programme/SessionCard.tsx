@@ -4,6 +4,7 @@ import type { ScheduleTalk } from "@/lib/schedule";
 import { localizedField } from "@/lib/i18n-helpers";
 import { formatEventDuration, formatEventTime } from "@/lib/datetime";
 import FavouriteButton from "@/components/FavouriteButton";
+import SpeakerAvatars from "@/components/speakers/SpeakerAvatars";
 
 interface SessionCardProps {
   talk: ScheduleTalk;
@@ -17,8 +18,9 @@ interface SessionCardProps {
    * `grid` is a 180 px column: it carries the category, the title, and a last
    * line of format and duration — nothing else. The start time went because the
    * row header already says it, the format badge because the same line names
-   * the format in words, and the speakers because at that width they cost a
-   * line the title needs more.
+   * the format in words, and the speakers' *names* because at that width they
+   * cost a line the title needs more. Their faces came back on that same last
+   * line, which costs none (#463).
    *
    * `agenda` is the mobile list, where the width is not the constraint and the
    * room has to be named — there is no column to do it.
@@ -39,6 +41,10 @@ interface SessionCardProps {
   favouriteLabels?: { add: string; remove: string };
 }
 
+// Three faces overlap and still read; a fourth in a 180 px column does not.
+const GRID_FACES = 3;
+const GRID_FACE_SIZE = 24;
+
 // One session inside the grid (#106). The whole card is the link to its detail
 // page, so the target is comfortable on a touch screen.
 export default function SessionCard({
@@ -57,65 +63,89 @@ export default function SessionCard({
   const endsAt = talk.endsAt ? formatEventTime(talk.endsAt) : null;
   const isGrid = variant === "grid";
   const duration = formatEventDuration(talk.startsAt, talk.endsAt ?? null);
+  const hasFaces = isGrid && talk.speakers.length > 0;
 
   return (
-    // The star lives beside the link, not inside it (#442) — a button nested in
-    // an anchor is invalid markup, and one of the two clicks gets eaten.
-    <div className="relative h-full">
-      <Link
-        href={`/conferences/${talk.slug}`}
-        className={`flex h-full flex-col rounded-2xl p-3 transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50 ${
-          isSimulcast
-            ? "border border-dashed border-gris/40 bg-blanc-casse"
-            : "bg-blanc shadow-card"
-        }`}
-      >
-        {/* The right padding keeps the badges clear of the star.
+    // The card is no longer a link (#463): the speaker bubbles inside it are
+    // links too, and <a> nested in <a> is invalid markup — one of the two clicks
+    // gets eaten. That is the same trap that put the star beside the link rather
+    // than inside it (#442). The title's link stretches over the whole card
+    // through a pseudo-element instead (#350), so the DOM keeps a single,
+    // correctly-labelled <a> and every pixel of the card still opens the talk.
+    <div
+      className={`relative flex h-full flex-col rounded-2xl p-3 transition-shadow hover:shadow-lg ${
+        isSimulcast
+          ? "border border-dashed border-gris/40 bg-blanc-casse"
+          : "bg-blanc shadow-card"
+      }`}
+    >
+      {/* The right padding keeps the badges clear of the star.
 
-            In the grid the category badge must be allowed to wrap (#460). Kept
-            on one line, its intrinsic width becomes the column's floor: the
-            table is auto-laid-out, so "Craft & Architecture" pushed its two
-            columns from 180 px to 192 and widened the whole grid by 24 px. Two
-            lines cost nothing; truncating would hide the half of the name that
-            distinguishes it. Short names such as "Cloud & DevOps" still fit on
-            one line, which is what #441 was after. */}
-        <div className={`flex flex-wrap items-center gap-1.5 ${onToggleFavourite ? "pr-9" : ""}`}>
-          {/* One badge in the grid, not two (#457). Twenty-four sessions used to
-              put forty-eight pastel pills on screen, all at a tenth of their
-              opacity — colour spent everywhere signals nothing. The category
-              keeps its badge because it is the only one carrying meaning; the
-              format moved to the last line, in words. */}
-          {!isGrid && (
-            <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
-              {formatLabels[talk.format]}
-            </span>
-          )}
-          {categoryName && (
-            <span
-              className={`max-w-full rounded-full px-2 py-0.5 text-xs font-bold ${
-                isGrid ? "break-words" : "truncate whitespace-nowrap"
-              }`}
-              style={{ backgroundColor: `${talk.category!.color}20`, color: talk.category!.color }}
-            >
-              {categoryName}
-            </span>
-          )}
-        </div>
-
-        {/* The title is not localized (#293) — a talk is given in one language. */}
-        <p className="mt-2 text-sm font-bold leading-snug text-noir">{talk.title}</p>
-
-        {!isGrid && talk.speakers.length > 0 && (
-          <p className="mt-1 text-xs text-gris">{talk.speakers.map((s) => s.name).join(", ")}</p>
+          In the grid the category badge must be allowed to wrap (#460). Kept
+          on one line, its intrinsic width becomes the column's floor: the
+          table is auto-laid-out, so "Craft & Architecture" pushed its two
+          columns from 180 px to 192 and widened the whole grid by 24 px. Two
+          lines cost nothing; truncating would hide the half of the name that
+          distinguishes it. Short names such as "Cloud & DevOps" still fit on
+          one line, which is what #441 was after. */}
+      <div className={`flex flex-wrap items-center gap-1.5 ${onToggleFavourite ? "pr-9" : ""}`}>
+        {/* One badge in the grid, not two (#457). Twenty-four sessions used to
+            put forty-eight pastel pills on screen, all at a tenth of their
+            opacity — colour spent everywhere signals nothing. The category
+            keeps its badge because it is the only one carrying meaning; the
+            format moved to the last line, in words. */}
+        {!isGrid && (
+          <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
+            {formatLabels[talk.format]}
+          </span>
         )}
-
-        {isSimulcast && simulcastLabel && (
-          <p className="mt-1 text-xs font-bold uppercase tracking-wide text-gris-sur-creme">
-            {simulcastLabel}
-          </p>
+        {categoryName && (
+          <span
+            className={`max-w-full rounded-full px-2 py-0.5 text-xs font-bold ${
+              isGrid ? "break-words" : "truncate whitespace-nowrap"
+            }`}
+            style={{ backgroundColor: `${talk.category!.color}20`, color: talk.category!.color }}
+          >
+            {categoryName}
+          </span>
         )}
+      </div>
 
-        <p className="mt-auto pt-2 text-xs tabular-nums text-gris">
+      {/* The title is not localized (#293) — a talk is given in one language.
+          Its link carries no focus style of its own: globals.css draws the
+          site-wide `:focus-visible` outline, and opting out to ring the
+          pseudo-element only stacked a second indicator on the first (#350). */}
+      <p className="mt-2 text-sm font-bold leading-snug text-noir">
+        <Link
+          href={`/conferences/${talk.slug}`}
+          className="after:absolute after:inset-0 after:rounded-2xl"
+        >
+          {talk.title}
+        </Link>
+      </p>
+
+      {!isGrid && talk.speakers.length > 0 && (
+        <p className="mt-1 text-xs text-gris">{talk.speakers.map((s) => s.name).join(", ")}</p>
+      )}
+
+      {isSimulcast && simulcastLabel && (
+        <p className="mt-1 text-xs font-bold uppercase tracking-wide text-gris-sur-creme">
+          {simulcastLabel}
+        </p>
+      )}
+
+      {/* The faces share the last line rather than taking one of their own, so
+          a card with speakers is no taller than one without. Two fit: the line
+          is 159 px wide, "Conférence · 40 min" takes 112 and two bubbles 40.
+          Three plus a +N need 72 and wrap onto their own line, which costs the
+          card — and so the whole row, since cells stretch — 20 px. Rare enough
+          to be worth the faces, and the wrap degrades on its own.
+
+          `gap-x-1` is the wrap threshold, not the visible spacing:
+          `justify-between` spends the leftover width between the two, so the
+          eye sees ~43 px either way. */}
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-x-1 gap-y-1 pt-2">
+        <p className="text-xs tabular-nums text-gris">
           {isGrid ? (
             [formatLabels[talk.format], duration].filter(Boolean).join(" · ")
           ) : (
@@ -126,8 +156,22 @@ export default function SessionCard({
             </>
           )}
         </p>
-      </Link>
 
+        {/* Only the bubbles rise above the stretched area, never the row that
+            holds them: a positioned container would cover the pseudo-element
+            without being a link itself, leaving dead spots in its own gaps. */}
+        {hasFaces && (
+          <SpeakerAvatars
+            speakers={talk.speakers}
+            max={GRID_FACES}
+            size={GRID_FACE_SIZE}
+            withNames={false}
+          />
+        )}
+      </div>
+
+      {/* Last in the DOM, so it paints above the stretched pseudo-element and
+          keeps its own click. */}
       {onToggleFavourite && favouriteLabels && (
         <FavouriteButton
           isFavourite={isFavourite}

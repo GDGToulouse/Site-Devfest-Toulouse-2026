@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
@@ -6,10 +5,14 @@ import SessionCard from "./SessionCard";
 import type { ScheduleTalk } from "@/lib/schedule";
 
 // next-intl's localized Link pulls in next/navigation, which does not resolve
-// under vitest's ESM loader. The card only needs an anchor around its content.
+// under vitest's ESM loader. The card only ever renders plain anchors, and the
+// attributes have to survive the passthrough — the stretched link and the
+// bubbles' accessible names are asserted on them.
 vi.mock("@/i18n/navigation", () => ({
-  Link: ({ children, href }: { children: ReactNode; href: string }) => (
-    <a href={href}>{children}</a>
+  Link: ({ href, children, ...rest }: React.ComponentProps<"a">) => (
+    <a href={href} {...rest}>
+      {children}
+    </a>
   ),
 }));
 
@@ -24,11 +27,22 @@ const talk = {
   format: "CONFERENCE",
   startsAt: "2026-11-19T08:50:00.000Z",
   endsAt: "2026-11-19T09:30:00.000Z",
-  speakers: [{ name: "Marie Dupont" }],
+  speakers: [{ slug: "marie-dupont", name: "Marie Dupont", photoUrl: null }],
   category: { nameFr: "Cloud & DevOps", nameEn: "Cloud & DevOps", color: "#3B6BB0" },
 } as unknown as ScheduleTalk;
 
 const formatLabels = { CONFERENCE: "Conférence", QUICKIE: "Quickie" };
+
+function withSpeakers(names: string[]): ScheduleTalk {
+  return {
+    ...talk,
+    speakers: names.map((name) => ({
+      slug: name.toLowerCase().replace(/\s+/g, "-"),
+      name,
+      photoUrl: null,
+    })),
+  } as ScheduleTalk;
+}
 
 describe("SessionCard in the grid", () => {
   it("does not repeat the start time the row header already gives", () => {
@@ -63,11 +77,122 @@ describe("SessionCard in the grid", () => {
     expect(screen.getByText("Cloud & DevOps").className).not.toMatch(/whitespace-nowrap/);
   });
 
-  it("drops the speakers, which cost the title a line at 180 px", () => {
+  it("still spells out no name — that is what #457 bought the title", () => {
     render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
 
+    // The face came back (#463), the line of text did not: nothing in the card
+    // is the string "Marie Dupont".
     expect(screen.queryByText("Marie Dupont")).not.toBeInTheDocument();
     expect(screen.getByText(talk.title)).toBeInTheDocument();
+  });
+});
+
+// #463 — a face is recognised without being read, and it rides on the line the
+// format and duration already occupy, so it costs the card no height.
+
+describe("the speaker bubble on a grid card", () => {
+  it("shows the speaker and leads to their page", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    const bubble = screen.getByRole("link", { name: "Marie Dupont" });
+    expect(bubble).toHaveAttribute("href", "/speakers/marie-dupont");
+  });
+
+  it("names the link after the speaker, not after their initial", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    // With no photo the bubble is a lone "M", and the image's alt text is what
+    // normally names the link — so the link announced itself as "M". Bearable
+    // beside a visible name, useless when the bubble stands alone.
+    expect(screen.queryByRole("link", { name: "M" })).not.toBeInTheDocument();
+    expect(screen.getByText("M")).toBeInTheDocument();
+  });
+
+  it("folds a crowded talk into three faces and a +N", () => {
+    render(
+      <SessionCard
+        talk={withSpeakers(["Ada Lovelace", "Alan Turing", "Grace Hopper", "Edsger Dijkstra"])}
+        locale="fr"
+        formatLabels={formatLabels}
+        variant="grid"
+      />,
+    );
+
+    // A fourth bubble does not fit in 180 px, and widening the column would
+    // widen the whole grid — the table is auto-laid-out (#460).
+    expect(screen.getAllByRole("link", { name: /Lovelace|Turing|Hopper|Dijkstra/ })).toHaveLength(3);
+    expect(screen.getByText("+1")).toBeInTheDocument();
+    // The folded name is not simply lost: no names line here to carry it.
+    expect(screen.getByTitle("Edsger Dijkstra")).toBeInTheDocument();
+  });
+
+  it("draws the bubble at grid size, initial included", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    // 24 px, not the 32 of the conference list: the size drives the box, the
+    // `sizes` hint of next/image and the initial's scale together, so checking
+    // the initial checks all three came from the same value.
+    expect(screen.getByText("M")).toHaveStyle({ fontSize: "9px" });
+  });
+
+  it("carries the same faces on a relayed card — it is the same session", () => {
+    render(
+      <SessionCard
+        talk={talk}
+        locale="fr"
+        formatLabels={formatLabels}
+        variant="grid"
+        isSimulcast
+        simulcastLabel="Retransmission"
+      />,
+    );
+
+    expect(screen.getByRole("link", { name: "Marie Dupont" })).toBeInTheDocument();
+  });
+
+  it("leaves the agenda alone, where the names are written out", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="agenda" />);
+
+    // The discriminant: this is the assertion that falls if `grid` ever stops
+    // being the condition for the bubbles.
+    expect(screen.queryByRole("link", { name: "Marie Dupont" })).not.toBeInTheDocument();
+    expect(screen.getByText("Marie Dupont")).toBeInTheDocument();
+  });
+});
+
+describe("the card as a link", () => {
+  it("stretches the title's link over the whole card", () => {
+    const { container } = render(
+      <SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />,
+    );
+
+    const title = screen.getByRole("link", { name: talk.title });
+    expect(title.className).toContain("after:absolute");
+    expect(title.className).toContain("after:inset-0");
+    // The pseudo-element resolves against the card, so the card has to be the
+    // containing block — otherwise it would cover the viewport instead.
+    expect(container.firstElementChild!.className).toContain("relative");
+  });
+
+  it("keeps every link a sibling, never nested", () => {
+    const { container } = render(
+      <SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />,
+    );
+
+    // Wrapping the card in a link is exactly what a bubble inside it forbids:
+    // browsers "repair" <a> in <a> by breaking the structure apart, stranding
+    // the inner link — keyboard included.
+    expect(container.querySelector("a a")).toBeNull();
+  });
+
+  it("leaves the site-wide focus outline alone", () => {
+    render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    // globals.css draws `:focus-visible` for the whole site. The card used to
+    // opt out and ring itself; with the link now wrapping only the title, that
+    // ring would have outlined the words rather than the card (#350).
+    const title = screen.getByRole("link", { name: talk.title });
+    expect(title.className).not.toMatch(/outline-none|\[outline:none\]/);
   });
 });
 
