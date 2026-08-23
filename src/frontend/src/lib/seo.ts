@@ -22,6 +22,8 @@ export function jsonLdScript(data: unknown): string {
 
 // Schema.org expects absolute URLs. Uploaded assets are stored as /uploads/…,
 // so they need the site origin prepended before they go into JSON-LD (#185).
+// Speaker photos imported from 2016-2019 are hosted on third-party domains and
+// are already absolute — those pass through untouched (#356, #465).
 export function absoluteUrl(path: string): string {
   return /^https?:\/\//.test(path) ? path : `${BASE_URL}${path}`;
 }

@@ -7,7 +7,7 @@ import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import { Link } from "@/i18n/navigation";
-import { jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 
 export async function generateMetadata({
   params,
@@ -74,7 +74,7 @@ export default async function SpeakerDetailPage({
     "@context": "https://schema.org",
     "@type": "Person",
     name: speaker.name,
-    ...(speaker.photoUrl ? { image: speaker.photoUrl } : {}),
+    ...(speaker.photoUrl ? { image: absoluteUrl(speaker.photoUrl) } : {}),
     ...(speaker.company ? { worksFor: { "@type": "Organization", name: speaker.company } } : {}),
     ...(Object.values(speaker.socialLinks).length > 0
       ? { sameAs: Object.values(speaker.socialLinks) }

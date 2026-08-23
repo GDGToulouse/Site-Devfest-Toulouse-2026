@@ -141,7 +141,7 @@ export default async function BilanPage({ params }: PageProps) {
           "@type": "Person",
           name: s.name,
           ...(s.company ? { worksFor: { "@type": "Organization", name: s.company } } : {}),
-          ...(s.photoUrl ? { image: s.photoUrl } : {}),
+          ...(s.photoUrl ? { image: absoluteUrl(s.photoUrl) } : {}),
         }))
       : null;
 
