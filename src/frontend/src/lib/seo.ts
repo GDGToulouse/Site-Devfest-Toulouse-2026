@@ -27,3 +27,24 @@ export function jsonLdScript(data: unknown): string {
 export function absoluteUrl(path: string): string {
   return /^https?:\/\//.test(path) ? path : `${BASE_URL}${path}`;
 }
+
+/**
+ * Whether an Event carries the two fields Google requires of one (#464).
+ *
+ * Both are optional in the database — an edition in preparation legitimately
+ * has neither a date nor a venue yet — while both builders emit them as
+ * `?? undefined`. That combination produces an Event missing a required field,
+ * which is precisely the pair Search Console reports: "champ startDate
+ * manquant", "champ location manquant".
+ *
+ * The answer is to emit nothing at all. No rich result costs nothing; an
+ * invalid one is a critical error on the report. A placeholder would be worse
+ * still — Google penalises structured data that does not match what the page
+ * shows.
+ *
+ * One function rather than the same condition written in two pages: it is one
+ * rule, and it has one reason to change (what Google requires).
+ */
+export function isCompleteEvent(event: { startDate?: string; location?: unknown }): boolean {
+  return Boolean(event.startDate && event.location);
+}

@@ -13,7 +13,7 @@ import {
   getEcosystemPartners,
 } from "@/lib/api";
 
-import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
@@ -140,6 +140,14 @@ export default async function HomePage() {
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
   const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
 
+  const eventJsonLd = edition
+    ? buildEventJsonLd(edition, tiers, {
+        description: tSite("description"),
+        ogImage: seoSettings.seo_og_image || null,
+        speakerNames: speakers.map((s) => s.name),
+      })
+    : null;
+
   // Background alternation is computed at render over the sections that are
   // actually visible, so the blanc / blanc-cassé rhythm stays regular even when
   // a conditional section (sponsors, speakers, news…) is empty (#135).
@@ -238,18 +246,13 @@ export default async function HomePage() {
 
   return (
     <>
-      {edition && (
+      {/* Nothing rather than an Event short of a field Google requires (#464):
+          an edition still in preparation has neither date nor venue, and the
+          two together are the pair Search Console reports as critical. */}
+      {eventJsonLd && isCompleteEvent(eventJsonLd) && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdScript(
-              buildEventJsonLd(edition, tiers, {
-                description: tSite("description"),
-                ogImage: seoSettings.seo_og_image || null,
-                speakerNames: speakers.map((s) => s.name),
-              }),
-            ),
-          }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
         />
       )}
 

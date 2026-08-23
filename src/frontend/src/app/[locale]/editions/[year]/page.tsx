@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 
 import { getEditionByYear, getEditions, getEditionSpeakers, getEditionSponsors, getEditionTalks } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
-import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import StatIcon from "@/components/home/StatIcon";
@@ -147,10 +147,14 @@ export default async function BilanPage({ params }: PageProps) {
 
   return (
     <div>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
-      />
+      {/* Silent rather than incomplete when the archive has no date or no
+          venue (#464) — the page itself is unaffected. */}
+      {isCompleteEvent(eventJsonLd) && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
+        />
+      )}
       {speakersJsonLd && (
         <script
           type="application/ld+json"

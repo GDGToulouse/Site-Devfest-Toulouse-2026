@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { absoluteUrl, jsonLdScript } from "./seo";
+import { absoluteUrl, isCompleteEvent, jsonLdScript } from "./seo";
 
 // JSON-LD is injected through dangerouslySetInnerHTML on every page carrying
 // structured data. `JSON.stringify` alone leaves `</script>` intact, which ends
@@ -39,6 +39,37 @@ describe("jsonLdScript", () => {
 
   it("should leave ordinary values untouched", () => {
     expect(JSON.parse(jsonLdScript({ name: "Ada Lovelace" }))).toEqual({ name: "Ada Lovelace" });
+  });
+});
+
+// Google requires startDate and location on an Event, but both are optional in
+// the database — an edition in preparation has neither. Search Console reported
+// exactly that pair as two critical errors (#464), and the code did not prevent
+// it: it simply had not met an incomplete edition yet.
+
+describe("isCompleteEvent", () => {
+  const place = { "@type": "Place", name: "Diagora" };
+
+  it("passes an event carrying both required fields", () => {
+    expect(isCompleteEvent({ startDate: "2026-11-19", location: place })).toBe(true);
+  });
+
+  it("refuses one with no date", () => {
+    // `startDate: undefined` is what `edition.startDate?.split(…) ?? undefined`
+    // produces, so this is the shape the builders actually emit.
+    expect(isCompleteEvent({ startDate: undefined, location: place })).toBe(false);
+  });
+
+  it("refuses one with no venue", () => {
+    expect(isCompleteEvent({ startDate: "2026-11-19", location: undefined })).toBe(false);
+  });
+
+  it("refuses one with neither — the case the report described", () => {
+    expect(isCompleteEvent({})).toBe(false);
+  });
+
+  it("does not take an empty string for a date", () => {
+    expect(isCompleteEvent({ startDate: "", location: place })).toBe(false);
   });
 });
 
