@@ -9,6 +9,7 @@ import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import TagInput from "@/components/admin/TagInput";
 import Tabs from "@/components/admin/Tabs";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface ArticleForm {
   slug: string;
@@ -134,7 +135,15 @@ export default function ArticleEditorPage() {
   }
 
   const [isTranslating, setIsTranslating] = useState(false);
-  const [translateError, setTranslateError] = useState<string | null>(null);
+  // Both outcomes go through SaveFeedback (#434). The banner used to be a mute
+  // <div>, so a translation that failed — over a slow network, precisely when a
+  // long asynchronous operation most needs to report back — failed in silence
+  // for a screen reader. The success was never announced either, though it
+  // rewrites the editor's content under the reader.
+  const [translateState, setTranslateState] = useState<SaveState>(null);
+  // The confirmation is worth having — the target language gets overwritten —
+  // but not as a system box outside the charter (#414).
+  const [translateFrom, setTranslateFrom] = useState<"fr" | "en" | null>(null);
 
   // Translates the OTHER language from the currently active one and writes
   // the result on the article. Only enabled when:
@@ -142,18 +151,12 @@ export default function ArticleEditorPage() {
   //   - source title is non-empty (no point translating nothing)
   // The endpoint persists the result and sets the auto-translated flag,
   // so we just reload to refresh the form state.
-  async function handleTranslate() {
+  async function runTranslate(from: "fr" | "en") {
     if (!articleId) return;
-    const from = activeLang;
     const to = from === "fr" ? "en" : "fr";
 
-    if (!confirm(
-      `Traduire automatiquement le contenu ${from.toUpperCase()} vers ${to.toUpperCase()} ?\n\n` +
-      `Le contenu ${to.toUpperCase()} actuel sera écrasé. Vous pourrez le relire et le corriger ensuite.`,
-    )) return;
-
     setIsTranslating(true);
-    setTranslateError(null);
+    setTranslateState(null);
 
     const { status, error: translateApiError } = await adminFetch<{ error?: string; message?: string }>(
       `/articles/${articleId}/translate-fields`,
@@ -163,21 +166,21 @@ export default function ArticleEditorPage() {
     setIsTranslating(false);
 
     if (status === 503) {
-      setTranslateError("Service de traduction non configuré (clé API Gemini manquante).");
+      setTranslateState({ kind: "error", text: "Service de traduction non configuré (clé API Gemini manquante)." });
       return;
     }
     if (status === 429) {
-      setTranslateError("Quota de traduction atteint. Réessayez plus tard.");
+      setTranslateState({ kind: "error", text: "Quota de traduction atteint. Réessayez plus tard." });
       return;
     }
     if (status === 422) {
-      setTranslateError("La traduction a cassé la structure du contenu. Réessayez ou corrigez manuellement.");
+      setTranslateState({ kind: "error", text: "La traduction a cassé la structure du contenu. Réessayez ou corrigez manuellement." });
       return;
     }
     // Anything but 200 failed, network included: a dropped connection comes
     // back as status 0, which `>= 400` let through as a translation (#428).
     if (status !== 200) {
-      setTranslateError(translateApiError || "La traduction a échoué.");
+      setTranslateState({ kind: "error", text: translateApiError || "La traduction a échoué." });
       return;
     }
 
@@ -186,6 +189,10 @@ export default function ArticleEditorPage() {
     // persisted flag + content.
     setActiveLang(to);
     await reloadArticle();
+    setTranslateState({
+      kind: "ok",
+      text: `Contenu ${to.toUpperCase()} traduit. Relisez-le, puis enregistrez.`,
+    });
   }
 
   async function handleSave() {
@@ -309,7 +316,7 @@ export default function ArticleEditorPage() {
             {!isNew && (
               <button
                 type="button"
-                onClick={handleTranslate}
+                onClick={() => setTranslateFrom(activeLang)}
                 disabled={isTranslating || !form.titleFr.trim() && activeLang === "fr" || !form.titleEn.trim() && activeLang === "en"}
                 className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-bleu/30 text-bleu hover:bg-bleu/5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Traduire le contenu ${activeLang.toUpperCase()} vers ${activeLang === "fr" ? "EN" : "FR"} via Gemini`}
@@ -328,12 +335,8 @@ export default function ArticleEditorPage() {
             )}
           </div>
 
-          {/* Translation outcome banner */}
-          {translateError && (
-            <div className="px-4 py-2 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm">
-              {translateError}
-            </div>
-          )}
+          {/* Translation outcome banner, announced like every other one (#434) */}
+          <SaveFeedback state={translateState} onDismiss={() => setTranslateState(null)} />
           {!isNew && (form.autoTranslatedFr || form.autoTranslatedEn) && (
             <p className="text-xs text-gris italic">
               Astuce : si vous avez relu et corrigé une langue marquée « auto », décochez la case ci-dessous pour retirer le badge.
@@ -415,6 +418,24 @@ export default function ArticleEditorPage() {
               updateForm("imageUrl", url);
               setShowImagePicker(false);
             }}
+          />
+
+          <ConfirmDialog
+            isOpen={translateFrom !== null}
+            title="Traduire automatiquement ?"
+            message={
+              translateFrom === null
+                ? ""
+                : `Le contenu ${(translateFrom === "fr" ? "en" : "fr").toUpperCase()} actuel sera écrasé par la traduction du ${translateFrom.toUpperCase()}. Vous pourrez le relire et le corriger ensuite.`
+            }
+            confirmLabel="Traduire"
+            variant="danger"
+            onConfirm={() => {
+              const from = translateFrom;
+              setTranslateFrom(null);
+              if (from) void runTranslate(from);
+            }}
+            onCancel={() => setTranslateFrom(null)}
           />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
