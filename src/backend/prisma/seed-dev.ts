@@ -774,6 +774,36 @@ async function seedDev() {
       bioFr: "Developer advocate.", bioEn: "Developer advocate.",
     },
   });
+  // Two more, so a session can be given by several people (#463). Every talk in
+  // the demo day had exactly one speaker, so the grid card was never asked to
+  // draw a second bubble, let alone fold a fourth into +N.
+  const speakerLina = await prisma.speaker.upsert({
+    where: { slug: "lina-oueslati" },
+    update: {},
+    create: {
+      slug: "lina-oueslati", name: "Lina Oueslati", company: "Nimbus Sud", city: "Montpellier",
+      bioFr: "Ingénieure plateforme, spécialiste de l'observabilité.",
+      bioEn: "Platform engineer, focused on observability.",
+    },
+  });
+  const speakerOmar = await prisma.speaker.upsert({
+    where: { slug: "omar-benali" },
+    update: {},
+    create: {
+      slug: "omar-benali", name: "Omar Benali", company: "Freelance", city: "Toulouse",
+      bioFr: "Développeur TypeScript et formateur.",
+      bioEn: "TypeScript developer and trainer.",
+    },
+  });
+  const speakerThea = await prisma.speaker.upsert({
+    where: { slug: "thea-nguyen" },
+    update: {},
+    create: {
+      slug: "thea-nguyen", name: "Théa Nguyen", company: "Cassoulet Code", city: "Toulouse",
+      bioFr: "Développeuse front, autrice d'un cours de TypeScript.",
+      bioEn: "Frontend developer, author of a TypeScript course.",
+    },
+  });
 
   // The sponsor association rides on the participation since #353 — it is true
   // of a given year, and Sponsor is edition-scoped too.
@@ -781,6 +811,10 @@ async function seedDev() {
     [speakerMarie.id, true, "PUBLISHED", sponsorOfMarie.id],
     [speakerJean.id, true, "PUBLISHED", null],
     [speakerSophie.id, false, "DRAFT", null],
+    // Published, or the bubble on their card would link to a 404 (#463).
+    [speakerLina.id, false, "PUBLISHED", null],
+    [speakerOmar.id, false, "PUBLISHED", null],
+    [speakerThea.id, false, "PUBLISHED", null],
   ] as const) {
     await prisma.speakerEdition.upsert({
       where: { speakerId_editionId: { speakerId, editionId: edition.id } },
@@ -788,7 +822,7 @@ async function seedDev() {
       create: { speakerId, editionId: edition.id, isFeatured, publicationStatus, sponsorId },
     });
   }
-  console.log("Speakers created: 3");
+  console.log("Speakers created: 6");
 
   await prisma.talk.create({
     data: {
@@ -952,6 +986,14 @@ async function seedDev() {
       speaker: speakerJean.id, room: "Amphithéâtre", start: "15:30", end: "16:10" },
   ] as const;
 
+  // Co-speakers (#463): one session given by two, one by four. Three faces fit
+  // a 180 px column and the fourth folds into +N — a shape the grid could not
+  // be looked at until the demo day contained it.
+  const coSpeakers: Record<string, readonly number[]> = {
+    "observabilite-opentelemetry": [speakerLina.id],
+    "typescript-types-avances": [speakerLina.id, speakerOmar.id, speakerThea.id],
+  };
+
   const roomsByName = new Map(
     (await prisma.room.findMany({ where: { venueId: diagora.id } })).map((r) => [r.name, r]),
   );
@@ -964,7 +1006,9 @@ async function seedDev() {
         slug: session.slug, title: session.title, description: session.description,
         format: session.format, level: session.level, language: session.language,
         publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: session.category,
-        speakers: { connect: [{ id: session.speaker }] },
+        speakers: {
+          connect: [session.speaker, ...(coSpeakers[session.slug] ?? [])].map((id) => ({ id })),
+        },
         roomId: room?.id,
         // Frozen at placement time (#375): renaming the room in 2027 must not
         // rewrite what the 2026 grid says.
