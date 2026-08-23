@@ -174,6 +174,11 @@ export interface SponsorTierRef {
 // The tier summary the admin sponsor routes expose (#321): the name to show and
 // the key/rank to filter and order by.
 export interface AdminSponsorTierRef {
+  // The API has always sent it (`TIER_SELECT` in routes/admin/sponsors.ts); the
+  // type simply under-described the payload, which went unnoticed because the
+  // flat `tierId` beside it answered the same question for the current year.
+  // Reading a *past* year's tier needs it (#429).
+  id: number;
   key: string;
   nameFr: string;
   nameEn: string;
@@ -202,11 +207,23 @@ export interface Sponsor {
   //
   // Nested `edition` rather than a flat `year`, unlike SpeakerEdition: that is
   // the shape the admin API returns.
+  // Every year the company took part in. The detail endpoint fills the
+  // year-scoped fields below `publicationStatus` so the admin sheet can edit a
+  // past participation (#429); the list endpoint does not select them, so they
+  // come back undefined there.
   editions?: {
     editionId: number;
     edition: { id: number; year: number };
     tier: AdminSponsorTierRef;
     publicationStatus: "DRAFT" | "PUBLISHED";
+    logoUrl?: string | null;
+    comKitReceived?: boolean;
+    comKitLogoWebUrl?: string | null;
+    comKitLogoPrintUrl?: string | null;
+    comKitCharterUrl?: string | null;
+    comKitNotes?: string | null;
+    platinumPromoIdea?: string | null;
+    platinumCoBuildIdea?: string | null;
   }[];
   // Private fields (#249) — organizers only, never on public pages.
   standContacts?: { name?: string; linkedin?: string; twitter?: string; bluesky?: string }[];

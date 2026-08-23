@@ -127,11 +127,28 @@ function serialize(s: {
       platinumCoBuildIdea: current.platinumCoBuildIdea,
       ...(current.jobOffers && { jobOffers: current.jobOffers }),
     }),
+    // Every participation, each with its own year-scoped values (#429). The
+    // flat fields above are one of these — the most recent — kept for the
+    // callers that only ever look at the current year; the sheet reads this
+    // list to let an organiser edit an earlier one.
+    //
+    // The detail query already selected all of it: it was being dropped here,
+    // which is why switching year had nothing to fill the form with. Fields
+    // absent from the list query (`logoUrl` and the com kit are not selected
+    // there) simply come back undefined.
     editions: editions?.map((e) => ({
       editionId: e.editionId,
       edition: e.edition,
       tier: e.tier,
       publicationStatus: e.publicationStatus,
+      logoUrl: e.logoUrl,
+      comKitReceived: e.comKitReceived,
+      comKitLogoWebUrl: e.comKitLogoWebUrl,
+      comKitLogoPrintUrl: e.comKitLogoPrintUrl,
+      comKitCharterUrl: e.comKitCharterUrl,
+      comKitNotes: e.comKitNotes,
+      platinumPromoIdea: e.platinumPromoIdea,
+      platinumCoBuildIdea: e.platinumCoBuildIdea,
     })),
   };
 }
