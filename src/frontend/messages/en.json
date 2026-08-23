@@ -26,6 +26,8 @@
   },
   "home": {
     "title": "DevFest Toulouse",
+    "pageTitle": "DevFest Toulouse 2026 — tech conference in southern France",
+    "description": "DevFest Toulouse 2026 is a full day of tech talks run by GDG Toulouse: web, cloud, AI, mobile and security, with speakers from across the community.",
     "hero": {
       "subtitleLine1": "The Toulouse conference by",
       "subtitleLine2devs": "devs",
@@ -114,6 +116,7 @@
     "by": "by",
     "backToList": "Back to news",
     "taggedWith": "Articles tagged",
+    "tagDescription": "Every DevFest Toulouse article filed under {tag}: announcements, behind-the-scenes of the event and write-ups from past conference editions.",
     "autoTranslated": "Automatic translation not yet reviewed by the team.",
     "filters": {
       "edition": "Edition",

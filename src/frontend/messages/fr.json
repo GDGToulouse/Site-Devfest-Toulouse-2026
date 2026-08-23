@@ -26,6 +26,8 @@
   },
   "home": {
     "title": "DevFest Toulouse",
+    "pageTitle": "DevFest Toulouse 2026 — la conférence tech du Sud-Ouest",
+    "description": "Le DevFest Toulouse 2026, c'est une journée de conférences tech organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité et communauté.",
     "hero": {
       "subtitleLine1": "La conférence Toulousaine par",
       "subtitleLine2devs": "les devs",
@@ -114,6 +116,7 @@
     "by": "par",
     "backToList": "Retour aux actualités",
     "taggedWith": "Articles tagués",
+    "tagDescription": "Tous les articles du DevFest Toulouse classés sous {tag} : annonces, coulisses de l'organisation et comptes rendus des conférences passées.",
     "autoTranslated": "Traduction automatique non relue par l'équipe.",
     "filters": {
       "edition": "Édition",

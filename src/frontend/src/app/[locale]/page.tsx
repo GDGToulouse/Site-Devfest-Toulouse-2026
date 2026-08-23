@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import {
@@ -13,6 +14,7 @@ import {
   getEcosystemPartners,
 } from "@/lib/api";
 
+import { pageMetadata } from "@/lib/page-metadata";
 import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import type { SectionSurface } from "@/components/home/section-surface";
 
@@ -114,6 +116,21 @@ function buildEventJsonLd(
     // invalidated the rich result. A yearly DevFest is not a rescheduled
     // event, so we simply omit it (#239).
     ...(offers.length > 0 && { offers }),
+  };
+}
+
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: "home" });
+
+  return {
+    // Absolute: the title already names the brand, and the layout template
+    // would append it a second time. Without this export the home page fell
+    // back on the layout's 21-character default — the most strategic page on
+    // the site using a third of its room in a result list (#381).
+    title: { absolute: t("pageTitle") },
+    description: t("description"),
+    ...(await pageMetadata(locale, "")),
   };
 }
 
