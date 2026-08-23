@@ -30,6 +30,7 @@ import sponsorSpaceRoutes from "./routes/sponsor-space.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
+import { serverOptions } from "./lib/server-options.js";
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
@@ -39,11 +40,11 @@ const host = process.env.HOST || "0.0.0.0";
 // so debug entries are filtered out in normal runs and free to leave in place
 // as a permanent diagnostic tool.
 //
-// trustProxy: required behind Traefik/Coolify so request.ip and request.protocol
-// reflect X-Forwarded-* headers set by the reverse proxy.
+// The rest lives in serverOptions, shared with the test that probes the router
+// (#467) — a limit only the real server carries is a limit nothing checks.
 const app = Fastify({
+  ...serverOptions,
   logger: { level: process.env.LOG_LEVEL || "info" },
-  trustProxy: true,
 });
 
 // Fastify rejects `content-type: application/json` with an empty payload
