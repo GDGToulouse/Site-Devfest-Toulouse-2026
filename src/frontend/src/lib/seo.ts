@@ -48,3 +48,20 @@ export function absoluteUrl(path: string): string {
 export function isCompleteEvent(event: { startDate?: string; location?: unknown }): boolean {
   return Boolean(event.startDate && event.location);
 }
+
+/**
+ * The locale a single-language entity canonicalises to (#468).
+ *
+ * `Talk.language` is a plain `String` in the schema. A value the site cannot
+ * serve is read as "no opinion" and leaves the page bilingual, rather than
+ * canonicalising it to a URL that does not exist. Every talk carries "fr" or
+ * "en" today — the historical import normalises to those two — so this guards
+ * a future data drift, not a current case.
+ *
+ * Here rather than beside `pageMetadata`, which the sitemap must not import:
+ * that module reaches for `next-intl/server`, and the sitemap has no request
+ * locale to give it.
+ */
+export function canonicalLocaleFor(language: string | null | undefined): string | undefined {
+  return language === "fr" || language === "en" ? language : undefined;
+}

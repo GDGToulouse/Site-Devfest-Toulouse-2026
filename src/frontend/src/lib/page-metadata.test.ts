@@ -8,6 +8,7 @@ vi.mock("next-intl/server", () => ({
 }));
 
 const { pageMetadata } = await import("./page-metadata");
+const { canonicalLocaleFor } = await import("./seo");
 
 describe("pageMetadata (#384)", () => {
   it("points og:url at the page's own URL, not the site root", async () => {
@@ -58,6 +59,56 @@ describe("pageMetadata (#384)", () => {
     expect(openGraph).toMatchObject({ type: "article", siteName: "DevFest Toulouse 2026" });
     expect(openGraph?.images).toEqual([{ url: "/uploads/cover.png" }]);
   });
+});
+
+describe("a talk lives in one language (#468)", () => {
+  const path = "/conferences/pourquoi-rails";
+
+  it("canonicalises the English URL of a French talk onto /fr", async () => {
+    const { alternates, openGraph } = await pageMetadata("en", path, {}, "fr");
+
+    expect(alternates?.canonical).toBe(`/fr${path}`);
+    expect(openGraph?.url).toBe(`/fr${path}`);
+  });
+
+  it("canonicalises the French URL of an English talk onto /en", async () => {
+    // The other direction: 18 of the 279 imported talks were given in English.
+    const { alternates } = await pageMetadata("fr", path, {}, "en");
+
+    expect(alternates?.canonical).toBe(`/en${path}`);
+  });
+
+  it("declares hreflang for that language alone", async () => {
+    const { alternates } = await pageMetadata("en", path, {}, "fr");
+
+    expect(alternates?.languages).toEqual({
+      fr: `/fr${path}`,
+      "x-default": `/fr${path}`,
+    });
+  });
+
+  it("leaves a bilingual page self-referential", async () => {
+    // The non-regression that matters: every other page keeps both variants.
+    const { alternates } = await pageMetadata("en", "/sponsors");
+
+    expect(alternates?.canonical).toBe("/en/sponsors");
+    expect(Object.keys(alternates?.languages ?? {}).sort()).toEqual(["en", "fr", "x-default"]);
+  });
+});
+
+describe("canonicalLocaleFor (#468)", () => {
+  it.each(["fr", "en"])("reads %s as a locale the site serves", (language) => {
+    expect(canonicalLocaleFor(language)).toBe(language);
+  });
+
+  it.each([null, undefined, "", "de", "FR"])(
+    "has no opinion on %s, leaving the page bilingual",
+    (language) => {
+      // Canonicalising onto /de would name a URL that does not exist — worse
+      // than the duplicate this change removes.
+      expect(canonicalLocaleFor(language)).toBeUndefined();
+    },
+  );
 });
 
 describe("no page declares its own openGraph block (#384)", () => {

@@ -8,6 +8,7 @@ import {
   getHallOfFame,
   getIndexableSponsors,
 } from "@/lib/api";
+import { canonicalLocaleFor } from "@/lib/seo";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -179,6 +180,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   //
   // Listing a past talk under /conferences/{slug} would emit a 404: that route
   // resolves against the featured edition alone.
+  //
+  // One entry per talk, in the talk's own language (#468). Listing both locales
+  // offered Google two URLs carrying the same untranslated words — nine of them
+  // came back as "Google n'a pas choisi la même URL canonique que vous", and it
+  // had chosen correctly. The page still answers in either locale; only the
+  // canonical, the hreflang and this list name one.
   for (const edition of editions) {
     const isFeatured = featured?.year === edition.year;
     const talks = await getEditionTalks(edition.year);
@@ -186,18 +193,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       const path = isFeatured
         ? `/conferences/${talk.slug}`
         : `/editions/${edition.year}/conferences/${talk.slug}`;
-      for (const locale of ["fr", "en"] as Locale[]) {
-        entries.push(
-          buildEntry(
-            `${BASE_URL}/${locale}${path}`,
-            ["fr", "en"],
-            path,
-            toDate(talk.updatedAt),
-            isFeatured ? "monthly" : "yearly",
-            isFeatured ? 0.7 : 0.4,
-          ),
-        );
-      }
+      const locale = canonicalLocaleFor(talk.language) ?? "fr";
+      entries.push({
+        url: `${BASE_URL}/${locale}${path}`,
+        lastModified: toDate(talk.updatedAt),
+        changeFrequency: isFeatured ? "monthly" : "yearly",
+        priority: isFeatured ? 0.7 : 0.4,
+        // No `alternates`: an hreflang naming a URL that canonicalises
+        // elsewhere is the contradiction this change exists to remove.
+      });
     }
   }
 

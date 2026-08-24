@@ -20,19 +20,34 @@ import { getTranslations } from "next-intl/server";
  *
  * @param path page path *without* the locale prefix — `""` for the home page.
  * @param openGraph what this page adds or overrides, e.g. `type: "article"`.
+ * @param onlyLocale the single locale this page exists in — see below.
  */
 export async function pageMetadata(
   locale: string,
   path: string,
   openGraph: NonNullable<Metadata["openGraph"]> = {},
+  onlyLocale?: string,
 ): Promise<Pick<Metadata, "alternates" | "openGraph">> {
   const t = await getTranslations({ locale, namespace: "site" });
-  const url = `/${locale}${path}`;
+
+  // A talk exists in one language and is not translated (#293), so both URLs
+  // served the same French words. Search Console reported nine of them as
+  // "Google n'a pas choisi la même URL canonique que vous", and it was right
+  // (#468). The page stays reachable in either locale — the chrome around the
+  // abstract is translated, and the language switch has to keep working — but
+  // it points at one canonical, and declares hreflang for that one language
+  // only. Declaring the other variant would name a URL that canonicalises
+  // elsewhere, which is the contradiction Google already resolved on its own.
+  const canonicalLocale = onlyLocale ?? locale;
+  const url = `/${canonicalLocale}${path}`;
+  const languages = onlyLocale
+    ? { [onlyLocale]: url, "x-default": url }
+    : { fr: `/fr${path}`, en: `/en${path}`, "x-default": `/fr${path}` };
 
   return {
     alternates: {
       canonical: url,
-      languages: { fr: `/fr${path}`, en: `/en${path}`, "x-default": `/fr${path}` },
+      languages,
     },
     openGraph: {
       siteName: t("title"),

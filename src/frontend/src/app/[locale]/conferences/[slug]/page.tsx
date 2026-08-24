@@ -6,6 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getCurrentEdition, getTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
+import { canonicalLocaleFor } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
 import { Link } from "@/i18n/navigation";
@@ -34,7 +35,16 @@ export async function generateMetadata({
     description,
     // OG image generated dynamically by ./opengraph-image (RG-215); og:title
     // and og:description come from the two fields above.
-    ...(await pageMetadata(locale, `/conferences/${slug}`)),
+    //
+    // The talk's own language carries the canonical (#468): both URLs serve the
+    // same untranslated words, so declaring each one canonical made Google pick
+    // for us — and it dropped the /en side.
+    ...(await pageMetadata(
+      locale,
+      `/conferences/${slug}`,
+      {},
+      canonicalLocaleFor(talk.language),
+    )),
   };
 }
 
