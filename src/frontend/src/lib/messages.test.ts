@@ -86,6 +86,24 @@ describe("page descriptions (#381)", () => {
     expect(empty).toEqual([]);
   });
 
+  // The pages worth ranking for. Not the legal ones: "Mentions légales du site
+  // DevFest Toulouse" is 42 characters in French and 30 in English, and that is
+  // the right length — padding a legal notice to 150 buys nothing.
+  const MAIN_PAGES = ["articles", "ticketing", "bilan", "contact", "cfp", "sponsor"];
+
+  it.each(MAIN_PAGES)("gives %s a description in the useful range", (namespace) => {
+    // Google shows roughly 150-160. The French side sat at 39-67 characters
+    // while the English had had a real SEO pass — the wrong way round for a
+    // Toulouse event whose x-default points at /fr.
+    for (const [name, messages] of locales) {
+      const description = messages[namespace].description as string;
+      expect(description.length, `${name}: ${namespace}.description is ${description.length}`)
+        .toBeGreaterThanOrEqual(120);
+      expect(description.length, `${name}: ${namespace}.description is ${description.length}`)
+        .toBeLessThanOrEqual(160);
+    }
+  });
+
   it("describes a tag page, naming the tag", () => {
     for (const [name, messages] of locales) {
       expect(messages.articles.tagDescription as string, `${name}: articles.tagDescription`).toContain("{tag}");

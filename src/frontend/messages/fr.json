@@ -110,7 +110,7 @@
   },
   "articles": {
     "title": "Actualités",
-    "description": "Toutes les actualités du DevFest Toulouse 2026.",
+    "description": "Toute l'actualité du DevFest Toulouse 2026 : ouverture du CFP, mise en vente des billets, annonce des speakers et nouvelles de la communauté tech.",
     "home": "Accueil",
     "noArticles": "Aucun article pour le moment.",
     "by": "par",
@@ -132,7 +132,7 @@
   },
   "ticketing": {
     "pageTitle": "Billetterie",
-    "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
+    "description": "Réservez votre place pour le DevFest Toulouse 2026, la plus grande conférence tech du Sud-Ouest. Tarifs Blind Bird, Normal et Late Bird.",
     "home": "Accueil",
     "available": "Disponible",
     "comingSoon": "Bientôt",
@@ -144,7 +144,7 @@
   },
   "cfp": {
     "pageTitle": "Proposer un talk",
-    "description": "Soumettez votre présentation pour le DevFest Toulouse 2026.",
+    "description": "Appel à conférenciers du DevFest Toulouse 2026 : proposez votre conférence, quickie ou keynote sur le web, le cloud, l'IA, le mobile ou la sécurité.",
     "home": "Accueil",
     "intro": "Le DevFest Toulouse accueille des speakers de tous horizons. Que vous soyez débutant ou expert, votre expérience et votre passion comptent. Proposez un talk et partagez vos connaissances avec la communauté.",
     "statusOpen": "Le CFP est actuellement ouvert !",
@@ -165,7 +165,7 @@
   },
   "contact": {
     "title": "Contact",
-    "description": "Contactez l'équipe du DevFest Toulouse.",
+    "description": "Contactez l'équipe d'organisation du DevFest Toulouse pour toute demande de sponsoring, de conférence ou de presse au sujet de l'édition 2026.",
     "home": "Accueil",
     "form": {
       "firstName": "Prénom",
@@ -205,7 +205,7 @@
   },
   "bilan": {
     "pageTitle": "DevFest Toulouse {year}",
-    "description": "Bilan de l'édition {year} du DevFest Toulouse.",
+    "description": "Retour sur le DevFest Toulouse {year} : conférences, speakers, chiffres de fréquentation, aftermovie et temps forts de cette édition.",
     "home": "Accueil",
     "editions": "Éditions",
     "keyFigures": "L'édition en chiffres",
@@ -234,7 +234,7 @@
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
-    "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",
+    "description": "Nos formules de sponsoring pour le DevFest Toulouse 2026 : faites rayonner votre marque employeur, recrutez des profils tech et soutenez la communauté.",
     "home": "Accueil",
     "intro": "Le DevFest Toulouse est l'opportunité de vous rendre visible auprès de milliers de passionnés de technologie. Rejoignez-nous en tant que sponsor et bénéficiez d'une visibilité unique auprès de la communauté tech toulousaine.",
     "whyTitle": "Pourquoi devenir sponsor ?",
