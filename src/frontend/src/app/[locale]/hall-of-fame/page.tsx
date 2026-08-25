@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getHallOfFame } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import HallOfFameCard from "@/components/speakers/HallOfFameCard";
 import { Link } from "@/i18n/navigation";
@@ -14,14 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description", { count: people.length }),
-    alternates: {
-      canonical: `/${locale}/hall-of-fame`,
-      languages: {
-        fr: "/fr/hall-of-fame",
-        en: "/en/hall-of-fame",
-        "x-default": "/fr/hall-of-fame",
-      },
-    },
+    ...(await pageMetadata(locale, "/hall-of-fame")),
   };
 }
 

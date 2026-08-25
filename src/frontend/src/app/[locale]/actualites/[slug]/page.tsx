@@ -8,6 +8,7 @@ import { getArticleBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import { jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata({
   params,
@@ -26,16 +27,10 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `/${locale}/actualites/${slug}`,
-      languages: { fr: `/fr/actualites/${slug}`, en: `/en/actualites/${slug}`, "x-default": `/fr/actualites/${slug}` },
-    },
-    openGraph: {
-      title,
-      description,
+    ...(await pageMetadata(locale, `/actualites/${slug}`, {
       type: "article",
       ...(article.imageUrl ? { images: [{ url: article.imageUrl }] } : {}),
-    },
+    })),
   };
 }
 

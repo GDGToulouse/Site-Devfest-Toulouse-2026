@@ -4,6 +4,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
 import { prisma } from "../../lib/prisma.js";
+import { originalNamesByUrl, rememberOriginalName } from "../../lib/file-metadata.js";
 import { generateAltText } from "../../lib/alt-text.js";
 import {
   COMPRESSIBLE_MIMES,
@@ -148,6 +149,11 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       });
     }
 
+    // The name the editor's machine gave it (#378). The route already knew it —
+    // it has always been echoed back in the response below — it simply never
+    // survived the request.
+    await rememberOriginalName(`/uploads/${uniqueName}`, data.filename);
+
     return {
       filename: uniqueName,
       originalName: data.filename,
@@ -203,6 +209,9 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           isImage: IMAGE_EXTS.includes(ext),
           ext,
           alt: metaByFilename.get(filename)?.alt ?? null,
+          // Null for anything uploaded before #378 — there is nothing to
+          // recover, and the library falls back to the stored name.
+          originalName: metaByFilename.get(filename)?.originalName ?? null,
         };
       }),
     );

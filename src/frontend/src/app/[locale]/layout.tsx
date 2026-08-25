@@ -13,8 +13,9 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCfpSettings, getCurrentEdition, getIdentitySettings, getSeoSettings, getSocialLinks } from "@/lib/api";
+import { getCfpSettings, getCurrentEdition, getIdentitySettings, getSocialLinks } from "@/lib/api";
 import { buildFaviconMetadata, getLogoUrl } from "@/lib/identity";
+import { pageMetadata } from "@/lib/page-metadata";
 import { jsonLdScript } from "@/lib/seo";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
@@ -27,16 +28,10 @@ export async function generateMetadata({
   params: Promise<{ locale: string }>;
 }): Promise<Metadata> {
   const { locale } = await params;
-  const [t, seoSettings, identity] = await Promise.all([
+  const [t, identity] = await Promise.all([
     getTranslations({ locale, namespace: "site" }),
-    getSeoSettings(),
     getIdentitySettings(),
   ]);
-
-  // If the admin configured a static OG image override, honour it. Otherwise
-  // let Next.js pick up the per-route opengraph-image.tsx convention, which
-  // generates branded images at request time.
-  const ogImageOverride = seoSettings.seo_og_image || null;
 
   return {
     metadataBase: new URL(BASE_URL),
@@ -46,33 +41,13 @@ export async function generateMetadata({
     },
     description: t("description"),
     icons: buildFaviconMetadata(identity),
-    openGraph: {
-      siteName: t("title"),
-      type: "website",
-      locale: locale === "fr" ? "fr_FR" : "en_US",
-      ...(ogImageOverride && {
-        images: [
-          {
-            url: ogImageOverride,
-            width: 1200,
-            height: 630,
-            alt: t("title"),
-          },
-        ],
-      }),
-    },
-    twitter: {
-      card: "summary_large_image",
-      ...(ogImageOverride && { images: [ogImageOverride] }),
-    },
-    alternates: {
-      canonical: `/${locale}`,
-      languages: {
-        fr: "/fr",
-        en: "/en",
-        "x-default": "/fr",
-      },
-    },
+    // The admin's `seo_og_image` is *not* read here. It is honoured inside
+    // ./opengraph-image.tsx (#183), and that file convention wins over
+    // `openGraph.images` anyway — while `twitter.images`, set from the same
+    // setting, kept the raw upload. The two tags ended up on different URLs
+    // (#384). Naming the setting in one place only is what keeps them equal.
+    ...(await pageMetadata(locale, "")),
+    twitter: { card: "summary_large_image" },
     // On non-production hosts (beta), keep the site out of Google without
     // killing social sharing: emit noindex *only for Googlebot* rather than a
     // global `robots` meta. facebookexternalhit / LinkedInBot respect the

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getSpeakers } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerCard from "@/components/speakers/SpeakerCard";
 
@@ -11,10 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/speakers`,
-      languages: { fr: "/fr/speakers", en: "/en/speakers", "x-default": "/fr/speakers" },
-    },
+    ...(await pageMetadata(locale, "/speakers")),
   };
 }
 

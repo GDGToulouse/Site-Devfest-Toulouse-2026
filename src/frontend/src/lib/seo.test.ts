@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { jsonLdScript } from "./seo";
+import { absoluteUrl, isCompleteEvent, jsonLdScript } from "./seo";
 
 // JSON-LD is injected through dangerouslySetInnerHTML on every page carrying
 // structured data. `JSON.stringify` alone leaves `</script>` intact, which ends
@@ -39,5 +39,65 @@ describe("jsonLdScript", () => {
 
   it("should leave ordinary values untouched", () => {
     expect(JSON.parse(jsonLdScript({ name: "Ada Lovelace" }))).toEqual({ name: "Ada Lovelace" });
+  });
+});
+
+// Google requires startDate and location on an Event, but both are optional in
+// the database — an edition in preparation has neither. Search Console reported
+// exactly that pair as two critical errors (#464), and the code did not prevent
+// it: it simply had not met an incomplete edition yet.
+
+describe("isCompleteEvent", () => {
+  const place = { "@type": "Place", name: "Diagora" };
+
+  it("passes an event carrying both required fields", () => {
+    expect(isCompleteEvent({ startDate: "2026-11-19", location: place })).toBe(true);
+  });
+
+  it("refuses one with no date", () => {
+    // `startDate: undefined` is what `edition.startDate?.split(…) ?? undefined`
+    // produces, so this is the shape the builders actually emit.
+    expect(isCompleteEvent({ startDate: undefined, location: place })).toBe(false);
+  });
+
+  it("refuses one with no venue", () => {
+    expect(isCompleteEvent({ startDate: "2026-11-19", location: undefined })).toBe(false);
+  });
+
+  it("refuses one with neither — the case the report described", () => {
+    expect(isCompleteEvent({})).toBe(false);
+  });
+
+  it("does not take an empty string for a date", () => {
+    expect(isCompleteEvent({ startDate: "", location: place })).toBe(false);
+  });
+});
+
+// #465 — the Person builders emitted /uploads/… straight into `image`, where
+// Schema.org wants an absolute URL. The rule already existed for the Event's
+// image; it just never followed the speakers.
+
+describe("absoluteUrl", () => {
+  // Careful with the origin here: under vitest, `process.env.BASE_URL` is "/" —
+  // Vite injects its own BASE_URL (the app's base path) into the environment,
+  // so neither the production value nor the localhost fallback applies. A test
+  // asserting the prefix would be asserting Vite's default. What is worth
+  // pinning is the distinction the function draws, not the origin it uses.
+  it("prepends the origin to an uploaded asset", () => {
+    const prefixed = absoluteUrl("/uploads/photo.jpg");
+
+    expect(prefixed).not.toBe("/uploads/photo.jpg");
+    expect(prefixed.endsWith("/uploads/photo.jpg")).toBe(true);
+  });
+
+  it("leaves a third-party photo alone", () => {
+    // Speakers imported from 2016-2019 are hosted on twimg, gravatar and the
+    // like (#356). Prefixing those would produce a doubled, broken URL.
+    const external = "https://pbs.twimg.com/profile_images/42.jpg";
+    expect(absoluteUrl(external)).toBe(external);
+  });
+
+  it("leaves a plain http host alone too", () => {
+    expect(absoluteUrl("http://example.org/a.png")).toBe("http://example.org/a.png");
   });
 });

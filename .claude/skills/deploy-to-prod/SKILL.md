@@ -204,15 +204,30 @@ git show main:src/backend/src/lib/version.ts | grep APP_VERSION   # == X.Y.Z
 
 git tag -a vX.Y.Z -m "Release vX.Y.Z"
 git push origin vX.Y.Z
+
+# Le corps de la release EST la section du CHANGELOG, titre `## [X.Y.Z]` retiré.
+awk '/^## \[X\.Y\.Z\]/{f=1;next} /^## \[/{f=0} f' CHANGELOG.md | sed '/./,$!d' > /tmp/notes.md
+cat >> /tmp/notes.md <<'FOOTER'
+---
+
+[Changelog complet](https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/blob/main/CHANGELOG.md) · [Diff vPREV…vX.Y.Z](https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/vPREV...vX.Y.Z) · PR de promotion #NNN
+FOOTER
+
 gh release create vX.Y.Z \
   --repo GDGToulouse/Site-Devfest-Toulouse-2026 \
-  --title "vX.Y.Z" --generate-notes
+  --title "vX.Y.Z — <résumé en une demi-ligne>" --notes-file /tmp/notes.md
 ```
 
 Garde-fous :
 - Le tag **doit** être identique à `APP_VERSION` — vérifié **avant** le push.
 - **Un seul tag par version**, jamais déplacé une fois poussé.
-- `--generate-notes` compile les PR mergées depuis le tag précédent.
+- **Ne pas utiliser `--generate-notes`** : il produit une liste de PR qui répète
+  ce que le diff dit déjà, et rompt avec les releases v1.2.0 à v1.6.0. Le lecteur
+  d'une release veut savoir *ce qui change pour lui*, pas quelles branches ont été
+  mergées — c'est le travail déjà fait dans le CHANGELOG à l'étape 2.
+- Le **titre** porte un résumé, jamais le numéro seul : « v1.5.0 — Catalogue
+  sponsoring, corbeille et page Lieu ». C'est ce qui s'affiche dans la liste des
+  releases, où le numéro seul n'apprend rien.
 
 Vérifier que les `Closes` de l'étape 3 ont bien fermé les issues (le merge dans `main`
 les ferme automatiquement — si l'une est encore ouverte, le mot-clé était mal écrit) :

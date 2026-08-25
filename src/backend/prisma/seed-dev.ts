@@ -1,4 +1,9 @@
 import { seedBase, prisma, auth } from "./seed.js";
+import {
+  describeRoomClash,
+  findRoomClash,
+  type RoomOccupation,
+} from "../src/lib/room-clash.js";
 
 // Dev-only test accounts — see docs/comptes-dev-local.md
 const DEV_ACCOUNTS = [
@@ -6,11 +11,145 @@ const DEV_ACCOUNTS = [
   { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", password: "editor1234!dev", role: "EDITOR" as const },
 ];
 
+/**
+ * Puts the documented password back on an account that already exists (#433).
+ *
+ * `seedBase()` runs first and provisions those same two addresses from
+ * `ADMIN_EMAILS` with a random password. This script then found them present,
+ * logged "exists", and never reached its own `signUpEmail` — so the password
+ * CLAUDE.md documents was not merely lost after a reseed, as the note there
+ * claimed: it had never been set, not once, not even on a brand-new database.
+ *
+ * `updatePassword` alone would not do: on a user with no credential row it
+ * writes nothing and reports nothing, and the seed would go on printing a
+ * password that signs no one in.
+ */
+async function applyDevPassword(userId: string, password: string): Promise<void> {
+  const ctx = await auth.$context;
+  const hash = await ctx.password.hash(password);
+  const credential = await prisma.account.findFirst({ where: { userId, providerId: "credential" } });
+
+  if (credential) {
+    await ctx.internalAdapter.updatePassword(userId, hash);
+    return;
+  }
+  await ctx.internalAdapter.createAccount({
+    userId,
+    providerId: "credential",
+    accountId: userId,
+    password: hash,
+  });
+}
+
+/**
+ * Refuses to leave two sessions overlapping in one room (#462).
+ *
+ * The day is placed from three lists written independently — `sessions`,
+ * `placements` and `keynotes` — and nothing compares them, which is how a
+ * conference once landed on the exact range another already held in the
+ * Amphitheatre. The database is the only place the three meet, so the check
+ * belongs here, after all of them have run.
+ *
+ * Two sessions *following* each other in a room is the nominal 2026 shape —
+ * two 20-minute quickies inside a 40-minute slot — and must pass. Only a real
+ * overlap is a mistake, and it stops the seed rather than producing a day that
+ * cannot happen.
+ *
+ * A relay room counts as occupied: a keynote on a screen there still fills it.
+ */
+async function assertNoRoomClash(editionId: number) {
+  const placed = await prisma.talk.findMany({
+    where: { editionId, startsAt: { not: null }, endsAt: { not: null } },
+    select: {
+      slug: true,
+      roomId: true,
+      roomLabel: true,
+      startsAt: true,
+      endsAt: true,
+      simulcasts: { select: { roomId: true, roomLabel: true } },
+    },
+  });
+
+  const occupations: RoomOccupation[] = placed.flatMap((talk) =>
+    [{ roomId: talk.roomId, roomLabel: talk.roomLabel }, ...talk.simulcasts].flatMap(
+      ({ roomId, roomLabel }) =>
+        roomId == null
+          ? []
+          : [
+              {
+                slug: talk.slug,
+                room: roomLabel ?? `#${roomId}`,
+                roomId,
+                start: talk.startsAt!,
+                end: talk.endsAt!,
+              },
+            ],
+    ),
+  );
+
+  const clash = findRoomClash(occupations);
+  if (clash) throw new Error(`Seed inconsistency in ${describeRoomClash(clash)}`);
+}
+
 async function seedDev() {
-  // Run base seed first (contact categories, admin accounts)
-  await seedBase();
+  // This script wipes the edition's talks, sponsors and categories, and since
+  // #433 it also forces a known password onto two addresses that are real
+  // administrator accounts in production. Both were already reasons never to
+  // point it at a live database; the second makes the guard worth writing down.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("seed-dev.ts is destructive and sets known passwords — never run it in production.");
+  }
+
+  // Run base seed first (contact categories, admin accounts) — but not the two
+  // accounts below, which this script owns and gives a documented password
+  // (#433). Any other address in ADMIN_EMAILS is still provisioned there.
+  await seedBase({ skipAccountEmails: DEV_ACCOUNTS.map((a) => a.email) });
 
   console.log("Seeding dev data...");
+
+  // --- Venues (#105) ---
+  // Upsert by name: the venue is the shared entity, so re-seeding must find the
+  // existing row rather than fail on the unique name.
+  //
+  // `update` carries the same fields as `create` (#452). With an empty update,
+  // the row the #105 migration had backfilled from `Edition.venueName` — with
+  // no coordinates, because the local edition had none — was never repaired:
+  // `hasVenueInfo` stayed false, /fr/lieu answered 404 and the "Lieu" menu
+  // entry never appeared. A dev seed has to converge on the state it describes,
+  // or "replay the seed" stops meaning anything.
+  const diagoraFields = { address: "Labège", lat: 43.5497, lng: 1.5119 };
+  const diagora = await prisma.venue.upsert({
+    where: { name: "Diagora" },
+    update: diagoraFields,
+    create: { name: "Diagora", ...diagoraFields },
+  });
+
+  // The eight rooms of the 2026 edition, with their real capacities — the
+  // schedule grid orders its columns by sortOrder.
+  const rooms2026 = [
+    { name: "Amphithéâtre", capacity: 500, sortOrder: 1 },
+    { name: "Agora 1", capacity: 500, sortOrder: 2 },
+    { name: "Hémicycle", capacity: 150, sortOrder: 3 },
+    { name: "Pastel", capacity: 200, sortOrder: 4 },
+    { name: "Lauragais", capacity: 200, sortOrder: 5 },
+    { name: "Ellipse", capacity: 100, sortOrder: 6 },
+    { name: "Salle Quickies", capacity: 80, sortOrder: 7 },
+    { name: "Salle Communautés", capacity: 80, sortOrder: 8 },
+  ];
+  for (const room of rooms2026) {
+    await prisma.room.upsert({
+      where: { venueId_name: { venueId: diagora.id, name: room.name } },
+      update: { capacity: room.capacity, sortOrder: room.sortOrder },
+      create: { ...room, venueId: diagora.id },
+    });
+  }
+  console.log(`Venue created: ${diagora.name} (${rooms2026.length} rooms)`);
+
+  const pierreBaudis = await prisma.venue.upsert({
+    where: { name: "Centre de Congrès Pierre Baudis" },
+    update: { address: "Toulouse" },
+    create: { name: "Centre de Congrès Pierre Baudis", address: "Toulouse" },
+  });
 
   // --- Edition 2026 ---
   const edition = await prisma.edition.upsert({
@@ -21,8 +160,7 @@ async function seedDev() {
       startDate: new Date("2026-11-19T09:00:00Z"),
       endDate: new Date("2026-11-19T18:00:00Z"),
       status: "ANNOUNCEMENT",
-      venueName: "Diagora",
-      venueAddress: "Labège",
+      venueId: diagora.id,
       sponsorFormUrl: "https://forms.gle/devfest-sponsor",
       aftermovieUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     },
@@ -187,8 +325,7 @@ async function seedDev() {
       status: "SEE_YOU_NEXT_YEAR",
       startDate: new Date("2025-11-06T09:00:00Z"),
       endDate: new Date("2025-11-06T18:00:00Z"),
-      venueName: "Centre de Congrès Pierre Baudis",
-      venueAddress: "Toulouse",
+      venueId: pierreBaudis.id,
       aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
       galleryUrl: "https://photos.app.goo.gl/devfest2025",
       archivedSiteUrl: "https://2025.devfesttoulouse.fr",
@@ -198,8 +335,7 @@ async function seedDev() {
       startDate: new Date("2025-11-06T09:00:00Z"),
       endDate: new Date("2025-11-06T18:00:00Z"),
       status: "SEE_YOU_NEXT_YEAR",
-      venueName: "Centre de Congrès Pierre Baudis",
-      venueAddress: "Toulouse",
+      venueId: pierreBaudis.id,
       aftermovieUrl: "https://www.youtube.com/watch?v=nCjk1T8G1WE",
       galleryUrl: "https://photos.app.goo.gl/devfest2025",
       archivedSiteUrl: "https://2025.devfesttoulouse.fr",
@@ -345,14 +481,36 @@ async function seedDev() {
     update: { nameEn: "Web & Mobile", color: "#EC6839" },
     create: { nameFr: "Web & Mobile", nameEn: "Web & Mobile", color: "#EC6839" },
   });
+  // Two categories alternating session by session said nothing about what a
+  // real grid renders (#460): not the chip row wrapping, not two colour dots
+  // side by side on a card, not a category filter that actually empties the
+  // grid. Colours come from the palette in `docs/design-system.md`.
+  const catData = await prisma.category.upsert({
+    where: { nameFr: "IA & Data" },
+    update: { nameEn: "AI & Data", color: "#109E6E" },
+    create: { nameFr: "IA & Data", nameEn: "AI & Data", color: "#109E6E" },
+  });
+  const catCraft = await prisma.category.upsert({
+    where: { nameFr: "Craft & Architecture" },
+    update: { nameEn: "Craft & Architecture", color: "#F8AB06" },
+    create: { nameFr: "Craft & Architecture", nameEn: "Craft & Architecture", color: "#F8AB06" },
+  });
+  const catSecu = await prisma.category.upsert({
+    where: { nameFr: "Sécurité" },
+    update: { nameEn: "Security", color: "#B94420" },
+    create: { nameFr: "Sécurité", nameEn: "Security", color: "#B94420" },
+  });
   await prisma.editionCategory.createMany({
     data: [
       { editionId: edition.id, categoryId: catCloud.id, sortOrder: 0 },
       { editionId: edition.id, categoryId: catWeb.id, sortOrder: 1 },
+      { editionId: edition.id, categoryId: catData.id, sortOrder: 2 },
+      { editionId: edition.id, categoryId: catCraft.id, sortOrder: 3 },
+      { editionId: edition.id, categoryId: catSecu.id, sortOrder: 4 },
     ],
     skipDuplicates: true,
   });
-  console.log("Categories created: 2");
+  console.log("Categories created: 5");
 
   // A realistic sponsor wall: 4 Platinum, 16 Gold, 8 Soutien. Every field is
   // filled (logo, both descriptions, website, socials, contact email) so the
@@ -656,6 +814,36 @@ async function seedDev() {
       bioFr: "Developer advocate.", bioEn: "Developer advocate.",
     },
   });
+  // Two more, so a session can be given by several people (#463). Every talk in
+  // the demo day had exactly one speaker, so the grid card was never asked to
+  // draw a second bubble, let alone fold a fourth into +N.
+  const speakerLina = await prisma.speaker.upsert({
+    where: { slug: "lina-oueslati" },
+    update: {},
+    create: {
+      slug: "lina-oueslati", name: "Lina Oueslati", company: "Nimbus Sud", city: "Montpellier",
+      bioFr: "Ingénieure plateforme, spécialiste de l'observabilité.",
+      bioEn: "Platform engineer, focused on observability.",
+    },
+  });
+  const speakerOmar = await prisma.speaker.upsert({
+    where: { slug: "omar-benali" },
+    update: {},
+    create: {
+      slug: "omar-benali", name: "Omar Benali", company: "Freelance", city: "Toulouse",
+      bioFr: "Développeur TypeScript et formateur.",
+      bioEn: "TypeScript developer and trainer.",
+    },
+  });
+  const speakerThea = await prisma.speaker.upsert({
+    where: { slug: "thea-nguyen" },
+    update: {},
+    create: {
+      slug: "thea-nguyen", name: "Théa Nguyen", company: "Cassoulet Code", city: "Toulouse",
+      bioFr: "Développeuse front, autrice d'un cours de TypeScript.",
+      bioEn: "Frontend developer, author of a TypeScript course.",
+    },
+  });
 
   // The sponsor association rides on the participation since #353 — it is true
   // of a given year, and Sponsor is edition-scoped too.
@@ -663,6 +851,10 @@ async function seedDev() {
     [speakerMarie.id, true, "PUBLISHED", sponsorOfMarie.id],
     [speakerJean.id, true, "PUBLISHED", null],
     [speakerSophie.id, false, "DRAFT", null],
+    // Published, or the bubble on their card would link to a 404 (#463).
+    [speakerLina.id, false, "PUBLISHED", null],
+    [speakerOmar.id, false, "PUBLISHED", null],
+    [speakerThea.id, false, "PUBLISHED", null],
   ] as const) {
     await prisma.speakerEdition.upsert({
       where: { speakerId_editionId: { speakerId, editionId: edition.id } },
@@ -670,7 +862,7 @@ async function seedDev() {
       create: { speakerId, editionId: edition.id, isFeatured, publicationStatus, sponsorId },
     });
   }
-  console.log("Speakers created: 3");
+  console.log("Speakers created: 6");
 
   await prisma.talk.create({
     data: {
@@ -695,7 +887,261 @@ async function seedDev() {
       speakers: { connect: [{ id: speakerJean.id }] },
     },
   });
-  console.log("Talks created: 2");
+  // --- Schedule (#105, rendered by #106) ---
+  //
+  // A day dense enough for the grid to be worth looking at: six session slots
+  // across four rooms. Diagora holds eight, and four staying empty is the case
+  // the endpoint derives its columns for — a venue's room list is not a grid.
+  //
+  // Times are UTC, an hour behind the November wall clock in Toulouse, and fit
+  // between the off-session moments of the 2026 sponsor guide below.
+  const sessions = [
+    { slug: "observabilite-opentelemetry", title: "Observabilité : OpenTelemetry en pratique",
+      description: "Instrumenter une application sans se noyer dans les traces.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "08:50", end: "09:30" },
+    { slug: "design-system-tailwind", title: "Un design system qui survit à ses auteurs",
+      description: "Tokens, composants et conventions : ce qui tient dans la durée.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "08:50", end: "09:30" },
+    { slug: "postgres-plan-execution", title: "Postgres : lire un plan d'exécution",
+      description: "EXPLAIN ANALYZE, ligne par ligne, sur des requêtes réelles.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catData.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "08:50", end: "09:30" },
+    { slug: "accessibilite-par-ou-commencer", title: "Accessibilité : par où commencer",
+      description: "Les quelques gestes qui changent tout, avant l'audit complet.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Pastel", start: "08:50", end: "09:10" },
+    { slug: "terraform-sans-douleur", title: "Terraform sans douleur",
+      description: "Modules, états partagés et revues : industrialiser sans se figer.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "10:00", end: "10:40" },
+    { slug: "server-actions-limites", title: "Server Actions : jusqu'où aller",
+      description: "Ce que les Server Actions résolvent, et ce qu'elles compliquent.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "10:00", end: "10:40" },
+    { slug: "edge-computing-really-buys", title: "Edge computing: what it actually buys you",
+      description: "Measuring the latency you gain, and the complexity you pay.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "en", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "10:55", end: "11:35" },
+    { slug: "web-components-renouveau", title: "Web Components : le renouveau",
+      description: "Les nouvelles API navigateur qui les rendent enfin utilisables.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Pastel", start: "10:55", end: "11:15" },
+    { slug: "finops-reprendre-la-main", title: "FinOps : reprendre la main sur la facture",
+      description: "Attribuer les coûts, puis décider — dans cet ordre.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "13:15", end: "13:55" },
+    { slug: "tests-end-to-end-playwright", title: "Tests end-to-end : arrêter de les subir",
+      description: "Écrire des tests qui échouent pour une bonne raison seulement.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCraft.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "13:15", end: "13:55" },
+    { slug: "vos-secrets-sont-en-clair", title: "Vos secrets sont en clair (et vous l'ignorez)",
+      description: "Là où les jetons finissent vraiment : logs, images, tickets.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catSecu.id,
+      speaker: speakerMarie.id, room: "Amphithéâtre", start: "14:10", end: "14:50" },
+    { slug: "islands-architecture-production", title: "Islands architecture in production",
+      description: "Shipping less JavaScript without giving up interactivity.",
+      format: "CONFERENCE", level: "CONFIRME", language: "en", category: catWeb.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "14:10", end: "14:50" },
+    { slug: "green-it-mesurer-avant", title: "Green IT : mesurer avant d'optimiser",
+      description: "Ce qu'on croit économiser, et ce qu'on économise vraiment.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Hémicycle", start: "15:30", end: "16:10" },
+    { slug: "typescript-types-avances", title: "TypeScript : les types avancés sans peur",
+      description: "Génériques, inférence et types conditionnels, pas à pas.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catCraft.id,
+      speaker: speakerJean.id, room: "Agora 1", start: "15:30", end: "16:10" },
+    // The four rooms below exist only to fill the grid's remaining columns
+    // (#441): with four salles the layout looked fine and hid the fact that a
+    // column falls to 130 px at eight. The demo day has to reach eight, or the
+    // defect stays invisible in dev.
+    { slug: "nix-pour-les-presses", title: "Nix pour les gens pressés",
+      description: "Un environnement reproductible sans y passer le trimestre.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Lauragais", start: "08:50", end: "09:30" },
+    { slug: "rust-cote-serveur", title: "Rust côté serveur : le prix d'entrée",
+      description: "Ce qu'on gagne, ce qu'on paie, et quand ça ne vaut pas le coup.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Ellipse", start: "08:50", end: "09:30" },
+    { slug: "refactoring-en-binome", title: "Refactoring en binôme",
+      description: "Quinze minutes pour montrer ce qu'un pas de deux change au code.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "08:50", end: "09:10" },
+    { slug: "faire-vivre-une-communaute", title: "Faire vivre une communauté locale",
+      description: "Ce qui tient une communauté au-delà du premier semestre.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Salle Communautés", start: "10:00", end: "10:40" },
+    { slug: "sqlite-en-production", title: "SQLite en production, vraiment ?",
+      description: "Les cas où c'est le bon choix, et ceux où c'est un piège.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catData.id,
+      speaker: speakerMarie.id, room: "Lauragais", start: "10:55", end: "11:35" },
+    { slug: "css-moderne-vos-hacks", title: "Le CSS moderne a rattrapé vos hacks",
+      description: "Container queries, :has(), subgrid : ce qu'on peut enfin supprimer.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Ellipse", start: "13:15", end: "13:55" },
+    { slug: "documenter-sans-y-passer-ses-vendredis", title: "Documenter sans y passer ses vendredis",
+      description: "Écrire le strict nécessaire, au moment où ça coûte le moins cher.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
+      speaker: speakerMarie.id, room: "Salle Quickies", start: "13:15", end: "13:35" },
+    { slug: "organiser-un-meetup-qui-dure", title: "Organiser un meetup qui dure",
+      description: "Retour sur dix ans de rendez-vous mensuels, sans s'épuiser.",
+      format: "CONFERENCE", level: "DEBUTANT", language: "fr", category: catWeb.id,
+      speaker: speakerJean.id, room: "Salle Communautés", start: "14:10", end: "14:50" },
+    // Two more, so IA & Data and Sécurité each carry a session in the main room
+    // rather than only reassigned leftovers (#460). Both land on Amphithéâtre
+    // slots that were free, so the empty cells the grid marker needs remain.
+    // Agora 1 rather than the Amphithéâtre, which is booked solid: `kubernetes-
+    // en-production` already holds it on this range, from the `placements` list
+    // below (#462).
+    { slug: "llm-en-production", title: "Un LLM en production, et la facture qui va avec",
+      description: "Latence, coût au jeton et garde-fous : ce que le prototype ne dit pas.",
+      format: "CONFERENCE", level: "INTERMEDIAIRE", language: "fr", category: catData.id,
+      speaker: speakerMarie.id, room: "Agora 1", start: "10:55", end: "11:35" },
+    // Three quickies that pair up with an existing one, so a room fills the
+    // 40 minutes of the conferences beside it in two goes (#462). This is the
+    // nominal 2026 shape, and without it in the demo day the grid was never
+    // asked to draw a session reaching across two rows.
+    //
+    // Two quickies are deliberately left on their own — `accessibilite-par-ou-
+    // commencer` and `react-server-components`, both in Pastel. The
+    // organisation aims for pairs but does not promise them, and a room that
+    // frees up halfway has to keep rendering. Both cases now land in the same
+    // row: at 09:10 the Salle Quickies is busy and Pastel is genuinely free.
+    { slug: "revue-de-code-sans-drame", title: "La revue de code sans drame",
+      description: "Ce qu'on écrit dans un commentaire, et ce qui se dit de vive voix.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catCraft.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "09:10", end: "09:30" },
+    { slug: "feature-flags-vingt-minutes", title: "Les feature flags en vingt minutes",
+      description: "Livrer sans déployer, et surtout : retirer le drapeau ensuite.",
+      format: "QUICKIE", level: "INTERMEDIAIRE", language: "fr", category: catCloud.id,
+      speaker: speakerMarie.id, room: "Pastel", start: "11:15", end: "11:35" },
+    { slug: "audit-de-dependances", title: "Auditer ses dépendances sans y passer la semaine",
+      description: "Trier ce qui est exploitable de ce qui encombre le rapport.",
+      format: "QUICKIE", level: "DEBUTANT", language: "fr", category: catSecu.id,
+      speaker: speakerJean.id, room: "Salle Quickies", start: "13:35", end: "13:55" },
+    { slug: "chaine-appro-logicielle", title: "Votre chaîne d'approvisionnement logicielle",
+      description: "Dépendances, artefacts et signatures : par où un audit commence.",
+      format: "CONFERENCE", level: "CONFIRME", language: "fr", category: catSecu.id,
+      speaker: speakerJean.id, room: "Amphithéâtre", start: "15:30", end: "16:10" },
+  ] as const;
+
+  // Co-speakers (#463): one session given by two, one by four. Three faces fit
+  // a 180 px column and the fourth folds into +N — a shape the grid could not
+  // be looked at until the demo day contained it.
+  const coSpeakers: Record<string, readonly number[]> = {
+    "observabilite-opentelemetry": [speakerLina.id],
+    "typescript-types-avances": [speakerLina.id, speakerOmar.id, speakerThea.id],
+  };
+
+  const roomsByName = new Map(
+    (await prisma.room.findMany({ where: { venueId: diagora.id } })).map((r) => [r.name, r]),
+  );
+  const placedAt = (time: string) => new Date(`2026-11-19T${time}:00Z`);
+
+  for (const session of sessions) {
+    const room = roomsByName.get(session.room);
+    await prisma.talk.create({
+      data: {
+        slug: session.slug, title: session.title, description: session.description,
+        format: session.format, level: session.level, language: session.language,
+        publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: session.category,
+        speakers: {
+          connect: [session.speaker, ...(coSpeakers[session.slug] ?? [])].map((id) => ({ id })),
+        },
+        roomId: room?.id,
+        // Frozen at placement time (#375): renaming the room in 2027 must not
+        // rewrite what the 2026 grid says.
+        roomLabel: room?.name,
+        startsAt: placedAt(session.start),
+        endsAt: placedAt(session.end),
+      },
+    });
+  }
+
+  // The two talks created above get their slot too — one of them is the only
+  // English quickie, and both are the ones the speaker-edit fixtures point at.
+  const placements = [
+    { slug: "kubernetes-en-production", room: "Amphithéâtre", start: "10:55", end: "11:35" },
+    { slug: "react-server-components", room: "Pastel", start: "13:15", end: "13:35" },
+  ];
+  for (const placement of placements) {
+    const room = roomsByName.get(placement.room);
+    await prisma.talk.update({
+      where: { editionId_slug: { editionId: edition.id, slug: placement.slug } },
+      data: {
+        roomId: room?.id,
+        roomLabel: room?.name,
+        startsAt: placedAt(placement.start),
+        endsAt: placedAt(placement.end),
+      },
+    });
+  }
+  // The keynotes are talks, not bands (#456), and they are the reason relay
+  // rooms exist: the amphitheatre seats 500 and the DevFest sells more than
+  // that, so the opening plays on a screen in Agora 1 as well. Seeded here or
+  // the case never appears in a development database — which is exactly how
+  // eight rooms went unnoticed until #441.
+  const keynotes = [
+    { slug: "keynote-ouverture", title: "Keynote d'ouverture",
+      description: "Dix ans de DevFest Toulouse, et ce que la décennie qui vient nous prépare.",
+      speaker: speakerMarie.id, start: "08:00", end: "08:45",
+      room: "Amphithéâtre", relays: ["Agora 1"] },
+    { slug: "keynote-cloture", title: "Keynote de clôture",
+      description: "Ce qu'on retient de la journée, et rendez-vous à la soirée.",
+      speaker: speakerJean.id, start: "16:30", end: "17:15",
+      room: "Amphithéâtre", relays: ["Agora 1", "Hémicycle"] },
+  ];
+  for (const keynote of keynotes) {
+    const room = roomsByName.get(keynote.room);
+    await prisma.talk.create({
+      data: {
+        slug: keynote.slug, title: keynote.title, description: keynote.description,
+        format: "KEYNOTE", level: null, language: "fr",
+        publicationStatus: "PUBLISHED", editionId: edition.id, categoryId: catCloud.id,
+        speakers: { connect: [{ id: keynote.speaker }] },
+        roomId: room?.id,
+        roomLabel: room?.name,
+        startsAt: placedAt(keynote.start),
+        endsAt: placedAt(keynote.end),
+        simulcasts: {
+          create: keynote.relays.flatMap((name) => {
+            const relay = roomsByName.get(name);
+            // Frozen here too (#375), same reason as roomLabel above.
+            return relay ? [{ roomId: relay.id, roomLabel: relay.name }] : [];
+          }),
+        },
+      },
+    });
+  }
+
+  console.log(`Talks created: ${sessions.length + 2 + keynotes.length}`);
+
+  await assertNoRoomClash(edition.id);
+
+  // Everything that is not a session. Lunch is the one that matters for the
+  // grid: it spans every room, and in 2026 no quickie runs under it.
+  await prisma.scheduleEntry.deleteMany({ where: { editionId: edition.id } });
+  const scheduleEntries = [
+    { kind: "OTHER" as const, labelFr: "Accueil et petit déjeuner", labelEn: "Welcome and breakfast", startsAt: "06:30", endsAt: "07:45" },
+    { kind: "BREAK" as const, labelFr: "Pause du matin", labelEn: "Morning break", startsAt: "09:35", endsAt: "10:00" },
+    { kind: "MEAL" as const, labelFr: "Déjeuner", labelEn: "Lunch", startsAt: "11:45", endsAt: "13:15" },
+    { kind: "BREAK" as const, labelFr: "Pause de l'après-midi", labelEn: "Afternoon break", startsAt: "15:00", endsAt: "15:30" },
+    { kind: "SOCIAL" as const, labelFr: "Soirée « 10 ans »", labelEn: "\"10 years\" party", startsAt: "17:30", endsAt: "20:00" },
+  ];
+  for (const entry of scheduleEntries) {
+    await prisma.scheduleEntry.create({
+      data: {
+        editionId: edition.id,
+        kind: entry.kind,
+        labelFr: entry.labelFr,
+        labelEn: entry.labelEn,
+        startsAt: new Date(`2026-11-19T${entry.startsAt}:00Z`),
+        endsAt: new Date(`2026-11-19T${entry.endsAt}:00Z`),
+      },
+    });
+  }
+  console.log(`Schedule entries created: ${scheduleEntries.length}`);
 
   // --- Social Links ---
   const socialSettings = [
@@ -734,7 +1180,13 @@ async function seedDev() {
   // --- Dev test accounts (with passwords) ---
   for (const account of DEV_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
-    if (!existing) {
+    if (existing) {
+      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
+      await applyDevPassword(existing.id, account.password);
+      console.log(`Dev account repaired: ${account.email} (${account.role}) — password: ${account.password}`);
+      continue;
+    }
+    {
       try {
         await auth.api.signUpEmail({
           body: {
@@ -754,9 +1206,6 @@ async function seedDev() {
         });
         console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
       }
-    } else {
-      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
-      console.log(`Dev account exists: ${account.email} (${existing.role})`);
     }
   }
 

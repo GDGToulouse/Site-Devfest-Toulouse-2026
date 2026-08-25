@@ -17,6 +17,22 @@ describe("SaveFeedback", () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it("brings itself into view — it sits far above the button that triggers it", () => {
+    // On the venue page the message and the save button were 1092 px apart,
+    // the message outside the viewport at the moment of the click: a refused
+    // deletion read as nothing happening at all (#453). jsdom has no layout, so
+    // what is asserted is that the scroll is asked for, and asked for gently —
+    // "nearest" leaves a message already on screen where it is.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+
+    render(<SaveFeedback state={{ kind: "error", text: "Suppression refusée." }} />);
+
+    expect(scrollIntoView).toHaveBeenCalledWith(
+      expect.objectContaining({ block: "nearest" }),
+    );
+  });
+
   it("announces a success politely", () => {
     render(<SaveFeedback state={{ kind: "ok", text: "Modifications enregistrées." }} />);
     const message = screen.getByRole("status");

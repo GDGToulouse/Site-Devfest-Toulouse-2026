@@ -6,6 +6,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ContactForm from "@/components/ContactForm";
 import { Link } from "@/i18n/navigation";
 import type { SponsorPageStatus } from "@/lib/types";
+import { pageMetadata } from "@/lib/page-metadata";
 
 function localizedField(
   obj: Record<string, unknown>,
@@ -22,10 +23,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/devenir-sponsor`,
-      languages: { fr: "/fr/devenir-sponsor", en: "/en/devenir-sponsor", "x-default": "/fr/devenir-sponsor" },
-    },
+    ...(await pageMetadata(locale, "/devenir-sponsor")),
   };
 }
 

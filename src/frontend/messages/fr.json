@@ -26,6 +26,8 @@
   },
   "home": {
     "title": "DevFest Toulouse",
+    "pageTitle": "DevFest Toulouse 2026 — la conférence tech du Sud-Ouest",
+    "description": "Le DevFest Toulouse 2026, c'est une journée de conférences tech organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité et communauté.",
     "hero": {
       "subtitleLine1": "La conférence Toulousaine par",
       "subtitleLine2devs": "les devs",
@@ -108,12 +110,13 @@
   },
   "articles": {
     "title": "Actualités",
-    "description": "Toutes les actualités du DevFest Toulouse 2026.",
+    "description": "Toute l'actualité du DevFest Toulouse 2026 : ouverture du CFP, mise en vente des billets, annonce des speakers et nouvelles de la communauté tech.",
     "home": "Accueil",
     "noArticles": "Aucun article pour le moment.",
     "by": "par",
     "backToList": "Retour aux actualités",
     "taggedWith": "Articles tagués",
+    "tagDescription": "Tous les articles du DevFest Toulouse classés sous {tag} : annonces, coulisses de l'organisation et comptes rendus des conférences passées.",
     "autoTranslated": "Traduction automatique non relue par l'équipe.",
     "filters": {
       "edition": "Édition",
@@ -129,7 +132,7 @@
   },
   "ticketing": {
     "pageTitle": "Billetterie",
-    "description": "Achetez vos billets pour le DevFest Toulouse 2026.",
+    "description": "Réservez votre place pour le DevFest Toulouse 2026, la plus grande conférence tech du Sud-Ouest. Tarifs Blind Bird, Normal et Late Bird.",
     "home": "Accueil",
     "available": "Disponible",
     "comingSoon": "Bientôt",
@@ -141,7 +144,7 @@
   },
   "cfp": {
     "pageTitle": "Proposer un talk",
-    "description": "Soumettez votre présentation pour le DevFest Toulouse 2026.",
+    "description": "Appel à conférenciers du DevFest Toulouse 2026 : proposez votre conférence, quickie ou keynote sur le web, le cloud, l'IA, le mobile ou la sécurité.",
     "home": "Accueil",
     "intro": "Le DevFest Toulouse accueille des speakers de tous horizons. Que vous soyez débutant ou expert, votre expérience et votre passion comptent. Proposez un talk et partagez vos connaissances avec la communauté.",
     "statusOpen": "Le CFP est actuellement ouvert !",
@@ -162,7 +165,7 @@
   },
   "contact": {
     "title": "Contact",
-    "description": "Contactez l'équipe du DevFest Toulouse.",
+    "description": "Contactez l'équipe d'organisation du DevFest Toulouse pour toute demande de sponsoring, de conférence ou de presse au sujet de l'édition 2026.",
     "home": "Accueil",
     "form": {
       "firstName": "Prénom",
@@ -202,7 +205,7 @@
   },
   "bilan": {
     "pageTitle": "DevFest Toulouse {year}",
-    "description": "Bilan de l'édition {year} du DevFest Toulouse.",
+    "description": "Retour sur le DevFest Toulouse {year} : conférences, speakers, chiffres de fréquentation, aftermovie et temps forts de cette édition.",
     "home": "Accueil",
     "editions": "Éditions",
     "keyFigures": "L'édition en chiffres",
@@ -231,7 +234,7 @@
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
-    "description": "Découvrez nos formules de sponsoring pour le DevFest Toulouse 2026.",
+    "description": "Nos formules de sponsoring pour le DevFest Toulouse 2026 : faites rayonner votre marque employeur, recrutez des profils tech et soutenez la communauté.",
     "home": "Accueil",
     "intro": "Le DevFest Toulouse est l'opportunité de vous rendre visible auprès de milliers de passionnés de technologie. Rejoignez-nous en tant que sponsor et bénéficiez d'une visibilité unique auprès de la communauté tech toulousaine.",
     "whyTitle": "Pourquoi devenir sponsor ?",
@@ -356,6 +359,61 @@
     "home": "Accueil",
     "cta": "Voir l'offre",
     "offersAt": "Offres chez {name}"
+  },
+  "calendar": {
+    "heading": "Ajouter à mon agenda",
+    "google": "Google Agenda",
+    "outlook": "Outlook",
+    "download": "Télécharger le fichier (.ics)",
+    "export": "Exporter",
+    "exportAll": "Exporter tout le programme vers mon agenda",
+    "exportMine": "Exporter mes favoris vers mon agenda"
+  },
+  "favourites": {
+    "add": "Ajouter à mes favoris",
+    "remove": "Retirer de mes favoris",
+    "viewLabel": "Affichage du programme",
+    "viewAll": "Tout le programme",
+    "viewMine": "Mes favoris et les moments communs",
+    "viewMineOnly": "Mes favoris seuls",
+    "restoreNotice": "Vous regardez la sélection d'un lien partagé.",
+    "restoreAction": "Reprendre ma sélection",
+    "empty": "Vous n'avez encore choisi aucune session. Ajoutez celles qui vous intéressent pour composer votre journée — votre sélection tient dans l'adresse de la page, gardez-la en favori pour la retrouver."
+  },
+  "programme": {
+    "title": "Programme",
+    "pageTitle": "Programme — la grille horaire",
+    "description": "La grille horaire du DevFest Toulouse {year} : toutes les sessions, salle par salle.",
+    "heading": "Programme du DevFest Toulouse {year}",
+    "home": "Accueil",
+    "intro": "Le programme de la journée, salle par salle. Cliquez sur une session pour en lire le détail.",
+    "timeColumn": "Horaire",
+    "roomTba": "Salle à préciser",
+    "simulcast": "Retransmission",
+    "print": "Imprimer",
+    "printTitle": "Imprimer ou enregistrer le programme en PDF",
+    "exportMenu": "Exporter",
+    "exportMenuTitle": "Partager, exporter ou imprimer le programme",
+    "share": "Partager les favoris",
+    "shareTitle": "Copier le lien de cette page, avec mes favoris",
+    "shareCopied": "Lien copié.",
+    "shareFailed": "La copie n'a pas fonctionné. Copiez l'adresse depuis la barre du navigateur.",
+    "shareEmptyTitle": "Aucun favori pour l'instant",
+    "shareEmptyBody": "Le lien partagera le programme complet. Ajoutez des favoris avec l'étoile de chaque session pour partager votre sélection.",
+    "shareEmptyChoose": "Choisir des favoris",
+    "shareEmptyConfirm": "Partager sans favoris",
+    "calendar": "Calendrier",
+    "printByTimeAction": "Imprimer par heure",
+    "printByRoomAction": "Imprimer par salle",
+    "filterZone": "Filtrer le programme",
+    "actionZone": "Actions sur le programme",
+    "noResults": "Aucune session ne correspond à ces filtres.",
+    "allSessions": "Voir toutes les sessions en liste",
+    "comingSoonTitle": "La grille horaire arrive bientôt",
+    "comingSoonBody": "Les sessions du DevFest Toulouse {year} sont en cours de placement. La grille sera publiée ici dès qu'elle sera figée.",
+    "printSource": "Détail des sessions : {url}",
+    "printSelection": "Sélection personnelle — ce document ne contient pas tout le programme.",
+    "printCommon": "Moments communs"
   },
   "venue": {
     "pageTitle": "Lieu & infos pratiques",

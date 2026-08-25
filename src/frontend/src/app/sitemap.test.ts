@@ -43,8 +43,11 @@ beforeEach(() => {
   vi.mocked(getCurrentEdition).mockResolvedValue({ ...FEATURED, hasVenueInfo: true } as never);
   vi.mocked(getEditionTalks).mockImplementation(async (year: number) =>
     year === FEATURED.year
-      ? ([{ slug: "talk-of-the-year", updatedAt: "2026-04-01T00:00:00Z" }] as never)
-      : ([{ slug: "talk-of-the-past", updatedAt: "2025-04-01T00:00:00Z" }] as never),
+      ? ([
+          { slug: "talk-of-the-year", language: "fr", updatedAt: "2026-04-01T00:00:00Z" },
+          { slug: "talk-in-english", language: "en", updatedAt: "2026-04-02T00:00:00Z" },
+        ] as never)
+      : ([{ slug: "talk-of-the-past", language: "fr", updatedAt: "2025-04-01T00:00:00Z" }] as never),
   );
   vi.mocked(getIndexableSponsors).mockResolvedValue([
     { slug: "past-only-co", updatedAt: "2025-05-01T00:00:00Z" },
@@ -59,7 +62,6 @@ describe("sitemap — talk pages (#379)", () => {
     const entries = await sitemap();
 
     expect(paths(entries)).toContain("/fr/conferences/talk-of-the-year");
-    expect(paths(entries)).toContain("/en/conferences/talk-of-the-year");
   });
 
   it("lists a past talk under its edition, never under /conferences", async () => {
@@ -71,14 +73,38 @@ describe("sitemap — talk pages (#379)", () => {
     expect(paths(entries)).not.toContain("/fr/conferences/talk-of-the-past");
   });
 
-  it("gives every entry its three alternates", async () => {
+  it("gives a bilingual page its three alternates", async () => {
     const entries = await sitemap();
-    const talk = entries.find((e) => e.url.endsWith("/fr/conferences/talk-of-the-year"));
-    const languages = talk?.alternates?.languages ?? {};
+    const sponsor = entries.find((e) => e.url.endsWith("/fr/sponsors/past-only-co"));
+    const languages = sponsor?.alternates?.languages ?? {};
 
     expect(Object.keys(languages).sort()).toEqual(["en", "fr", "x-default"]);
     expect(languages.fr).toBe(languages["x-default"]);
-    expect(languages.en).toMatch(/\/en\/conferences\/talk-of-the-year$/);
+    expect(languages.en).toMatch(/\/en\/sponsors\/past-only-co$/);
+  });
+});
+
+describe("sitemap — one URL per talk, in its own language (#468)", () => {
+  it("lists a French talk under /fr only", async () => {
+    const listed = paths(await sitemap()).filter((p) => p.endsWith("/conferences/talk-of-the-year"));
+
+    expect(listed).toEqual(["/fr/conferences/talk-of-the-year"]);
+  });
+
+  it("lists an English talk under /en only", async () => {
+    // The direction that proves the language is read, not hardcoded to French.
+    const listed = paths(await sitemap()).filter((p) => p.endsWith("/conferences/talk-in-english"));
+
+    expect(listed).toEqual(["/en/conferences/talk-in-english"]);
+  });
+
+  it("declares no hreflang on a talk", async () => {
+    // An alternate naming a URL that canonicalises elsewhere is the very
+    // contradiction Google resolved on its own — nine pages of it.
+    const entries = await sitemap();
+    const talk = entries.find((e) => e.url.endsWith("/fr/conferences/talk-of-the-year"));
+
+    expect(talk?.alternates).toBeUndefined();
   });
 });
 

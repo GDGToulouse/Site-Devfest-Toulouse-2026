@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getArticles, getEditions, getTags } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import ArticleCard from "@/components/ArticleCard";
 import ArticlesFilters from "@/components/articles/ArticlesFilters";
@@ -13,10 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/actualites`,
-      languages: { fr: "/fr/actualites", en: "/en/actualites", "x-default": "/fr/actualites" },
-    },
+    ...(await pageMetadata(locale, "/actualites")),
   };
 }
 

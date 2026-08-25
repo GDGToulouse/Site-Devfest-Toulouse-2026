@@ -56,4 +56,57 @@ describe("page titles and the brand (#381)", () => {
       expect(messages.bilan.pageTitle as string, `${name}: bilan.pageTitle`).toContain("DevFest Toulouse");
     }
   });
+
+  // The home page is the second `title.absolute`: it names the brand on
+  // purpose, so the template must not add it again. Once, and only once.
+  it("names the brand exactly once on the home page", () => {
+    for (const [name, messages] of locales) {
+      const title = messages.home.pageTitle as string;
+      expect(title.match(/DevFest Toulouse/g), `${name}: home.pageTitle`).toHaveLength(1);
+      // Google cuts around 60. The page used to fall back on the layout's
+      // 21-character default; the answer is not to overshoot the other way.
+      expect(title.length, `${name}: home.pageTitle is ${title.length} characters`).toBeLessThanOrEqual(60);
+    }
+  });
+});
+
+describe("page descriptions (#381)", () => {
+  // Every public page must carry one in both languages. The tag pages were the
+  // single exception — a title and nothing else.
+  it("leaves no description empty in either locale", () => {
+    const empty: string[] = [];
+    for (const [name, messages] of locales) {
+      for (const [namespace, values] of Object.entries(messages)) {
+        const description = (values as Record<string, unknown>).description;
+        if (typeof description === "string" && description.trim() === "") {
+          empty.push(`${name}: ${namespace}.description`);
+        }
+      }
+    }
+    expect(empty).toEqual([]);
+  });
+
+  // The pages worth ranking for. Not the legal ones: "Mentions légales du site
+  // DevFest Toulouse" is 42 characters in French and 30 in English, and that is
+  // the right length — padding a legal notice to 150 buys nothing.
+  const MAIN_PAGES = ["articles", "ticketing", "bilan", "contact", "cfp", "sponsor"];
+
+  it.each(MAIN_PAGES)("gives %s a description in the useful range", (namespace) => {
+    // Google shows roughly 150-160. The French side sat at 39-67 characters
+    // while the English had had a real SEO pass — the wrong way round for a
+    // Toulouse event whose x-default points at /fr.
+    for (const [name, messages] of locales) {
+      const description = messages[namespace].description as string;
+      expect(description.length, `${name}: ${namespace}.description is ${description.length}`)
+        .toBeGreaterThanOrEqual(120);
+      expect(description.length, `${name}: ${namespace}.description is ${description.length}`)
+        .toBeLessThanOrEqual(160);
+    }
+  });
+
+  it("describes a tag page, naming the tag", () => {
+    for (const [name, messages] of locales) {
+      expect(messages.articles.tagDescription as string, `${name}: articles.tagDescription`).toContain("{tag}");
+    }
+  });
 });

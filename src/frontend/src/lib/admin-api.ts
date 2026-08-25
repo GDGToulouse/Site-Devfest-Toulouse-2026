@@ -65,6 +65,25 @@ export async function adminFetch<T>(
   }
 }
 
+/**
+ * The sentence to show a human after a failed call.
+ *
+ * `adminFetch` resolves `error` as `body.error || body.message`, and several
+ * screens compare that value against a code (`last_responsable`,
+ * `quota_reached`…), so it has to keep winning. The cost is that a route
+ * sending both — a code AND a written explanation — surfaces the code:
+ * "room_in_use" where the backend wrote "3 conférences sont programmées dans
+ * cette salle". This picks the written one when there is one.
+ */
+export function humanError(
+  result: { error?: string; errorBody?: Record<string, unknown> },
+  fallback: string,
+): string {
+  const message = result.errorBody?.message;
+  if (typeof message === "string" && message.trim()) return message;
+  return result.error ?? fallback;
+}
+
 export async function getAdminSession(): Promise<AdminUser | null> {
   const { data, status } = await adminFetch<{ user: AdminUser }>("/session");
   if (status === 403 || !data) return null;

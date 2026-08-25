@@ -107,7 +107,9 @@ describe("Sponsor sheet — panels separate identity from participation (#393)",
 
     // The screen had a single <h1> and no <h2> at all: nothing to navigate by.
     await user.click(await screen.findByRole("tab", { name: "Kit de com" }));
-    expect(screen.getByRole("heading", { name: "Kit de com", level: 2 })).toBeInTheDocument();
+    // The heading names the year too (#429): the com kit is year-scoped like
+    // the participation, and its tab label does not say so.
+    expect(screen.getByRole("heading", { name: "Kit de com 2025", level: 2 })).toBeInTheDocument();
   });
 
   it("wires the panel to its tab for assistive tech", async () => {
@@ -177,5 +179,84 @@ describe("Sponsor sheet — a blocked save explains itself (#393)", () => {
       expect(screen.getByText("Renseignez le nom, onglet Identité.")).toBeInTheDocument();
     });
     expect(name).toHaveAttribute("aria-invalid", "true");
+  });
+});
+
+
+// #429 â the sheet opened on the most recent participation and stayed there.
+// A company attached to 2026 and 2025 had no way to reach its 2025 tier, logo
+// or com kit: the very fields #375 froze per year, so there was nowhere to
+// correct them.
+
+const MULTI_YEAR = {
+  ...SPONSOR,
+  editionId: 1,
+  edition: { id: 1, year: 2026 },
+  tierId: 1,
+  editions: [
+    {
+      editionId: 1,
+      edition: { id: 1, year: 2026 },
+      tier: TIERS[0],
+      publicationStatus: "PUBLISHED",
+      logoUrl: "/logos/2026.svg",
+      comKitNotes: "Notes 2026",
+    },
+    {
+      editionId: 2,
+      edition: { id: 2, year: 2025 },
+      tier: TIERS[1],
+      publicationStatus: "DRAFT",
+      logoUrl: "/logos/2025.svg",
+      comKitNotes: "Notes 2025",
+    },
+  ],
+};
+
+function mockMultiYear() {
+  adminFetch.mockImplementation((path: string) => {
+    if (path === "/sponsor-tiers") return Promise.resolve({ data: TIERS, status: 200 });
+    if (path === "/sponsors/42") return Promise.resolve({ data: MULTI_YEAR, status: 200 });
+    if (path === "/editions") return Promise.resolve({ data: [{ id: 1, year: 2026 }, { id: 2, year: 2025 }], status: 200 });
+    return Promise.resolve({ data: [], status: 200 });
+  });
+}
+
+describe("Sponsor sheet â reaching a past participation (#429)", () => {
+  it("offers the years the company took part in", async () => {
+    mockMultiYear();
+    const user = userEvent.setup();
+    render(<SponsorEditorPage />);
+
+    // The picker lives in the year-scoped panels, not on Identité — that tab
+    // edits the company, every year.
+    await user.click(await screen.findByRole("tab", { name: "Participation 2026" }));
+
+    const picker = await screen.findByLabelText(/Année éditée/);
+    expect([...(picker as HTMLSelectElement).options].map((o) => o.textContent)).toEqual(["2026", "2025"]);
+  });
+
+  it("swaps every year-scoped field when the year changes", async () => {
+    mockMultiYear();
+    const user = userEvent.setup();
+    render(<SponsorEditorPage />);
+
+    await user.click(await screen.findByRole("tab", { name: "Participation 2026" }));
+    await user.selectOptions(await screen.findByLabelText(/Année éditée/), "2");
+
+    // The tier of 2025, not the one of 2026 â a field left behind would be
+    // written onto 2025 by the next save, undoing the freeze of #375.
+    expect(await screen.findByRole("tab", { name: "Participation 2025" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Niveau 2025/)).toHaveValue("2");
+  });
+
+  it("shows no picker when there is only one year to edit", async () => {
+    const user = userEvent.setup();
+    render(<SponsorEditorPage />);
+
+    // The single-participation payload of the other tests: a select with one
+    // option is furniture, and the year is already in the tab label.
+    await user.click(await screen.findByRole("tab", { name: "Participation 2025" }));
+    expect(screen.queryByLabelText(/Année éditée/)).not.toBeInTheDocument();
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 // Feedback after a save (#394). The editor screens used to redirect to their
 // list with no message at all — the same outcome as pressing Cancel, so nothing
@@ -23,6 +23,23 @@ interface SaveFeedbackProps {
 
 export default function SaveFeedback({ state, onDismiss, successTimeout = 4000 }: SaveFeedbackProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef<HTMLParagraphElement>(null);
+
+  // Bring the message into view (#453). It sits at the top of its screen, while
+  // the buttons that trigger it can be a whole form below: on the venue page the
+  // two were 1092 px apart, the message outside the viewport at the moment of
+  // the click. A refused deletion then looked like nothing at all — the dialog
+  // closed, the room stayed, and the reason was a thousand pixels away.
+  //
+  // `block: "nearest"` scrolls only when it has to, so a message already in view
+  // does not make a short screen jump.
+  //
+  // Depends on `isVisible` as well as on `state`: the first render after a save
+  // still returns null — the paragraph, and its ref, only exist once the effect
+  // below has flipped isVisible. Watching `state` alone scrolled nothing at all.
+  useEffect(() => {
+    if (state && isVisible) ref.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [state, isVisible]);
 
   useEffect(() => {
     setIsVisible(!!state);
@@ -40,6 +57,7 @@ export default function SaveFeedback({ state, onDismiss, successTimeout = 4000 }
   const isOk = state.kind === "ok";
   return (
     <p
+      ref={ref}
       role={isOk ? "status" : "alert"}
       aria-live={isOk ? "polite" : "assertive"}
       className={`rounded-lg px-3 py-2 text-sm ${

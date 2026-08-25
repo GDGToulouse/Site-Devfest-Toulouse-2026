@@ -5,7 +5,9 @@ import { getCurrentEdition, getEditionTalks } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ConferencesBrowser from "@/components/conferences/ConferencesBrowser";
 import { localizedField } from "@/lib/i18n-helpers";
+import { parseFavourites } from "@/lib/favourites";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -13,10 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/conferences`,
-      languages: { fr: "/fr/conferences", en: "/en/conferences", "x-default": "/fr/conferences" },
-    },
+    ...(await pageMetadata(locale, "/conferences")),
   };
 }
 
@@ -30,6 +29,7 @@ export default async function ConferencesPage({
 }) {
   const locale = await getLocale();
   const t = await getTranslations("conferences");
+  const tf = await getTranslations("favourites");
   const edition = await getCurrentEdition();
   const year = edition?.year ?? new Date().getFullYear();
   const talks = edition ? await getEditionTalks(edition.year) : [];
@@ -84,6 +84,7 @@ export default async function ConferencesPage({
     formatLabels,
     levelLabels,
     languageLabels: { fr: t("filters.langFr"), en: t("filters.langEn") },
+    favouriteLabels: { add: tf("add"), remove: tf("remove") },
   };
 
   return (
@@ -104,6 +105,8 @@ export default async function ConferencesPage({
               languages={languages}
               labels={labels}
               initial={initial}
+              initialFavourites={parseFavourites(first(sp.fav))}
+              editionYear={year}
             />
           </div>
         ) : (

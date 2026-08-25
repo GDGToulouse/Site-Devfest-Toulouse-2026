@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import { getSponsorPrivate, saveSponsorProfile, type SponsorSpacePrivate } from "@/lib/sponsor-api";
 import SponsorFileField from "@/components/sponsor-space/SponsorFileField";
+import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
 
 // The com kit and booth staff (#362) — what the company and the organisers
 // exchange privately. Never rendered on the public site.
@@ -20,7 +21,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
   const [logoPrintUrl, setLogoPrintUrl] = useState("");
   const [charterUrl, setCharterUrl] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<SponsorMessage | null>(null);
 
   useEffect(() => {
     getSponsorPrivate(sponsorId).then(({ data }) => {
@@ -85,6 +86,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="PNG, WebP ou SVG, fond transparent de préférence."
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
                 value={logoWebUrl}
+                fileName={data.fileNames?.[logoWebUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setLogoWebUrl}
@@ -94,6 +96,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="Version haute définition ou vectorielle, pour l'impression."
                 accept="image/png,image/jpeg,image/webp,image/svg+xml,application/pdf"
                 value={logoPrintUrl}
+                fileName={data.fileNames?.[logoPrintUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setLogoPrintUrl}
@@ -103,6 +106,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
                 hint="PDF."
                 accept="application/pdf"
                 value={charterUrl}
+                fileName={data.fileNames?.[charterUrl]}
                 sponsorId={sponsorId}
                 canEdit
                 onChange={setCharterUrl}
@@ -165,11 +169,7 @@ export default function PrivateTab({ sponsorId }: { sponsorId: number }) {
         </div>
       )}
 
-      {message && (
-        <p className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}>
-          {message.text}
-        </p>
-      )}
+      <SponsorFeedback message={message} />
 
       {current && (
         <button

@@ -13,6 +13,8 @@ interface FileForDetails {
   isImage: boolean;
   ext: string;
   alt: string | null;
+  /** Name on the editor's machine (#378); null for files uploaded before it was kept. */
+  originalName: string | null;
 }
 
 interface FileDetailsDialogProps {
@@ -87,8 +89,12 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
-          <h2 id={titleId} className="text-lg font-bold text-noir truncate" title={file.filename}>
-            {file.filename}
+          <h2
+            id={titleId}
+            className="text-lg font-bold text-noir truncate"
+            title={file.originalName ? `${file.originalName} — ${file.filename}` : file.filename}
+          >
+            {file.originalName ?? file.filename}
           </h2>
           <button
             onClick={onClose}

@@ -4,6 +4,28 @@ import { useState, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 
+const KEY = "lang-banner-dismissed";
+
+// Reading `window.localStorage` is not merely useless when a browser blocks
+// site data — it throws, and this banner runs on every page of the site, so an
+// unguarded access took the whole page down with it. Found while checking
+// #461's blocked-storage case; the banner simply reappears each visit there.
+function isDismissed(): boolean {
+  try {
+    return Boolean(window.localStorage.getItem(KEY));
+  } catch {
+    return false;
+  }
+}
+
+function rememberDismissal(): void {
+  try {
+    window.localStorage.setItem(KEY, "1");
+  } catch {
+    // Nothing to do: the banner is dismissed for this page load either way.
+  }
+}
+
 export default function LanguageSuggestionBanner() {
   const locale = useLocale();
   const t = useTranslations("langBanner");
@@ -11,7 +33,7 @@ export default function LanguageSuggestionBanner() {
   const [suggestedLocale, setSuggestedLocale] = useState<"fr" | "en" | null>(null);
 
   useEffect(() => {
-    if (localStorage.getItem("lang-banner-dismissed")) return;
+    if (isDismissed()) return;
 
     const browserLang = navigator.language?.split("-")[0];
     if (!browserLang) return;
@@ -26,7 +48,7 @@ export default function LanguageSuggestionBanner() {
   }, [locale]);
 
   function handleDismiss() {
-    localStorage.setItem("lang-banner-dismissed", "1");
+    rememberDismissal();
     setIsVisible(false);
   }
 

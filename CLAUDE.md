@@ -57,8 +57,10 @@ Provisionnés par `src/backend/prisma/seed-dev.ts` (lancé à la main) — conne
 | ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` |
 | EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` |
 
-Après un reseed, `seed.ts` l'emporte sur `seed-dev.ts` et le mot de passe admin ne marche plus :
-recréer le compte via l'API auth. Détails dans `docs/comptes-dev-local.md`.
+Ces mots de passe marchent, y compris après un reseed : `seed-dev.ts` les repose sur les comptes
+existants (#433). Ce n'était pas le cas avant — `seed.ts` créait les deux adresses avec un mot de
+passe aléatoire et `seed-dev.ts` les sautait, donc le mot de passe documenté n'était jamais posé,
+dès la première installation. Détails dans `docs/comptes-dev-local.md`.
 
 ## Documentation
 
@@ -84,8 +86,9 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 
 ## Décisions structurantes
 
-- **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`),
-  invalidation à la demande depuis l'admin ; SSR+SPA hybride sur les pages authentifiées.
+- **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`,
+  **sauf l'accueil à `s-maxage=300`** — RG-003), invalidation à la demande depuis l'admin ;
+  SSR+SPA hybride sur les pages authentifiées.
 - **Accueil** : contenu conditionné par le statut de l'édition (préparation / annonce / à l'année prochaine).
 - **Rôles** : admin, sponsor, speaker — un sponsor gère sa fiche depuis un **compte**
   (invitation, rôles par entreprise) ; un speaker garde le lien de modification `/edit/<token>`.

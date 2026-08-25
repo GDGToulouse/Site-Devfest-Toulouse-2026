@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCfpSettings } from "@/lib/api";
 import { getCfpCtaUrl } from "@/lib/cfp";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -11,10 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/proposer-un-talk`,
-      languages: { fr: "/fr/proposer-un-talk", en: "/en/proposer-un-talk", "x-default": "/fr/proposer-un-talk" },
-    },
+    ...(await pageMetadata(locale, "/proposer-un-talk")),
   };
 }
 

@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from "react";
+import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import {
@@ -13,7 +14,8 @@ import {
   getEcosystemPartners,
 } from "@/lib/api";
 
-import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
+import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import type { SectionSurface } from "@/components/home/section-surface";
 
 import HeroSection from "@/components/home/HeroSection";
@@ -117,6 +119,21 @@ function buildEventJsonLd(
   };
 }
 
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getLocale();
+  const t = await getTranslations({ locale, namespace: "home" });
+
+  return {
+    // Absolute: the title already names the brand, and the layout template
+    // would append it a second time. Without this export the home page fell
+    // back on the layout's 21-character default — the most strategic page on
+    // the site using a third of its room in a result list (#381).
+    title: { absolute: t("pageTitle") },
+    description: t("description"),
+    ...(await pageMetadata(locale, "")),
+  };
+}
+
 export default async function HomePage() {
   const locale = await getLocale();
   const [tSite, seoSettings] = await Promise.all([
@@ -139,6 +156,14 @@ export default async function HomePage() {
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
   const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
+
+  const eventJsonLd = edition
+    ? buildEventJsonLd(edition, tiers, {
+        description: tSite("description"),
+        ogImage: seoSettings.seo_og_image || null,
+        speakerNames: speakers.map((s) => s.name),
+      })
+    : null;
 
   // Background alternation is computed at render over the sections that are
   // actually visible, so the blanc / blanc-cassé rhythm stays regular even when
@@ -238,18 +263,13 @@ export default async function HomePage() {
 
   return (
     <>
-      {edition && (
+      {/* Nothing rather than an Event short of a field Google requires (#464):
+          an edition still in preparation has neither date nor venue, and the
+          two together are the pair Search Console reports as critical. */}
+      {eventJsonLd && isCompleteEvent(eventJsonLd) && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: jsonLdScript(
-              buildEventJsonLd(edition, tiers, {
-                description: tSite("description"),
-                ogImage: seoSettings.seo_og_image || null,
-                speakerNames: speakers.map((s) => s.name),
-              }),
-            ),
-          }}
+          dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
         />
       )}
 

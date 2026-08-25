@@ -49,13 +49,11 @@ export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
   const entries: NavEntry[] = [];
 
   if (edition?.isScheduleReady) {
-    // The schedule (planning) page lives at /programme and is built in Lot 3.
-    // Until it exists, the parent points to /conferences so the menu never
-    // leads to a 404; flip this href to /programme when the page ships.
+    // The grid itself (#106), with the searchable list nested under it.
     entries.push({
       key: "program",
       labelKey: "program",
-      href: "/conferences",
+      href: "/programme",
       children: [CONFERENCES_ENTRY],
     });
   } else if (edition?.isProgramPublished) {

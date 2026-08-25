@@ -11,6 +11,7 @@ import {
   revalidateTalk,
 } from "../lib/revalidate.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
+import { rememberOriginalName } from "../lib/file-metadata.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
@@ -522,7 +523,10 @@ export default async function editRoutes(app: FastifyInstance) {
 
     try {
       const url = await storeImageBuffer(buffer, data.mimetype);
-      return { url };
+      // Keep the name the speaker's machine gave it (#378) — the stored one
+      // identifies nothing once the upload screen is closed.
+      await rememberOriginalName(url, data.filename);
+      return { url, originalName: data.filename };
     } catch (err) {
       // An SVG whose only content was executable leaves nothing to render —
       // tell the sponsor their file was refused rather than return a 500.

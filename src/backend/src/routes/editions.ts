@@ -35,6 +35,7 @@ export async function getFeaturedEdition() {
     // site — this function decides what every visitor sees.
     const edition = await prisma.edition.findFirst({
       where: { id: Number(setting.value), ...notDeleted },
+      include: { venue: true },
     });
     if (edition) return edition;
   }
@@ -43,6 +44,7 @@ export async function getFeaturedEdition() {
   return prisma.edition.findFirst({
     where: notDeleted,
     orderBy: { year: "desc" },
+    include: { venue: true },
   });
 }
 
@@ -78,6 +80,9 @@ export default async function editionRoutes(app: FastifyInstance) {
     const edition = await prisma.edition.findFirst({
       where: { year: yearNum, ...notDeleted },
       include: {
+        // The venue moved to its own table (#105); the payload below keeps
+        // rendering it flat so no consumer had to change.
+        venue: true,
         keyFigures: { orderBy: { sortOrder: "asc" } },
         articles: {
           where: { publicationStatus: "PUBLISHED", ...notDeleted },
@@ -96,8 +101,8 @@ export default async function editionRoutes(app: FastifyInstance) {
       startDate: edition.startDate,
       endDate: edition.endDate,
       status: edition.status,
-      venueName: edition.venueName,
-      venueAddress: edition.venueAddress,
+      venueName: edition.venue?.name ?? null,
+      venueAddress: edition.venue?.address ?? null,
       heroImageUrl: edition.heroImageUrl,
       aftermovieUrl: edition.aftermovieUrl,
       galleryUrl: edition.galleryUrl,
@@ -207,9 +212,117 @@ export default async function editionRoutes(app: FastifyInstance) {
       // Dates the talk page in the sitemap (#379). The list already carries
       // every published slug of the year, so no extra endpoint is needed.
       updatedAt: t.updatedAt,
+      // Scheduling (#105). `room` is the label frozen when the talk was placed,
+      // so an archive keeps the name that year's signage carried (#375).
+      room: t.roomLabel,
+      startsAt: t.startsAt,
+      endsAt: t.endsAt,
       category: visibleCategory(t.category),
       speakers: t.speakers,
     }));
+  });
+
+  // GET /api/editions/:year/schedule — the grid of a year: scheduled talks and
+  // everything around them (#105).
+  //
+  // Built for #106, which renders it. The columns are derived from the talks
+  // actually scheduled rather than from the venue's room list: the 2026 venue
+  // has eight rooms and the 2025 grid used five, so listing them all would draw
+  // empty columns.
+  app.get<{ Params: { year: string } }>("/editions/:year/schedule", {
+    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+  }, async (request, reply) => {
+    const yearNum = Number(request.params.year);
+    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
+
+    const edition = await prisma.edition.findFirst({
+      where: { year: yearNum, ...notDeleted },
+      select: { id: true },
+    });
+    if (!edition) return reply.status(404).send({ error: "Edition not found" });
+
+    const [talks, entries] = await Promise.all([
+      prisma.talk.findMany({
+        where: {
+          editionId: edition.id,
+          publicationStatus: "PUBLISHED",
+          startsAt: { not: null },
+          ...notDeleted,
+        },
+        orderBy: [{ startsAt: "asc" }, { title: "asc" }],
+        include: {
+          speakers: {
+            where: {
+              ...notDeleted,
+              editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
+            },
+            select: { slug: true, name: true, photoUrl: true },
+            orderBy: { name: "asc" },
+          },
+          category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
+          room: { select: { id: true, sortOrder: true } },
+          // Rooms a keynote is relayed to (#456): they occupy a column of the
+          // grid at that hour just as the main room does.
+          simulcasts: { include: { room: { select: { id: true, sortOrder: true } } } },
+        },
+      }),
+      prisma.scheduleEntry.findMany({
+        where: { editionId: edition.id },
+        orderBy: { startsAt: "asc" },
+        include: { room: { select: { id: true, name: true } } },
+      }),
+    ]);
+
+    // One entry per room actually used, in grid order. A talk placed before its
+    // room existed — or whose room was later deleted — keeps its frozen label
+    // and lands in a column of its own rather than disappearing.
+    //
+    // A relay room counts as used (#456): a room whose only occupation of the
+    // day is showing the keynote on a screen still needs its column, or the
+    // keynote lands nowhere.
+    const usedRooms = talks.flatMap((t) => [
+      { id: t.room?.id ?? null, name: t.roomLabel ?? "", sortOrder: t.room?.sortOrder ?? 0 },
+      ...t.simulcasts.map((s) => ({
+        id: s.room?.id ?? null,
+        name: s.roomLabel ?? "",
+        sortOrder: s.room?.sortOrder ?? 0,
+      })),
+    ]);
+
+    const rooms = [
+      ...new Map(usedRooms.map((r) => [r.id ?? `label:${r.name}`, r])).values(),
+    ].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name));
+
+    return {
+      year: yearNum,
+      rooms,
+      talks: talks.map((t) => ({
+        slug: t.slug,
+        title: t.title,
+        format: t.format,
+        level: t.level,
+        language: t.language,
+        room: t.roomLabel,
+        roomId: t.roomId,
+        // Frozen labels here too (#375): the grid must read a relay room the
+        // way the signage did that year, not the way it is named today.
+        simulcasts: t.simulcasts.map((s) => ({ roomId: s.roomId, room: s.roomLabel })),
+        startsAt: t.startsAt,
+        endsAt: t.endsAt,
+        category: visibleCategory(t.category),
+        speakers: t.speakers,
+      })),
+      entries: entries.map((e) => ({
+        id: e.id,
+        kind: e.kind,
+        labelFr: e.labelFr,
+        labelEn: e.labelEn,
+        startsAt: e.startsAt,
+        endsAt: e.endsAt,
+        roomId: e.roomId,
+        room: e.room?.name ?? null,
+      })),
+    };
   });
 
   // GET /api/editions/:year/talks/:slug — detail of one past talk (#343).
@@ -269,6 +382,10 @@ export default async function editionRoutes(app: FastifyInstance) {
       language: talk.language,
       videoUrl: talk.videoUrl,
       year: edition.year,
+      // When and where (#443), same as the current-edition detail route.
+      room: talk.roomLabel,
+      startsAt: talk.startsAt,
+      endsAt: talk.endsAt,
       category: visibleCategory(talk.category),
       speakers: talk.speakers,
     };
@@ -345,21 +462,25 @@ export default async function editionRoutes(app: FastifyInstance) {
       startDate: edition.startDate,
       endDate: edition.endDate,
       status: edition.status,
-      venueName: edition.venueName,
-      venueAddress: edition.venueAddress,
+      // The venue lives in its own table since #105, but the payload stays
+      // flat: nine frontend files read these keys, and reshaping the contract
+      // to mirror the storage would have meant reworking pages that already
+      // work — the homepage hero, /lieu, the past-edition sheets.
+      venueName: edition.venue?.name ?? null,
+      venueAddress: edition.venue?.address ?? null,
       // Venue & practical-info page (#109). The map needs both coordinates, so
       // `hasVenueInfo` drives the nav entry on the presence of at least the map
       // or one written section — an edition with only a name/address stays as it
       // was and shows no dedicated page.
-      venueLat: edition.venueLat,
-      venueLng: edition.venueLng,
-      venueTransports: edition.venueTransports,
-      venueParking: edition.venueParking,
-      venueDirectionsUrl: edition.venueDirectionsUrl,
+      venueLat: edition.venue?.lat ?? null,
+      venueLng: edition.venue?.lng ?? null,
+      venueTransports: edition.venue?.transports ?? null,
+      venueParking: edition.venue?.parking ?? null,
+      venueDirectionsUrl: edition.venue?.directionsUrl ?? null,
       hasVenueInfo:
-        (edition.venueLat !== null && edition.venueLng !== null) ||
-        !!edition.venueTransports ||
-        !!edition.venueParking,
+        (edition.venue?.lat != null && edition.venue?.lng != null) ||
+        !!edition.venue?.transports ||
+        !!edition.venue?.parking,
       heroImageUrl: edition.heroImageUrl,
       sponsorFormUrl: edition.sponsorFormUrl,
       aftermovieUrl: edition.aftermovieUrl,

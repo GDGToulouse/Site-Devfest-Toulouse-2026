@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getEditions } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
@@ -11,14 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/editions`,
-      languages: {
-        fr: `/fr/editions`,
-        en: `/en/editions`,
-        "x-default": `/fr/editions`,
-      },
-    },
+    ...(await pageMetadata(locale, "/editions")),
   };
 }
 

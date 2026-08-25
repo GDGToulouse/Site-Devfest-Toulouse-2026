@@ -146,6 +146,16 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "s-maxage=3600, stale-while-revalidate=60" },
         ],
       },
+      // The generated social cards are resources, not pages, and Search Console
+      // was reporting them among the crawled-not-indexed URLs (#468). They have
+      // to stay fetchable — a blocked OG image is a broken share preview — so
+      // the answer is a header, not robots.txt.
+      {
+        source: "/:path*/opengraph-image",
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex" },
+        ],
+      },
       // Security headers on all pages
       {
         source: "/:path*",

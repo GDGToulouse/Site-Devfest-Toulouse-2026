@@ -126,7 +126,13 @@ export default function EditionSponsorsTab({ editionId }: EditionSponsorsTabProp
               key={s.id}
               className="flex flex-wrap items-center gap-3 rounded-lg border border-gris/15 bg-blanc px-3 py-2"
             >
-              <Link href={`/admin/sponsors/${s.id}`} className="min-w-[180px] flex-1 text-sm font-medium text-noir hover:underline">
+              {/* Carry the year, or the sheet opens on the company's most
+                  recent participation instead of the one being looked at
+                  (#429). */}
+              <Link
+                href={`/admin/sponsors/${s.id}?editionId=${editionId}`}
+                className="min-w-[180px] flex-1 text-sm font-medium text-noir hover:underline"
+              >
                 {s.name}
               </Link>
               <span className="text-sm text-gris">{s.tier?.nameFr ?? "—"}</span>
