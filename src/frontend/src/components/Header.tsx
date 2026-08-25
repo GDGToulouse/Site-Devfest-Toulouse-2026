@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition, useIdentitySettings, useSocialLinks } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
 import { getPublicNavEntries } from "@/lib/nav";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const locale = useLocale();
   const t = useTranslations("nav");
   const tCta = useTranslations("cta");
   const tHeader = useTranslations("header");
@@ -20,6 +21,7 @@ export default function Header() {
   const cfp = useCfpSettings();
   const identity = useIdentitySettings();
   const socialLinks = useSocialLinks();
+  const pages = useNavPages();
   // Header sits on a white bar — use the square / main logo (color on white).
   const logoUrl = getLogoUrl(identity, "square");
 
@@ -28,7 +30,7 @@ export default function Header() {
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = getCfpCtaUrl(cfp);
 
-  const navEntries = getPublicNavEntries(edition);
+  const navEntries = getPublicNavEntries(edition, pages, locale);
 
   return (
     <header
@@ -58,7 +60,7 @@ export default function Header() {
                     className="flex items-center gap-1 text-gris text-base hover:text-noir transition-colors"
                     aria-haspopup="true"
                   >
-                    {t(entry.labelKey)}
+                    {entry.label ?? t(entry.labelKey)}
                     <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -70,7 +72,7 @@ export default function Header() {
                         href={child.href}
                         className="px-4 py-2 text-gris text-base hover:text-noir hover:bg-blanc-casse transition-colors"
                       >
-                        {t(child.labelKey)}
+                        {child.label ?? t(child.labelKey)}
                       </Link>
                     ))}
                   </div>
@@ -81,7 +83,7 @@ export default function Header() {
                   href={entry.href}
                   className="text-gris text-base hover:text-noir transition-colors"
                 >
-                  {t(entry.labelKey)}
+                  {entry.label ?? t(entry.labelKey)}
                 </Link>
               ),
             )}
@@ -148,7 +150,7 @@ export default function Header() {
                   className="text-gris text-base hover:text-noir transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {t(entry.labelKey)}
+                  {entry.label ?? t(entry.labelKey)}
                 </Link>
                 {entry.children?.map((child) => (
                   <Link
@@ -157,7 +159,7 @@ export default function Header() {
                     className="pl-4 text-gris text-base hover:text-noir transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t(child.labelKey)}
+                    {child.label ?? t(child.labelKey)}
                   </Link>
                 ))}
               </div>

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 
 import {
@@ -7,24 +7,29 @@ import {
   getEcosystemPartners,
   getEditions,
   getIdentitySettings,
+  getPublishedPages,
   getSocialLinks,
 } from "@/lib/api";
 import { getLogoUrl } from "@/lib/identity";
-import { getPublicNavEntries } from "@/lib/nav";
+import { getFooterPageEntries, getPublicNavEntries } from "@/lib/nav";
 import SocialIcons from "./SocialIcons";
 
 export default async function Footer() {
-  const [tNav, tFooter, tCta, edition, editions, socialLinks, identity, ecosystemPartners] =
+  const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages] =
     await Promise.all([
       getTranslations("nav"),
       getTranslations("footer"),
       getTranslations("cta"),
+      getLocale(),
       getCurrentEdition(),
       getEditions(),
       getSocialLinks(),
       getIdentitySettings(),
       getEcosystemPartners(),
+      getPublishedPages(),
     ]);
+
+  const footerPages = getFooterPageEntries(pages, locale);
 
   // Footer sits on a dark green background — pick the white variant.
   const logoUrl = getLogoUrl(identity, "white");
@@ -72,7 +77,7 @@ export default async function Footer() {
             {(() => {
               // Flatten parent + children into one list (the footer has no
               // dropdowns); children render indented under their parent (#203).
-              const footerEntries = getPublicNavEntries(edition)
+              const footerEntries = getPublicNavEntries(edition, pages, locale)
                 .flatMap((entry) => [
                   { ...entry, indented: false },
                   ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
@@ -96,7 +101,7 @@ export default async function Footer() {
                           href={entry.href}
                           className={`text-blanc text-base hover:opacity-70 transition-opacity ${entry.indented ? "pl-4" : ""}`}
                         >
-                          {tNav(entry.labelKey)}
+                          {entry.label ?? tNav(entry.labelKey)}
                         </Link>
                       </li>
                     ))}
@@ -179,7 +184,18 @@ export default async function Footer() {
         <p className="text-blanc/85 text-sm italic">
           {tFooter("tagline")}
         </p>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          {/* Pages an editor placed in the footer bar (#420), before the
+              permanent links so those keep their familiar last position. */}
+          {footerPages.map((entry) => (
+            <Link
+              key={entry.key}
+              href={entry.href}
+              className="text-blanc/85 text-sm hover:text-blanc transition-colors"
+            >
+              {entry.label}
+            </Link>
+          ))}
           <Link href="/mentions-legales" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("legalNotice")}
           </Link>

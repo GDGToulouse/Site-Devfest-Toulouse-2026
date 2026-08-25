@@ -485,7 +485,23 @@ model ContentPage {
   titleEn   String
   contentFr String
   contentEn String
-  updatedAt DateTime @updatedAt
+  // A page is a draft until an editor publishes it (#419). The public routes
+  // filter on this; without it every row went live the moment it was saved.
+  isPublished Boolean   @default(false)
+  // Where the page shows up in the navigation, and in which order among the
+  // other free pages (#420). NONE keeps it reachable by its URL only.
+  navLocation PageNavLocation @default(NONE)
+  navOrder    Int             @default(0)
+  deletedAt   DateTime?
+  updatedAt   DateTime  @updatedAt
+
+  @@index([deletedAt])
+}
+
+enum PageNavLocation {
+  NONE
+  HEADER
+  FOOTER
 }
 
 // --- Auth (Better Auth compatible) ---

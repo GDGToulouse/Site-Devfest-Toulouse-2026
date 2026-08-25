@@ -3,7 +3,7 @@ import { prisma } from "./prisma.js";
 /**
  * What the trash knows about each soft-deletable entity (#148).
  *
- * Twelve entities × three operations (list / restore / purge) is thirty-six
+ * Thirteen entities × three operations (list / restore / purge) is thirty-nine
  * routes if written by hand. They only differ by four things — the Prisma
  * delegate, which field labels a row in the UI, which unique fields were parked
  * on the way in, and which fields hold uploaded files — so those differences
@@ -129,6 +129,14 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["email"],
     fileFields: [],
     adminOnly: true,
+  },
+  {
+    key: "pages",
+    model: "contentPage",
+    labelField: "titleFr",
+    parkedFields: ["slug"],
+    fileFields: [],
+    adminOnly: false,
   },
 ];
 

@@ -1,4 +1,4 @@
-import type { Edition } from "@/lib/types";
+import type { ContentPageSummary, Edition } from "@/lib/types";
 
 // A public navigation entry. `labelKey` is a key under the `nav` i18n
 // namespace. An entry may carry `children` — currently only "Programme",
@@ -8,6 +8,10 @@ export interface NavEntry {
   labelKey: string;
   href: string;
   children?: NavEntry[];
+  // Admin-authored pages carry their own title in both languages and have no
+  // i18n key, so they bring a ready-made label instead (#420). Callers must
+  // prefer it over translating `labelKey`.
+  label?: string;
 }
 
 const CONFERENCES_ENTRY: NavEntry = {
@@ -45,7 +49,37 @@ const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" }
 // While there are published talks but no schedule yet, "Conférences" is a
 // top-level link; once the schedule is ready it becomes a "Programme" menu
 // with "Conférences" nested underneath (#203).
-export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
+// An admin-authored page as a navigation entry (#420). Only published pages
+// reach here — the API filters drafts out — so no status check is needed.
+function pageEntry(page: ContentPageSummary, locale: string): NavEntry {
+  const title = locale === "en" && page.titleEn.trim() ? page.titleEn : page.titleFr;
+  return { key: `page-${page.slug}`, labelKey: "", href: `/${page.slug}`, label: title };
+}
+
+function pagesAt(
+  pages: ContentPageSummary[],
+  location: "HEADER" | "FOOTER",
+  locale: string,
+): NavEntry[] {
+  return pages
+    .filter((p) => p.navLocation === location)
+    .sort((a, b) => a.navOrder - b.navOrder || a.slug.localeCompare(b.slug))
+    .map((p) => pageEntry(p, locale));
+}
+
+// Pages placed in the footer bar, beside the permanent legal links (#420).
+export function getFooterPageEntries(
+  pages: ContentPageSummary[] = [],
+  locale = "fr",
+): NavEntry[] {
+  return pagesAt(pages, "FOOTER", locale);
+}
+
+export function getPublicNavEntries(
+  edition: Edition | null,
+  pages: ContentPageSummary[] = [],
+  locale = "fr",
+): NavEntry[] {
   const entries: NavEntry[] = [];
 
   if (edition?.isScheduleReady) {
@@ -68,6 +102,10 @@ export function getPublicNavEntries(edition: Edition | null): NavEntry[] {
   }
   if (edition?.hasVenueInfo) entries.push(VENUE_ENTRY);
   entries.push(BLOG_ENTRY);
+
+  // Free pages come after the system entries, never between them: the order of
+  // those is driven by the edition's status and is not the editor's to change.
+  entries.push(...pagesAt(pages, "HEADER", locale));
 
   return entries;
 }

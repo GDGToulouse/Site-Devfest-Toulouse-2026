@@ -52,6 +52,24 @@ export function revalidateArticle(slug: string): Promise<void> {
   ]);
 }
 
+/**
+ * A content page was saved, published, unpublished or trashed (#419).
+ *
+ * Public pages sit behind `s-maxage=3600`, so without this purge a page
+ * published in the admin would stay a 404 for up to an hour — and, worse, one
+ * taken back to draft would keep being served just as long. The header and
+ * footer carry the navigation, so every page is purged, not just this one.
+ */
+export function revalidateContentPage(slug: string): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths(`/${slug}`),
+    // The sitemap is the whole point of publishing: leaving it stale would list
+    // a page that 404s, or hide one that is live. It has no locale prefix.
+    "/sitemap.xml",
+  ]);
+}
+
 export function revalidateEdition(year: number): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
