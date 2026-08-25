@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getContentPage } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { htmlToText } from "@/lib/html";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
 // Serves any page created from the admin (#421). Slugs are unique and not
@@ -29,10 +30,7 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `/${locale}/${slug}`,
-      languages: { fr: `/fr/${slug}`, en: `/en/${slug}`, "x-default": `/fr/${slug}` },
-    },
+    ...(await pageMetadata(locale, `/${slug}`)),
   };
 }
 

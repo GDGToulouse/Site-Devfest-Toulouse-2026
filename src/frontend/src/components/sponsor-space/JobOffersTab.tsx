@@ -11,6 +11,7 @@ import {
   deleteSponsorJobOffer,
   type SponsorJobOffer,
 } from "@/lib/sponsor-api";
+import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
 
 // The company's job offers for the current edition (#251), moved to the
 // account-based space (#362). How many may be published depends on the tier
@@ -32,7 +33,7 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
   const [draft, setDraft] = useState<Draft>(EMPTY);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isBusy, setIsBusy] = useState(false);
-  const [message, setMessage] = useState<{ isOk: boolean; text: string } | null>(null);
+  const [message, setMessage] = useState<SponsorMessage | null>(null);
 
   async function load() {
     const { data, status } = await getSponsorJobOffers(sponsorId);
@@ -245,15 +246,7 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
         </div>
       )}
 
-      {message && (
-        <p
-          role={message.isOk ? "status" : "alert"}
-          aria-live={message.isOk ? "polite" : "assertive"}
-          className={`text-sm ${message.isOk ? "text-malachite" : "text-terre-cuite"}`}
-        >
-          {message.text}
-        </p>
-      )}
+      <SponsorFeedback message={message} />
     </div>
   );
 }

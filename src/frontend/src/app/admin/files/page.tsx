@@ -13,6 +13,9 @@ interface FileInfo {
   isImage: boolean;
   ext: string;
   alt: string | null;
+  // The name it had on the editor's machine (#378). Null for anything
+  // uploaded before that was kept.
+  originalName: string | null;
 }
 
 function formatSize(bytes: number): string {
@@ -223,7 +226,7 @@ export default function FilesAdminPage() {
               <button
                 type="button"
                 onClick={() => setDetailsTarget(file)}
-                aria-label={`Voir les détails de ${file.filename}`}
+                aria-label={`Voir les détails de ${file.originalName ?? file.filename}`}
                 className="block w-full aspect-square relative flex items-center justify-center bg-blanc-casse hover:opacity-80 transition-opacity cursor-pointer"
               >
                 {file.isImage ? (
@@ -248,7 +251,14 @@ export default function FilesAdminPage() {
                 )}
               </button>
               <div className="p-2 space-y-0.5">
-                <p className="text-[10px] text-noir truncate font-medium" title={file.filename}>{file.filename}</p>
+                {/* The name a human recognises first, the stored one on hover —
+                    that one is still what the URL uses (#378). */}
+                <p
+                  className="text-[10px] text-noir truncate font-medium"
+                  title={file.originalName ? `${file.originalName} — ${file.filename}` : file.filename}
+                >
+                  {file.originalName ?? file.filename}
+                </p>
                 <p className="text-[10px] text-gris">{formatSize(file.size)}</p>
                 <div className="flex gap-2">
                   <button

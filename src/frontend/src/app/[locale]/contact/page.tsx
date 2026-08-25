@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getContactCategories } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import ContactForm from "@/components/ContactForm";
 import SocialIcons from "@/components/SocialIcons";
@@ -12,10 +13,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/contact`,
-      languages: { fr: "/fr/contact", en: "/en/contact", "x-default": "/fr/contact" },
-    },
+    ...(await pageMetadata(locale, "/contact")),
   };
 }
 

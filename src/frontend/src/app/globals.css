@@ -491,3 +491,152 @@ body {
 .section-y h2 {
   text-box: trim-both cap alphabetic;
 }
+
+/* ========================================
+ * Print (#108, rewritten in #449)
+ *
+ * The printable schedule is the browser's own Save-as-PDF, driven by a
+ * stylesheet rather than a generator: no Chromium in the backend image, no
+ * layout re-implemented by hand.
+ *
+ * But it is no longer the screen with its chrome removed. Paper has no hover,
+ * no link, no reliable colour and no room for cards — so a separate document
+ * (.print-only) is rendered from the same rows, and both the grid and the
+ * mobile agenda step aside.
+ *
+ * Every rule here is hand-written rather than expressed as a Tailwind `print:`
+ * variant: those emitted no CSS at all in this setup, and a class that produces
+ * nothing fails without a word.
+ * ======================================== */
+
+/* Off screen, and out of the accessibility tree with it. */
+.print-only {
+  display: none;
+}
+
+@media print {
+  /* Site chrome carries nothing onto paper — navigation least of all. */
+  header,
+  footer,
+  nav,
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+    /* Paper is read at arm's length, not at screen distance. */
+    font-size: 10pt;
+    line-height: 1.35;
+  }
+
+  /* The two screen renderings step aside for the printed document. */
+  .print-grid,
+  .print-agenda {
+    display: none !important;
+  }
+
+  .print-only {
+    display: block !important;
+  }
+
+  .print-only * {
+    color: #000 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 14mm 12mm;
+  }
+
+  /* --- Document header, repeated nowhere: it opens the first sheet --- */
+  .print-head {
+    border-bottom: 2px solid #000;
+    padding-bottom: 6pt;
+    margin-bottom: 10pt;
+  }
+  .print-head h2 {
+    font-size: 18pt;
+    font-weight: 700;
+    margin: 0;
+  }
+  .print-head p {
+    margin: 2pt 0 0;
+    font-size: 9.5pt;
+  }
+  .print-note {
+    font-weight: 700;
+  }
+  .print-source {
+    font-size: 8.5pt;
+  }
+
+  /* --- A moment shared by everyone: a full-width rule, not a card --- */
+  .print-band {
+    border-top: 1px solid #000;
+    border-bottom: 1px solid #000;
+    padding: 3pt 0;
+    margin: 8pt 0;
+    font-weight: 700;
+    break-inside: avoid;
+  }
+
+  /* --- A time slot, or a room --- */
+  .print-slot,
+  .print-room {
+    margin-bottom: 8pt;
+    break-inside: avoid;
+  }
+  .print-slot h3,
+  .print-room h3 {
+    font-size: 12pt;
+    font-weight: 700;
+    margin: 0 0 3pt;
+    border-bottom: 1px solid #666;
+  }
+  /* A room starts its own sheet: these are pinned on doors, one per door. */
+  .print-room {
+    break-before: page;
+  }
+  .print-room-sub {
+    margin: 0 0 4pt;
+    font-size: 8.5pt;
+  }
+  .print-room:first-of-type {
+    break-before: auto;
+  }
+
+  .print-slot ul,
+  .print-room ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .print-slot li,
+  .print-room li {
+    display: grid;
+    /* 28mm, not 22: "Amphithéâtre" and "Salle Communautés" overflowed into the
+       title column and printed on top of it. Seen in the PDF, invisible in the
+       rules themselves. */
+    grid-template-columns: 28mm 1fr;
+    gap: 0 4pt;
+    padding: 2.5pt 0;
+    border-bottom: 1px dotted #999;
+    break-inside: avoid;
+  }
+
+  .print-time {
+    grid-row: span 3;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: break-word;
+  }
+  .print-title {
+    font-weight: 700;
+  }
+  .print-speakers,
+  .print-meta {
+    font-size: 8.5pt;
+  }
+}

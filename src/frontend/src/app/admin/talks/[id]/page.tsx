@@ -4,12 +4,15 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
+import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
-import type { Talk, Category, Speaker } from "@/lib/types";
+import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
 
 interface TalkData extends Talk {
   edition?: { id: number; year: number };
+  /** Relay rooms (#456), flattened to ids by the admin endpoint. */
+  simulcastRoomIds?: number[];
 }
 
 export default function TalkEditorPage() {
@@ -25,6 +28,8 @@ export default function TalkEditorPage() {
   const [editionYear, setEditionYear] = useState<number | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
+  // The rooms of the edition's venue (#105). Empty until an edition is known.
+  const [rooms, setRooms] = useState<{ id: number; name: string }[]>([]);
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,6 +62,12 @@ export default function TalkEditorPage() {
           speakerIds: data.speakerIds,
           publicationStatus: data.publicationStatus,
           isSpeakerEditable: data.isSpeakerEditable,
+          roomId: data.roomId ? String(data.roomId) : "",
+          simulcastRoomIds: data.simulcastRoomIds ?? [],
+          // Through the helper, never by slicing: the input reads local time
+          // and the API stores UTC, so a slice loses the offset on save (#105).
+          startsAt: isoToLocalInput(data.startsAt),
+          endsAt: isoToLocalInput(data.endsAt),
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
@@ -78,6 +89,21 @@ export default function TalkEditorPage() {
     });
   }, [editionId]);
 
+  // The room list comes from the edition's venue, not from every venue: a
+  // session can only be placed where its own edition happens (#105).
+  useEffect(() => {
+    if (!editionId) return;
+    void adminFetch<{ venueId: number | null }>(`/editions/${editionId}`).then(({ data }) => {
+      if (!data?.venueId) {
+        setRooms([]);
+        return;
+      }
+      void adminFetch<AdminVenue>(`/venues/${data.venueId}`).then(({ data: venue }) => {
+        setRooms(venue?.rooms.map((r) => ({ id: r.id, name: r.name })) ?? []);
+      });
+    });
+  }, [editionId]);
+
   async function handleSave() {
     if (!form.title.trim() || !editionId) return;
     setIsSaving(true);
@@ -93,6 +119,13 @@ export default function TalkEditorPage() {
       speakerIds: form.speakerIds,
       publicationStatus: form.publicationStatus,
       isSpeakerEditable: form.isSpeakerEditable,
+      // `null` unschedules; a blank date clears the slot (#105).
+      roomId: form.roomId ? Number(form.roomId) : null,
+      // Always sent, so clearing every relay reaches the API (#456): an omitted
+      // field means "leave them alone", an empty array means "none".
+      simulcastRoomIds: form.simulcastRoomIds,
+      startsAt: localInputToIso(form.startsAt),
+      endsAt: localInputToIso(form.endsAt),
     };
 
     if (isNew) {
@@ -148,7 +181,7 @@ export default function TalkEditorPage() {
           <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
         )}
 
-        <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} />
+        <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} rooms={rooms} />
 
         {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
 

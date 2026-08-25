@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { getCurrentEdition } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 // Client wrapper: the map's `ssr: false` dynamic import cannot live in this
 // Server Component (Next.js 16), so it sits behind VenueMapClient.
@@ -14,10 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/lieu`,
-      languages: { fr: "/fr/lieu", en: "/en/lieu", "x-default": "/fr/lieu" },
-    },
+    ...(await pageMetadata(locale, "/lieu")),
   };
 }
 

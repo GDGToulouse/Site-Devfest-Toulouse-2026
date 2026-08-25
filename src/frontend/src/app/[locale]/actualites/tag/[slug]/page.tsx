@@ -1,10 +1,24 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getArticles } from "@/lib/api";
+import { getArticles, getTags } from "@/lib/api";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import ArticleCard from "@/components/ArticleCard";
 import Pagination from "@/components/Pagination";
+
+/**
+ * The tag as it is written, not as it is addressed (#381).
+ *
+ * The page used the slug everywhere — title, heading, breadcrumb — so a reader
+ * landing from a search result read "Articles tagués cloud-native" where the
+ * site says "Cloud Native" everywhere else. The list is a handful of rows, so
+ * resolving the label costs one cached call.
+ */
+async function findTag(slug: string) {
+  return (await getTags()).find((tag) => tag.slug === slug) ?? null;
+}
 
 export async function generateMetadata({
   params,
@@ -14,12 +28,16 @@ export async function generateMetadata({
   const { slug } = await params;
   const locale = await getLocale();
   const t = await getTranslations("articles");
+  const tag = await findTag(slug);
+
+  // No such tag — the page below answers 404, so there is nothing to describe.
+  if (!tag) return { title: t("taggedWith") };
+
   return {
-    title: `${t("taggedWith")} ${slug}`,
-    alternates: {
-      canonical: `/${locale}/actualites/tag/${slug}`,
-      languages: { fr: `/fr/actualites/tag/${slug}`, en: `/en/actualites/tag/${slug}`, "x-default": `/fr/actualites/tag/${slug}` },
-    },
+    title: `${t("taggedWith")} ${tag.name}`,
+    // The only page on the site that had a title and no description (#381).
+    description: t("tagDescription", { tag: tag.name }),
+    ...(await pageMetadata(locale, `/actualites/tag/${slug}`)),
   };
 }
 
@@ -36,12 +54,20 @@ export default async function TagPage({
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
 
-  const { articles, totalPages } = await getArticles(page, 9, slug);
+  const [tag, { articles, totalPages }] = await Promise.all([
+    findTag(slug),
+    getArticles(page, 9, slug),
+  ]);
+
+  // An address that names no tag is a 404, not an empty list: the page used to
+  // answer 200 with "aucun article", which reads to a crawler as a real page
+  // (#466 was the same defect on the sponsor space).
+  if (!tag) notFound();
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
     { label: t("title"), href: `/${locale}/actualites` },
-    { label: slug, href: `/${locale}/actualites/tag/${slug}` },
+    { label: tag.name, href: `/${locale}/actualites/tag/${slug}` },
   ];
 
   return (
@@ -50,7 +76,7 @@ export default async function TagPage({
         <Breadcrumb items={breadcrumbItems} />
 
         <h1 className="mt-6 text-3xl lg:text-5xl font-bold text-noir">
-          {t("taggedWith")} <span className="text-malachite">{slug}</span>
+          {t("taggedWith")} <span className="text-malachite">{tag.name}</span>
         </h1>
 
         {articles.length === 0 ? (

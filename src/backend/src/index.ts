@@ -13,6 +13,7 @@ import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
 import { APP_VERSION, APP_ENVIRONMENT, APP_COMMIT } from "./lib/version.js";
 import editionRoutes from "./routes/editions.js";
+import calendarRoutes from "./routes/calendar.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
@@ -29,6 +30,8 @@ import sponsorSpaceRoutes from "./routes/sponsor-space.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import adminRoutes from "./routes/admin/index.js";
+import { serverOptions } from "./lib/server-options.js";
+import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
 
 const port = Number(process.env.PORT) || 4000;
 const host = process.env.HOST || "0.0.0.0";
@@ -38,11 +41,11 @@ const host = process.env.HOST || "0.0.0.0";
 // so debug entries are filtered out in normal runs and free to leave in place
 // as a permanent diagnostic tool.
 //
-// trustProxy: required behind Traefik/Coolify so request.ip and request.protocol
-// reflect X-Forwarded-* headers set by the reverse proxy.
+// The rest lives in serverOptions, shared with the test that probes the router
+// (#467) — a limit only the real server carries is a limit nothing checks.
 const app = Fastify({
+  ...serverOptions,
   logger: { level: process.env.LOG_LEVEL || "info" },
-  trustProxy: true,
 });
 
 // Fastify rejects `content-type: application/json` with an empty payload
@@ -125,17 +128,15 @@ await app.register(helmet, {
   xPermittedCrossDomainPolicies: { permittedPolicies: "none" },
 });
 
-// Global rate limit: 200 requests per minute per IP
-await app.register(rateLimit, {
-  max: 200,
-  timeWindow: "1 minute",
-  addHeadersOnExceeding: { "x-ratelimit-limit": true, "x-ratelimit-remaining": true, "x-ratelimit-reset": true },
-});
+// Rate limit per IP and per minute: 200 requests on the API, a separate and
+// larger budget on the static uploads (#469). Details in rate-limit-options.ts,
+// shared with the test that exercises both buckets.
+await app.register(rateLimit, rateLimitOptions);
 
 await app.register(multipart);
 await app.register(fastifyStatic, {
   root: "/app/uploads",
-  prefix: "/uploads/",
+  prefix: UPLOADS_PREFIX,
   decorateReply: false,
   // Uploaded files are content-addressed by name (`${Date.now()}-${random}.ext`,
   // see routes/admin/files.ts): a given URL never changes content, so it can be
@@ -282,6 +283,7 @@ app.route({
 
 // Public API routes
 await app.register(editionRoutes, { prefix: "/api" });
+await app.register(calendarRoutes, { prefix: "/api" });
 await app.register(articleRoutes, { prefix: "/api" });
 await app.register(settingsRoutes, { prefix: "/api" });
 await app.register(pageRoutes, { prefix: "/api" });

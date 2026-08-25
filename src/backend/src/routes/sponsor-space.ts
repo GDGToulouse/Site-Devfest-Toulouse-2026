@@ -10,6 +10,7 @@ import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
 import { isSafeUrl, sanitizeRichHtml } from "../lib/sanitize.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
+import { originalNamesByUrl, rememberOriginalName } from "../lib/file-metadata.js";
 import { revalidateJobOffers, revalidateSponsors } from "../lib/revalidate.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -147,6 +148,8 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       ...sponsor,
       socialLinks: sponsor.socialLinks ? JSON.parse(sponsor.socialLinks) : {},
       accessRole: request.sponsorAccess!.accessRole,
+      // Same map as the private payload (#378), for the logo field.
+      fileNames: await originalNamesByUrl([sponsor.logoUrl]),
     };
   });
 
@@ -183,9 +186,18 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
 
+    // The three com-kit files are stored as `<timestamp>-<random>.pdf`, which
+    // tells the sponsor nothing about which one is the charter (#378). One
+    // query resolves the names for all of them; anything uploaded before that
+    // column existed is simply absent from the map.
+    const fileNames = await originalNamesByUrl(
+      sponsor.editions.flatMap((e) => [e.comKitLogoWebUrl, e.comKitLogoPrintUrl, e.comKitCharterUrl]),
+    );
+
     return {
       standContacts: sponsor.standContacts ? JSON.parse(sponsor.standContacts) : [],
       editions: sponsor.editions,
+      fileNames,
     };
   });
 
@@ -632,7 +644,10 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
 
     try {
       const url = await storeImageBuffer(buffer, data.mimetype);
-      return { url };
+      // Keep the name the sponsor's machine gave it (#378): a com kit is three
+      // files that all look alike once they are `<timestamp>-<random>.pdf`.
+      await rememberOriginalName(url, data.filename);
+      return { url, originalName: data.filename };
     } catch (err) {
       // An SVG whose only content was executable leaves nothing to render —
       // tell the sponsor their file was refused rather than return a 500.

@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { notFound, useRouter } from "next/navigation";
 
 import Tabs from "@/components/admin/Tabs";
 import PublicTab from "@/components/sponsor-space/PublicTab";
@@ -24,30 +24,61 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   const router = useRouter();
 
   const [profile, setProfile] = useState<SponsorSpaceProfile | null>(null);
-  const [isDenied, setIsDenied] = useState(false);
+  // Three outcomes, not two (#466). "Chargement…" used to cover all of them,
+  // including the ones that would never resolve.
+  const [outcome, setOutcome] = useState<"loading" | "denied" | "unreachable">("loading");
   const [activeTab, setActiveTab] = useState("public");
 
   const load = useCallback(async () => {
+    setOutcome("loading");
     const { data, status } = await getSponsorProfile(id);
     if (status === 401) {
       router.replace(`/sponsor/login?next=/sponsor/${id}`);
       return;
     }
-    if (!data) {
-      setIsDenied(true);
+    if (data) {
+      setProfile(data);
       return;
     }
-    setProfile(data);
+    // A dropped connection comes back as status 0 (#428). Reporting that as
+    // "not accessible with your account" sends the sponsor to ask for rights
+    // they already have — missing and broken are not the same thing.
+    setOutcome(status === 0 || status >= 500 ? "unreachable" : "denied");
   }, [id, router]);
 
   useEffect(() => {
-    if (Number.isInteger(id)) void load();
-  }, [id, load]);
+    void load();
+  }, [load]);
 
-  if (isDenied) {
+  // `/sponsor/<slug>` is what the WordPress site exposed, and its 60 URLs are
+  // still in Google's index (#466). `Number("capgemini")` is NaN, so the guard
+  // that protected the API call left the page stuck on "Chargement…" forever,
+  // served as a 200 with no title: a soft 404 for Google, a spinner with no end
+  // for anyone following an old link. Placed after the hooks so their order
+  // never changes; the render throws before any effect is committed.
+  if (!Number.isInteger(id) || id <= 0) notFound();
+
+  if (outcome === "denied") {
     return (
       <Shell>
         <p className="text-center text-noir">Cette fiche n&apos;est pas accessible avec votre compte.</p>
+      </Shell>
+    );
+  }
+
+  if (outcome === "unreachable") {
+    return (
+      <Shell>
+        <p className="text-center text-noir">
+          Votre espace n&apos;a pas pu être chargé. Vérifiez votre connexion et réessayez.
+        </p>
+        <button
+          type="button"
+          onClick={() => void load()}
+          className="mx-auto mt-4 block rounded-[12px] bg-malachite px-5 py-2.5 font-bold text-blanc transition-colors hover:bg-malachite/90"
+        >
+          Réessayer
+        </button>
       </Shell>
     );
   }

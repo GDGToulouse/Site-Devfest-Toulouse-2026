@@ -24,6 +24,7 @@ import type {
   EditionSpeaker,
   EditionTalk,
   EditionTalkDetail,
+  EditionSchedule,
   Replay,
   ReplayFilters,
   EcosystemPartner,
@@ -260,6 +261,13 @@ export async function getEditionSpeakers(year: number): Promise<EditionSpeaker[]
 
 export async function getEditionTalks(year: number): Promise<EditionTalk[]> {
   return (await fetchAPI<EditionTalk[]>(`/api/editions/${year}/talks`)) || [];
+}
+
+// The grid of one year (#106): scheduled talks, the rooms they use, and the
+// moments around them. Null when the year has no edition — the page 404s, the
+// same way /lieu does when there is nothing to show.
+export async function getEditionSchedule(year: number): Promise<EditionSchedule | null> {
+  return fetchAPI<EditionSchedule>(`/api/editions/${year}/schedule`);
 }
 
 // Sponsors of a past edition (#370). Same payload as getSponsors() — the values

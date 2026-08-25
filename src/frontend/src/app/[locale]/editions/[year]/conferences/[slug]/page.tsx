@@ -4,6 +4,8 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getEditionTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { pageMetadata } from "@/lib/page-metadata";
+import { canonicalLocaleFor } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import YouTubeFacade from "@/components/YouTubeFacade";
@@ -34,11 +36,8 @@ export async function generateMetadata({
   return {
     title: talk.title,
     description: talk.description || talk.title,
-    alternates: {
-      canonical: `/${locale}${path}`,
-      languages: { fr: `/fr${path}`, en: `/en${path}`, "x-default": `/fr${path}` },
-    },
-    openGraph: { title: talk.title, description: talk.description || talk.title },
+    // Canonical on the talk's own language (#468) — see /conferences/[slug].
+    ...(await pageMetadata(locale, path, {}, canonicalLocaleFor(talk.language))),
   };
 }
 

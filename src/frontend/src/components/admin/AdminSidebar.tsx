@@ -20,6 +20,7 @@ import {
   faTag,
   faStar,
   faTrashCan,
+  faLocationDot,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -59,6 +60,7 @@ const iconMap: Record<string, IconDefinition> = {
   tag: faTag,
   star: faStar,
   trash: faTrashCan,
+  "map-pin": faLocationDot,
 };
 
 interface HealthInfo {

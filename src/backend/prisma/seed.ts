@@ -11,7 +11,13 @@ const { auth } = await import("../src/lib/auth.js");
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-export async function seedBase() {
+/**
+ * @param skipAccountEmails Addresses this run must leave alone, because the
+ *   caller provisions them itself. `seed-dev.ts` owns its two documented
+ *   accounts (#433): provisioning them here first, with a random password,
+ *   is what kept their documented password from ever being applied.
+ */
+export async function seedBase({ skipAccountEmails = [] }: { skipAccountEmails?: string[] } = {}) {
   console.log("Seeding database (base)...");
 
   // --- Contact Categories ---
@@ -98,7 +104,7 @@ export async function seedBase() {
   const adminEmails = (process.env.ADMIN_EMAILS || "")
     .split(",")
     .map((e) => e.trim())
-    .filter((e) => e);
+    .filter((e) => e && !skipAccountEmails.includes(e));
 
   for (const email of adminEmails) {
     const existing = await prisma.user.findUnique({ where: { email } });

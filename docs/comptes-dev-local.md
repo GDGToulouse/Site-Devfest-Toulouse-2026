@@ -17,7 +17,12 @@ Les emails sont inclus dans `ADMIN_EMAILS` par défaut dans `docker-compose.yml`
 ADMIN_EMAILS=admin@devfesttoulouse.fr,editor@devfesttoulouse.fr
 ```
 
-Les comptes sont créés dans la table `User` par `prisma/seed.ts`.
+Ces deux comptes-là sont provisionnés par `prisma/seed-dev.ts`, pas par `prisma/seed.ts` :
+le seed de base les laisse de côté depuis #433 (`skipAccountEmails`). Avant ce correctif, il
+les créait le premier avec un mot de passe **aléatoire**, et `seed-dev.ts` trouvait alors les
+comptes déjà là — le mot de passe documenté n'était donc jamais posé, dès la toute première
+installation. Toute autre adresse listée dans `ADMIN_EMAILS` reste provisionnée par
+`prisma/seed.ts`, avec un mot de passe aléatoire affiché dans la sortie du seed.
 
 ## Seed
 
@@ -29,13 +34,20 @@ docker compose -f docker-compose.local.yml exec backend pnpm exec tsx prisma/see
 
 Cela crée les comptes de test, les éditions, les articles, les tarifs et les chiffres clés de démo.
 
+Relancer le seed dev est sans danger : il **repose** le mot de passe documenté sur les comptes
+existants au lieu de les sauter.
+
 > **Note** : le seed de base (`prisma/seed.ts`) est exécuté automatiquement à chaque démarrage du container backend (en dev comme en prod). Il crée uniquement les catégories de contact et les comptes admin à partir de `ADMIN_EMAILS` — il est idempotent et ne recrée rien si les données existent déjà.
+
+> `seed-dev.ts` refuse de tourner si `NODE_ENV=production` : il vide des tables et pose des
+> mots de passe connus sur des adresses qui sont de vrais comptes administrateurs en prod.
 
 ## Connexion
 
 1. Lancer `docker compose -f docker-compose.local.yml up`
 2. Lancer le seed dev si c'est la première fois (voir ci-dessus)
-3. Aller sur http://localhost:3000/fr/admin
+3. Aller sur http://localhost:3000/admin — **pas** `/fr/admin`, qui renvoie 404 : le
+   back-office vit hors de `[locale]`
 4. Entrer l'email et le mot de passe du tableau ci-dessus
 5. Cliquer **« Se connecter »**
 
@@ -45,7 +57,7 @@ Cela crée les comptes de test, les éditions, les articles, les tarifs et les c
 
 Si vous avez configuré les credentials OAuth dans `.env` :
 
-1. Aller sur http://localhost:3000/fr/admin
+1. Aller sur http://localhost:3000/admin
 2. Cliquer **Google** ou **GitHub**
 3. Se connecter avec un compte dont l'email correspond à un des emails autorisés
 

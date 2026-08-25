@@ -3,10 +3,17 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getTalkBySlug } from "@/lib/api";
+import { getCurrentEdition, getTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { pageMetadata } from "@/lib/page-metadata";
+import { canonicalLocaleFor } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
+import AddToCalendar from "@/components/conferences/AddToCalendar";
 import { Link } from "@/i18n/navigation";
+
+// Absolute, because the event body ends up on someone else's calendar: a
+// relative link would be dead there.
+const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 export async function generateMetadata({
   params,
@@ -26,16 +33,18 @@ export async function generateMetadata({
   return {
     title,
     description,
-    alternates: {
-      canonical: `/${locale}/conferences/${slug}`,
-      languages: {
-        fr: `/fr/conferences/${slug}`,
-        en: `/en/conferences/${slug}`,
-        "x-default": `/fr/conferences/${slug}`,
-      },
-    },
-    // OG image generated dynamically by ./opengraph-image (RG-215).
-    openGraph: { title, description },
+    // OG image generated dynamically by ./opengraph-image (RG-215); og:title
+    // and og:description come from the two fields above.
+    //
+    // The talk's own language carries the canonical (#468): both URLs serve the
+    // same untranslated words, so declaring each one canonical made Google pick
+    // for us — and it dropped the /en side.
+    ...(await pageMetadata(
+      locale,
+      `/conferences/${slug}`,
+      {},
+      canonicalLocaleFor(talk.language),
+    )),
   };
 }
 
@@ -47,9 +56,14 @@ export default async function TalkDetailPage({
   const { slug } = await params;
   const locale = await getLocale();
   const t = await getTranslations("conferences");
+  const tcal = await getTranslations("calendar");
   const talk = await getTalkBySlug(slug);
 
   if (!talk) notFound();
+
+  // Only for the venue printed on the calendar event; the page itself does not
+  // otherwise need the edition.
+  const edition = talk.startsAt ? await getCurrentEdition() : null;
 
   const title = talk.title;
   const description = talk.description;
@@ -91,6 +105,30 @@ export default async function TalkDetailPage({
 
         {description && (
           <p className="mt-6 whitespace-pre-line text-lg leading-relaxed text-noir">{description}</p>
+        )}
+
+        {/* Only once the session has an hour: before that there is nothing to
+            put on a calendar (#443). */}
+        {talk.startsAt && (
+          <AddToCalendar
+            session={{
+              slug: talk.slug,
+              title: talk.title,
+              startsAt: talk.startsAt,
+              endsAt: talk.endsAt,
+              room: talk.room,
+              speakers: talk.speakers.map((sp) => sp.name),
+              year: talk.year,
+              url: `${BASE_URL}/${locale}/conferences/${talk.slug}`,
+              venue: [edition?.venueName, edition?.venueAddress].filter(Boolean).join(", ") || null,
+            }}
+            labels={{
+              heading: tcal("heading"),
+              google: tcal("google"),
+              outlook: tcal("outlook"),
+              download: tcal("download"),
+            }}
+          />
         )}
 
         {talk.speakers.length > 0 && (

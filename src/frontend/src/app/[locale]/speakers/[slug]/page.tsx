@@ -7,7 +7,8 @@ import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import { Link } from "@/i18n/navigation";
-import { jsonLdScript } from "@/lib/seo";
+import { absoluteUrl, jsonLdScript } from "@/lib/seo";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata({
   params,
@@ -25,16 +26,8 @@ export async function generateMetadata({
   return {
     title: speaker.name,
     description,
-    alternates: {
-      canonical: `/${locale}/speakers/${slug}`,
-      languages: {
-        fr: `/fr/speakers/${slug}`,
-        en: `/en/speakers/${slug}`,
-        "x-default": `/fr/speakers/${slug}`,
-      },
-    },
     // OG image is generated dynamically by ./opengraph-image (RG-208).
-    openGraph: { title: speaker.name, description },
+    ...(await pageMetadata(locale, `/speakers/${slug}`)),
   };
 }
 
@@ -74,7 +67,7 @@ export default async function SpeakerDetailPage({
     "@context": "https://schema.org",
     "@type": "Person",
     name: speaker.name,
-    ...(speaker.photoUrl ? { image: speaker.photoUrl } : {}),
+    ...(speaker.photoUrl ? { image: absoluteUrl(speaker.photoUrl) } : {}),
     ...(speaker.company ? { worksFor: { "@type": "Organization", name: speaker.company } } : {}),
     ...(Object.values(speaker.socialLinks).length > 0
       ? { sameAs: Object.values(speaker.socialLinks) }

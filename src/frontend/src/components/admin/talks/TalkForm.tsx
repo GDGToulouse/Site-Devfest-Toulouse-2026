@@ -21,6 +21,12 @@ export interface TalkFormValue {
   level: "" | TalkLevel;
   language: string;
   categoryId: string;
+  // Scheduling (#105). Empty string means "not scheduled" for all three.
+  roomId: string;
+  /** Rooms the talk is relayed to (#456). Ids, as the API takes them. */
+  simulcastRoomIds: number[];
+  startsAt: string;
+  endsAt: string;
   speakerIds: number[];
   publicationStatus: "DRAFT" | "PUBLISHED";
   isSpeakerEditable: boolean;
@@ -33,6 +39,10 @@ export const emptyTalkForm: TalkFormValue = {
   level: "",
   language: "fr",
   categoryId: "",
+  roomId: "",
+  simulcastRoomIds: [],
+  startsAt: "",
+  endsAt: "",
   speakerIds: [],
   publicationStatus: "DRAFT",
   isSpeakerEditable: false,
@@ -46,9 +56,12 @@ interface TalkFormProps {
   onChange: (value: TalkFormValue) => void;
   categories: Category[];
   speakers: Speaker[];
+  // The rooms of the edition's venue (#105). Empty when no venue is attached,
+  // which the form says out loud rather than showing an empty dropdown.
+  rooms: { id: number; name: string }[];
 }
 
-export default function TalkForm({ value, onChange, categories, speakers }: TalkFormProps) {
+export default function TalkForm({ value, onChange, categories, speakers, rooms }: TalkFormProps) {
   function toggleSpeaker(id: number) {
     onChange({
       ...value,
@@ -104,6 +117,70 @@ export default function TalkForm({ value, onChange, categories, speakers }: Talk
           </select>
         </label>
       </div>
+
+      <fieldset className="rounded-lg border border-gris/30 p-4">
+        <legend className="px-1 text-sm font-medium text-noir">Programmation</legend>
+        {rooms.length === 0 ? (
+          <p className="text-sm text-gris">
+            Aucune salle disponible : rattachez un lieu à l’édition, puis déclarez ses salles.
+          </p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-3">
+            <label className="block">
+              <span className="block text-sm font-medium text-noir mb-1">Salle</span>
+              <select value={value.roomId} onChange={(e) => onChange({ ...value, roomId: e.target.value })} className={inputClass}>
+                <option value="">— Non programmée —</option>
+                {rooms.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </label>
+            <label className="block">
+              <span className="block text-sm font-medium text-noir mb-1">Début</span>
+              <input type="datetime-local" value={value.startsAt} onChange={(e) => onChange({ ...value, startsAt: e.target.value })} className={inputClass} />
+            </label>
+            <label className="block">
+              <span className="block text-sm font-medium text-noir mb-1">Fin</span>
+              <input type="datetime-local" value={value.endsAt} onChange={(e) => onChange({ ...value, endsAt: e.target.value })} className={inputClass} />
+            </label>
+          </div>
+        )}
+
+        {/* Relay rooms (#456). A keynote fills the amphitheatre and plays on
+            screens elsewhere; those rooms are running this session, not another
+            one. The room the talk is given in is not offered here — it would
+            draw the keynote twice in its own column, and the API drops it. */}
+        {rooms.length > 0 && (
+          <div className="mt-4">
+            <span className="block text-sm font-medium text-noir mb-1">
+              Retransmise dans
+            </span>
+            <p className="mb-2 text-sm text-gris">
+              Les salles où la session est diffusée sur écran. À laisser vide pour une
+              session ordinaire.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {rooms
+                .filter((r) => String(r.id) !== value.roomId)
+                .map((r) => (
+                  <label key={r.id} className="inline-flex items-center gap-2 text-sm text-noir">
+                    <input
+                      type="checkbox"
+                      checked={value.simulcastRoomIds.includes(r.id)}
+                      onChange={(e) =>
+                        onChange({
+                          ...value,
+                          simulcastRoomIds: e.target.checked
+                            ? [...value.simulcastRoomIds, r.id]
+                            : value.simulcastRoomIds.filter((id) => id !== r.id),
+                        })
+                      }
+                    />
+                    {r.name}
+                  </label>
+                ))}
+            </div>
+          </div>
+        )}
+      </fieldset>
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Speakers</span>

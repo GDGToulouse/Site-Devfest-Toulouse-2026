@@ -3,6 +3,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getCurrentTicketTiers } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
+import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -11,10 +12,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/billetterie`,
-      languages: { fr: "/fr/billetterie", en: "/en/billetterie", "x-default": "/fr/billetterie" },
-    },
+    ...(await pageMetadata(locale, "/billetterie")),
   };
 }
 

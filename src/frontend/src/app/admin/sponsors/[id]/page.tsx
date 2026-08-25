@@ -12,13 +12,20 @@ import SponsorEditions from "@/components/admin/sponsors/SponsorEditions";
 import SponsorIdentityFields from "@/components/admin/sponsors/SponsorIdentityFields";
 import SponsorParticipationFields from "@/components/admin/sponsors/SponsorParticipationFields";
 import SponsorComKitFields from "@/components/admin/sponsors/SponsorComKitFields";
+import SponsorYearPicker from "@/components/admin/sponsors/SponsorYearPicker";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import {
   emptySponsorForm,
+  participationValue,
   type SponsorFormValue,
+  type SponsorParticipation,
 } from "@/components/admin/sponsors/sponsor-form-shared";
 
 interface SponsorData extends Sponsor {
   edition?: { id: number; year: number };
+  // Every year the company took part in, each carrying its own tier, logo and
+  // com kit (#429).
+  editions?: SponsorParticipation[];
 }
 
 // The sheet is split along the line the data model already draws (#393): the
@@ -51,6 +58,36 @@ export default function SponsorEditorPage() {
   const [saveState, setSaveState] = useState<SaveState>(null);
   // Set when the chosen name belongs to a company already in base (#389).
   const [existingSponsorId, setExistingSponsorId] = useState<number | null>(null);
+  // A year switch waiting on confirmation, because the form holds unsaved
+  // changes for the year being left (#429).
+  const [pendingYear, setPendingYear] = useState<SponsorParticipation | null>(null);
+
+  const participations = current?.editions ?? [];
+  const editedParticipation = participations.find((p) => p.editionId === editionId) ?? null;
+
+  // Switching year replaces every year-scoped field at once. Anything typed
+  // and not saved for the year being left would go with it, silently — so ask
+  // first, and only when there is really something to lose.
+  function isParticipationDirty(): boolean {
+    if (!editedParticipation) return false;
+    const saved = participationValue(editedParticipation, current?.logoUrl);
+    return (Object.keys(saved) as (keyof typeof saved)[]).some((k) => form[k] !== saved[k]);
+  }
+
+  function applyYear(p: SponsorParticipation) {
+    setForm((f) => ({ ...f, ...participationValue(p, current?.logoUrl) }));
+    setEditionId(p.editionId);
+    setEditionYear(p.edition.year);
+    setSaveState(null);
+  }
+
+  function requestYear(p: SponsorParticipation) {
+    if (isParticipationDirty()) {
+      setPendingYear(p);
+      return;
+    }
+    applyYear(p);
+  }
 
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl ?? IDENTITY_TAB);
@@ -86,12 +123,47 @@ export default function SponsorEditorPage() {
         }
       });
     } else if (sponsorId) {
-      adminFetch<SponsorData>(`/sponsors/${sponsorId}`).then(({ data, status }) => {
+      void loadSponsor(Number(searchParams.get("editionId")) || undefined);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sponsorId, isNew]);
+
+  // Read the sheet back from the server. Called on mount and again after each
+  // save, so the baseline the year picker compares against is always what the
+  // server holds (#429) — measured against a stale one, a real unsaved change
+  // reads as clean and switching year discards it in silence.
+  async function loadSponsor(preferEditionId?: number) {
+    if (!sponsorId) return;
+    await adminFetch<SponsorData>(`/sponsors/${sponsorId}`).then(({ data, status }) => {
         if (status === 404 || !data) {
           router.push("/admin/sponsors");
           return;
         }
         setCurrent(data);
+
+        // Which year the sheet opens on. The link from an edition's Sponsors
+        // tab carries `?editionId=` so it lands on the participation the
+        // organiser was looking at; without it, the most recent one, which is
+        // what the API flattens on top of the payload (#429).
+        const chosen =
+          data.editions?.find((e) => e.editionId === preferEditionId) ??
+          data.editions?.[0] ??
+          null;
+        const chosenValue = chosen
+          ? participationValue(chosen, data.logoUrl)
+          : {
+              tierId: data.tierId,
+              logoUrl: data.logoUrl || "",
+              publicationStatus: data.publicationStatus,
+              comKitReceived: data.comKitReceived ?? false,
+              comKitLogoWebUrl: data.comKitLogoWebUrl || "",
+              comKitLogoPrintUrl: data.comKitLogoPrintUrl || "",
+              comKitCharterUrl: data.comKitCharterUrl || "",
+              comKitNotes: data.comKitNotes || "",
+              platinumPromoIdea: data.platinumPromoIdea || "",
+              platinumCoBuildIdea: data.platinumCoBuildIdea || "",
+            };
+
         setForm({
           name: data.name,
           websiteUrl: data.websiteUrl || "",
@@ -101,24 +173,13 @@ export default function SponsorEditorPage() {
           twitter: data.socialLinks?.twitter || "",
           bluesky: data.socialLinks?.bluesky || "",
           locale: data.locale === "en" ? "en" : "fr",
-          tierId: data.tierId,
-          logoUrl: data.logoUrl || "",
-          publicationStatus: data.publicationStatus,
-          comKitReceived: data.comKitReceived ?? false,
-          comKitLogoWebUrl: data.comKitLogoWebUrl || "",
-          comKitLogoPrintUrl: data.comKitLogoPrintUrl || "",
-          comKitCharterUrl: data.comKitCharterUrl || "",
-          comKitNotes: data.comKitNotes || "",
-          platinumPromoIdea: data.platinumPromoIdea || "",
-          platinumCoBuildIdea: data.platinumCoBuildIdea || "",
+          ...chosenValue,
         });
-        setEditionId(data.editionId);
-        setEditionYear(data.edition?.year ?? null);
+        setEditionId(chosen?.editionId ?? data.editionId);
+        setEditionYear(chosen?.edition.year ?? data.edition?.year ?? null);
         setIsLoading(false);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sponsorId, isNew]);
+    });
+  }
 
   function handleTabChange(tab: string) {
     setActiveTab(tab);
@@ -182,6 +243,8 @@ export default function SponsorEditorPage() {
       // Stays on the page rather than redirecting to the list (#394): the
       // redirect was the only signal, and it looked exactly like Cancel.
       setSaveState({ kind: "ok", text: "Modifications enregistrées." });
+      // Stay on the year that was just saved.
+      await loadSponsor(editionId);
     }
   }
 
@@ -293,6 +356,11 @@ export default function SponsorEditorPage() {
                     Propre à cette édition : le niveau et le logo saisis ici ne touchent pas aux
                     autres années.
                   </p>
+                  <SponsorYearPicker
+                    participations={participations}
+                    editionId={editionId}
+                    onChange={requestYear}
+                  />
                   <SponsorParticipationFields value={form} onChange={setForm} tiers={tiers} year={editionYear} />
 
                   {current && (
@@ -306,10 +374,17 @@ export default function SponsorEditorPage() {
 
               {activeTab === COM_KIT_TAB && (
                 <section>
-                  <h2 className="mb-1 text-lg font-semibold text-noir">Kit de com</h2>
+                  <h2 className="mb-1 text-lg font-semibold text-noir">
+                    Kit de com{editionYear ? ` ${editionYear}` : ""}
+                  </h2>
                   <p className="mb-4 text-sm text-gris">
                     Fourni par le sponsor pour cette édition. Jamais publié sur le site.
                   </p>
+                  <SponsorYearPicker
+                    participations={participations}
+                    editionId={editionId}
+                    onChange={requestYear}
+                  />
                   <SponsorComKitFields value={form} onChange={setForm} tiers={tiers} year={editionYear} />
                 </section>
               )}
@@ -326,6 +401,20 @@ export default function SponsorEditorPage() {
             </div>
           </>
         )}
+
+        <ConfirmDialog
+          isOpen={pendingYear !== null}
+          title={`Passer à ${pendingYear?.edition.year ?? ""} ?`}
+          message={`Les modifications non enregistrées de ${editionYear ?? "cette année"} seront perdues. Enregistrez d'abord si vous voulez les garder.`}
+          confirmLabel="Changer d'année"
+          variant="danger"
+          onConfirm={() => {
+            const next = pendingYear;
+            setPendingYear(null);
+            if (next) applyYear(next);
+          }}
+          onCancel={() => setPendingYear(null)}
+        />
 
         {existingSponsorId !== null && (
           <div className="mt-4 rounded-lg border border-orange/40 bg-orange/10 p-3 text-sm text-noir">

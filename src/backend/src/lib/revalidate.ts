@@ -59,6 +59,22 @@ export function revalidateEdition(year: number): Promise<void> {
   ]);
 }
 
+/**
+ * A venue changed (#105) — purge every page that prints it.
+ *
+ * `/lieu` had no purge at all until now: the practical-info page shipped with
+ * #109 without one, so a corrected address stayed stale for an hour. The home
+ * page carries the venue in its strap line, hence both.
+ */
+export function revalidateVenue(): Promise<void> {
+  return revalidatePaths([
+    ...bilingualPaths(""),
+    ...bilingualPaths("/lieu"),
+    // Renaming a room changes the grid's column headers (#106).
+    ...bilingualPaths("/programme"),
+  ]);
+}
+
 export function revalidateBilletterie(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
@@ -104,6 +120,10 @@ export function revalidateConferences(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),
     ...bilingualPaths("/conferences"),
+    // The grid (#106) reads the same talks, plus the off-session entries the
+    // schedule screens write. Placing a session must show there immediately —
+    // the organisers publish the planning right up to the day before.
+    ...bilingualPaths("/programme"),
   ]);
 }
 

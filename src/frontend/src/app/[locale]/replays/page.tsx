@@ -6,6 +6,7 @@ import Breadcrumb from "@/components/Breadcrumb";
 import ReplayCard from "@/components/replays/ReplayCard";
 import ReplayFiltersBar from "@/components/replays/ReplayFiltersBar";
 import type { TalkFormat } from "@/lib/types";
+import { pageMetadata } from "@/lib/page-metadata";
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getLocale();
@@ -13,10 +14,7 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("pageTitle"),
     description: t("description"),
-    alternates: {
-      canonical: `/${locale}/replays`,
-      languages: { fr: "/fr/replays", en: "/en/replays", "x-default": "/fr/replays" },
-    },
+    ...(await pageMetadata(locale, "/replays")),
   };
 }
 

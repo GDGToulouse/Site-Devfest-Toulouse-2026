@@ -47,6 +47,9 @@ describe("getPublicNavEntries", () => {
     const entries = getPublicNavEntries(edition({ isScheduleReady: true, isProgramPublished: true }));
     const program = entries.find((e) => e.key === "program");
     expect(program).toBeDefined();
+    // The parent is the grid itself since #106 — it pointed at /conferences
+    // while the page did not exist yet.
+    expect(program?.href).toBe("/programme");
     expect(program?.children?.map((c) => c.key)).toEqual(["conferences"]);
     // Not also a flat conferences entry — schedule-ready supersedes it.
     expect(keys(entries)).not.toContain("conferences");
