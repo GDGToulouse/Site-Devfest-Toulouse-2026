@@ -180,7 +180,7 @@ config prod critique (détails : [`docs/mise-en-production.md`](../../../docs/mi
 Vérifier la **version réellement déployée** (garde-fou #171) :
 
 ```bash
-curl -s https://site.devfesttoulouse.fr/api/health
+curl -s https://devfesttoulouse.fr/api/health
 # → doit renvoyer "version":"X.Y.Z" == le bump de l'étape 2
 ```
 
