@@ -12,6 +12,94 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.8.0] - 2026-08-25
+
+Le **programme du DevFest devient consultable** : une grille horaire par salle et
+par créneau, des favoris qu'on retrouve d'une visite à l'autre, et l'export de sa
+sélection vers son agenda ou sur papier. Pour y arriver, le lieu cesse d'être sept
+colonnes recopiées sur chaque édition pour devenir une **entité partagée**, avec
+ses salles.
+
+Le reste de la version est une passe SEO sur les titres, les balises sociales et
+le sitemap — plusieurs de ces défauts étaient visibles en production depuis
+plusieurs semaines.
+
+> ⚠️ **Cette version contient une migration destructrice**
+> (`programme_venue_rooms`) : les sept colonnes `venue*` quittent `Edition` pour
+> une entité `Venue`, et `Talk.room` devient une relation vers `Room`, avant que
+> les colonnes d'origine soient supprimées. Sauvegarde de la base obligatoire
+> avant déploiement.
+>
+> Le **contrat de l'API publique ne change pas** : la sérialisation aplatit la
+> relation et rend exactement la même charge utile. Aucune page publique n'a été
+> touchée.
+
+### Ajouté
+
+- **Grille horaire publique** : les sessions par salle et par créneau, avec la
+  vue agenda en repli sur mobile. La grille desktop tient huit salles de front, et
+  l'en-tête des salles reste visible au défilement (#106, #441, #455).
+- **Favoris de sessions** : on marque ce qu'on veut voir, la sélection se rejoue
+  par l'URL et se retrouve sur le même navigateur sans avoir gardé le lien
+  (#442, #461).
+- **Export de son programme** vers Google Agenda, Outlook ou un fichier `.ics`,
+  et un rendu d'impression pensé pour le papier plutôt que pour l'écran
+  (#108, #443, #449).
+- **Modèle Lieu / Salle / entrée hors-session** : un lieu est réutilisable d'une
+  édition à l'autre, une salle porte sa capacité et son rang dans la grille, et
+  les pauses, déjeuners et soirées ont enfin leur place — le programme d'une
+  journée n'est pas fait que de conférences (#105).
+- **Écrans d'administration des lieux et des salles**, et la saisie de la salle et
+  des horaires sur la fiche d'une conférence (#105).
+
+### Modifié
+
+- **Une barre de contrôles unique sur le programme** : filtrer d'un côté, agir de
+  l'autre. Les filtres sont repliés par défaut, le menu Exporter annonce ce qu'il
+  exporte, et il reste atteignable sur mobile (#448, #459, #460).
+- **Les keynotes sont des conférences**, plus des bandes qui traversent la grille :
+  elles ont un titre, un orateur et une fiche comme les autres (#456).
+- **Carte de session allégée**, avec la photo de l'orateur cliquable directement
+  depuis la grille (#457, #463).
+- **Un fichier garde le nom qu'il avait à l'envoi** au lieu d'un identifiant
+  opaque : ce qui est téléchargé depuis le site est reconnaissable (#378).
+
+### Corrigé
+
+- **Six conférences répondaient 500** : `maxParamLength` de Fastify plafonne les
+  paramètres de route à 100 caractères et refusait les slugs plus longs, dans le
+  routeur, avant tout gestionnaire (#467).
+- **Un quart du sitemap était un doublon** : chaque conférence y figurait dans les
+  deux langues alors qu'elle n'a été donnée que dans une. Elle est désormais
+  canonique dans sa langue, l'autre version pointant vers elle (#468).
+- **Les 60 anciennes URL `/sponsor/<slug>` répondaient 200** au lieu de 404, et
+  les espaces privés étaient atteignables (#466).
+- **Balises sociales** : `og:image` et `twitter:image` divergeaient, `og:url` était
+  absent et le `x-default` contredisait le HTML. Un seul constructeur les produit
+  maintenant, et l'image Open Graph fait 1200×630 au lieu de 600×271 — LinkedIn
+  l'ignorait (#384, #235).
+- **Titres et descriptions** : l'accueil n'avait pas de métadonnées, `/replays`
+  doublait la marque, les pages de tag n'avaient pas de nom, et six descriptions
+  françaises étaient trop courtes pour être affichées entières (#381).
+- **Les images du JSON-LD `Person` étaient relatives** là où Google attend une URL
+  absolue (#465).
+- **Ouvrir un PDF déposé dans les fichiers renvoyait 429** : les fichiers statiques
+  partageaient le budget de limitation d'appels de l'API (#469).
+- **Une session à cheval sur plusieurs créneaux ne s'affichait que sur le premier**
+  (#462).
+- **Le manifeste déclarait des icônes 192 et 512** pour un fichier de 96×96, figé
+  au build (#432).
+- **Espace partenaire et éditeur d'articles** : les messages d'erreur et de succès
+  n'étaient pas annoncés aux lecteurs d'écran, et l'échec d'une traduction passait
+  inaperçu — WCAG 2.1 AA (#427, #434).
+- **Le retour d'une action en admin s'affichait hors du champ visible**, donc jamais
+  lu (#453).
+- **Le niveau et le logo d'une participation passée n'étaient éditables nulle part**
+  depuis la refonte du modèle sponsor (#429).
+- **Environnement de développement** : `seed-dev` n'appliquait jamais les mots de
+  passe documentés sur une base neuve, et ne réparait pas les coordonnées du lieu,
+  ce qui laissait `/fr/lieu` en 404 en local (#433, #452).
+
 ## [1.7.0] - 2026-08-20
 
 Après le speaker en 1.6.0, c'est au tour du **sponsor de devenir une entreprise
