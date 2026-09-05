@@ -1,13 +1,16 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { CfpSettings, Edition, SocialLinks } from "@/lib/types";
+import type { CfpSettings, ContentPageSummary, Edition, SocialLinks } from "@/lib/types";
 
 interface EditionContextValue {
   edition: Edition | null;
   cfp: CfpSettings | null;
   identity: Record<string, string>;
   socialLinks: SocialLinks;
+  // Published admin-authored pages, so the header — a client component — can
+  // place the ones an editor put in the menu (#420).
+  pages: ContentPageSummary[];
 }
 
 const EditionContext = createContext<EditionContextValue>({
@@ -15,6 +18,7 @@ const EditionContext = createContext<EditionContextValue>({
   cfp: null,
   identity: {},
   socialLinks: {},
+  pages: [],
 });
 
 export function EditionProvider({
@@ -22,16 +26,18 @@ export function EditionProvider({
   cfp,
   identity,
   socialLinks,
+  pages = [],
   children,
 }: {
   edition: Edition | null;
   cfp: CfpSettings | null;
   identity: Record<string, string>;
   socialLinks: SocialLinks;
+  pages?: ContentPageSummary[];
   children: React.ReactNode;
 }) {
   return (
-    <EditionContext.Provider value={{ edition, cfp, identity, socialLinks }}>
+    <EditionContext.Provider value={{ edition, cfp, identity, socialLinks, pages }}>
       {children}
     </EditionContext.Provider>
   );
@@ -51,4 +57,8 @@ export function useIdentitySettings() {
 
 export function useSocialLinks() {
   return useContext(EditionContext).socialLinks;
+}
+
+export function useNavPages() {
+  return useContext(EditionContext).pages;
 }

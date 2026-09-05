@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 
-import { getPublicNavEntries } from "./nav";
-import type { Edition } from "./types";
+import { getFooterPageEntries, getPublicNavEntries } from "./nav";
+import type { ContentPageSummary, Edition } from "./types";
 import fr from "../../messages/fr.json";
 import en from "../../messages/en.json";
 
@@ -125,5 +125,79 @@ describe("getPublicNavEntries", () => {
       }),
     );
     expect(keys(entries)).toEqual(["conferences", "speakers", "sponsors", "venue", "blog"]);
+  });
+});
+
+// #420 — admin-authored pages join the navigation. Only the placement is the
+// editor's to choose: the system entries keep their status-driven order.
+
+function page(overrides: Partial<ContentPageSummary> = {}): ContentPageSummary {
+  return {
+    id: 1,
+    slug: "une-page",
+    titleFr: "Une page",
+    titleEn: "A page",
+    hasEnglish: true,
+    navLocation: "HEADER",
+    navOrder: 0,
+    updatedAt: "2026-08-25T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+describe("content pages in the navigation", () => {
+  it("appends a header page after the system entries, never between them", () => {
+    const entries = getPublicNavEntries(
+      edition({ isProgramPublished: true, hasSpeakers: true }),
+      [page({ slug: "recrutement" })],
+    );
+    expect(keys(entries)).toEqual(["conferences", "speakers", "blog", "page-recrutement"]);
+  });
+
+  it("keeps a footer page out of the main menu", () => {
+    const entries = getPublicNavEntries(edition(), [page({ navLocation: "FOOTER" })]);
+    expect(keys(entries)).toEqual(["blog"]);
+    expect(getFooterPageEntries([page({ navLocation: "FOOTER" })]).map((e) => e.key)).toEqual([
+      "page-une-page",
+    ]);
+  });
+
+  it("shows a page placed nowhere in neither navigation", () => {
+    const nowhere = [page({ navLocation: "NONE" })];
+    expect(keys(getPublicNavEntries(edition(), nowhere))).toEqual(["blog"]);
+    expect(getFooterPageEntries(nowhere)).toEqual([]);
+  });
+
+  it("orders pages by navOrder, then by slug when they tie", () => {
+    const entries = getPublicNavEntries(edition(), [
+      page({ slug: "troisieme", navOrder: 2 }),
+      page({ slug: "beta", navOrder: 1 }),
+      page({ slug: "alpha", navOrder: 1 }),
+    ]);
+    expect(keys(entries)).toEqual(["blog", "page-alpha", "page-beta", "page-troisieme"]);
+  });
+
+  it("carries a literal label rather than an i18n key", () => {
+    const [entry] = getFooterPageEntries([
+      page({ navLocation: "FOOTER", titleFr: "Nous rejoindre", titleEn: "Join us" }),
+    ]);
+    expect(entry.label).toBe("Nous rejoindre");
+    expect(entry.href).toBe("/une-page");
+  });
+
+  it("switches the label to English on the /en side", () => {
+    const [entry] = getFooterPageEntries(
+      [page({ navLocation: "FOOTER", titleFr: "Nous rejoindre", titleEn: "Join us" })],
+      "en",
+    );
+    expect(entry.label).toBe("Join us");
+  });
+
+  it("falls back to the French title when the English one is empty", () => {
+    const [entry] = getFooterPageEntries(
+      [page({ navLocation: "FOOTER", titleFr: "Nous rejoindre", titleEn: "  " })],
+      "en",
+    );
+    expect(entry.label).toBe("Nous rejoindre");
   });
 });

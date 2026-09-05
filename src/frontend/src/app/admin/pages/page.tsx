@@ -6,12 +6,29 @@ import BilingualInput from "@/components/admin/BilingualInput";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+
+// Served by their own route and linked from every footer: the backend refuses
+// to unpublish or trash them, and the UI hides the actions rather than letting
+// an editor discover the refusal (#419).
+const SYSTEM_SLUGS = ["code-de-conduite", "mentions-legales"];
+
+type NavLocation = "NONE" | "HEADER" | "FOOTER";
+
+const NAV_LABELS: Record<NavLocation, string> = {
+  NONE: "Nulle part — accessible par son adresse uniquement",
+  HEADER: "Menu principal",
+  FOOTER: "Pied de page",
+};
 
 interface PageSummary {
   id: number;
   slug: string;
   titleFr: string;
   titleEn: string;
+  isPublished: boolean;
+  navLocation: NavLocation;
+  navOrder: number;
   updatedAt: string;
 }
 
@@ -31,6 +48,8 @@ export default function PagesAdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(null);
+  const [deleteTarget, setDeleteTarget] = useState<PageSummary | null>(null);
+  const [listState, setListState] = useState<SaveState>(null);
 
   async function loadPages() {
     setIsLoading(true);
@@ -93,6 +112,9 @@ export default function PagesAdminPage() {
         titleEn: editing.titleEn,
         contentFr: editing.contentFr,
         contentEn: editing.contentEn,
+        isPublished: editing.isPublished,
+        navLocation: editing.navLocation,
+        navOrder: editing.navOrder,
       }),
     });
     setIsSaving(false);
@@ -103,6 +125,25 @@ export default function PagesAdminPage() {
       return;
     }
     setEditing(null);
+    loadPages();
+  }
+
+  async function handleDelete() {
+    if (!deleteTarget) return;
+    const target = deleteTarget;
+    setDeleteTarget(null);
+    const { status } = await adminFetch(`/pages/${target.id}`, { method: "DELETE" });
+    if (status !== 200) {
+      setListState({
+        kind: "error",
+        text:
+          status === 409
+            ? "Cette page est servie par une route dédiée et ne peut pas être supprimée."
+            : "La suppression a échoué. Réessayez.",
+      });
+      return;
+    }
+    setListState({ kind: "ok", text: `« ${target.titleFr} » est dans la corbeille.` });
     loadPages();
   }
 
@@ -157,6 +198,10 @@ export default function PagesAdminPage() {
               />
             </div>
           </div>
+          <p className="text-xs text-gris">
+            La page est créée en brouillon. Elle ne sera visible qu&apos;une fois publiée depuis son
+            écran de modification.
+          </p>
           {createError && (
             <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{createError}</p>
           )}
@@ -199,6 +244,71 @@ export default function PagesAdminPage() {
             }
           />
 
+          {SYSTEM_SLUGS.includes(editing.slug) ? (
+            <p className="text-sm text-gris">
+              Cette page a sa propre adresse et un lien permanent en pied de page : elle reste
+              publiée.
+            </p>
+          ) : (
+            <div className="rounded-lg border border-gris/20 p-4">
+              <label className="flex items-center gap-3 text-sm text-noir">
+                <input
+                  type="checkbox"
+                  checked={editing.isPublished}
+                  onChange={(e) => setEditing({ ...editing, isPublished: e.target.checked })}
+                  className="size-4 accent-malachite"
+                />
+                <span className="font-medium">Page publiée</span>
+              </label>
+              <p className="mt-2 text-xs text-gris">
+                {editing.isPublished
+                  ? `Visible de tous à l'adresse /${editing.slug}.`
+                  : "Brouillon : la page répond 404 pour les visiteurs et n'apparaît pas au plan du site."}
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+                <div>
+                  <label htmlFor="navLocation" className="block text-sm font-medium text-noir mb-1">
+                    Emplacement dans la navigation
+                  </label>
+                  <select
+                    id="navLocation"
+                    value={editing.navLocation}
+                    onChange={(e) =>
+                      setEditing({ ...editing, navLocation: e.target.value as NavLocation })
+                    }
+                    className="w-full rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  >
+                    {(Object.keys(NAV_LABELS) as NavLocation[]).map((value) => (
+                      <option key={value} value={value}>
+                        {NAV_LABELS[value]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="navOrder" className="block text-sm font-medium text-noir mb-1">
+                    Ordre
+                  </label>
+                  <input
+                    id="navOrder"
+                    type="number"
+                    value={editing.navOrder}
+                    onChange={(e) =>
+                      setEditing({ ...editing, navOrder: Number(e.target.value) || 0 })
+                    }
+                    className="w-24 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                  />
+                </div>
+              </div>
+              <p className="mt-2 text-xs text-gris">
+                Les pages s&apos;ajoutent après les entrées du site (Programme, Conférenciers,
+                Sponsors…), du plus petit ordre au plus grand. Un brouillon n&apos;apparaît nulle
+                part, quel que soit son emplacement.
+              </p>
+            </div>
+          )}
+
           <div className="flex items-center justify-end gap-3">
             <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
@@ -207,31 +317,66 @@ export default function PagesAdminPage() {
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-blanc-casse/60 border-b border-gris/20">
-                <th className="text-left px-4 py-3 font-medium text-gris">Slug</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Titre (FR)</th>
-                <th className="text-left px-4 py-3 font-medium text-gris">Mis à jour</th>
-                <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pages.map((page) => (
-                <tr key={page.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
-                  <td className="px-4 py-3 text-noir font-medium">/{page.slug}</td>
-                  <td className="px-4 py-3 text-noir">{page.titleFr}</td>
-                  <td className="px-4 py-3 text-gris text-xs">{new Date(page.updatedAt).toLocaleDateString("fr-FR")}</td>
-                  <td className="px-4 py-3 text-right">
-                    <button onClick={() => startEdit(page)} className="text-bleu hover:underline text-sm">Modifier</button>
-                  </td>
+        <>
+          <div className="mb-4 flex justify-end">
+            <SaveFeedback state={listState} onDismiss={() => setListState(null)} />
+          </div>
+          <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-blanc-casse/60 border-b border-gris/20">
+                  <th className="text-left px-4 py-3 font-medium text-gris">Slug</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Titre (FR)</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Statut</th>
+                  <th className="text-left px-4 py-3 font-medium text-gris">Mis à jour</th>
+                  <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {pages.map((page) => (
+                  <tr key={page.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
+                    <td className="px-4 py-3 text-noir font-medium">/{page.slug}</td>
+                    <td className="px-4 py-3 text-noir">{page.titleFr}</td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={
+                          page.isPublished
+                            ? "inline-block rounded-full bg-malachite/15 px-2 py-0.5 text-xs font-medium text-malachite"
+                            : "inline-block rounded-full bg-gris/15 px-2 py-0.5 text-xs font-medium text-gris"
+                        }
+                      >
+                        {page.isPublished ? "Publiée" : "Brouillon"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-gris text-xs">{new Date(page.updatedAt).toLocaleDateString("fr-FR")}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button onClick={() => startEdit(page)} className="text-bleu hover:underline text-sm">Modifier</button>
+                      {!SYSTEM_SLUGS.includes(page.slug) && (
+                        <button
+                          onClick={() => setDeleteTarget(page)}
+                          className="ml-4 text-terre-cuite hover:underline text-sm"
+                        >
+                          Supprimer
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
+
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="Supprimer cette page ?"
+        message={`« ${deleteTarget?.titleFr} » ira à la corbeille et ne sera plus accessible à l'adresse /${deleteTarget?.slug}. Vous pourrez la restaurer depuis la corbeille.`}
+        confirmLabel="Supprimer"
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

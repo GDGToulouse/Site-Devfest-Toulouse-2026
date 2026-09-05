@@ -57,7 +57,8 @@ describe("Admin Pages API", () => {
     const getRes2 = await app.inject({ method: "GET", url: `/api/admin/pages/${id}` });
     expect(getRes2.json().titleFr).toBe("Page Test FR Modifiee");
 
-    // Cleanup via Prisma (no DELETE endpoint for pages)
+    // Hard delete: the DELETE route is a soft one (#419), which would leave the
+    // row behind and defeat the cleanup.
     await prisma.contentPage.delete({ where: { id } });
 
     await app.close();

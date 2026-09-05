@@ -2,6 +2,7 @@ import type { MetadataRoute } from "next";
 import {
   getArticles,
   getContentPage,
+  getPublishedPages,
   getCurrentEdition,
   getEditions,
   getEditionTalks,
@@ -146,6 +147,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           locales,
           path,
           lastModified,
+          "monthly",
+          0.4,
+        ),
+      );
+    }
+  }
+
+  // Pages created from the admin, served by the [locale]/[slug] segment (#421).
+  // Only published ones are listed — a draft is a 404 (#419). The two routes
+  // above have their own path and are excluded here to avoid a duplicate entry.
+  const cmsSlugs = new Set<string>(CMS_BACKED_ROUTES.map((r) => r.slug));
+  for (const page of await getPublishedPages()) {
+    if (cmsSlugs.has(page.slug)) continue;
+    const path = `/${page.slug}`;
+    const locales: Locale[] = page.hasEnglish ? ["fr", "en"] : ["fr"];
+    for (const locale of locales) {
+      entries.push(
+        buildEntry(
+          `${BASE_URL}/${locale}${path}`,
+          locales,
+          path,
+          toDate(page.updatedAt),
           "monthly",
           0.4,
         ),
