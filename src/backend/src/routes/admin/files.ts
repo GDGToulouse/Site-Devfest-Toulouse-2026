@@ -15,6 +15,7 @@ import {
 } from "../../lib/image-store.js";
 import { sanitizeSvg } from "../../lib/svg-sanitize.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
+import { listFileReferences, type FileReferenceUsage } from "../../lib/trash-files.js";
 
 const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
@@ -35,6 +36,27 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
+
+// What each model is called in the refusal shown to the admin (#486). The
+// message has to name the place to go and fix it, not a Prisma delegate.
+const USAGE_LABELS: Record<string, { one: string; many: string }> = {
+  article: { one: "un article", many: "articles" },
+  speaker: { one: "un speaker", many: "speakers" },
+  sponsor: { one: "un sponsor", many: "sponsors" },
+  editionSponsor: { one: "une participation sponsor", many: "participations sponsor" },
+  edition: { one: "une édition", many: "éditions" },
+  siteSetting: { one: "les réglages du site", many: "les réglages du site" },
+};
+
+function describeUsages(usages: readonly FileReferenceUsage[]): string {
+  const parts = usages.map(({ model, count }) => {
+    const label = USAGE_LABELS[model];
+    if (!label) return `${count} ligne(s) « ${model} »`;
+    return count > 1 ? `${count} ${label.many}` : label.one;
+  });
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(", ")} et ${parts[parts.length - 1]}`;
+}
 
 export default async function adminFileRoutes(app: FastifyInstance) {
   // POST /api/admin/files — upload a single file (image or document)
@@ -322,6 +344,20 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       // Prevent path traversal
       if (filename.includes("/") || filename.includes("\\") || filename.includes("..")) {
         return reply.code(400).send({ error: "Invalid filename" });
+      }
+
+      // The media library is shared: a file here may be a speaker's photo, a
+      // sponsor's frozen logo or the site's own header logo. Deleting it used to
+      // always succeed, leaving the referencing column pointing at nothing and
+      // the public page showing a broken image — no fallback fires, because
+      // photoUrl is still set (#486). The counter already existed for the trash
+      // purge; this is the path that never asked it.
+      const usages = await listFileReferences(`/uploads/${filename}`);
+      if (usages.length > 0) {
+        return reply.code(409).send({
+          error: `Ce fichier est encore utilisé par ${describeUsages(usages)}. Remplacez-le là où il sert avant de le supprimer.`,
+          usages,
+        });
       }
 
       const filePath = path.join(UPLOADS_DIR, filename);

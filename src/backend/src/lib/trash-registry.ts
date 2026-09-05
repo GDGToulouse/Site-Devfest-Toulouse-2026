@@ -140,6 +140,27 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
   },
 ];
 
+/**
+ * Models that hold /uploads/ columns without being soft-deletable (#486).
+ *
+ * The reference count has to span every column that can point at an upload, but
+ * the trash only knows the entities it can restore. `EditionSponsor` is what
+ * revealed the gap: it carries the logo frozen for one edition (#375) plus the
+ * com-kit files picked from the media library, and a file used only there was
+ * counted as unreferenced — so purging any other row pointing at it erased a
+ * past edition's logo.
+ *
+ * Kept beside TRASH_ENTITIES rather than in a second file: the two are read
+ * together by `FILE_REFERENCES`, and splitting them is how the flat list this
+ * registry replaced went out of date.
+ */
+export const FILE_ONLY_MODELS: readonly { model: string; fileFields: readonly string[] }[] = [
+  {
+    model: "editionSponsor",
+    fileFields: ["logoUrl", "comKitLogoWebUrl", "comKitLogoPrintUrl", "comKitCharterUrl"],
+  },
+];
+
 export function findTrashEntity(key: string): TrashEntity | undefined {
   return TRASH_ENTITIES.find((e) => e.key === key);
 }
