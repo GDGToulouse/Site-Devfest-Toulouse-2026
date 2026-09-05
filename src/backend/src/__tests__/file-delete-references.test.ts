@@ -99,10 +99,12 @@ describe("deleting a file from the media library", () => {
   // logo breaks the header of every page on the site.
   it("refuses one held by the site settings", async () => {
     const filename = await writeUpload();
-    await prisma.siteSetting.create({
-      data: { key: "identity_logo_main", value: `/uploads/${filename}` },
-    });
-    settingKeys.push("identity_logo_main");
+    // A key of its own rather than the real `identity_logo_main`: the scan is
+    // on `value`, so the key is irrelevant to what is verified, and borrowing a
+    // real one collides with whatever the local database already holds.
+    const key = `test_identity_logo_${Date.now()}`;
+    await prisma.siteSetting.create({ data: { key, value: `/uploads/${filename}` } });
+    settingKeys.push(key);
 
     const res = await deleteFile(filename);
 
@@ -110,15 +112,13 @@ describe("deleting a file from the media library", () => {
     expect(res.json().error).toContain("réglages du site");
   });
 
-  it("refuses one buried in the carousel's JSON", async () => {
+  it("refuses one buried in a setting's JSON, as the carousel stores it", async () => {
     const filename = await writeUpload();
+    const key = `test_about_carousel_${Date.now()}`;
     await prisma.siteSetting.create({
-      data: {
-        key: "about_carousel",
-        value: JSON.stringify([{ url: `/uploads/${filename}`, alt: "Ambiance" }]),
-      },
+      data: { key, value: JSON.stringify([{ url: `/uploads/${filename}`, alt: "Ambiance" }]) },
     });
-    settingKeys.push("about_carousel");
+    settingKeys.push(key);
 
     const res = await deleteFile(filename);
 
