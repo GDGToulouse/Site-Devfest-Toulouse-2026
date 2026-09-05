@@ -113,9 +113,14 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
             upload was served as-is and the browser only discovered it after
             parsing the CSS, pushing LCP past 20 s on slow 4G (#197). Rendering
             it through <Image priority> gets it WebP/AVIF conversion, a size
-            matched to the viewport, a preload in the document head and
-            fetchpriority=high. The overlay reproduces the darkening gradient
-            the background used to carry. */}
+            matched to the viewport and a preload in the document head. The
+            overlay reproduces the darkening gradient the background used to
+            carry.
+
+            `fetchPriority` is passed explicitly: `priority` alone stopped
+            emitting it in Next 16, and the LCP request went out at Low priority
+            behind everything else — 498 ms of load delay for a download that
+            takes 1 ms (#473). */}
         <div className="hero-photo" aria-hidden="true">
           {heroImageUrl && (
             <Image
@@ -123,6 +128,7 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
               alt=""
               fill
               priority
+              fetchPriority="high"
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="hero-photo-img"
             />
