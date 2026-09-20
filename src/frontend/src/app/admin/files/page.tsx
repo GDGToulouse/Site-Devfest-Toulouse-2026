@@ -115,12 +115,14 @@ export default function FilesAdminPage() {
   async function handleDelete() {
     if (!deleteTarget) return;
     setError("");
-    const { status } = await adminFetch(`/files/${deleteTarget}`, { method: "DELETE" });
+    const { status, error: serverError } = await adminFetch(`/files/${deleteTarget}`, {
+      method: "DELETE",
+    });
     setDeleteTarget(null);
-    // A file still referenced elsewhere comes back on the next load; without
-    // this the dialog just closed and the file silently reappeared (#412).
+    // The server now refuses in 409 and names the entities still using the file
+    // (#486) — show its sentence rather than the guess this used to print.
     if (status !== 204 && status !== 200) {
-      setError("La suppression a échoué. Le fichier est peut-être encore utilisé.");
+      setError(serverError ?? "La suppression a échoué. Réessayez.");
       return;
     }
     loadFiles();

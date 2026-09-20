@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useLocale, useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { Link, usePathname } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
@@ -32,6 +32,14 @@ export default function Header() {
 
   const navEntries = getPublicNavEntries(edition, pages, locale);
 
+  // next/link prefetches a target without noticing the visitor is already on
+  // it: standing on the home page, the logo link had the server re-render /fr
+  // for nothing (#476). An `_rsc` prefetch is a server render, not a static
+  // file, so it costs on both ends — and on a throttled link it competes with
+  // the page still loading.
+  const pathname = usePathname();
+  const prefetchUnlessHere = (href: string) => (href === pathname ? false : undefined);
+
   return (
     <header
       role="banner"
@@ -40,7 +48,7 @@ export default function Header() {
       <div className="mx-auto flex h-full max-w-[1440px] items-center px-4 lg:px-[100px]">
         {/* Logo + Nav grouped on left */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="shrink-0">
+          <Link href="/" prefetch={prefetchUnlessHere("/")} className="shrink-0">
             <Image
               src={logoUrl}
               alt="DevFest Toulouse"
@@ -57,6 +65,7 @@ export default function Header() {
                 <div key={entry.key} className="group relative">
                   <Link
                     href={entry.href}
+                    prefetch={prefetchUnlessHere(entry.href)}
                     className="flex items-center gap-1 text-gris text-base hover:text-noir transition-colors"
                     aria-haspopup="true"
                   >
@@ -70,6 +79,7 @@ export default function Header() {
                       <Link
                         key={child.key}
                         href={child.href}
+                        prefetch={prefetchUnlessHere(child.href)}
                         className="px-4 py-2 text-gris text-base hover:text-noir hover:bg-blanc-casse transition-colors"
                       >
                         {child.label ?? t(child.labelKey)}
@@ -81,6 +91,7 @@ export default function Header() {
                 <Link
                   key={entry.key}
                   href={entry.href}
+                  prefetch={prefetchUnlessHere(entry.href)}
                   className="text-gris text-base hover:text-noir transition-colors"
                 >
                   {entry.label ?? t(entry.labelKey)}
@@ -147,6 +158,7 @@ export default function Header() {
               <div key={entry.key} className="flex flex-col gap-4">
                 <Link
                   href={entry.href}
+                  prefetch={prefetchUnlessHere(entry.href)}
                   className="text-gris text-base hover:text-noir transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
@@ -156,6 +168,7 @@ export default function Header() {
                   <Link
                     key={child.key}
                     href={child.href}
+                    prefetch={prefetchUnlessHere(child.href)}
                     className="pl-4 text-gris text-base hover:text-noir transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
