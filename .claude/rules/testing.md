@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/**"
+---
+
 # Testing
 
 ## Strategy
@@ -26,13 +31,9 @@ A test that passes without the fix proves nothing. When fixing a bug, make the t
 
 ### 2 — Run the suites
 
-```bash
-# frontend
-cd src/frontend && pnpm exec vitest run
-
-# backend — DATABASE_URL must point at localhost, or ~44 tests fail with 500s
-cd src/backend && DATABASE_URL="postgresql://devfest:devfest@localhost:5432/devfest?schema=public" pnpm exec vitest run
-```
+The commands, in order, live in `aidd_docs/memory/coding-assertions.md` — one home, so they
+cannot drift. The backend runs inside its container: its `node_modules` is a named volume and
+the host folder is empty.
 
 Integration tests share one database and run in parallel: an isolated failure that does not
 reproduce is usually a fixture collision, not a regression. Re-run before chasing it, and say so
@@ -56,6 +57,11 @@ a stale `.next` volume, not a broken feature.
 
 Only once the suites pass and the feature has been seen working. State what was verified and
 what was not — an unobserved behaviour is not a verified one.
+
+A push is not finished until the CI has been read (`gh run list --branch <branch>`). Vitest does
+not typecheck: a backend that does not compile passes every suite and only fails in the build.
+A Prisma `Type 'null' is not assignable to type 'undefined'` on a foreign key is often a ghost —
+another field of the same `data` fails and TypeScript reports the other branch of the XOR.
 
 ### Non-negotiable
 

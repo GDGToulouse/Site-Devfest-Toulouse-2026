@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/**"
+---
+
 # Error Handling
 
 Usual principles hold: fail fast, let errors propagate through internal code, catch at system
