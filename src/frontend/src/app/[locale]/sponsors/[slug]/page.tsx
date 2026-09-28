@@ -5,7 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { getSponsorBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
-import { looksLikeHtml, htmlToText } from "@/lib/html";
+import { looksLikeHtml, htmlToText, markLinksSponsored, SPONSORED_LINK_REL } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 import { absoluteUrl, jsonLdScript } from "@/lib/seo";
@@ -113,7 +113,7 @@ export default async function SponsorDetailPage({
               looksLikeHtml(description) ? (
                 <div
                   className="article-content text-lg leading-relaxed text-noir"
-                  dangerouslySetInnerHTML={{ __html: description }}
+                  dangerouslySetInnerHTML={{ __html: markLinksSponsored(description) }}
                 />
               ) : (
                 <p className="text-lg leading-relaxed text-noir whitespace-pre-line">{description}</p>
@@ -132,7 +132,7 @@ export default async function SponsorDetailPage({
               <a
                 href={sponsor.websiteUrl}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel={SPONSORED_LINK_REL}
                 className="block rounded-[12px] bg-bleu px-6 py-3 text-center font-bold text-blanc transition-colors hover:bg-bleu/90"
               >
                 {t("visitWebsite")}
@@ -145,7 +145,7 @@ export default async function SponsorDetailPage({
                     <a
                       href={url}
                       target="_blank"
-                      rel="noopener noreferrer"
+                      rel={SPONSORED_LINK_REL}
                       className="text-bleu hover:underline capitalize"
                     >
                       {key}
@@ -205,13 +205,13 @@ export default async function SponsorDetailPage({
                   {description && (
                     <div
                       className="article-content mt-2 text-sm text-gris"
-                      dangerouslySetInnerHTML={{ __html: description }}
+                      dangerouslySetInnerHTML={{ __html: markLinksSponsored(description) }}
                     />
                   )}
                   <a
                     href={offer.url}
                     target="_blank"
-                    rel="noopener noreferrer"
+                    rel={SPONSORED_LINK_REL}
                     className="mt-3 inline-block font-bold text-bleu hover:underline"
                   >
                     {t("jobOfferCta")} →
