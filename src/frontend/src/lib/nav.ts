@@ -1,8 +1,9 @@
 import type { ContentPageSummary, Edition } from "@/lib/types";
 
 // A public navigation entry. `labelKey` is a key under the `nav` i18n
-// namespace. An entry may carry `children` — currently only "Programme",
-// which nests "Conférences" once the schedule (planning) is ready (#203).
+// namespace. An entry may carry one level of `children` — the header renders
+// no deeper — such as "Programme", which nests "Conférences" once the schedule
+// (planning) is ready (#203).
 export interface NavEntry {
   key: string;
   labelKey: string;
@@ -19,6 +20,12 @@ const CONFERENCES_ENTRY: NavEntry = {
   labelKey: "conferences",
   href: "/conferences",
 };
+
+// The replays span every edition (#489), so unlike the programme they never
+// wait for the current edition to publish talks: they hang under it when it
+// exists and stand on their own when it does not — the months between two
+// editions, when the archives are what the site has to show.
+const REPLAYS_ENTRY: NavEntry = { key: "replays", labelKey: "replays", href: "/replays" };
 
 const SPEAKERS_ENTRY: NavEntry = { key: "speakers", labelKey: "speakers", href: "/speakers" };
 const SPONSORS_ENTRY: NavEntry = { key: "sponsors", labelKey: "sponsors", href: "/sponsors" };
@@ -88,10 +95,12 @@ export function getPublicNavEntries(
       key: "program",
       labelKey: "program",
       href: "/programme",
-      children: [CONFERENCES_ENTRY],
+      children: [CONFERENCES_ENTRY, REPLAYS_ENTRY],
     });
   } else if (edition?.isProgramPublished) {
-    entries.push(CONFERENCES_ENTRY);
+    entries.push({ ...CONFERENCES_ENTRY, children: [REPLAYS_ENTRY] });
+  } else {
+    entries.push(REPLAYS_ENTRY);
   }
 
   if (edition?.hasSpeakers) entries.push({ ...SPEAKERS_ENTRY, children: [HALL_OF_FAME_CHILD] });
