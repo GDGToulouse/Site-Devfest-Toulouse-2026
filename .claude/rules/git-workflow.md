@@ -49,8 +49,10 @@ promotion vers `main`. Le détail est dans `docs/cycle-de-vie-issues.md`.
 
 ## Opérations distantes
 
-`push`, `pull`, `fetch`, `gh pr create` sont autorisés sans confirmation (SSH via
-PuTTY/Pageant). Demander avant tout force-push ou opération destructive.
+**Commiter** ne demande pas de confirmation : un commit local se relit et se défait. **Tout ce
+qui sort de la machine se valide d'abord** avec Julien : `push`, `gh pr create`, merge d'une PR.
+Présenter ce qui partira (branche, commits, cible) et attendre son accord. `pull` et `fetch`
+restent libres (SSH via PuTTY/Pageant). Force-push et opération destructive : toujours demander.
 
 ## Worktrees
 

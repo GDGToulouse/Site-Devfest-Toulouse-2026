@@ -24,4 +24,6 @@ Détail, PR et faux conflits après squash : `.claude/rules/git-workflow.md`. Fe
 
 ## Commit Strategy
 
-AI should auto commit: `never`
+AI should auto commit: `after phase`
+
+Commiter est libre ; pousser, ouvrir ou merger une PR se valide avec l'humain d'abord (`.claude/rules/git-workflow.md` § Opérations distantes).
