@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -56,6 +56,26 @@ const emptyForm: ArticleForm = {
   translatedAtFr: null,
   translatedAtEn: null,
 };
+
+// First thing in a language panel marked auto. It used to sit under the rich
+// text editor, where nobody found it, and the badge looked impossible to
+// remove (#488). Only shown while the flag is set, as before.
+function ReviewNotice({ onReviewed }: { onReviewed: () => void }) {
+  return (
+    <label className="flex items-start gap-2 p-3 rounded-lg bg-bleu/10 text-noir text-sm">
+      <input type="checkbox" checked onChange={onReviewed} className="mt-0.5 rounded border-gris/30" />
+      <span>
+        Traduit par IA, pas encore relu : le site affiche un bandeau « traduction automatique ».
+        Décochez après relecture, puis enregistrez, pour le retirer.
+      </span>
+    </label>
+  );
+}
+
+// Same rule as the backend's translate-fields: an emptied editor saves `<p></p>`.
+function isBlankHtml(html: string): boolean {
+  return !html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
 
 export default function ArticleEditorPage() {
   const params = useParams();
@@ -158,10 +178,11 @@ export default function ArticleEditorPage() {
     setIsTranslating(true);
     setTranslateState(null);
 
-    const { status, error: translateApiError } = await adminFetch<{ error?: string; message?: string }>(
+    const result = await adminFetch<{ error?: string; message?: string }>(
       `/articles/${articleId}/translate-fields`,
       { method: "POST", body: JSON.stringify({ from }) },
     );
+    const { status } = result;
 
     setIsTranslating(false);
 
@@ -180,7 +201,8 @@ export default function ArticleEditorPage() {
     // Anything but 200 failed, network included: a dropped connection comes
     // back as status 0, which `>= 400` let through as a translation (#428).
     if (status !== 200) {
-      setTranslateState({ kind: "error", text: translateApiError || "La traduction a échoué." });
+      // humanError: the backend's French message, not its `empty_source` code (#488).
+      setTranslateState({ kind: "error", text: humanError(result, "La traduction a échoué.") });
       return;
     }
 
@@ -193,6 +215,18 @@ export default function ArticleEditorPage() {
       kind: "ok",
       text: `Contenu ${to.toUpperCase()} traduit. Relisez-le, puis enregistrez.`,
     });
+  }
+
+  // After a FR → EN translation the editor lands on the EN tab, so the next
+  // click reads "EN → FR" and would back-translate over the original French.
+  // The dialog says so when the target holds text the AI did not write (#488).
+  function translateConfirmMessage(from: "fr" | "en"): string {
+    const to = from === "fr" ? "en" : "fr";
+    const overwrite = `Le contenu ${to.toUpperCase()} actuel sera écrasé par la traduction du ${from.toUpperCase()}. Vous pourrez le relire et le corriger ensuite.`;
+    const targetBody = to === "fr" ? form.contentFr : form.contentEn;
+    const isTargetAuto = to === "fr" ? form.autoTranslatedFr : form.autoTranslatedEn;
+    if (isBlankHtml(targetBody) || isTargetAuto) return overwrite;
+    return `${overwrite} Attention : le texte ${to.toUpperCase()} n'a pas été traduit automatiquement, c'est probablement le texte d'origine.`;
   }
 
   async function handleSave() {
@@ -317,7 +351,12 @@ export default function ArticleEditorPage() {
               <button
                 type="button"
                 onClick={() => setTranslateFrom(activeLang)}
-                disabled={isTranslating || !form.titleFr.trim() && activeLang === "fr" || !form.titleEn.trim() && activeLang === "en"}
+                disabled={
+                  isTranslating ||
+                  (activeLang === "fr"
+                    ? !form.titleFr.trim() || isBlankHtml(form.contentFr)
+                    : !form.titleEn.trim() || isBlankHtml(form.contentEn))
+                }
                 className="mb-6 inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-bleu/30 text-bleu hover:bg-bleu/5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title={`Traduire le contenu ${activeLang.toUpperCase()} vers ${activeLang === "fr" ? "EN" : "FR"} via Gemini`}
               >
@@ -337,11 +376,6 @@ export default function ArticleEditorPage() {
 
           {/* Translation outcome banner, announced like every other one (#434) */}
           <SaveFeedback state={translateState} onDismiss={() => setTranslateState(null)} />
-          {!isNew && (form.autoTranslatedFr || form.autoTranslatedEn) && (
-            <p className="text-xs text-gris italic">
-              Astuce : si vous avez relu et corrigé une langue marquée « auto », décochez la case ci-dessous pour retirer le badge.
-            </p>
-          )}
 
           <div
             id="article-panel-fr"
@@ -349,20 +383,12 @@ export default function ArticleEditorPage() {
             aria-labelledby="tab-fr"
             className={activeLang === "fr" ? "space-y-4" : "hidden"}
           >
+            {form.autoTranslatedFr && (
+              <ReviewNotice onReviewed={() => updateForm("autoTranslatedFr", false)} />
+            )}
             <FormField label="Titre" name="titleFr" value={form.titleFr} onChange={(v) => updateForm("titleFr", v)} required />
             <FormField label="Extrait" name="excerptFr" value={form.excerptFr} onChange={(v) => updateForm("excerptFr", v)} multiline rows={2} />
             <RichTextEditor label="Contenu" name="contentFr" value={form.contentFr} onChange={(v) => updateForm("contentFr", v)} minHeight="320px" />
-            {form.autoTranslatedFr && (
-              <label className="flex items-center gap-2 text-sm text-gris">
-                <input
-                  type="checkbox"
-                  checked={form.autoTranslatedFr}
-                  onChange={(e) => updateForm("autoTranslatedFr", e.target.checked)}
-                  className="rounded border-gris/30"
-                />
-                <span>Contenu généré par IA (décocher après relecture pour retirer le badge sur le site)</span>
-              </label>
-            )}
           </div>
           <div
             id="article-panel-en"
@@ -372,20 +398,12 @@ export default function ArticleEditorPage() {
           >
             {/* Not required (#262): an article can be created FR-only and
                 translated afterwards, by hand or via the AI translation. */}
+            {form.autoTranslatedEn && (
+              <ReviewNotice onReviewed={() => updateForm("autoTranslatedEn", false)} />
+            )}
             <FormField label="Title" name="titleEn" value={form.titleEn} onChange={(v) => updateForm("titleEn", v)} />
             <FormField label="Excerpt" name="excerptEn" value={form.excerptEn} onChange={(v) => updateForm("excerptEn", v)} multiline rows={2} />
             <RichTextEditor label="Content" name="contentEn" value={form.contentEn} onChange={(v) => updateForm("contentEn", v)} minHeight="320px" />
-            {form.autoTranslatedEn && (
-              <label className="flex items-center gap-2 text-sm text-gris">
-                <input
-                  type="checkbox"
-                  checked={form.autoTranslatedEn}
-                  onChange={(e) => updateForm("autoTranslatedEn", e.target.checked)}
-                  className="rounded border-gris/30"
-                />
-                <span>AI-generated content (uncheck after review to remove the badge on the site)</span>
-              </label>
-            )}
           </div>
         </div>
 
@@ -423,11 +441,7 @@ export default function ArticleEditorPage() {
           <ConfirmDialog
             isOpen={translateFrom !== null}
             title="Traduire automatiquement ?"
-            message={
-              translateFrom === null
-                ? ""
-                : `Le contenu ${(translateFrom === "fr" ? "en" : "fr").toUpperCase()} actuel sera écrasé par la traduction du ${translateFrom.toUpperCase()}. Vous pourrez le relire et le corriger ensuite.`
-            }
+            message={translateFrom === null ? "" : translateConfirmMessage(translateFrom)}
             confirmLabel="Traduire"
             variant="danger"
             onConfirm={() => {
