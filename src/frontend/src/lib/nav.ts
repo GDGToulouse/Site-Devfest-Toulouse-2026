@@ -51,11 +51,6 @@ const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites
 // coordinates or a written transports/parking section (hasVenueInfo).
 const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" };
 
-// Build the ordered public nav entries for the given edition. Conference-,
-// speaker- and sponsor-related links only appear once their content is live.
-// While there are published talks but no schedule yet, "Conférences" is a
-// top-level link; once the schedule is ready it becomes a "Programme" menu
-// with "Conférences" nested underneath (#203).
 // An admin-authored page as a navigation entry (#420). Only published pages
 // reach here — the API filters drafts out — so no status check is needed.
 function pageEntry(page: ContentPageSummary, locale: string): NavEntry {
@@ -82,6 +77,13 @@ export function getFooterPageEntries(
   return pagesAt(pages, "FOOTER", locale);
 }
 
+// Build the ordered public nav entries for the given edition. Talk-, speaker-
+// and sponsor-related links only appear once their content is live. While
+// there are published talks but no schedule yet, "Conférences" is a top-level
+// menu; once the schedule is ready it becomes a "Programme" menu with
+// "Conférences" nested underneath (#203). The replays are the exception: they
+// span past editions, so they sit under whichever of the two exists and stand
+// top-level when the edition has no talks yet (#489).
 export function getPublicNavEntries(
   edition: Edition | null,
   pages: ContentPageSummary[] = [],

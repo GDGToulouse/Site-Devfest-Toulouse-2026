@@ -28,6 +28,11 @@ function keys(entries: ReturnType<typeof getPublicNavEntries>): string[] {
   return entries.map((e) => e.key);
 }
 
+// Top-level keys and their children's, in menu order.
+function allKeys(entries: ReturnType<typeof getPublicNavEntries>): string[] {
+  return entries.flatMap((e) => [e.key, ...(e.children?.map((c) => c.key) ?? [])]);
+}
+
 describe("getPublicNavEntries", () => {
   it("shows only the replays and the blog when nothing is published", () => {
     expect(keys(getPublicNavEntries(edition()))).toEqual(["replays", "blog"]);
@@ -84,11 +89,9 @@ describe("getPublicNavEntries", () => {
       ["talks only", edition({ isProgramPublished: true })],
       ["a ready schedule", edition({ isScheduleReady: true, isProgramPublished: true })],
     ])("appears exactly once with %s", (_, state) => {
-      const all = getPublicNavEntries(state).flatMap((e) => [
-        e.key,
-        ...(e.children?.map((c) => c.key) ?? []),
-      ]);
-      expect(all.filter((k) => k === "replays")).toHaveLength(1);
+      const all = allKeys(getPublicNavEntries(state));
+      expect(all.indexOf("replays")).toBe(all.lastIndexOf("replays"));
+      expect(all).toContain("replays");
     });
   });
 
