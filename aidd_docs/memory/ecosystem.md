@@ -31,7 +31,8 @@ flowchart LR
   Agent -- mcp --> DevTools
   Agent -- mcp --> Figma
   Human -- cli --> GitHub
-  Human -- "web, human only" --> Coolify
+  Agent -- "mcp, read only" --> Coolify
+  Human -- "web, deploys" --> Coolify
   App -- prisma --> Postgres
   App -- http --> Sessionize
   App -- http --> Billetweb

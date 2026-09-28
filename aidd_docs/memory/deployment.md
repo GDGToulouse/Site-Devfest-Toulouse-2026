@@ -39,6 +39,7 @@ flowchart LR
 
 ## Monitoring
 
-- Santé : `/api/health` (version déployée)
+- Santé : `/api/health` (version déployée ; `dev-j` n'expose pas le commit, `APP_COMMIT` y est vide)
+- Déploiements : le MCP Coolify intégré (`https://infra.devfesttoulouse.fr/mcp`, lecture seule) donne l'état et le commit de chaque déploiement. Les trois applications portent presque le même nom : les distinguer par `git_branch` (`main`, `dev`, `dev-j`). Pendant un redéploiement, l'environnement répond « no available server » : c'est la bascule du compose, pas une panne
 - Erreurs 5xx : webhook d'alerte (#118), cf. `integration.md`
 - Audience : Plausible. Performance et indexation : Google Search Console et PageSpeed Insights
