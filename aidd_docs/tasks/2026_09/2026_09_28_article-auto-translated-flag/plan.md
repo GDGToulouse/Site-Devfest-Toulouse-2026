@@ -1,6 +1,6 @@
 ---
 objective: "A translation never marks a language it did not write, the editor is warned before overwriting a text the AI did not produce, and the « reviewed » checkbox is found without looking for it."
-status: in-progress
+status: implemented
 ---
 
 <!-- Fill or omit these sections; never add, rename, or reorder one. -->
