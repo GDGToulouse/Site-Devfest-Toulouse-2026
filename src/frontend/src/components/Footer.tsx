@@ -83,11 +83,12 @@ export default async function Footer() {
                   ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
                 ])
                 // The hall of fame joined the header under Speakers (#369), and
-                // the footer already lists it in the cross-edition column next
-                // to the replays — where it belongs, and where it stays visible
-                // before any speaker is announced. Flattening it here as well
-                // put it twice in the same footer.
-                .filter((entry) => entry.key !== "hall-of-fame");
+                // the replays under the programme (#489). The footer already
+                // lists both in the cross-edition column — where they belong,
+                // and where they stay visible whatever the current edition has
+                // published. Flattening them here as well would put each twice
+                // in the same footer.
+                .filter((entry) => entry.key !== "hall-of-fame" && entry.key !== "replays");
               if (footerEntries.length === 0) return null;
               return (
                 <div>

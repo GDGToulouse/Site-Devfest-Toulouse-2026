@@ -1,8 +1,9 @@
 import type { ContentPageSummary, Edition } from "@/lib/types";
 
 // A public navigation entry. `labelKey` is a key under the `nav` i18n
-// namespace. An entry may carry `children` — currently only "Programme",
-// which nests "Conférences" once the schedule (planning) is ready (#203).
+// namespace. An entry may carry one level of `children` — the header renders
+// no deeper — such as "Programme", which nests "Conférences" once the schedule
+// (planning) is ready (#203).
 export interface NavEntry {
   key: string;
   labelKey: string;
@@ -19,6 +20,12 @@ const CONFERENCES_ENTRY: NavEntry = {
   labelKey: "conferences",
   href: "/conferences",
 };
+
+// The replays span every edition (#489), so unlike the programme they never
+// wait for the current edition to publish talks: they hang under it when it
+// exists and stand on their own when it does not — the months between two
+// editions, when the archives are what the site has to show.
+const REPLAYS_ENTRY: NavEntry = { key: "replays", labelKey: "replays", href: "/replays" };
 
 const SPEAKERS_ENTRY: NavEntry = { key: "speakers", labelKey: "speakers", href: "/speakers" };
 const SPONSORS_ENTRY: NavEntry = { key: "sponsors", labelKey: "sponsors", href: "/sponsors" };
@@ -44,11 +51,6 @@ const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites
 // coordinates or a written transports/parking section (hasVenueInfo).
 const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" };
 
-// Build the ordered public nav entries for the given edition. Conference-,
-// speaker- and sponsor-related links only appear once their content is live.
-// While there are published talks but no schedule yet, "Conférences" is a
-// top-level link; once the schedule is ready it becomes a "Programme" menu
-// with "Conférences" nested underneath (#203).
 // An admin-authored page as a navigation entry (#420). Only published pages
 // reach here — the API filters drafts out — so no status check is needed.
 function pageEntry(page: ContentPageSummary, locale: string): NavEntry {
@@ -75,6 +77,13 @@ export function getFooterPageEntries(
   return pagesAt(pages, "FOOTER", locale);
 }
 
+// Build the ordered public nav entries for the given edition. Talk-, speaker-
+// and sponsor-related links only appear once their content is live. While
+// there are published talks but no schedule yet, "Conférences" is a top-level
+// menu; once the schedule is ready it becomes a "Programme" menu with
+// "Conférences" nested underneath (#203). The replays are the exception: they
+// span past editions, so they sit under whichever of the two exists and stand
+// top-level when the edition has no talks yet (#489).
 export function getPublicNavEntries(
   edition: Edition | null,
   pages: ContentPageSummary[] = [],
@@ -88,10 +97,12 @@ export function getPublicNavEntries(
       key: "program",
       labelKey: "program",
       href: "/programme",
-      children: [CONFERENCES_ENTRY],
+      children: [CONFERENCES_ENTRY, REPLAYS_ENTRY],
     });
   } else if (edition?.isProgramPublished) {
-    entries.push(CONFERENCES_ENTRY);
+    entries.push({ ...CONFERENCES_ENTRY, children: [REPLAYS_ENTRY] });
+  } else {
+    entries.push(REPLAYS_ENTRY);
   }
 
   if (edition?.hasSpeakers) entries.push({ ...SPEAKERS_ENTRY, children: [HALL_OF_FAME_CHILD] });
