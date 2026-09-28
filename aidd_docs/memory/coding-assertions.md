@@ -27,6 +27,7 @@ Depuis l'hôte, les tests backend exigent un `pnpm install` dans `src/backend` e
 | Order | Command | Checks |
 | ----- | ------- | ------ |
 | 1 | `gh run list --branch <branche> --limit 3` | La CI et le build ont passé — un push n'est pas fini tant que ce n'est pas lu |
+| 2 | MCP Coolify : `list_deployments` sur l'application de la branche, puis `get_deployment` | Sur `dev-j` et `dev` (redéploiement auto), le déploiement du commit poussé est `finished`. À faire **à chaque fois**, sans attendre qu'on le demande : `/api/health` de `dev-j` n'expose pas le commit |
 
 ## Behavior
 
