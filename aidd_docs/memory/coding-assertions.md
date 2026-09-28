@@ -18,6 +18,8 @@ Commandes à lancer avec l'environnement local démarré (`docker compose -f doc
 | 3 | `cd src/frontend && pnpm build` | Build Next, qui porte aussi le typage frontend |
 | 4 | Vérification dans le navigateur, cf. `testing.md` § Browser QA | Rien n'est poussé sans avoir été vu marcher (`.claude/rules/testing.md`) |
 
+En conteneur, **un échec est attendu et n'est pas à corriger** : `stat-icons.test.ts` (« catalogue parity with the frontend ») lit `src/frontend/src/lib/stat-icons.ts`, et le conteneur backend ne monte que `src/backend`. Il passe en CI, où tout le dépôt est présent.
+
 Depuis l'hôte, les tests backend exigent un `pnpm install` dans `src/backend` et le préfixe `DATABASE_URL="postgresql://devfest:devfest@localhost:5432/devfest?schema=public"` : sans lui, ~44 faux échecs en 500.
 
 ## After push
