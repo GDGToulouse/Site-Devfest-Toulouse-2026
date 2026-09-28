@@ -27,9 +27,15 @@ feature/us-xxx  →  dev-{initiale}  →  dev  →  main
   force-push. Sur sa branche perso, le développeur a les pleins droits.
 - **Squash** vers `dev` et `main` (un commit par feature) ; merge classique de feature vers la
   branche perso.
-- Une PR `dev-j → dev` peut lever de **faux conflits add/add** après squash : c'est une branche
-  de promotion, et `-X ours` y duplique des blocs. Vérifier l'arbre plutôt que de faire
-  confiance à la résolution automatique.
+- Une PR `dev-j → dev` peut lever de **faux conflits add/add** après squash : git ne reconnaît
+  plus les commits d'origine. Procédure :
+  1. Confirmer que le conflit est faux : `git diff origin/dev-j..origin/dev --stat` ne montre
+     **que des suppressions**. Sinon, c'est un vrai conflit.
+  2. Créer une branche de promotion depuis `dev-j`, y merger `origin/dev`, ouvrir la PR depuis
+     elle (GitHub ne change pas la branche source d'une PR : fermer l'ancienne).
+  3. `-X ours` ne suffit pas, il duplique les blocs ajoutés des deux côtés. Exiger
+     `git diff --stat origin/dev-j` **vide** après le merge ; corriger par
+     `git checkout origin/dev-j -- <fichier>`. La CI ne voit pas ces doublons.
 
 ## Pull requests
 
@@ -39,7 +45,7 @@ un défaut dans l'énoncé de l'issue, une réserve — valent plus que l'énum�
 touchés.
 
 `Refs #123` sur une PR feature (elle ne ferme rien), `Closes #123` seulement sur la PR de
-promotion vers `main`. Le détail est dans `.claude/rules/issue-lifecycle.md`.
+promotion vers `main`. Le détail est dans `docs/cycle-de-vie-issues.md`.
 
 ## Opérations distantes
 

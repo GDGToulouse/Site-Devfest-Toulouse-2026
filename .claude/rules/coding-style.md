@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/**"
+---
+
 # Coding Style
 
 Formatting is Prettier's and ESLint's job — do not fix by hand what tooling handles, and do not
