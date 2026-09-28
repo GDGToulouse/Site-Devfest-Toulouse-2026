@@ -18,6 +18,7 @@
 - Une base locale déjà pleine masque les échecs « données manquantes ». Reproduire la CI = `migrate deploy` + `seed-dev.ts` + tests sur une **base fraîche**
 - `BASE_URL` vaut `/` sous Vitest (injecté par Vite) : ne jamais asserter l'origine, asserter la distinction que fait la fonction. `console.log` ne s'affiche pas : pour lire une valeur, écrire une assertion volontairement fausse et lire le « Received »
 - La suite frontend est épinglée sur `TZ=Europe/Paris` : un test d'heure ne prouve rien s'il ne recharge pas le module sous `vi.stubEnv("TZ", "UTC")` après `vi.resetModules()`
+- Pas de Gemini dans les tests backend : `vi.mock("../lib/translation/index.js", …)` en gardant les vraies classes d'erreur par `importActual`, `isConfigured` et `translate` remplacés (modèle : `src/backend/src/__tests__/admin-articles-translate.test.ts`)
 - Une clé i18n trouvée par `grep` peut appartenir à un autre namespace : tester que **chaque clé produite se résout** dans les deux langues (modèle : `src/frontend/src/lib/nav.test.ts`)
 
 ## Run
