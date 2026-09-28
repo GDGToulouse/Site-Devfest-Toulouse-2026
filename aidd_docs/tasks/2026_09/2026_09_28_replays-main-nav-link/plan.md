@@ -1,6 +1,6 @@
 ---
 objective: "The main menu always offers a « Hall of Replays » link to /replays, tied to the programme when there is one, without ever showing it twice in the footer."
-status: implemented
+status: reviewed
 ---
 
 # Plan: Replays link in the main menu
