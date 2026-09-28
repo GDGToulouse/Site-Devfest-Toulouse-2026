@@ -54,6 +54,14 @@ describe("markLinksSponsored", () => {
     );
   });
 
+  it("should mark a protocol-relative link as sponsored", () => {
+    // sanitizeRichHtml keeps //host links as is: its normalizer reads the
+    // leading slash as a site path.
+    expect(markLinksSponsored('<a href="//www.partner.com/jobs" rel="noopener noreferrer">x</a>')).toBe(
+      '<a href="//www.partner.com/jobs" rel="sponsored noopener noreferrer">x</a>',
+    );
+  });
+
   it("should add the rel to an external link that has none", () => {
     expect(markLinksSponsored('<a href="https://example.com">x</a>')).toBe(
       '<a href="https://example.com" rel="sponsored noopener noreferrer">x</a>',
