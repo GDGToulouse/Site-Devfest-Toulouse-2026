@@ -3,6 +3,7 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { getJobOffers } from "@/lib/api";
+import { markLinksSponsored, SPONSORED_LINK_REL } from "@/lib/html";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
@@ -61,13 +62,13 @@ export default async function JobOffersPage() {
                       {description && (
                         <div
                           className="article-content mt-2 text-sm text-gris"
-                          dangerouslySetInnerHTML={{ __html: description }}
+                          dangerouslySetInnerHTML={{ __html: markLinksSponsored(description) }}
                         />
                       )}
                       <a
                         href={offer.url}
                         target="_blank"
-                        rel="noopener noreferrer"
+                        rel={SPONSORED_LINK_REL}
                         className="mt-3 inline-block font-bold text-bleu hover:underline"
                       >
                         {t("cta")} →

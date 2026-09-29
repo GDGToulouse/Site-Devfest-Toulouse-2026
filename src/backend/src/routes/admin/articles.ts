@@ -21,6 +21,11 @@ function parsePublishedAt(value: string | undefined): Date | null {
   return isNaN(date.getTime()) ? null : date;
 }
 
+// An emptied TipTap editor saves `<p></p>`, not "": look at the text, not the string.
+function isBlankHtml(html: string | null): boolean {
+  return !html || !html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").trim();
+}
+
 interface ArticleBody {
   slug: string;
   titleFr: string;
@@ -278,7 +283,9 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
   // POST /api/admin/articles/:id/translate-fields
   // Translates the article from one language to the other (title, excerpt,
   // content) and persists the result on the target side. The corresponding
-  // autoTranslated* flag is set to true and translatedAt* stamped.
+  // autoTranslated* flag is set to true and translatedAt* stamped: it tells the
+  // reader the body was machine-written, so an empty source body is refused
+  // up front — it used to flag a target whose body nobody had translated (#488).
   // The editor still has to save the form afterwards if they edit anything;
   // this route writes immediately so partial failure on one field doesn't
   // leave the page in an inconsistent state.
@@ -309,6 +316,12 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
     const sourceTitle = from === "fr" ? article.titleFr : article.titleEn;
     const sourceExcerpt = from === "fr" ? article.excerptFr : article.excerptEn;
     const sourceContent = from === "fr" ? article.contentFr : article.contentEn;
+    if (isBlankHtml(sourceContent)) {
+      return reply.status(400).send({
+        error: "empty_source",
+        message: `Le contenu ${from.toUpperCase()} est vide : rien à traduire.`,
+      });
+    }
 
     try {
       const titleOut = await translate(
@@ -321,24 +334,22 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
             { userId },
           )
         : null;
-      const contentOut = sourceContent
-        ? await translate(
-            { content: sourceContent, sourceLang: from, targetLang: to, format: "html", quality: request.body?.quality },
-            { userId },
-          )
-        : null;
+      const contentOut = await translate(
+        { content: sourceContent, sourceLang: from, targetLang: to, format: "html", quality: request.body?.quality },
+        { userId },
+      );
 
       const data: Record<string, unknown> = {};
       if (to === "en") {
         data.titleEn = titleOut.translatedContent;
         if (excerptOut) data.excerptEn = excerptOut.translatedContent;
-        if (contentOut) data.contentEn = sanitizeRichHtml(contentOut.translatedContent);
+        data.contentEn = sanitizeRichHtml(contentOut.translatedContent);
         data.autoTranslatedEn = true;
         data.translatedAtEn = new Date();
       } else {
         data.titleFr = titleOut.translatedContent;
         if (excerptOut) data.excerptFr = excerptOut.translatedContent;
-        if (contentOut) data.contentFr = sanitizeRichHtml(contentOut.translatedContent);
+        data.contentFr = sanitizeRichHtml(contentOut.translatedContent);
         data.autoTranslatedFr = true;
         data.translatedAtFr = new Date();
       }
@@ -351,7 +362,7 @@ export default async function adminArticleRoutes(app: FastifyInstance) {
         targetLang: to,
         title: titleOut.translatedContent,
         excerpt: excerptOut?.translatedContent ?? null,
-        content: contentOut ? (to === "en" ? updated.contentEn : updated.contentFr) : null,
+        content: to === "en" ? updated.contentEn : updated.contentFr,
         translatedAt: to === "en" ? updated.translatedAtEn : updated.translatedAtFr,
       };
     } catch (err) {

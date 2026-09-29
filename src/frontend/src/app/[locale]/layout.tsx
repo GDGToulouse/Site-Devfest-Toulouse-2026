@@ -13,7 +13,13 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
-import { getCfpSettings, getCurrentEdition, getIdentitySettings, getSocialLinks } from "@/lib/api";
+import {
+  getCfpSettings,
+  getCurrentEdition,
+  getIdentitySettings,
+  getPublishedPages,
+  getSocialLinks,
+} from "@/lib/api";
 import { buildFaviconMetadata, getLogoUrl } from "@/lib/identity";
 import { pageMetadata } from "@/lib/page-metadata";
 import { jsonLdScript } from "@/lib/seo";
@@ -79,11 +85,12 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, cfp, identity, socialLinks] = await Promise.all([
+  const [edition, cfp, identity, socialLinks, pages] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
     getIdentitySettings(),
     getSocialLinks(),
+    getPublishedPages(),
   ]);
 
   const logoPath = getLogoUrl(identity, "square");
@@ -130,7 +137,13 @@ export default async function LocaleLayout({
       </a>
       <NextIntlClientProvider>
         <LanguageSuggestionBanner />
-        <EditionProvider edition={edition} cfp={cfp} identity={identity} socialLinks={socialLinks}>
+        <EditionProvider
+          edition={edition}
+          cfp={cfp}
+          identity={identity}
+          socialLinks={socialLinks}
+          pages={pages}
+        >
           <Header />
           <main id="main-content" role="main" className="flex-1">
             {children}

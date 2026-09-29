@@ -180,7 +180,7 @@ config prod critique (détails : [`docs/mise-en-production.md`](../../../docs/mi
 Vérifier la **version réellement déployée** (garde-fou #171) :
 
 ```bash
-curl -s https://site.devfesttoulouse.fr/api/health
+curl -s https://devfesttoulouse.fr/api/health
 # → doit renvoyer "version":"X.Y.Z" == le bump de l'étape 2
 ```
 
@@ -258,6 +258,13 @@ relire et merger :
 gh pr list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --base dev --search "chore(version)"
 ```
 
+- **Sa CI ne passera jamais au vert, et c'est normal** : la PR est ouverte par
+  `app/github-actions`, or GitHub ne déclenche aucun workflow sur un événement
+  produit par le `GITHUB_TOKEN` — protection anti-récursion. `gh pr checks`
+  répond « no checks reported » et l'état reste `UNSTABLE`. Ce n'est pas un
+  échec, c'est une **absence** : vérifier `mergeable: MERGEABLE`, relire le diff
+  (4 fichiers : CHANGELOG + les 3 versions) et merger. Pour forcer les workflows,
+  fermer puis rouvrir la PR depuis un compte humain.
 - **PR absente** (workflow non déclenché, tag poussé avant la mise en place) →
   la rejouer à la main : `gh workflow run version-backport.yml -f version=X.Y.Z`.
 - **Bump à ajuster** : le workflow propose un **patch** (`1.5.0` → `1.5.1-beta`).

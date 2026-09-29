@@ -186,15 +186,32 @@ complète. Spécifique prod :
 joue les migrations au boot ; sans dump préalable, une migration qui corrompt ou
 supprime des données est **irrécupérable**.
 
+Sur le VPS, depuis une copie du dépôt :
+
 ```bash
-PROD_DB=<db-prod>   # le conteneur db dont le BASE_URL est site.devfesttoulouse.fr
+sudo sh scripts/backup-prod-db.sh
+```
+
+Le script trouve le conteneur par son `BASE_URL` — jamais par le hash Coolify,
+qui change à chaque redéploiement — écrit `/root/backups/prod-<horodatage>.sql`,
+et **échoue bruyamment si le marqueur de fin du dump est absent**. Un dump
+tronqué pèse lourd et ne vaut rien ; c'est la seule vérification qui compte.
+
+Il accepte un environnement en argument (`beta`, `dev-j`), ce qui permet de le
+répéter à blanc sans toucher à la prod.
+
+À la main, si le dépôt n'est pas sur la machine :
+
+```bash
+PROD_DB=<le conteneur db du projet dont le backend porte BASE_URL=https://devfesttoulouse.fr>
 STAMP=$(date +%Y%m%d-%H%M%S)
 
-sudo docker exec "$PROD_DB" pg_dump -U devfest -d devfest \
-  --no-owner --no-privileges > "/root/backups/prod-$STAMP.sql"
+# La redirection doit être DANS le sudo : la sortir échoue en « Permission
+# denied » sur /root, car c'est votre shell qui écrit, pas root.
+sudo sh -c "docker exec $PROD_DB pg_dump -U devfest -d devfest \
+  --no-owner --no-privileges > /root/backups/prod-$STAMP.sql"
 
-# Vérifier que le dump n'est pas vide
-ls -lh "/root/backups/prod-$STAMP.sql"
+sudo grep -c "PostgreSQL database dump complete" /root/backups/prod-$STAMP.sql
 ```
 
 Garder au moins le dernier dump avant chaque déploiement à migration. En cas de
@@ -247,7 +264,7 @@ la sidebar admin doit afficher le **nouveau** numéro. Sinon, `APP_VERSION` n'a 
 été bumpé (étape 1) ou le build n'a pas été régénéré.
 
 ```bash
-curl -s https://site.devfesttoulouse.fr/api/health
+curl -s https://devfesttoulouse.fr/api/health
 # → {"status":"ok","version":"1.2.3","environment":"prod","commit":"7d90b17", ...}
 ```
 

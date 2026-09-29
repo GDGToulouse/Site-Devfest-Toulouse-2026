@@ -44,3 +44,11 @@ uploads/
 # Source documents (content captured in design-system.md)
 docs/CharteGraphique_Devfest2024.pdf
 tests/
+
+# AI-Driven Dev: aidd_docs/ is tracked, as the framework's own repository does.
+# Only the session journal is machine-local.
+aidd_docs/runs/
+
+# Video evidence from aidd-dev:11-browser-qa. The framework's own .gitignore
+# lists .playwright-mcp/, but the CLI writes here instead.
+.playwright-cli/

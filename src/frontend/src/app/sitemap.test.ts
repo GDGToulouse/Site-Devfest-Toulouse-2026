@@ -13,6 +13,7 @@ vi.mock("@/lib/api", () => ({
   getEditionTalks: vi.fn(),
   getHallOfFame: vi.fn(),
   getIndexableSponsors: vi.fn(),
+  getPublishedPages: vi.fn(),
 }));
 
 import {
@@ -23,6 +24,7 @@ import {
   getEditionTalks,
   getHallOfFame,
   getIndexableSponsors,
+  getPublishedPages,
 } from "@/lib/api";
 import sitemap, { dynamic } from "./sitemap";
 
@@ -55,6 +57,7 @@ beforeEach(() => {
   vi.mocked(getHallOfFame).mockResolvedValue([]);
   vi.mocked(getContentPage).mockResolvedValue(null);
   vi.mocked(getArticles).mockResolvedValue({ articles: [], total: 0, page: 1, totalPages: 0 });
+  vi.mocked(getPublishedPages).mockResolvedValue([]);
 });
 
 describe("sitemap — talk pages (#379)", () => {
@@ -168,6 +171,34 @@ describe("sitemap — every article, not the first hundred (#379)", () => {
     // The old code called getArticles(1, 100) once and stopped there.
     expect(paths(entries)).toContain("/fr/actualites/article-1");
     expect(paths(entries)).toContain("/fr/actualites/article-3");
+  });
+});
+
+describe("sitemap — pages written from the admin (#419)", () => {
+  it("lists a published page, in both languages when it has an English version", async () => {
+    vi.mocked(getPublishedPages).mockResolvedValue([
+      { id: 3, slug: "recrutement", titleFr: "Recrutement", titleEn: "Jobs", hasEnglish: true, navLocation: "HEADER", navOrder: 0, updatedAt: "2026-06-01T00:00:00Z" },
+      { id: 4, slug: "faq", titleFr: "FAQ", titleEn: "", hasEnglish: false, navLocation: "NONE", navOrder: 0, updatedAt: "2026-06-02T00:00:00Z" },
+    ]);
+
+    const entries = await sitemap();
+
+    expect(paths(entries)).toContain("/fr/recrutement");
+    expect(paths(entries)).toContain("/en/recrutement");
+    expect(paths(entries)).toContain("/fr/faq");
+    expect(paths(entries)).not.toContain("/en/faq");
+  });
+
+  // The two legal pages have their own hardcoded route, already listed above.
+  // Without the exclusion they would appear twice in the same sitemap.
+  it("lists a page that also has its own route only once", async () => {
+    vi.mocked(getPublishedPages).mockResolvedValue([
+      { id: 1, slug: "code-de-conduite", titleFr: "Code de conduite", titleEn: "Code of Conduct", hasEnglish: true, navLocation: "NONE", navOrder: 0, updatedAt: "2026-06-01T00:00:00Z" },
+    ]);
+
+    const entries = await sitemap();
+
+    expect(paths(entries).filter((p) => p === "/fr/code-de-conduite")).toHaveLength(1);
   });
 });
 

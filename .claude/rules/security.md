@@ -1,3 +1,14 @@
+---
+paths:
+  - "src/backend/**"
+  - "src/frontend/src/app/{admin,sponsor,edit}/**"
+  - "src/frontend/src/lib/**"
+  - "src/frontend/next.config.ts"
+  - "**/Dockerfile"
+  - "docker-compose*.yml"
+  - ".env.example"
+---
+
 # Security
 
 Standard practice applies (validate at boundaries, parameterize queries, escape output, never
