@@ -12,6 +12,62 @@ GitHub). Voir [`docs/mise-en-production.md`](docs/mise-en-production.md).
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.9.0] - 2026-09-30
+
+Les **pages de contenu deviennent gérables de bout en bout depuis l'admin** :
+on peut en écrire une à l'avance en brouillon, la publier au bon moment, la
+placer dans le menu ou le pied de page, et la retirer. Jusqu'ici, une page créée
+était en ligne dès l'enregistrement, impossible à dépublier ou à supprimer, et
+introuvable pour qui n'en connaissait pas l'adresse.
+
+Le reste de la version est une passe de performance mobile sur la page
+d'accueil, et une série de correctifs qui évitent de casser ce qui est déjà en
+ligne : une image supprimée alors qu'une page l'affiche, un texte d'origine
+écrasé par une traduction automatique.
+
+> Deux migrations, **toutes deux additives** (`content_page_publication`,
+> `content_page_navigation`) : quatre colonnes et un index sur `ContentPage`.
+> Les pages existantes sont marquées **publiées** par la migration, pour que le
+> code de conduite, les mentions légales et les pages déjà créées restent en
+> ligne. Sauvegarde de la base recommandée avant déploiement, comme pour toute
+> migration.
+
+### Ajouté
+
+- **Brouillon et publication des pages de contenu** : une nouvelle page est un
+  brouillon, invisible du public jusqu'à sa publication. Une page peut être
+  dépubliée ou mise à la corbeille, et son adresse redevient disponible. Le code
+  de conduite et les mentions légales, liés depuis chaque pied de page, ne
+  peuvent être ni dépubliés ni supprimés (#419).
+- **Une page de contenu peut être placée dans le menu principal ou dans le pied
+  de page**, à la suite des entrées du site et dans l'ordre choisi (#420).
+- **Le Hall of Replays dans le menu principal** : sous « Conférences » ou
+  « Programme » selon l'état de l'édition, et seul au premier niveau entre deux
+  éditions, quand ce sont les archives que le site a à montrer (#489).
+
+### Corrigé
+
+- **Liens partenaires qualifiés `rel="sponsored"`**, comme Google le demande
+  pour un lien lié à une contrepartie : site, réseaux sociaux, liens de la
+  description et offres d'emploi, sur la fiche sponsor et la page des offres.
+  Les liens des articles et des pages ne sont pas concernés (#495).
+- **Un fichier encore affiché ne peut plus être supprimé de la médiathèque** :
+  photo de speaker, logo figé d'une édition passée, logo du site… Le refus dit
+  ce qui utilise le fichier (#486).
+- **Le badge « traduction automatique » ne s'affiche plus sur un texte français
+  d'origine**, et l'admin prévient avant qu'une traduction écrase un texte
+  écrit à la main (#488).
+- **Image principale de l'accueil de nouveau prioritaire** : elle partait en
+  priorité basse et l'image du carrousel, sous le pli, se préchargeait devant
+  elle (#473).
+- **Vignette YouTube servie par le site** : 23 ko au lieu de 80, et plus aucun
+  appel à Google avant qu'on clique sur la vidéo (#474).
+- **Plus de préchargement de la page sur laquelle on se trouve déjà** depuis
+  les liens de l'en-tête (#476).
+- **Le premier écran ne bouge plus quand la police arrive** : la police de la
+  marque est prise si elle est prête à temps, sinon la page garde la police
+  système pour ce chargement plutôt que de tout décaler (#481).
+
 ## [1.8.0] - 2026-08-25
 
 Le **programme du DevFest devient consultable** : une grille horaire par salle et
@@ -521,7 +577,9 @@ l'ancien site WordPress.
 - SSR + cache HTTP, SEO (Schema.org, Open Graph), accessibilité (WCAG 2.1 AA).
 - Authentification admin (better-auth : email/password + Google + GitHub).
 
-[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.7.0...dev
+[Non publié]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.9.0...dev
+[1.9.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.7.0...v1.8.0
 [1.7.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.6.0...v1.7.0
 [1.6.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.5.0...v1.6.0
 [1.5.0]: https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/compare/v1.4.0...v1.5.0
