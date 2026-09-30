@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 
 interface YouTubeFacadeProps {
   videoUrl: string;
   title?: string;
 }
+
+// YouTube only generates maxresdefault (1280×720) for videos uploaded above a
+// certain resolution; for the rest it answers 404. hqdefault always exists, so
+// it takes over when the first one fails — otherwise the block would show an
+// empty frame on exactly the older talks the replay archive is made of (#474).
+const THUMBNAIL_QUALITIES = ["maxresdefault", "hqdefault"] as const;
 
 function extractVideoId(url: string): string | null {
   const patterns = [
@@ -21,6 +28,7 @@ function extractVideoId(url: string): string | null {
 
 export default function YouTubeFacade({ videoUrl, title = "Video" }: YouTubeFacadeProps) {
   const [isPlaying, setIsPlaying] = useState(false);
+  const [qualityIndex, setQualityIndex] = useState(0);
   const videoId = extractVideoId(videoUrl);
 
   const handlePlay = useCallback(() => {
@@ -44,7 +52,7 @@ export default function YouTubeFacade({ videoUrl, title = "Video" }: YouTubeFaca
     );
   }
 
-  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+  const thumbnailUrl = `https://img.youtube.com/vi/${videoId}/${THUMBNAIL_QUALITIES[qualityIndex]}.jpg`;
 
   if (isPlaying) {
     return (
@@ -67,12 +75,19 @@ export default function YouTubeFacade({ videoUrl, title = "Video" }: YouTubeFaca
       className="relative w-full aspect-video rounded-3xl overflow-hidden group cursor-pointer"
       aria-label={`Play ${title}`}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
+      {/* Through next/image, not a raw <img>: the proxy converts to AVIF and
+          resizes to what is actually displayed — 80 kB became ~10 kB — and,
+          more to the point, it is what makes the facade a facade. Served
+          straight from img.youtube.com, the thumbnail called Google on every
+          page load, before the visitor had asked for anything (#474). */}
+      <Image
+        key={thumbnailUrl}
         src={thumbnailUrl}
         alt={title}
-        className="w-full h-full object-cover"
-        loading="lazy"
+        fill
+        sizes="(min-width: 1024px) 896px, 100vw"
+        className="object-cover"
+        onError={() => setQualityIndex((i) => Math.min(i + 1, THUMBNAIL_QUALITIES.length - 1))}
       />
 
       {/* Dark overlay */}

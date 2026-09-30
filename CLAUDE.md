@@ -3,64 +3,37 @@
 DevFest Toulouse 2026 — site remplaçant le WordPress (Avada) des éditions 2023-2025.
 Objectif : un site durable, maintenable d'une édition à l'autre.
 
-## Architecture
+## Où vit quoi
 
-Deux applications indépendantes, **sous `src/`** :
+Chaque fait a **une seule maison**. Avant d'en écrire un, chercher s'il existe déjà.
 
-- **`src/frontend/`** — Next.js 16 (App Router, Server Components), Tailwind v4, next-intl, pnpm
-- **`src/backend/`** — API REST Fastify, Prisma 7, PostgreSQL
+| Nature | Maison | Chargée |
+|---|---|---|
+| Ce qu'est le projet : architecture, pièges, conventions, environnements | `aidd_docs/memory/` | à chaque session (bloc ci-dessous) |
+| Comment travailler : git, tests, sécurité, erreurs | `.claude/rules/` | au lancement, ou à la lecture d'un fichier `src/` pour les règles de code |
+| Specs et procédures pour humains | `docs/` | à la demande |
+| Ce qui ne vaut que pour une personne ou une machine | mémoire auto de Claude | index à chaque session |
 
-Le frontend appelle le backend en HTTP (`http://backend:4000` en Docker, via `BACKEND_URL`).
-**Le backend seul possède Prisma et la base** ; le frontend n'accède jamais à la base directement.
+## Règles impératives
 
-Auth : better-auth (admin uniquement). Hébergement : VPS + Coolify. CI : GitHub Actions.
+- Étager les fichiers un par un — jamais `git add .` ni `git add -A`
+- Une commande git par appel Bash — jamais de `&&`, jamais `cd`, jamais `git -C`
+- Jamais de force-push sur `main`, jamais de `--no-verify`
+- Utiliser Context7 MCP pour la doc des bibliothèques avant de les employer
 
-## Pièges de ce dépôt
+## Règles détaillées
 
-Ce que le code ne dit pas, ou dit de façon trompeuse.
-
-**Routes.** `src/frontend/src/app/admin/` est **hors** de `[locale]/` : le back-office est sur
-`/admin`, **pas** `/fr/admin` (qui renvoie 404). next-intl préfixe les routes racine même sans
-middleware — toute route technique doit vivre sous `/api/`.
-
-**Docker.** Pas de `docker-compose.yml` : trois fichiers distincts, dont
-`docker-compose.local.yml` pour le dev local. Toujours passer `-f`.
-
-**Le `.next` du frontend local est un volume nommé.** Après une reconstruction de la base ou un
-changement de routes, un `restart` ne suffit pas : purger le volume, sinon *toutes* les routes
-dynamiques renvoient 404. Test discriminant : si une route **sans rapport** tombe aussi en 404,
-c'est l'environnement, pas le code.
-
-**Le backend en Docker ne recharge pas à chaud** (`tsx watch` ne voit pas les écritures de
-l'hôte) : redémarrer le conteneur après une modification.
-
-**Tests backend depuis l'hôte** : préfixer `DATABASE_URL` sur `localhost:5432`, sinon ~44 faux
-échecs en 500.
-
-**Prisma 7** : `migrate dev` est interactif et inutilisable ici — écrire les migrations à la main.
-
-**Sponsors et speakers sont des entités partagées entre éditions** (#129, #351) : le slug
-identifie une *entreprise* ou une *personne*, pas une participation. Ce qu'une édition a affiché
-(logo, libellé de niveau) est **figé** sur la participation (#375) — un écran qui édite « le
-logo » doit dire de quelle année il parle.
-
-**`User.role` vaut `EDITOR` par défaut, et `EDITOR` ouvre le back-office.** Tout compte tiers
-(sponsor, speaker) doit porter un rôle neutre explicite à la création. Détail dans
-`.claude/rules/security.md`.
-
-## Comptes de dev local
-
-Provisionnés par `src/backend/prisma/seed-dev.ts` (lancé à la main) — connexion sur `/admin` :
-
-| Rôle | Email | Mot de passe |
-|------|-------|--------------|
-| ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` |
-| EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` |
-
-Ces mots de passe marchent, y compris après un reseed : `seed-dev.ts` les repose sur les comptes
-existants (#433). Ce n'était pas le cas avant — `seed.ts` créait les deux adresses avec un mot de
-passe aléatoire et `seed-dev.ts` les sautait, donc le mot de passe documenté n'était jamais posé,
-dès la première installation. Détails dans `docs/comptes-dev-local.md`.
+| Fichier | Sujet | Chargée |
+|---|---|---|
+| `.claude/rules/git-workflow.md` | Commits, branches, PR, worktrees | toujours |
+| `.claude/rules/communication.md` | Langue, workflow de correction | toujours |
+| `.claude/rules/task-management.md` | Mode plan, sous-agents, compaction | toujours |
+| `.claude/rules/testing.md` | Écrire ou lancer des tests, vérifier avant de pousser | fichiers `src/` |
+| `.claude/rules/code-quality.md` | Imports, taille, duplication, performance | fichiers `src/` |
+| `.claude/rules/coding-style.md` | Nommage, constantes, formatage | fichiers `src/` |
+| `.claude/rules/error-handling.md` | Gestion et remontée des erreurs | fichiers `src/` |
+| `.claude/rules/security.md` | Auth, secrets, validation d'entrées, headers, ouverture des comptes | backend, admin, config |
+| `docs/cycle-de-vie-issues.md` | Fermer, étiqueter (`corrigé`) ou rattacher une issue | à lire au moment d'agir |
 
 ## Documentation
 
@@ -83,37 +56,35 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 | `deployer-nouvel-environnement.md` | Ajouter un environnement (`dev-x`, beta, prod) |
 | `coolify-pieges-multi-environnements.md` | Pièges Coolify récurrents |
 | `traduction-ia.md` | Traduction assistée pour les éditeurs |
+| `cycle-de-vie-issues.md` | Issues, milestones, label `corrigé`, `Refs` / `Closes` |
 
-## Décisions structurantes
+## Memory Management
 
-- **Rendu** : SSR + cache HTTP sur les pages publiques (`s-maxage=3600, stale-while-revalidate=60`,
-  **sauf l'accueil à `s-maxage=300`** — RG-003), invalidation à la demande depuis l'admin ;
-  SSR+SPA hybride sur les pages authentifiées.
-- **Accueil** : contenu conditionné par le statut de l'édition (préparation / annonce / à l'année prochaine).
-- **Rôles** : admin, sponsor, speaker — un sponsor gère sa fiche depuis un **compte**
-  (invitation, rôles par entreprise) ; un speaker garde le lien de modification `/edit/<token>`.
-- **SEO** : Schema.org (Event, Organization, Person, Article), Open Graph, images OG dynamiques.
-- **i18n** : bilingue FR (défaut) + EN, URLs localisées.
+Project docs, memory, specs, and plans live in `aidd_docs/`.
 
-## Règles impératives
+### Project memory
 
-- Étager les fichiers un par un — jamais `git add .` ni `git add -A`
-- Une commande git par appel Bash — jamais de `&&`, jamais `cd`, jamais `git -C`
-- Jamais de force-push sur `main`, jamais de `--no-verify`
-- Utiliser Context7 MCP pour la doc des bibliothèques avant de les employer
+<!-- aidd_project_memory:start -->
 
-## Règles détaillées
+@aidd_docs/memory/api.md
+@aidd_docs/memory/architecture.md
+@aidd_docs/memory/auth.md
+@aidd_docs/memory/backlog.md
+@aidd_docs/memory/codebase-map.md
+@aidd_docs/memory/coding-assertions.md
+@aidd_docs/memory/database.md
+@aidd_docs/memory/deployment.md
+@aidd_docs/memory/design.md
+@aidd_docs/memory/ecosystem.md
+@aidd_docs/memory/forms.md
+@aidd_docs/memory/integration.md
+@aidd_docs/memory/navigation.md
+@aidd_docs/memory/project-brief.md
+@aidd_docs/memory/testing.md
+@aidd_docs/memory/vcs.md
 
-À lire quand le sujet se présente — ne pas charger d'avance :
+<!-- aidd_project_memory:end -->
 
-| Fichier | Quand |
-|---|---|
-| `.claude/rules/git-workflow.md` | Commits, branches, PR, worktrees |
-| `.claude/rules/issue-lifecycle.md` | Fermer, étiqueter (`corrigé`) ou rattacher une issue |
-| `.claude/rules/testing.md` | Écrire ou lancer des tests, vérifier avant de pousser |
-| `.claude/rules/security.md` | Auth, secrets, validation d'entrées, headers, ouverture des comptes |
-| `.claude/rules/error-handling.md` | Gestion et remontée des erreurs |
-| `.claude/rules/code-quality.md` | Imports, taille, duplication, performance |
-| `.claude/rules/coding-style.md` | Nommage, constantes, formatage |
-| `.claude/rules/task-management.md` | Mode plan, sous-agents, compaction |
-| `.claude/rules/communication.md` | Langue, workflow de correction |
+- If the block above is empty, run `ls -1tr aidd_docs/memory/` and read each file.
+- Load `aidd_docs/memory/external/*` when the user asks.
+- Load `aidd_docs/memory/internal/*` when the task needs it.

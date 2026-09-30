@@ -9,6 +9,7 @@ import type {
   KeyFigure,
   Tag,
   ContentPage,
+  ContentPageSummary,
   CfpSettings,
   ContactCategory,
   PaginatedArticles,
@@ -162,6 +163,10 @@ export async function getTags(): Promise<Tag[]> {
 
 export async function getContentPage(slug: string): Promise<ContentPage | null> {
   return fetchAPI<ContentPage>(`/api/pages/${encodeURIComponent(slug)}`);
+}
+
+export async function getPublishedPages(): Promise<ContentPageSummary[]> {
+  return (await fetchAPI<ContentPageSummary[]>("/api/pages")) || [];
 }
 
 export async function getCfpSettings(): Promise<CfpSettings> {

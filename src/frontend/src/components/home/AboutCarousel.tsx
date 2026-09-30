@@ -14,6 +14,11 @@ interface AboutCarouselProps {
 // Lightweight, dependency-free carousel (CSS scroll-snap + arrow buttons) for
 // the "Derrière le DevFest Toulouse" block (#59). Keyboard-accessible: the
 // track is focusable and scrolls with arrow keys; buttons scroll by one slide.
+//
+// No `priority` on the first slide: the block sits far below the fold on the
+// home page, its only caller, and preloading it put a second <link rel=preload
+// as=image> in the head — 45.8 kB competing with the hero's LCP on the same
+// throttled link (#473).
 export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCarouselProps) {
   const trackRef = useRef<HTMLUListElement>(null);
 
@@ -34,7 +39,7 @@ export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCar
         tabIndex={0}
         className="flex flex-1 min-h-[260px] gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory rounded-m [scrollbar-width:none] [&::-webkit-scrollbar]:hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-blanc"
       >
-        {slides.map((slide, i) => (
+        {slides.map((slide) => (
           <li
             key={slide.url}
             className="relative shrink-0 snap-start w-full sm:w-[85%] h-full overflow-hidden rounded-m bg-noir/20"
@@ -45,7 +50,6 @@ export default function AboutCarousel({ slides, prevLabel, nextLabel }: AboutCar
               fill
               sizes="(min-width: 640px) 60vw, 90vw"
               className="object-cover"
-              priority={i === 0}
             />
           </li>
         ))}

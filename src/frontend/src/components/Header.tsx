@@ -2,17 +2,18 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useTranslations } from "next-intl";
-import { Link } from "@/i18n/navigation";
+import { useLocale, useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition, useIdentitySettings, useSocialLinks } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
 import { getPublicNavEntries } from "@/lib/nav";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const locale = useLocale();
   const t = useTranslations("nav");
   const tCta = useTranslations("cta");
   const tHeader = useTranslations("header");
@@ -20,6 +21,7 @@ export default function Header() {
   const cfp = useCfpSettings();
   const identity = useIdentitySettings();
   const socialLinks = useSocialLinks();
+  const pages = useNavPages();
   // Header sits on a white bar — use the square / main logo (color on white).
   const logoUrl = getLogoUrl(identity, "square");
 
@@ -28,7 +30,15 @@ export default function Header() {
   const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
   const cfpUrl = getCfpCtaUrl(cfp);
 
-  const navEntries = getPublicNavEntries(edition);
+  const navEntries = getPublicNavEntries(edition, pages, locale);
+
+  // next/link prefetches a target without noticing the visitor is already on
+  // it: standing on the home page, the logo link had the server re-render /fr
+  // for nothing (#476). An `_rsc` prefetch is a server render, not a static
+  // file, so it costs on both ends — and on a throttled link it competes with
+  // the page still loading.
+  const pathname = usePathname();
+  const prefetchUnlessHere = (href: string) => (href === pathname ? false : undefined);
 
   return (
     <header
@@ -38,7 +48,7 @@ export default function Header() {
       <div className="mx-auto flex h-full max-w-[1440px] items-center px-4 lg:px-[100px]">
         {/* Logo + Nav grouped on left */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="shrink-0">
+          <Link href="/" prefetch={prefetchUnlessHere("/")} className="shrink-0">
             <Image
               src={logoUrl}
               alt="DevFest Toulouse"
@@ -55,10 +65,11 @@ export default function Header() {
                 <div key={entry.key} className="group relative">
                   <Link
                     href={entry.href}
+                    prefetch={prefetchUnlessHere(entry.href)}
                     className="flex items-center gap-1 text-gris text-base hover:text-noir transition-colors"
                     aria-haspopup="true"
                   >
-                    {t(entry.labelKey)}
+                    {entry.label ?? t(entry.labelKey)}
                     <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                     </svg>
@@ -68,9 +79,10 @@ export default function Header() {
                       <Link
                         key={child.key}
                         href={child.href}
+                        prefetch={prefetchUnlessHere(child.href)}
                         className="px-4 py-2 text-gris text-base hover:text-noir hover:bg-blanc-casse transition-colors"
                       >
-                        {t(child.labelKey)}
+                        {child.label ?? t(child.labelKey)}
                       </Link>
                     ))}
                   </div>
@@ -79,9 +91,10 @@ export default function Header() {
                 <Link
                   key={entry.key}
                   href={entry.href}
+                  prefetch={prefetchUnlessHere(entry.href)}
                   className="text-gris text-base hover:text-noir transition-colors"
                 >
-                  {t(entry.labelKey)}
+                  {entry.label ?? t(entry.labelKey)}
                 </Link>
               ),
             )}
@@ -145,19 +158,21 @@ export default function Header() {
               <div key={entry.key} className="flex flex-col gap-4">
                 <Link
                   href={entry.href}
+                  prefetch={prefetchUnlessHere(entry.href)}
                   className="text-gris text-base hover:text-noir transition-colors"
                   onClick={() => setIsMenuOpen(false)}
                 >
-                  {t(entry.labelKey)}
+                  {entry.label ?? t(entry.labelKey)}
                 </Link>
                 {entry.children?.map((child) => (
                   <Link
                     key={child.key}
                     href={child.href}
+                    prefetch={prefetchUnlessHere(child.href)}
                     className="pl-4 text-gris text-base hover:text-noir transition-colors"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    {t(child.labelKey)}
+                    {child.label ?? t(child.labelKey)}
                   </Link>
                 ))}
               </div>

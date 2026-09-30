@@ -19,6 +19,14 @@ src/backend/src/
 
 Pas de cache séparé : la traduction renvoyée est sauvegardée directement dans le contenu de l'entité (cf. PR2 — flag `autoTranslated*` sur `Article`). Si l'éditeur reclique sur « Traduire », il refait un appel — c'est un choix explicite.
 
+## Bandeau « traduction automatique » des articles
+
+`Article.autoTranslatedFr` / `autoTranslatedEn` affichent sur la page publique de la langue concernée le bandeau « Traduction automatique non relue par l'équipe ».
+
+- **Qui le pose** : seul `POST /api/admin/articles/:id/translate-fields`, sur la langue cible (et la création, pour les imports). La route refuse une source au corps vide (`400 empty_source`, `<p></p>` compris) : elle posait sinon le bandeau sur une cible dont personne n'avait traduit le corps (#488).
+- **Qui le retire** : la case « Traduit par IA, pas encore relu », en tête du panneau de langue de l'éditeur, décochée puis enregistrée. **Une réécriture manuelle ne le retire pas** : choix délibéré (#488), la case existait mais restait invisible sous l'éditeur, c'est elle qui a été rendue visible.
+- **Garde-fou** : après FR → EN l'éditeur passe sur l'onglet EN, et le bouton propose EN → FR. La confirmation prévient quand la cible contient un texte que l'IA n'a pas écrit — l'accepter écrase quand même le texte d'origine.
+
 ## Endpoint
 
 ### POST `/api/admin/translate`

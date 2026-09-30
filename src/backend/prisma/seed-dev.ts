@@ -278,10 +278,14 @@ async function seedDev() {
   console.log(`Articles created: ${articles.length}`);
 
   // --- Content Pages ---
+  // Both pages are served by their own route and linked from every footer, so
+  // they must be published — the column default is draft (#419). `update` sets
+  // it too, so a reseed repairs a row left unpublished by an earlier run (#433).
   await prisma.contentPage.upsert({
     where: { slug: "code-de-conduite" },
-    update: {},
+    update: { isPublished: true },
     create: {
+      isPublished: true,
       slug: "code-de-conduite",
       titleFr: "Code de conduite",
       titleEn: "Code of Conduct",
@@ -292,8 +296,9 @@ async function seedDev() {
 
   await prisma.contentPage.upsert({
     where: { slug: "mentions-legales" },
-    update: {},
+    update: { isPublished: true },
     create: {
+      isPublished: true,
       slug: "mentions-legales",
       titleFr: "Mentions légales",
       titleEn: "Legal Notice",

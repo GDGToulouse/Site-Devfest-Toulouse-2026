@@ -1,3 +1,8 @@
+---
+paths:
+  - "src/**"
+---
+
 # Code Quality
 
 Write code that reads like the code around it: match its naming, its comment density, its idiom.

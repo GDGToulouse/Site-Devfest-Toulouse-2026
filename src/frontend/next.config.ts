@@ -213,6 +213,19 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      // Video thumbnails, proxied through /_next/image so the browser never
+      // contacts Google before the visitor clicks play (#474). YouTube serves
+      // the same images from both hosts depending on the video.
+      {
+        protocol: "https",
+        hostname: "img.youtube.com",
+        pathname: "/vi/**",
+      },
+      {
+        protocol: "https",
+        hostname: "i.ytimg.com",
+        pathname: "/vi/**",
+      },
     ],
   },
 };

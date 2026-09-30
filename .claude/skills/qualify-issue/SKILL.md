@@ -53,6 +53,10 @@ Structure du repo (voir [CLAUDE.md](../../../CLAUDE.md)) :
 
 **Vérifier toi-même les points critiques d'une investigation déléguée.** Un agent peut se tromper (ex. affirmer une règle CSS qui n'existe pas). Avant de citer une ligne comme cause racine, l'avoir lue — surtout quand l'agent signale lui-même une inférence.
 
+**Pour un bug, reproduire avant de conclure.** Rejouer le parcours dans le navigateur (local, Chrome DevTools MCP) sur le code où le défaut est signalé, et comparer l'état obtenu à celui constaté en ligne. Sur #488, trois défauts plausibles se lisaient dans le code ; seule la reproduction a désigné celui qui produisait l'état observé, après deux plans réécrits.
+
+**Vérifier que le besoin n'est pas déjà couvert.** Un « impossible de retirer X » peut viser un contrôle qui existe mais qu'on ne voit pas : chercher dans l'écran ce qui fait déjà la chose demandée avant de proposer de la construire. Sur #488, la case qui retirait le badge était sous l'éditeur de texte ; le correctif était de la montrer, pas d'ajouter une règle serveur.
+
 Livrable de cette étape : une **cause racine confirmée**, avec `fichier:ligne` réels, et un correctif proposé.
 
 **Si l'investigation n'aboutit pas**, ne pas maquiller une hypothèse en diagnostic : utiliser la variante « qualification partielle » du template — ce qui a été écarté (avec les preuves), la piste qui reste, et ce qui manque pour trancher. Une qualification partielle honnête vaut mieux qu'une fausse certitude : elle évite au suivant de refaire les mêmes vérifications.

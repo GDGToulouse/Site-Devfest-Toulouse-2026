@@ -123,6 +123,21 @@ export interface ContentPage {
   updatedAt: string;
 }
 
+// A published page as listed by GET /api/pages — no body, since the callers
+// (sitemap, navigation) want the entry, not the content (#419).
+export interface ContentPageSummary {
+  id: number;
+  slug: string;
+  titleFr: string;
+  titleEn: string;
+  /** Both the English title and body are filled — gates the /en sitemap entry. */
+  hasEnglish: boolean;
+  /** Where the page shows in the navigation, and its rank there (#420). */
+  navLocation: "NONE" | "HEADER" | "FOOTER";
+  navOrder: number;
+  updatedAt: string;
+}
+
 // A sponsoring offer shown on /devenir-sponsor (#318). One row of the shared
 // SponsorTier catalogue, joined to the current edition (price is the edition
 // override). Replaces the former SponsorPlan.
