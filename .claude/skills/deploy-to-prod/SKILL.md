@@ -105,6 +105,11 @@ Dans la même PR, mettre à jour [`CHANGELOG.md`](../../../CHANGELOG.md) : dépl
 entrées de `## [Non publié]` vers une nouvelle section `## [X.Y.Z] - AAAA-MM-JJ`
 (Ajouté / Corrigé / Modifié). Ce texte sert aussi de notes de release.
 
+**Une ligne par paragraphe et par puce, jamais de retour à la ligne forcé.** Une
+release GitHub rend chaque saut de ligne comme un `<br>`, contrairement au `.md` :
+une section coupée à 80 colonnes y apparaît hachée — les treize premières releases
+l'étaient, jusqu'à v1.9.0.
+
 > ⚠️ Oublier ce bump = la prod affiche l'ancien numéro. C'est l'erreur la plus fréquente.
 
 ---
