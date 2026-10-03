@@ -143,6 +143,8 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<BilletwebEvent | null>(null);
+  // Billetweb credits a sale to the site only through `src` (#507).
+  const [trackingSource, setTrackingSource] = useState("site");
 
   async function loadTiers() {
     setIsLoading(true);
@@ -234,7 +236,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
 
     const { data, status } = await adminFetch<{ imported: number }>("/tickets/import/billetweb", {
       method: "POST",
-      body: JSON.stringify({ editionId, billetwebEventId: selectedEvent.id }),
+      body: JSON.stringify({ editionId, billetwebEventId: selectedEvent.id, trackingSource }),
     });
 
     setIsImporting(false);
@@ -382,6 +384,16 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                   </p>
                 </button>
               ))}
+            </div>
+
+            <div className="px-6 py-4 border-t border-gris/20">
+              <FormField
+                label="Source de suivi"
+                name="trackingSource"
+                value={trackingSource}
+                onChange={setTrackingSource}
+                helpText="Ajoutée aux liens Billetweb (src=…) pour compter les ventes venues du site. Laisser vide pour ne pas suivre."
+              />
             </div>
 
             <div className="px-6 py-4 border-t border-gris/20 flex gap-3 justify-end">
