@@ -1,5 +1,5 @@
 ---
-status: in-progress
+status: done
 ---
 
 # Instruction: Liens entrants réparés et écosystème contacté (#386)
@@ -56,6 +56,7 @@ journey
 
 > Réparer la source des liens, pas seulement leur arrivée.
 
+0. **Abandonné (2026-10-03)** : Julien a décidé de ne rien faire corriger chez les tiers ; #386 fermée en « not planned ». Seule la redirection (tâche 1) part en prod.
 1. Fiche GDG Toulouse (`gdg.community.dev`) : lien du programme vers `/fr/conferences` ; lien libellé `devfesttoulouse.fr` qui pointe vers LinkedIn, à corriger.
 2. Human Coders : demander la correction de la date (19 novembre, pas octobre).
 3. La Mêlée (`contact@lamelee.com`) : proposer le DevFest à l'agenda, pour l'audience.
