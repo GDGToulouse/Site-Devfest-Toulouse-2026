@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in-progress
 ---
 
 # Instruction: Audit des rôles stockés en prod et en beta (#500, tâche 1)

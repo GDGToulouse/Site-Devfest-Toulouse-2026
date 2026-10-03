@@ -1,6 +1,6 @@
 ---
 objective: "Les risques et pertes immédiats d'avant l'événement sont neutralisés : aucun contact sponsor n'a accès au back-office, les ventes depuis le site sont suivies, la collecte Emmaüs est annoncée, les liens entrants connus aboutissent, et le sort des stands 2026 est tranché."
-status: pending
+status: blocked
 ---
 
 # Plan: Vague 0 — actions immédiates avant le DevFest 2026

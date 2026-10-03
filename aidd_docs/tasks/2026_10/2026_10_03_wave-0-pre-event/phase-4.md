@@ -1,5 +1,5 @@
 ---
-status: pending
+status: in-progress
 ---
 
 # Instruction: Liens entrants réparés et écosystème contacté (#386)
