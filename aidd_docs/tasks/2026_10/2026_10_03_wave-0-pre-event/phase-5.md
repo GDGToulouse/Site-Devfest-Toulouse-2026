@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: Stands 2026 — décision consignée (#438, #485)
@@ -45,6 +45,7 @@ journey
 
 > Décider en connaissant le coût réel.
 
+0. **Tranché (2026-10-03)** : gestion des stands reportée à l'édition 2027 ; stands 2026 suivis hors du site par l'équipe sponsors ; ordre pour 2027 : #485 puis #438. Décision écrite sur les deux issues.
 1. Rappeler : #485 invalide le modèle de #438 (catalogue `StandOffer`), #438 est estimé L, l'échéance est le 16 octobre, le montage le 18 novembre.
 2. Recommandation : gérer les stands 2026 hors du site (tableur partagé ou formulaire externe), reporter #485 puis #438 après l'événement.
 
