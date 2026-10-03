@@ -49,6 +49,7 @@ journey
 
 > Publier un texte que l'équipe assume.
 
+0. **En attente (2026-10-03)** : Julien en parle d'abord avec la bénévole à l'origine de la demande. Ne rien créer dans l'admin avant son retour.
 1. Reprendre le texte de #490 (Montaine), corriger « une une caisse », nommer partout « l'Atelier Numérique d'Emmaüs Agir ».
 2. Faire trancher l'emplacement : menu principal (recommandé) ou pied de page, et les sections retenues (Emmaüs, écoconception, accessibilité, Tech Speak'Her).
 
