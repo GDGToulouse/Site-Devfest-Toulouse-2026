@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: Audit des rôles stockés en prod et en beta (#500, tâche 1)
@@ -48,6 +48,7 @@ journey
 
 > Viser la bonne base : les hashes Coolify changent à chaque redéploiement.
 
+0. Julien exécute toutes les commandes de cette phase ; l'agent ne se connecte jamais au VPS (`CLAUDE.md`), il les prépare et lit les résultats.
 1. Détecter le conteneur `backend-*` dont `BASE_URL` vaut `https://devfesttoulouse.fr`, en déduire `db-<hash>` ; idem pour `https://beta.site.devfesttoulouse.fr`.
 2. Afficher les deux noms et les relire avant toute requête.
 

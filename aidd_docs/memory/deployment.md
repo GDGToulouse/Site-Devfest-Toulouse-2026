@@ -41,6 +41,6 @@ flowchart LR
 
 - Santé : `/api/health` (version déployée ; `dev-j` n'expose pas le commit, `APP_COMMIT` y est vide)
 - Déploiements : le MCP Coolify intégré (`https://infra.devfesttoulouse.fr/mcp`, lecture seule) donne l'état et le commit de chaque déploiement. Les trois applications portent presque le même nom : les distinguer par `git_branch` (`main`, `dev`, `dev-j`). Pendant un redéploiement, l'environnement répond « no available server » : c'est la bascule du compose, pas une panne
-- Limites du MCP Coolify : `get_logs` d'une application compose ne renvoie que le conteneur frontend ; les logs backend (migrations, seed, erreurs) passent par SSH, `sudo docker logs --tail 200 $(sudo docker ps --format '{{.Names}}' | grep '^backend-<uuid-app>')`. `running:unknown` sur `dev-j` veut dire healthcheck désactivé dans Coolify, pas une panne
+- Limites du MCP Coolify : `get_logs` d'une application compose ne renvoie que le conteneur frontend ; les logs backend (migrations, seed, erreurs) passent par SSH, que seul Julien ouvre (l'agent fournit la commande), `sudo docker logs --tail 200 $(sudo docker ps --format '{{.Names}}' | grep '^backend-<uuid-app>')`. `running:unknown` sur `dev-j` veut dire healthcheck désactivé dans Coolify, pas une panne
 - Erreurs 5xx : webhook d'alerte (#118), cf. `integration.md`
 - Audience : Plausible. Performance et indexation : Google Search Console et PageSpeed Insights

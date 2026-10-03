@@ -24,6 +24,19 @@ const nextConfig: NextConfig = {
         destination: "/:locale/sponsors",
         permanent: true,
       },
+      // The WordPress programme URL, still linked from the GDG Toulouse page
+      // (#386). The infra redirects of #380 don't cover it, and without a
+      // locale it would get /fr prepended and 404.
+      {
+        source: "/conferences-list",
+        destination: "/fr/conferences",
+        permanent: true,
+      },
+      {
+        source: "/:locale(fr|en)/conferences-list",
+        destination: "/:locale/conferences",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
