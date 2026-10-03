@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: Suivi Billetweb rétabli par les données (#507, contournement)
