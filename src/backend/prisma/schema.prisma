@@ -126,6 +126,7 @@ model Edition {
   editionSponsors EditionSponsor[]
   categories      EditionCategory[]
   scheduleEntries ScheduleEntry[]
+  sessionizeRooms SessionizeRoom[]
 
   @@index([deletedAt])
   @@index([venueId])
@@ -176,9 +177,36 @@ model Room {
   talks          Talk[]
   scheduleEntries ScheduleEntry[]
   simulcasts      TalkSimulcast[]
+  sessionizeRooms SessionizeRoom[]
 
   @@unique([venueId, name])
   @@index([venueId])
+}
+
+/// A room as Sessionize names it, and the venue room it stands for (#519).
+///
+/// The names do not line up ("Amphi" is our "Amphithéâtre", "Agora" our
+/// "Agora 1"), so the admin pairs them once and every later import of the same
+/// edition reuses the pairing. Per edition because Sessionize room ids belong
+/// to one Sessionize event. A null `roomId` is a room seen but not paired yet:
+/// its sessions are imported without a room, and the import report says so.
+model SessionizeRoom {
+  id           Int    @id @default(autoincrement())
+  sessionizeId Int
+  name         String
+  sortOrder    Int    @default(0)
+
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  roomId Int?
+  room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([editionId, sessionizeId])
+  @@index([roomId])
 }
 
 /// One room a talk is relayed to (#456).
