@@ -8,6 +8,8 @@ import fastifyStatic from "@fastify/static";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { startScheduledTasks } from "./lib/scheduler.js";
 import { registerRequestContext } from "./lib/request-context.js";
+import { registerRouteCatalog } from "./lib/route-catalog.js";
+import mcpRoutes from "./routes/mcp.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerAuthRoutes } from "./plugins/auth-routes.js";
 import { registerCommonSchemas } from "./schemas/common.js";
@@ -84,6 +86,10 @@ app.decorateRequest("authContext");
 // Who is acting and through which door, for the audit log (#513). Registered
 // before every route so no write escapes it.
 registerRequestContext(app);
+
+// The routes an AI agent can list through /api/mcp (#514), recorded as they
+// are registered — so before any of them.
+registerRouteCatalog(app);
 
 // Server errors are logged as today, and additionally pushed to the alert
 // webhook when one is configured (#118). Only 5xx are alerted: 4xx are client
@@ -259,6 +265,10 @@ await app.register(myApiKeysRoutes, { prefix: "/api/me" });
 // outside the admin group: the cron has no session, so the route checks a
 // shared secret or an ADMIN session itself.
 await app.register(maintenanceRoutes, { prefix: "/api" });
+
+// The MCP server for AI agents (#514): authenticates its own OAuth tokens, then
+// replays each call against the routes above with them.
+await app.register(mcpRoutes, { prefix: "/api" });
 
 // Admin routes (protected by requireAdmin hook)
 await app.register(adminRoutes, { prefix: "/api/admin" });

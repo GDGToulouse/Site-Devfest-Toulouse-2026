@@ -6,7 +6,8 @@ import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 import { extractPrefix, verifyApiKey } from "./api-key.js";
 import { notDeleted } from "./admin-helpers.js";
-import { setActor } from "./request-context.js";
+import { setActor, setChannel } from "./request-context.js";
+import { looksLikeJwt, verifyAgentToken } from "./agent-token.js";
 
 // Update `lastUsedAt` at most once per minute to avoid spamming the DB on
 // high-traffic keys. Good enough for "seen recently" UI hints.
@@ -21,7 +22,7 @@ export interface AuthenticatedUser {
 
 export interface AuthContext {
   user: AuthenticatedUser;
-  source: "session" | "apiKey";
+  source: "session" | "apiKey" | "mcp";
 }
 
 async function resolveSession(request: FastifyRequest): Promise<AuthenticatedUser | null> {
@@ -127,15 +128,39 @@ async function resolveBearer(
   };
 }
 
+// An AI agent acting for a person (#514). Same account checks as a session —
+// a banned or trashed account loses its agents with everything else.
+async function resolveAgent(request: FastifyRequest): Promise<AuthenticatedUser | null> {
+  const header = request.headers.authorization;
+  const raw = header?.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+  if (!looksLikeJwt(raw)) return null;
+
+  const token = await verifyAgentToken(raw);
+  if (!token) {
+    request.log.debug({ authPhase: "auth-context.agent.reject" });
+    return null;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { id: token.userId, ...notDeleted },
+    select: { id: true, email: true, name: true, role: true, banned: true },
+  });
+  if (!user || user.banned) {
+    request.log.debug({ authPhase: "auth-context.agent.reject", reason: !user ? "no_user" : "banned" });
+    return null;
+  }
+  return { id: user.id, email: user.email, name: user.name, role: user.role };
+}
+
 function actorOf(user: AuthenticatedUser) {
   return { userId: user.id, label: user.name || user.email };
 }
 
 /**
  * Resolve the current caller by trying (in order): a Better Auth session
- * cookie, then an `Authorization: Bearer <api-key>` header. Returns null
- * if neither succeeds. The caller's role reflects the DB state at request
- * time, so API tokens always mirror their owner's current role.
+ * cookie, an `Authorization: Bearer <api-key>` header, then an AI agent's OAuth
+ * token (#514). Returns null if none succeeds. The caller's role reflects the
+ * DB state at request time, so tokens always mirror their owner's current role.
  *
  * Also records the caller as the request's actor, so every write that follows
  * is attributed to them in the audit log (#513).
@@ -151,6 +176,13 @@ export async function getAuthContext(request: FastifyRequest): Promise<AuthConte
   if (bearer) {
     setActor(actorOf(bearer.user), { apiKeyId: bearer.apiKeyId });
     return { user: bearer.user, source: "apiKey" };
+  }
+
+  const agentUser = await resolveAgent(request);
+  if (agentUser) {
+    setActor(actorOf(agentUser));
+    setChannel("MCP");
+    return { user: agentUser, source: "mcp" };
   }
 
   return null;

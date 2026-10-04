@@ -55,6 +55,8 @@ const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3
 // The MCP endpoint agents call (#514), as seen from outside: tokens are bound to
 // this exact URL, so it must be the public one, not the container address.
 export const MCP_RESOURCE = `${baseUrl}/api/mcp`;
+// Who signs the agents' tokens: better-auth names itself by its base path.
+export const AUTH_ISSUER = `${baseUrl}/api/auth`;
 const wildcardOrigin = buildWildcardOrigin(baseUrl);
 const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrigin] : [])].filter(
   (v, i, arr) => arr.indexOf(v) === i,

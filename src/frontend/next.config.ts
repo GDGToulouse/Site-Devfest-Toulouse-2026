@@ -50,6 +50,12 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/auth/:path*`,
       },
       {
+        // The MCP server AI agents call (#514). Its public URL is the resource
+        // their tokens are bound to.
+        source: "/api/mcp",
+        destination: `${backendUrl}/api/mcp`,
+      },
+      {
         // OAuth discovery for the MCP connector (#514): clients look for these
         // documents at the origin root (RFC 8414, RFC 9728), the backend serves
         // them. The dot in ".well-known" already keeps proxy.ts (next-intl) out.

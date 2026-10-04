@@ -41,6 +41,12 @@ importers:
       '@fastify/swagger-ui':
         specifier: ^5.2.5
         version: 5.2.5
+      '@modelcontextprotocol/node':
+        specifier: 2.1.1
+        version: 2.1.1(@modelcontextprotocol/server@2.3.0)
+      '@modelcontextprotocol/server':
+        specifier: 2.3.0
+        version: 2.3.0
       '@node-rs/argon2':
         specifier: ^2.0.2
         version: 2.0.2
@@ -59,6 +65,9 @@ importers:
       fastify:
         specifier: ^5.10.0
         version: 5.10.0
+      jose:
+        specifier: 6.2.3
+        version: 6.2.3
       node-cron:
         specifier: ^4.6.0
         version: 4.6.0
@@ -603,6 +612,20 @@ packages:
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
     engines: {node: '>=8'}
+
+  '@modelcontextprotocol/core@2.3.0':
+    resolution: {integrity: sha512-09BHFaNVBe5pB2AhzCfLj0cqmsKLERvZQ4FblzP90UMGLaXVqdZPByFjURwsUYCmxonUW2yAwgTTvle+8O2/8w==}
+    engines: {node: '>=20'}
+
+  '@modelcontextprotocol/node@2.1.1':
+    resolution: {integrity: sha512-EY92OAXN2xYL7tNS/MVsWJW1v8VHAPwl9B4Ca3pCrjmvqyC+S1C/6UHsMxF2GoFPraS5Yyg56vFz9brVpFojMA==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      '@modelcontextprotocol/server': ^2.3.0
+
+  '@modelcontextprotocol/server@2.3.0':
+    resolution: {integrity: sha512-+6b0LdsQLmHsvS7J6sQJ4weTpzUn61fU1JKS+321/+IyDYoHW5CR2Tgqcs6GgAAQvlesCo6yX3xttgmx+XGtJw==}
+    engines: {node: '>=20'}
 
   '@napi-rs/wasm-runtime@0.2.12':
     resolution: {integrity: sha512-ZVWUcfwY4E/yPitQJl481FjFo3K22D6qF0DuFH6Y/nbnE11GY5uguDxZMGXPQ8WQ0128MXQD7TnfHyK4oWoIJQ==}
@@ -2555,6 +2578,21 @@ snapshots:
   '@kurkle/color@0.3.4': {}
 
   '@lukeed/ms@2.0.2': {}
+
+  '@modelcontextprotocol/core@2.3.0':
+    dependencies:
+      zod: 4.6.5
+
+  '@modelcontextprotocol/node@2.1.1(@modelcontextprotocol/server@2.3.0)':
+    dependencies:
+      '@hono/node-server': 1.19.11(hono@4.12.23)
+      '@modelcontextprotocol/server': 2.3.0
+      hono: 4.12.23
+
+  '@modelcontextprotocol/server@2.3.0':
+    dependencies:
+      '@modelcontextprotocol/core': 2.3.0
+      zod: 4.6.5
 
   '@napi-rs/wasm-runtime@0.2.12':
     dependencies:
