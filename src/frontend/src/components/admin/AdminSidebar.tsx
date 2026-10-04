@@ -21,6 +21,7 @@ import {
   faStar,
   faTrashCan,
   faLocationDot,
+  faClockRotateLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -61,6 +62,7 @@ const iconMap: Record<string, IconDefinition> = {
   star: faStar,
   trash: faTrashCan,
   "map-pin": faLocationDot,
+  clock: faClockRotateLeft,
 };
 
 interface HealthInfo {

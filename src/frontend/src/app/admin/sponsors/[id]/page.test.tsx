@@ -25,6 +25,9 @@ vi.mock("@/components/admin/RichTextEditor", () => ({
   default: ({ name }: { name: string }) => <textarea data-testid={name} />,
 }));
 
+// The history section loads on its own and has its own test (#513).
+vi.mock("@/components/admin/AuditTrail", () => ({ default: () => null }));
+
 const { default: SponsorEditorPage } = await import("./page");
 
 const TIERS = [

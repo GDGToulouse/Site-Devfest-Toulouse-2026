@@ -21,6 +21,7 @@ import adminTranslateRoutes from "./translate.js";
 import adminTrashRoutes from "./trash.js";
 import adminVenueRoutes from "./venues.js";
 import adminScheduleRoutes from "./schedule.js";
+import adminAuditRoutes from "./audit.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -58,5 +59,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(adminSettingsRoutes);
     await adminApp.register(adminUserRoutes);
     await adminApp.register(adminApiKeyRoutes);
+    // Who changed what, from where: personal data, not for editors (#513).
+    await adminApp.register(adminAuditRoutes);
   });
 }

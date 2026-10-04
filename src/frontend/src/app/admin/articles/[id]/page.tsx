@@ -10,6 +10,7 @@ import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import TagInput from "@/components/admin/TagInput";
 import Tabs from "@/components/admin/Tabs";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import AuditTrail from "@/components/admin/AuditTrail";
 
 interface ArticleForm {
   slug: string;
@@ -501,6 +502,8 @@ export default function ArticleEditorPage() {
           />
         </div>
       </div>
+
+      {articleId && <AuditTrail entity="Article" entityId={articleId} refreshKey={saveState} />}
     </div>
   );
 }

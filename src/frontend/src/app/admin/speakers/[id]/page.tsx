@@ -9,6 +9,7 @@ import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import EditLinkActions from "@/components/admin/EditLinkActions";
 import SpeakerForm, { emptySpeakerForm, type SpeakerFormValue } from "@/components/admin/speakers/SpeakerForm";
 import SpeakerEditionsPanel from "@/components/admin/speakers/SpeakerEditionsPanel";
+import AuditTrail from "@/components/admin/AuditTrail";
 
 type SpeakerData = Speaker;
 
@@ -282,6 +283,8 @@ export default function SpeakerEditorPage() {
           </button>
         </div>
       </div>
+
+      {!isNew && current && <AuditTrail entity="Speaker" entityId={current.id} refreshKey={saveState} />}
     </div>
   );
 }

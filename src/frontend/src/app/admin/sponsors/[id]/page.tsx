@@ -14,6 +14,7 @@ import SponsorParticipationFields from "@/components/admin/sponsors/SponsorParti
 import SponsorComKitFields from "@/components/admin/sponsors/SponsorComKitFields";
 import SponsorYearPicker from "@/components/admin/sponsors/SponsorYearPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import AuditTrail from "@/components/admin/AuditTrail";
 import {
   emptySponsorForm,
   participationValue,
@@ -484,6 +485,8 @@ export default function SponsorEditorPage() {
           </div>
         )}
       </div>
+
+      {sponsorId && <AuditTrail entity="Sponsor" entityId={sponsorId} refreshKey={saveState} />}
     </div>
   );
 }

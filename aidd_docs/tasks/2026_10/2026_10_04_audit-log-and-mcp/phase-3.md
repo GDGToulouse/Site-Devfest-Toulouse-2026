@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #513 — écran Historique, historique par fiche, purge à 13 mois

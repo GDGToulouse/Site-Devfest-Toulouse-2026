@@ -297,3 +297,58 @@ export async function adminRevokeApiKey(id: string): Promise<boolean> {
   const { status } = await adminFetch(`/api-keys/${id}`, { method: "DELETE" });
   return status === 200;
 }
+
+// --- Audit log (#513) ---
+
+export type AuditChannel =
+  | "ADMIN"
+  | "SPONSOR"
+  | "EDIT_LINK"
+  | "IMPORT"
+  | "API_KEY"
+  | "MCP"
+  | "PUBLIC"
+  | "SYSTEM"
+  | "AUTH";
+
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "TRASH" | "RESTORE";
+
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: AuditAction;
+  entity: string;
+  entityId: string;
+  entityLabel: string | null;
+  channel: AuditChannel;
+  actorUserId: string | null;
+  actorLabel: string;
+  apiKeyId: string | null;
+  ip: string | null;
+  changes: Record<string, { before: unknown; after: unknown }> | null;
+}
+
+export interface AuditPage {
+  items: AuditEntry[];
+  nextCursor: string | null;
+}
+
+export interface AuditFilters {
+  entity?: string;
+  entityId?: string;
+  actorUserId?: string;
+  channel?: AuditChannel;
+  from?: string;
+  to?: string;
+  before?: string;
+  limit?: number;
+}
+
+/** The status comes back too: a 403 means "not for this role", not an outage. */
+export async function adminListAudit(filters: AuditFilters) {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") q.set(key, String(value));
+  }
+  return adminFetch<AuditPage>(`/audit?${q}`);
+}

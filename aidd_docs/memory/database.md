@@ -31,6 +31,7 @@ flowchart LR
 - `prisma generate` exige un `DATABASE_URL`, même factice : la config le résout sans se connecter
 - Suppression douce via `deletedAt` et le filtre `notDeleted`, rétention 30 j (`TRASH_RETENTION_DAYS`). La purge (`POST /api/maintenance/purge-trash`, en-tête `X-Purge-Secret`) n'est appelée par **aucune** tâche planifiée : la corbeille ne se vide pas seule — procédure dans `docs/variables-environnement.md`
 - Un `upsert` doit viser un vrai `@id` / `@unique` / `@@unique`, sinon chaque seed ajoute des doublons. Poser l'unicité après coup : dédoublonner dans la migration **avant** de créer l'index, sinon `migrate deploy` échoue
+- Historique (#513) : toute écriture via `prisma` (`src/backend/src/lib/prisma.ts`) passe par l'extension `lib/audit.ts`, qui écrit `AuditLog` avec l'acteur et le canal du contexte de requête (`lib/request-context.ts`). Un nouveau modèle est tracé d'office ; l'exclure (secrets, bruit) se fait dans `EXCLUDED_MODELS`. Les seeds ont leur propre client et ne sont pas tracés. Hors requête (cron, CLI), envelopper le travail dans `runInContext(systemContext(...), async () => …)` en **attendant** les requêtes : une requête Prisma est paresseuse, renvoyée sans `await` elle part après la fermeture du contexte, sans auteur
 - Supprimer une colonne : chercher ses usages dans tout le dépôt, **seeds compris**. Un seed qui cite une colonne disparue met le backend de `dev-j` en boucle de redémarrage
 
 Modèle métier détaillé : `docs/modele-donnees-metier.md`.
