@@ -1,6 +1,10 @@
 import nodemailer from "nodemailer";
 
-import { renderEmail } from "./email-template.js";
+import { escapeHtml, renderEmail } from "./email-template.js";
+
+// Defined next to the layout, which escapes the preview text with it; exported
+// from here too, where every email builder already imports it from.
+export { escapeHtml };
 
 // SMTP_SECURE = true forces a TLS handshake on connect (port 465 typical).
 // SMTP_AUTH = true enables plain SMTP auth via SMTP_USER / SMTP_PASSWORD.
@@ -42,6 +46,8 @@ interface SendEmailOptions {
   locale?: "fr" | "en";
   // Snippet inboxes show next to the subject. Defaults to the subject.
   previewText?: string;
+  // The body asks the reader to reply: drop the footer's do-not-reply notice.
+  acceptsReplies?: boolean;
 }
 
 /**
@@ -58,6 +64,7 @@ export async function sendEmail({
   cc,
   locale = "fr",
   previewText,
+  acceptsReplies,
 }: SendEmailOptions) {
   await transporter.sendMail({
     from: FROM,
@@ -66,7 +73,7 @@ export async function sendEmail({
     ...(replyTo ? { replyTo } : {}),
     subject,
     text,
-    html: renderEmail({ locale, previewText: previewText ?? subject, bodyHtml: html }),
+    html: renderEmail({ locale, previewText: previewText ?? subject, bodyHtml: html, acceptsReplies }),
   });
 }
 
@@ -93,13 +100,4 @@ export function interpolateHtml(template: string, vars: Record<string, string>):
     const value = vars[key];
     return value === undefined ? match : escapeHtml(value);
   });
-}
-
-export function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
 }
