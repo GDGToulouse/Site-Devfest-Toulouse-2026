@@ -110,6 +110,18 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     return contacts.map((c) => ({ ...c.sponsor, accessRole: c.accessRole }));
   });
 
+  // GET /api/sponsor-space/me — who is signed in (#411).
+  //
+  // The space was built around the company, so a person invited by two of them
+  // never saw which address they were signed in with. /api/admin/session would
+  // tell, but it refuses a SPONSOR on purpose; this returns the identity only.
+  app.get("/sponsor-space/me", async (request, reply) => {
+    const ctx = await getAuthContext(request);
+    if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+
+    return { id: ctx.user.id, email: ctx.user.email, name: ctx.user.name };
+  });
+
   // GET /api/sponsor-space/:sponsorId — the company's own profile.
   //
   // STAND may read it: the booth team needs to know what the page says, which
