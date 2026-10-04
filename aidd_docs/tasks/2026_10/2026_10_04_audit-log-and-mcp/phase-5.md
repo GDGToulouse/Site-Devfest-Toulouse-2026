@@ -19,7 +19,8 @@ status: pending
 └── src/frontend/
     ├── next.config.ts                                 ✏️ réécritures /.well-known/* vers le backend
     ├── src/proxy.ts                                   ✏️ /.well-known hors next-intl
-    └── src/app/connect/page.tsx                       ✅ connexion d'un agent : mot de passe, Google, GitHub, lien magique, puis reprise de l'autorisation
+    ├── src/app/connect/page.tsx                       ✅ connexion d'un agent : mot de passe, Google, GitHub, lien magique, puis reprise de l'autorisation
+    └── src/app/connect/consent/page.tsx               ✅ consentement (option consentPage du plugin)
 ```
 
 ## User Journey
@@ -57,7 +58,7 @@ journey
 
 > better-auth devient le serveur OAuth du site, sans second système d'identité.
 
-1. Installer `@better-auth/mcp` et `@better-auth/cimd` (vérifier les API dans les types installés) ; `jwt()` + `mcp({ loginPage: "/connect", resource: "<BASE_URL>/api/mcp" })` + `cimd(...)`.
+1. Installer `@better-auth/mcp` et `@better-auth/cimd` (vérifier les API dans les types installés) ; `jwt()` + `mcp({ loginPage: "/connect", consentPage: "/connect/consent", resource: "<BASE_URL>/api/mcp" })` + `cimd({ fetchClientMetadataResource, metadataProfile: "mcp-2026-07-28" })`, le fetcher venant de `@better-auth/cimd/node`. Ne **pas** ajouter `oauthProvider()` en plus : `mcp()` l'embarque (doc Context7, 2026-10-04).
 2. Schéma des tables OAuth par la CLI better-auth, migration écrite à la main.
 3. `/api/auth` : accepter `application/x-www-form-urlencoded` ; limite de débit propre aux endpoints OAuth.
 

@@ -11,7 +11,7 @@ status: pending
 ```txt
 .
 ├── src/backend/
-│   ├── package.json                               ✏️ @modelcontextprotocol/server (SDK v2)
+│   ├── package.json                               ✏️ @modelcontextprotocol/server + @modelcontextprotocol/node (SDK v2 : le transport HTTP est dans le paquet node)
 │   ├── src/lib/auth-context.ts                    ✏️ 3e source : jeton OAuth vérifié par better-auth, source mcp, compte banni ou supprimé refusé
 │   ├── src/lib/request-context.ts                 ✏️ canal MCP
 │   ├── src/plugins/swagger.ts                     ✏️ spec générée en interne même quand l'UI est coupée en prod
@@ -65,7 +65,7 @@ journey
 
 > Deux outils génériques, aucune règle d'accès dans le connecteur.
 
-1. `POST /api/mcp` avec le SDK v2 en mode sans état ; GET/DELETE en 405.
+1. `POST /api/mcp` avec le SDK v2 en mode sans état : par requête, un `McpServer` (il porte le jeton de l'agent) et un `NodeStreamableHTTPServerTransport({ sessionIdGenerator: undefined })`, `handleRequest(request.raw, reply.raw, request.body)`, puis `transport.close()` et `server.close()` sur `reply.raw` `close`. Fastify doit rendre la main (`reply.hijack()`). GET/DELETE en 405.
 2. `list_routes` depuis `app.swagger()` (méthode, chemin, résumé, paramètres) ; `call_route` via `app.inject` en transmettant le jeton de l'agent ; réponse relayée telle quelle (statut, corps).
 3. Refuser `call_route` vers `/api/mcp` et `/api/auth/*` (pas de récursion, pas de gestion de comptes par l'agent).
 
