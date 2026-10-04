@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #505 — e-mail d'invitation sponsor qui explique l'espace
