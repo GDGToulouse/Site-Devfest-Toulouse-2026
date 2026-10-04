@@ -1,6 +1,6 @@
 ---
 objective: "Avant le 16 octobre 2026, un contact sponsor ne peut plus recevoir de rôle back-office, l'invitation sponsor explique l'espace partenaire, un sponsor voit son compte et gère son mot de passe, et le tout est en production avec #507 et la redirection /conferences-list."
-status: pending
+status: in-progress
 ---
 
 # Plan: Vague 1 — sécurité et parcours sponsor, puis mise en production

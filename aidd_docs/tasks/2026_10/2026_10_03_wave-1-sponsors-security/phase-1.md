@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #500 backend — rôles verrouillés et sponsors rattachés
