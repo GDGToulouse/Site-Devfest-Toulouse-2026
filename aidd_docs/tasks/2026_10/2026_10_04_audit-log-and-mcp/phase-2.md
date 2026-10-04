@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #513 — extension Prisma qui trace toute écriture

@@ -42,6 +42,11 @@ export function channelForUrl(url: string): AuditChannel {
   return match ? match[1] : "PUBLIC";
 }
 
+/**
+ * Run `fn` inside a context. Pass an async function that awaits its queries:
+ * a Prisma query is lazy and only runs on its first `then()`, so returning one
+ * unawaited sends it after the context has closed — unattributed.
+ */
 export function runInContext<T>(context: RequestContext, fn: () => T): T {
   return storage.run(context, fn);
 }
