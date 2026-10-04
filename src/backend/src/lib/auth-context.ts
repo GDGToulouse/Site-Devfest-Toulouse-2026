@@ -6,7 +6,7 @@ import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 import { extractPrefix, verifyApiKey } from "./api-key.js";
 import { notDeleted } from "./admin-helpers.js";
-import { setActor, setChannel } from "./request-context.js";
+import { getRequestContext, setActor, setChannel } from "./request-context.js";
 import { looksLikeJwt, verifyAgentToken } from "./agent-token.js";
 
 // Update `lastUsedAt` at most once per minute to avoid spamming the DB on
@@ -186,6 +186,22 @@ export async function getAuthContext(request: FastifyRequest): Promise<AuthConte
   }
 
   return null;
+}
+
+/**
+ * preHandler that keeps AI agents (#514) away from credentials and accounts:
+ * API keys, user management. An agent minting an API key would keep its access
+ * after its person withdrew consent; an admin's agent could hand out roles.
+ * Runs after the area's own guard, which already resolved the caller and set
+ * the MCP channel when the credential was an agent token.
+ */
+export async function refuseAgents(_request: FastifyRequest, reply: FastifyReply) {
+  if (getRequestContext()?.channel === "MCP") {
+    reply.code(403).send({
+      error: "Forbidden",
+      message: "Un agent IA ne peut pas gérer les comptes ni les clés d'accès.",
+    });
+  }
 }
 
 /**

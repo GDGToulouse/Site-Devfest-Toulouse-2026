@@ -73,6 +73,18 @@ describe("API route guards (#514)", () => {
     expect(unguarded).toEqual([]);
   });
 
+  it("should keep AI agents away from accounts and keys", () => {
+    // An agent minting a key would keep its access after consent is withdrawn;
+    // an admin's agent could hand out roles (API rights audit, #514).
+    const CREDENTIAL_AREAS = ["/api/me/api-keys", "/api/admin/users", "/api/admin/api-keys"];
+    const open = routes
+      .filter((r) => CREDENTIAL_AREAS.some((area) => r.path.startsWith(area)))
+      .filter((r) => !r.preHandlers.includes("refuseAgents"))
+      .map(key);
+
+    expect(open).toEqual([]);
+  });
+
   it("should keep the exceptions list to routes that exist", () => {
     const existing = new Set(routes.map(key));
 

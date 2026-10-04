@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import { prisma } from "../../lib/prisma.js";
-import { requireAnyAuthenticated } from "../../lib/auth-context.js";
+import { refuseAgents, requireAnyAuthenticated } from "../../lib/auth-context.js";
 import { generateApiKey, resolveApiKeyEnv } from "../../lib/api-key.js";
 
 // Soft cap on active keys per user. Meant as a sanity safeguard, not a
@@ -57,6 +57,7 @@ function serializeApiKey(k: {
 
 export default async function myApiKeysRoutes(app: FastifyInstance) {
   app.addHook("preHandler", requireAnyAuthenticated);
+  app.addHook("preHandler", refuseAgents);
 
   // GET /api/me/api-keys — list caller's own keys (never exposes raw/hash)
   app.get("/api-keys", {

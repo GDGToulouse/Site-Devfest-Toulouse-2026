@@ -15,10 +15,22 @@ export interface CatalogRoute {
   body?: unknown;
 }
 
-// Not for an agent: its own endpoint (no recursion), account and OAuth
-// plumbing (an agent must not manage sign-ins, mint clients or revoke other
-// agents), static files and the API docs.
-const HIDDEN_PREFIXES = ["/api/mcp", "/api/auth", "/api/me/agents", "/.well-known", "/uploads", "/api/docs"];
+// Not for an agent: its own endpoint (no recursion), account, key and OAuth
+// plumbing (an agent must not manage sign-ins, keys, accounts or other agents),
+// static files and the API docs. Only a convenience: the agent's token reaches
+// the routes directly too, so the ones that matter refuse it themselves
+// (refuseAgents in auth-context.ts).
+const HIDDEN_PREFIXES = [
+  "/api/mcp",
+  "/api/auth",
+  "/api/me/agents",
+  "/api/me/api-keys",
+  "/api/admin/users",
+  "/api/admin/api-keys",
+  "/.well-known",
+  "/uploads",
+  "/api/docs",
+];
 
 export function isHiddenFromAgents(path: string): boolean {
   return HIDDEN_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`) || path.startsWith(`${prefix}*`));

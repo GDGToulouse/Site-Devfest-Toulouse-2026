@@ -81,7 +81,14 @@ function buildServer(app: FastifyInstance, token: string, callerIp: string) {
       }),
     },
     async ({ method, path, query, body }) => {
-      const pathname = new URL(path, "http://agent.invalid").pathname;
+      // Decoded before the check: the router decodes too, so /api/%6De/agents
+      // would otherwise slip past it and still reach /api/me/agents.
+      let pathname: string;
+      try {
+        pathname = decodeURIComponent(new URL(path, "http://agent.invalid").pathname);
+      } catch {
+        return textResult(`Chemin invalide : ${path}`, true);
+      }
       if (isHiddenFromAgents(pathname)) {
         return textResult(`Route non disponible pour un agent : ${pathname}`, true);
       }

@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAdmin, requireAdminRole } from "../../lib/admin-guard.js";
+import { refuseAgents } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
@@ -57,8 +58,12 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(adminVenueRoutes);
     await adminApp.register(adminTicketRoutes);
     await adminApp.register(adminSettingsRoutes);
-    await adminApp.register(adminUserRoutes);
-    await adminApp.register(adminApiKeyRoutes);
+    // Accounts and keys stay a person's decision, never an AI agent's (#514).
+    await adminApp.register(async (credentialsApp) => {
+      credentialsApp.addHook("preHandler", refuseAgents);
+      await credentialsApp.register(adminUserRoutes);
+      await credentialsApp.register(adminApiKeyRoutes);
+    });
     // Who changed what, from where: personal data, not for editors (#513).
     await adminApp.register(adminAuditRoutes);
   });

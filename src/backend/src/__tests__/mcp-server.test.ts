@@ -6,6 +6,8 @@ import Fastify, { type FastifyInstance } from "fastify";
 import adminRoutes from "../routes/admin/index.js";
 import sponsorSpaceRoutes from "../routes/sponsor-space.js";
 import mcpRoutes from "../routes/mcp.js";
+import myApiKeysRoutes from "../routes/me/api-keys.js";
+import myAgentsRoutes from "../routes/me/agents.js";
 import { registerAuthRoutes } from "../plugins/auth-routes.js";
 import { registerRequestContext } from "../lib/request-context.js";
 import { registerRouteCatalog } from "../lib/route-catalog.js";
@@ -58,6 +60,8 @@ beforeAll(async () => {
   await registerAuthRoutes(app);
   await app.register(adminRoutes, { prefix: "/api/admin" });
   await app.register(sponsorSpaceRoutes, { prefix: "/api" });
+  await app.register(myApiKeysRoutes, { prefix: "/api/me" });
+  await app.register(myAgentsRoutes, { prefix: "/api/me" });
   await app.register(mcpRoutes, { prefix: "/api" });
   await app.ready();
 
@@ -146,6 +150,47 @@ describe("POST /api/mcp — tools (#514)", () => {
 
   it("should not let an agent reach the account endpoints", async () => {
     const { isError, data } = await callTool(adminToken, "call_route", { method: "POST", path: "/api/auth/sign-out" });
+
+    expect(isError).toBe(true);
+    expect(data).toContain("non disponible");
+  });
+});
+
+describe("credentials an agent must not manage (#514, API rights audit)", () => {
+  it("should not let an agent mint an API key, which would outlive its consent", async () => {
+    const before = await prisma.apiKey.count();
+
+    const direct = await app.inject({
+      method: "POST",
+      url: "/api/me/api-keys",
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { name: "agent-made" },
+    });
+    const viaTool = await callTool(adminToken, "call_route", {
+      method: "POST",
+      path: "/api/me/api-keys",
+      body: { name: "agent-made" },
+    });
+
+    expect(direct.statusCode).toBe(403);
+    expect(viaTool.isError).toBe(true);
+    expect(await prisma.apiKey.count()).toBe(before);
+  });
+
+  it("should not let an admin's agent change accounts", async () => {
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/users/${sponsorUserId}`,
+      headers: { authorization: `Bearer ${adminToken}` },
+      payload: { role: "ADMIN" },
+    });
+
+    expect(res.statusCode).toBe(403);
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: sponsorUserId } })).role).toBe("SPONSOR");
+  });
+
+  it("should not be fooled by a percent-encoded path", async () => {
+    const { isError, data } = await callTool(adminToken, "call_route", { method: "GET", path: "/api/%6De/agents" });
 
     expect(isError).toBe(true);
     expect(data).toContain("non disponible");
