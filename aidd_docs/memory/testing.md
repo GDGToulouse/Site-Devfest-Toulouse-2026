@@ -29,7 +29,7 @@
 
 - Entry: `docker compose -f docker-compose.local.yml up -d`, puis `http://localhost:3000` ; back-office sur `/admin` (pas `/fr/admin`)
 - Auth: `admin@devfesttoulouse.fr` / `admin1234!dev` (ADMIN) et `editor@devfesttoulouse.fr` / `editor1234!dev` (EDITOR), reposés par `seed-dev.ts` même sur des comptes existants (#433) — `docs/comptes-dev-local.md`
-- Auth sponsor: créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
+- Auth sponsor: `responsable@aeronova.example.com` (deux fiches) et `editeur@cassoulet.example.com`, mot de passe `sponsor1234!dev`, posés par `seed-dev.ts` sur `/sponsor/login`. Pour tester l'invitation elle-même : créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
 - State: `src/backend/prisma/seed-dev.ts`, lancé à la main
 
 ## Local environment
