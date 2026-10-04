@@ -25,15 +25,19 @@ export function isHiddenFromAgents(path: string): boolean {
 }
 
 const routes: CatalogRoute[] = [];
+// Every method and URL registered, hidden ones included: route-guards.test.ts
+// checks that its inventory missed none.
+const registered: Array<{ method: string; path: string }> = [];
 
 /** Record routes as they are registered. Call before registering any route. */
 export function registerRouteCatalog(app: FastifyInstance): void {
   app.addHook("onRoute", (route) => {
-    if (isHiddenFromAgents(route.url)) return;
     const schema = (route.schema ?? {}) as Record<string, unknown>;
     for (const method of [route.method].flat()) {
       // Fastify adds HEAD next to every GET; OPTIONS is CORS plumbing.
       if (method === "HEAD" || method === "OPTIONS") continue;
+      registered.push({ method, path: route.url });
+      if (isHiddenFromAgents(route.url)) continue;
       routes.push({
         method,
         path: route.url,
@@ -49,4 +53,8 @@ export function registerRouteCatalog(app: FastifyInstance): void {
 
 export function listCatalogRoutes(): readonly CatalogRoute[] {
   return routes;
+}
+
+export function listRegisteredRoutes(): ReadonlyArray<{ method: string; path: string }> {
+  return registered;
 }

@@ -48,7 +48,7 @@ export function hasAtLeast(role: SponsorAccessRole, minimum: SponsorAccessRole):
  * sponsor: a stranger probing ids must not learn which ones exist.
  */
 export function requireSponsorAccess(minimum: SponsorAccessRole) {
-  return async function guard(request: FastifyRequest, reply: FastifyReply) {
+  const guard = async function (request: FastifyRequest, reply: FastifyReply) {
     const params = request.params as { sponsorId?: string; id?: string };
     const sponsorId = Number(params.sponsorId ?? params.id);
     if (!Number.isInteger(sponsorId)) {
@@ -108,4 +108,7 @@ export function requireSponsorAccess(minimum: SponsorAccessRole) {
       isAdminOverride: false,
     };
   };
+  // Named after its minimum so the route inventory reads it (route-guards.test.ts).
+  Object.defineProperty(guard, "name", { value: `requireSponsorAccess_${minimum}` });
+  return guard;
 }
