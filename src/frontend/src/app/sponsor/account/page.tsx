@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 
 import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
 import { changeSponsorPassword, getSponsorAccount, type SponsorAccount } from "@/lib/sponsor-api";
+import ConnectedAgents from "@/components/account/ConnectedAgents";
 
 // A sponsor's own account (#411): who is signed in, and a password they can
 // change without asking the team. Same rules as the admin profile page.
@@ -115,6 +116,10 @@ export default function SponsorAccountPage() {
                 {isSaving ? "Enregistrement…" : "Changer le mot de passe"}
               </button>
             </form>
+
+            <div className="mt-8 border-t border-gris/20 pt-6">
+              <ConnectedAgents />
+            </div>
           </>
         )}
 

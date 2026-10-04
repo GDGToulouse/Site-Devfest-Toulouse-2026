@@ -73,14 +73,15 @@ export function setActor(actor: RequestActor, details: { apiKeyId?: string } = {
   }
 }
 
-/**
- * Narrow the channel the route prefix guessed (an import, a manual purge).
- * API_KEY is kept: a script driving the import is still a script, and that is
- * the fact worth reading in the history.
- */
+// Set by the caller's credential, not by the route: a script or an AI agent
+// driving an import is still a script or an agent, and that is the fact worth
+// reading in the history.
+const CREDENTIAL_CHANNELS: ReadonlySet<AuditChannel> = new Set(["API_KEY", "MCP"]);
+
+/** Narrow the channel the route prefix guessed (an import, a manual purge). */
 export function setChannel(channel: AuditChannel): void {
   const context = storage.getStore();
-  if (context && context.channel !== "API_KEY") context.channel = channel;
+  if (context && !CREDENTIAL_CHANNELS.has(context.channel)) context.channel = channel;
 }
 
 /**

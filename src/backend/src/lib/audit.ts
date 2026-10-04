@@ -14,7 +14,23 @@ import { getRequestContext } from "./request-context.js";
 // Not content: sessions, credentials and one-time tokens churn on every
 // sign-in, and logging them would bury the edits people look for — or store
 // secrets. AuditLog itself is excluded, or each write would log its own log.
-const EXCLUDED_MODELS = new Set(["AuditLog", "Session", "Account", "Verification", "TranslationLog"]);
+// The OAuth tables of the MCP connector (#514) are the same kind of plumbing,
+// and Jwks holds the private signing key.
+const EXCLUDED_MODELS = new Set([
+  "AuditLog",
+  "Session",
+  "Account",
+  "Verification",
+  "TranslationLog",
+  "Jwks",
+  "OauthClient",
+  "OauthResource",
+  "OauthClientResource",
+  "OauthAccessToken",
+  "OauthRefreshToken",
+  "OauthConsent",
+  "OauthClientAssertion",
+]);
 
 // A field whose change alone is bookkeeping, not an edit.
 const NOISE_ONLY_FIELDS: Record<string, readonly string[]> = {

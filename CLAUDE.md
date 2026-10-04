@@ -50,6 +50,7 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 | `design-system.md` | Charte, palette, tokens, kit UI |
 | `maquettes-figma.md` | Inventaire des maquettes ([Figma](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499)) |
 | `api-publique.md` | API REST publique (OpenAPI/Swagger) |
+| `audit-droits-api.md` | Qui peut appeler chaque route, constats de l'audit avant le connecteur MCP (#514) |
 | `variables-environnement.md` | Variables d'environnement |
 | `comptes-dev-local.md` | Comptes de test, MailHog |
 | `priorisation-developpement.md` | Lots de développement, rétroplanning 2026 |

@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { sendEmail, escapeHtml } from "../../lib/email.js";
 import { emailButton, emailHeading } from "../../lib/email-template.js";
 import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
+import { revokeAgents } from "../../lib/agent-grants.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -187,9 +188,11 @@ export default async function adminUserRoutes(app: FastifyInstance) {
         data: { banned: !existing.banned },
       });
 
-      // If banning, delete all active sessions
+      // If banning, delete all active sessions — and the AI agents' grants
+      // (#514): lifting the ban must not quietly hand them back.
       if (user.banned) {
         await prisma.session.deleteMany({ where: { userId: id } });
+        await revokeAgents(id);
       }
 
       return { id: user.id, banned: user.banned };
@@ -219,6 +222,8 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       // Kill live sessions: a trashed account must not stay signed in. Without
       // this, the user keeps their admin access until the cookie expires.
       await prisma.session.deleteMany({ where: { userId: id } });
+      // Same for the AI agents acting for this account (#514).
+      await revokeAgents(id);
 
       return { success: true };
     }
