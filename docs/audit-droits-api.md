@@ -37,11 +37,11 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 | Constat | Gravité | Proposition |
 |---|---|---|
-| Un EDITOR peut modifier ou supprimer les offres de sponsoring (`/api/admin/sponsor-tiers`), y compris quota d'offres d'emploi et options Platinum. Ailleurs, le code les traite comme réservées aux ADMIN (corbeille). | Moyenne | **Arbitrage** : réserver aux ADMIN, ou ouvrir aussi la corbeille aux EDITOR. |
-| La corbeille laisse un EDITOR restaurer un message ou une catégorie de contact qu'un ADMIN seul peut supprimer. | Faible | Passer `contact-messages` et `contact-categories` en `adminOnly`. |
-| L'URL de la brochure FR est publique (`GET /api/editions/current`), le formulaire ne conditionne donc pas le téléchargement et le compteur sous-compte. | Faible | **Arbitrage** : acceptable si la brochure n'est pas un outil de collecte de contacts. |
-| Le lien de modification d'un speaker ou d'une conférence mis à la corbeille fonctionne encore. | Faible | Filtrer `deletedAt` dans `resolveToken` (`routes/edit.ts`). |
-| L'invitation d'un collaborateur sponsor (`POST /api/sponsor-space/:id/team`) n'a ni schéma ni limite propre. Un RESPONSABLE peut envoyer des invitations en nombre à n'importe quelle adresse, et un e-mail mal formé provoque une erreur 500. Même défaut côté admin (`/api/admin/sponsors/:id/contacts`). | Faible | Schéma (format e-mail) et limite de débit dédiée. |
+| Un EDITOR peut modifier ou supprimer les offres de sponsoring (`/api/admin/sponsor-tiers`), y compris quota d'offres d'emploi et options Platinum. Ailleurs, le code les traite comme réservées aux ADMIN (corbeille). | Moyenne | Réserver les écritures aux ADMIN (décision du 4 octobre 2026) : #521. |
+| La corbeille laisse un EDITOR restaurer un message ou une catégorie de contact qu'un ADMIN seul peut supprimer. | Faible | Passer `contact-messages` et `contact-categories` en `adminOnly` : #522. |
+| L'URL de la brochure FR est publique (`GET /api/editions/current`), le formulaire ne conditionne donc pas le téléchargement et le compteur sous-compte. | Faible | **Accepté** (décision du 4 octobre 2026) : la brochure n'est pas un outil de collecte. |
+| Le lien de modification d'un speaker ou d'une conférence mis à la corbeille fonctionne encore. | Faible | Filtrer `deletedAt` dans `resolveToken` (`routes/edit.ts`) : #523. |
+| L'invitation d'un collaborateur sponsor (`POST /api/sponsor-space/:id/team`) n'a ni schéma ni limite propre. Un RESPONSABLE peut envoyer des invitations en nombre à n'importe quelle adresse, et un e-mail mal formé provoque une erreur 500. Même défaut côté admin (`/api/admin/sponsors/:id/contacts`). | Faible | Schéma (format e-mail) et limite de débit dédiée : #524. |
 
 **Note de conception.** L'agent d'un ADMIN a tous les pouvoirs ADMIN, hors comptes et clés : corbeille, paramètres, purge. C'est le principe retenu (l'agent agit avec les droits de la personne). Le resserrer passerait par des scopes OAuth par domaine.
 
