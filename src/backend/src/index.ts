@@ -32,6 +32,7 @@ import sponsorInvitationRoutes from "./routes/sponsor-invitation.js";
 import sponsorSpaceRoutes from "./routes/sponsor-space.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
+import myAgentsRoutes from "./routes/me/agents.js";
 import adminRoutes from "./routes/admin/index.js";
 import { serverOptions } from "./lib/server-options.js";
 import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
@@ -260,6 +261,8 @@ await app.register(sponsorSpaceRoutes, { prefix: "/api" });
 
 // Per-user routes (any authenticated back-office user — own resources only)
 await app.register(myApiKeysRoutes, { prefix: "/api/me" });
+// Any account, sponsors included: the AI agents they connected (#514).
+await app.register(myAgentsRoutes, { prefix: "/api/me" });
 
 // Maintenance routes driven by an external scheduler (#149). Deliberately
 // outside the admin group: the cron has no session, so the route checks a

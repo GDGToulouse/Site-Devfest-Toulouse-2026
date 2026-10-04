@@ -70,6 +70,37 @@ export function answerConsent(accept: boolean, oauthQuery: string) {
   return postForRedirect("/api/auth/oauth2/consent", { accept, oauth_query: oauthQuery });
 }
 
+export interface ConnectedAgent {
+  clientId: string;
+  name: string | null;
+  uri: string | null;
+  connectedAt: string | null;
+  lastTokenAt: string | null;
+}
+
+/** The agents acting for the signed-in person; null when the list could not be read. */
+export async function listMyAgents(): Promise<ConnectedAgent[] | null> {
+  try {
+    const res = await fetch("/api/me/agents", { credentials: "include" });
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Withdraw one agent's access. Success is 204 only (#428): 0 means unreached. */
+export async function revokeMyAgent(clientId: string): Promise<number> {
+  try {
+    const res = await fetch(`/api/me/agents/${encodeURIComponent(clientId)}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    return res.status;
+  } catch {
+    return 0;
+  }
+}
+
 export interface AgentClient {
   name: string | null;
   uri: string | null;

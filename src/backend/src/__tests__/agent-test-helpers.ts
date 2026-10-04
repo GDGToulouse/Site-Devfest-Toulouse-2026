@@ -47,6 +47,17 @@ export async function createUserWithPassword(role: "ADMIN" | "EDITOR" | "SPONSOR
   return user;
 }
 
+/** A browser session for `email`, as the cookie header to send back. */
+export async function signInCookie(app: FastifyInstance, email: string): Promise<string> {
+  const signIn = await app.inject({
+    method: "POST",
+    url: "/api/auth/sign-in/email",
+    headers: { origin },
+    payload: { email, password: PASSWORD },
+  });
+  return cookiesOf(signIn.headers["set-cookie"]);
+}
+
 /** Run the whole authorization for `email` and return the agent's access token. */
 export async function obtainAgentToken(app: FastifyInstance, clientId: string, email: string): Promise<string> {
   const verifier = randomBytes(32).toString("base64url");
