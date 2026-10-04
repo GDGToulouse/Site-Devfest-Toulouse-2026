@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #500 admin — badge Sponsor, sociétés, pas de promotion
