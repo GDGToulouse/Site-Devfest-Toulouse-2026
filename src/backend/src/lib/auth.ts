@@ -7,8 +7,9 @@ import { APIError } from "better-auth/api";
 // for its types, never imported (TS2742).
 import { magicLink } from "better-auth/plugins";
 import { prisma } from "./prisma.js";
-import { sendEmail, escapeHtml } from "./email.js";
+import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
+import { sendPasswordResetEmail } from "./password-reset-email.js";
 import { hasPendingInvitation, normalizeEmail } from "./sponsor-invitation.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
@@ -58,26 +59,10 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
-    sendResetPassword: async ({ user, token }) => {
-      // Build the reset URL manually pointing to the frontend page (not the
-      // Better Auth callback endpoint, which is an API route and not
-      // navigable). baseUrl is the public BASE_URL injected by Coolify or
-      // overridden locally.
-      const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
-      await sendEmail({
-        to: [user.email],
-        subject: "DevFest Toulouse — Réinitialisation de mot de passe",
-        text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${resetUrl}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.`,
-        html: `
-          ${emailHeading("Réinitialisation de mot de passe")}
-          <p>Bonjour ${escapeHtml(user.name || "")},</p>
-          <p>Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe :</p>
-          ${emailButton(resetUrl, "Réinitialiser mon mot de passe")}
-          <p>Ce lien expire dans 1 heure.</p>
-          <p><em>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</em></p>
-        `,
-      });
-    },
+    // The link points to a frontend page, not to better-auth's own callback
+    // (an API route, not navigable), and to the admin or the partner space
+    // depending on the account's role (#411).
+    sendResetPassword: sendPasswordResetEmail,
   },
   socialProviders: {
     // Implicit sign-up stays enabled so an allow-listed admin can sign in via

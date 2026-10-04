@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #411 espace sponsor — compte, mot de passe, mot de passe oublié

@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #411 backend — identité et URL de réinitialisation par rôle

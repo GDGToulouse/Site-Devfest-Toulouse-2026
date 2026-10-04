@@ -8,9 +8,9 @@ import PublicTab from "@/components/sponsor-space/PublicTab";
 import PrivateTab from "@/components/sponsor-space/PrivateTab";
 import TeamTab from "@/components/sponsor-space/TeamTab";
 import JobOffersTab from "@/components/sponsor-space/JobOffersTab";
+import SponsorAccountBar from "@/components/sponsor-space/SponsorAccountBar";
 import { getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
 import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
-import { signOut } from "@/lib/admin-api";
 
 // A sponsor's own space (#362), in three tabs — the split the issue asked for,
 // replacing a single page where public and private fields were stacked.
@@ -60,7 +60,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
 
   if (outcome === "denied") {
     return (
-      <Shell>
+      <Shell hasAccount>
         <p className="text-center text-noir">Cette fiche n&apos;est pas accessible avec votre compte.</p>
       </Shell>
     );
@@ -100,22 +100,10 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   ];
 
   return (
-    <Shell wide>
-      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-noir">{profile.name}</h1>
-          <p className="text-sm text-gris">Espace partenaire · {SPONSOR_ROLE_LABELS[profile.accessRole]}</p>
-        </div>
-        <button
-          type="button"
-          onClick={async () => {
-            await signOut();
-            router.replace("/sponsor/login");
-          }}
-          className="text-sm font-medium text-gris hover:text-noir"
-        >
-          Déconnexion
-        </button>
+    <Shell wide hasAccount>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-noir">{profile.name}</h1>
+        <p className="text-sm text-gris">Espace partenaire · {SPONSOR_ROLE_LABELS[profile.accessRole]}</p>
       </div>
 
       <Tabs
@@ -135,14 +123,23 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   );
 }
 
-function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }) {
+// `hasAccount` once the visitor is known to be signed in: the bar would only
+// flash on a load that ends up redirecting to the login page.
+function Shell({ children, wide, hasAccount }: { children: React.ReactNode; wide?: boolean; hasAccount?: boolean }) {
   return (
     <div className="min-h-dvh bg-blanc-casse">
       <header className="border-b border-gris/10 bg-blanc">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-6 py-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo-devfest-96.png" alt="DevFest Toulouse" width={40} height={40} className="h-10 w-10" />
-          <span className="font-bold text-noir">DevFest Toulouse</span>
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-3 px-6 py-4">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo-devfest-96.png" alt="DevFest Toulouse" width={40} height={40} className="h-10 w-10" />
+            <span className="font-bold text-noir">DevFest Toulouse</span>
+          </div>
+          {hasAccount && (
+            <div className="ml-auto min-w-0">
+              <SponsorAccountBar />
+            </div>
+          )}
         </div>
       </header>
       <main className={`mx-auto px-6 py-10 ${wide ? "max-w-4xl" : "max-w-md"}`}>{children}</main>

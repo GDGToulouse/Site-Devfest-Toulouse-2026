@@ -124,6 +124,43 @@ export function getMySponsorSpaces() {
   return call<SponsorSpaceSummary[]>("/api/sponsor-space/mine");
 }
 
+// --- The signed-in person, not the company (#411) ---
+
+export interface SponsorAccount {
+  id: string;
+  email: string;
+  name: string | null;
+}
+
+export function getSponsorAccount() {
+  return call<SponsorAccount>("/api/sponsor-space/me");
+}
+
+// Same better-auth endpoint as the admin profile page; it serves any account.
+export function changeSponsorPassword(currentPassword: string, newPassword: string) {
+  return call<unknown>("/api/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+}
+
+// The emailed link is built by the backend from the account's role, so a
+// sponsor lands on /sponsor/reset-password whatever redirectTo says (#411).
+// Callers show the same message whether or not the address has an account.
+export function requestSponsorPasswordReset(email: string) {
+  return call<unknown>("/api/auth/request-password-reset", {
+    method: "POST",
+    body: JSON.stringify({ email, redirectTo: `${window.location.origin}/sponsor/reset-password` }),
+  });
+}
+
+export function resetSponsorPassword(token: string, newPassword: string) {
+  return call<unknown>("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify({ token, newPassword }),
+  });
+}
+
 export function getSponsorProfile(sponsorId: number) {
   return call<SponsorSpaceProfile>(`/api/sponsor-space/${sponsorId}`);
 }
