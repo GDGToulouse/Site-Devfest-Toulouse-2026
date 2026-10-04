@@ -8,6 +8,12 @@
 |------|-------|-------------|-------|
 | ADMIN | `admin@devfesttoulouse.fr` | `admin1234!dev` | Accès complet au back-office |
 | EDITOR | `editor@devfesttoulouse.fr` | `editor1234!dev` | Rédaction d'articles et pages |
+| SPONSOR | `responsable@aeronova.example.com` | `sponsor1234!dev` | Espace partenaire : Responsable d'AeroNova Systems et Stand chez Garonne Digital (choix de fiche, deux rôles) |
+| SPONSOR | `editeur@cassoulet.example.com` | `sponsor1234!dev` | Espace partenaire : Éditeur de Cassoulet Code (une seule fiche) |
+
+Les comptes `SPONSOR` se connectent sur http://localhost:3000/sponsor/login, pas sur `/admin` : leur
+rôle n'ouvre pas le back-office. Le seed les écrit directement en base (l'inscription est fermée,
+#362) et rattache chacun à ses fiches par un contact sponsor déjà accepté.
 
 ## Configuration
 
