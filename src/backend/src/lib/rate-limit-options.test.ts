@@ -4,7 +4,10 @@ import { describe, it, expect } from "vitest";
 
 import {
   API_RATE_LIMIT_MAX,
+  AUTH_RATE_LIMIT_MAX,
+  OAUTH_RATE_LIMIT_MAX,
   UPLOADS_RATE_LIMIT_MAX,
+  authRateLimit,
   rateLimitOptions,
 } from "./rate-limit-options.js";
 
@@ -68,5 +71,44 @@ describe("rate limit on static uploads (#469)", () => {
 
     expect(codes.at(-1)).toBe(429);
     await app.close();
+  });
+});
+
+describe("rate limit on auth and the MCP connector's OAuth endpoints (#514)", () => {
+  async function authApp() {
+    const app = Fastify({ logger: false });
+    await app.register(rateLimit, rateLimitOptions);
+    const config = { rateLimit: authRateLimit };
+    app.post("/api/auth/sign-in/email", { config }, async () => ({ ok: true }));
+    app.post("/api/auth/oauth2/token", { config }, async () => ({ ok: true }));
+    return app;
+  }
+
+  async function post(app: Awaited<ReturnType<typeof authApp>>, url: string, times: number) {
+    const codes: number[] = [];
+    for (let i = 0; i < times; i++) codes.push((await app.inject({ method: "POST", url })).statusCode);
+    return codes;
+  }
+
+  it("keeps the strict sign-in budget", async () => {
+    const codes = await post(await authApp(), "/api/auth/sign-in/email", AUTH_RATE_LIMIT_MAX + 1);
+
+    expect(codes.at(-1)).toBe(429);
+  });
+
+  it("gives an agent's token requests their own, wider budget", async () => {
+    const app = await authApp();
+
+    const oauth = await post(app, "/api/auth/oauth2/token", AUTH_RATE_LIMIT_MAX * 3);
+    const signIn = await post(app, "/api/auth/sign-in/email", 1);
+
+    expect(oauth).not.toContain(429);
+    expect(signIn).toEqual([200]);
+  });
+
+  it("still caps the OAuth endpoints", async () => {
+    const codes = await post(await authApp(), "/api/auth/oauth2/token", OAUTH_RATE_LIMIT_MAX + 1);
+
+    expect(codes.at(-1)).toBe(429);
   });
 });

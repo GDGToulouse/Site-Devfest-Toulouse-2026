@@ -5,11 +5,11 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
-import { auth } from "./lib/auth.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { startScheduledTasks } from "./lib/scheduler.js";
 import { registerRequestContext } from "./lib/request-context.js";
 import { registerSwagger } from "./plugins/swagger.js";
+import { registerAuthRoutes } from "./plugins/auth-routes.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
 import { APP_VERSION, APP_ENVIRONMENT, APP_COMMIT } from "./lib/version.js";
@@ -232,59 +232,8 @@ app.get("/api/auth/providers", {
   };
 });
 
-// Auth routes — delegate to Better Auth handler
-// Strict rate limit on auth: 10 requests per minute per IP (covers login, signup, password reset)
-app.route({
-  method: ["GET", "POST"],
-  url: "/api/auth/*",
-  config: {
-    rateLimit: {
-      max: 10,
-      timeWindow: "1 minute",
-    },
-  },
-  async handler(request, reply) {
-    const url = new URL(request.url, `http://${request.headers.host}`);
-
-    request.log.debug({
-      authPhase: "proxy.incoming",
-      url: request.url,
-      method: request.method,
-      hasCookie: !!request.headers.cookie,
-      cookiePrefix: request.headers.cookie ? request.headers.cookie.slice(0, 60) : null,
-      origin: request.headers.origin,
-    });
-
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(request.headers)) {
-      if (value) headers.append(key, Array.isArray(value) ? value.join(", ") : value);
-    }
-
-    const req = new Request(url.toString(), {
-      method: request.method,
-      headers,
-      ...(request.body ? { body: JSON.stringify(request.body) } : {}),
-    });
-
-    const response = await auth.handler(req);
-
-    request.log.debug({ authPhase: "proxy.response", status: response.status });
-
-    // Log failed auth attempts for security monitoring
-    if (response.status >= 400 && request.url.includes("sign-in")) {
-      app.log.warn(
-        { ip: request.ip, url: request.url, status: response.status },
-        "Failed login attempt"
-      );
-    }
-
-    reply.status(response.status);
-    response.headers.forEach((value, key) => reply.header(key, value));
-
-    const body = await response.text();
-    reply.send(body || null);
-  },
-});
+// Auth routes and OAuth discovery, handed to better-auth (plugins/auth-routes.ts).
+await registerAuthRoutes(app);
 
 // Public API routes
 await app.register(editionRoutes, { prefix: "/api" });

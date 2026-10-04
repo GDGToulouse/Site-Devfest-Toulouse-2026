@@ -20,7 +20,10 @@ export default function proxy(request: NextRequest) {
   // Matched exactly, NOT by prefix: the public wall lives at /sponsors, one
   // letter away, and must keep going through i18n routing.
   const isSponsorSpace = pathname === "/sponsor" || pathname.startsWith("/sponsor/");
-  if (pathname.startsWith("/admin") || pathname.startsWith("/edit/") || isSponsorSpace) {
+  // /connect (#514): where an AI agent sends a person to sign in. Its URL is
+  // configured in the OAuth provider and must not gain a locale prefix.
+  const isAgentConnect = pathname === "/connect" || pathname.startsWith("/connect/");
+  if (pathname.startsWith("/admin") || pathname.startsWith("/edit/") || isSponsorSpace || isAgentConnect) {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-pathname", pathname);
     return NextResponse.next({ request: { headers: requestHeaders } });

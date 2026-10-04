@@ -24,6 +24,32 @@ function isUpload(request: FastifyRequest) {
   return request.url.startsWith(UPLOADS_PREFIX);
 }
 
+/** Sign-in, sign-up, password reset: per IP and per minute. */
+export const AUTH_RATE_LIMIT_MAX = 10;
+
+/**
+ * The MCP connector's OAuth endpoints and discovery documents (#514), per IP
+ * and per minute. An agent connecting reads several discovery documents, then
+ * authorizes, consents, exchanges a code and refreshes — and hosted agents
+ * reach us from shared egress addresses. The sign-in budget would lock out the
+ * second person connecting from the same agent within a minute. Passwords are
+ * not tried here: these endpoints take codes and tokens, not credentials.
+ */
+export const OAUTH_RATE_LIMIT_MAX = 60;
+
+export function isOAuthRequest(url: string): boolean {
+  const path = url.split("?")[0];
+  return path.startsWith("/api/auth/oauth2/") || path.startsWith("/.well-known/") || path === "/api/auth/jwks"
+    || path.startsWith("/api/auth/.well-known/");
+}
+
+/** Route-level budget for everything handed to better-auth. */
+export const authRateLimit = {
+  timeWindow: "1 minute",
+  max: (request: FastifyRequest) => (isOAuthRequest(request.url) ? OAUTH_RATE_LIMIT_MAX : AUTH_RATE_LIMIT_MAX),
+  keyGenerator: (request: FastifyRequest) => (isOAuthRequest(request.url) ? `oauth:${request.ip}` : `auth:${request.ip}`),
+};
+
 /**
  * Two budgets, two buckets: reading a brochure must not spend what the site's
  * own API calls need, and vice versa. A shared counter with two ceilings would
