@@ -41,15 +41,21 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     anonymous: [404],
   },
   "POST /api/contact/send": { why: "formulaire de contact public : tout le monde peut écrire, débit limité" },
+  "GET /api/edit/:token": { why: "lien de modification du speaker : le jeton est l'accès", anonymous: [404] },
+  "GET /api/maintenance/purge-trash": { why: "secret partagé du cron, ou session ADMIN", anonymous: [401] },
   "POST /api/maintenance/purge-trash": { why: "secret partagé du cron, ou session ADMIN", anonymous: [401] },
   "POST /api/mcp": { why: "jeton OAuth d'un agent IA, vérifié par la route", anonymous: [401] },
+  "GET /api/mcp": { why: "toujours 405 : le serveur MCP est sans état", anonymous: [405] },
   "DELETE /api/mcp": { why: "toujours 405 : le serveur MCP est sans état", anonymous: [405] },
 };
 
 /** Who may call a route, in words, for the inventory. */
 export function accessOf(route: InventoryRoute): string {
-  const guard = route.preHandlers.find((name) => KNOWN_GUARDS[name]);
-  if (guard) return KNOWN_GUARDS[guard];
+  // The last guard is the route's own, which narrows its group's: a trash
+  // purge runs the editors' requireAdmin, then requireAdminRole.
+  const guard = [...route.preHandlers].reverse().find((name) => KNOWN_GUARDS[name]);
+  const agents = route.preHandlers.includes("refuseAgents") ? " ; refusé aux agents IA" : "";
+  if (guard) return `${KNOWN_GUARDS[guard]}${agents}`;
   const self = SELF_GUARDED[`${route.method} ${route.path}`];
   return self ? `Contrôlé dans la route : ${self.why}` : "Public";
 }
