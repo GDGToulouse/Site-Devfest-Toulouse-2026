@@ -8,6 +8,7 @@ import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
+import AuditTrail from "@/components/admin/AuditTrail";
 
 interface TalkData extends Talk {
   edition?: { id: number; year: number };
@@ -203,6 +204,8 @@ export default function TalkEditorPage() {
           </button>
         </div>
       </div>
+
+      {talkId && <AuditTrail entity="Talk" entityId={talkId} refreshKey={saveState} />}
     </div>
   );
 }

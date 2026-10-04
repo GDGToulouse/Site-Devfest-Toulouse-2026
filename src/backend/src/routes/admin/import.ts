@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers, revalidateConferences } from "../../lib/revalidate.js";
 import { importSessionize, loadSessionizeData } from "../../lib/sessionize-import.js";
+import { setChannel } from "../../lib/request-context.js";
 
 interface SessionizeImportBody {
   editionId: number;
@@ -31,6 +32,9 @@ export default async function adminImportRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "Invalid Sessionize data", detail: (err as Error).message });
     }
 
+    // Hundreds of writes in one go: the history should say they came from
+    // Sessionize, not from the admin editing each speaker by hand (#513).
+    setChannel("IMPORT");
     const report = await importSessionize(editionId, data);
 
     revalidateSpeakers();
