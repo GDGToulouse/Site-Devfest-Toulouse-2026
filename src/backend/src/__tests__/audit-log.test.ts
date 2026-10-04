@@ -157,6 +157,21 @@ describe("audit log extension (#513)", () => {
     expect((await logsFor("Speaker", speaker.id)).map((row) => row.action)).toEqual(["CREATE"]);
   });
 
+  it("should not log JSON text rewritten with its keys in another order", async () => {
+    // socialLinks is JSON stored as text, and the admin form re-serializes it:
+    // the same links in another order are not an edit.
+    const speaker = await createSpeaker({ socialLinks: '{"github":"https://github.com/a","linkedin":"https://linkedin.com/in/a"}' });
+
+    await inAdmin(() =>
+      prisma.speaker.update({
+        where: { id: speaker.id },
+        data: { socialLinks: '{"linkedin":"https://linkedin.com/in/a","github":"https://github.com/a"}' },
+      }),
+    );
+
+    expect((await logsFor("Speaker", speaker.id)).map((row) => row.action)).toEqual(["CREATE"]);
+  });
+
   it("should still find the record when the caller's select leaves its id out, without leaking the id", async () => {
     const slug = `audit-select-${stamp()}`;
 

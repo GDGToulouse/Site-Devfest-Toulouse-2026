@@ -73,6 +73,31 @@ function normalize(value: unknown): unknown {
   return value ?? null;
 }
 
+// Key order is not content. Some columns hold JSON as text (Speaker.socialLinks)
+// and the forms re-serialize it on every save: compared as raw strings, an
+// untouched profile would log a change each time it is saved.
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(",")}]`;
+  if (value && typeof value === "object") {
+    const entries = Object.keys(value)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify((value as Row)[key])}`);
+    return `{${entries.join(",")}}`;
+  }
+  return JSON.stringify(value);
+}
+
+function comparable(value: unknown): string {
+  if (typeof value === "string" && /^\s*[[{]/.test(value)) {
+    try {
+      return stableStringify(JSON.parse(value));
+    } catch {
+      // Not JSON after all: compare the text itself.
+    }
+  }
+  return stableStringify(value);
+}
+
 function mask(value: unknown): unknown {
   return value === null ? null : MASKED;
 }
@@ -85,7 +110,7 @@ export function diffRows(model: string, before: Row | null, after: Row | null): 
     if (IGNORED_FIELDS.has(key)) continue;
     const b = normalize(before?.[key]);
     const a = normalize(after?.[key]);
-    if (JSON.stringify(b) === JSON.stringify(a)) continue;
+    if (comparable(b) === comparable(a)) continue;
     changes[key] = SECRET_FIELDS.has(key) ? { before: mask(b), after: mask(a) } : { before: b, after: a };
   }
 
