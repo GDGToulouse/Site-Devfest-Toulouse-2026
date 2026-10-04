@@ -5,6 +5,7 @@
 - better-auth, configuré dans `src/backend/src/lib/auth.ts` : e-mail + mot de passe, OAuth Google et GitHub (comptes liés), lien magique à usage unique
 - Inscription fermée : `user.create.before` n'accepte qu'une adresse de `ADMIN_EMAILS` ou une invitation sponsor en cours ; tout le reste est refusé **avant** création, pour ne laisser aucune ligne orpheline (#362)
 - Le lien magique connecte à un compte existant, il n'en crée jamais (`disableSignUp`)
+- Depuis better-auth 1.7, le premier lien magique d'un compte à `emailVerified = false` **efface son mot de passe et ses comptes liés**. Tout chemin qui prouve la boîte mail (acceptation d'invitation sponsor) doit poser `emailVerified` ; un nouveau type de compte aussi (#514)
 - Les speakers n'ont pas de compte : ils passent par le lien `/edit/<token>`, valable 30 jours
 
 ## Authorization

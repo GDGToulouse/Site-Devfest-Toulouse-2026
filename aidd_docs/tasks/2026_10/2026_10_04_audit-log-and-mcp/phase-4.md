@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 # Instruction: #514 — montée de better-auth 1.6.23 → 1.7.7
