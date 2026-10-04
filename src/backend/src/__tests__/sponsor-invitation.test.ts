@@ -21,9 +21,9 @@ const created = {
   sponsorIds: [] as number[],
 };
 
-async function createAccount(email: string) {
+async function createAccount(email: string, emailVerified = true) {
   const user = await prisma.user.create({
-    data: { email, name: email, role: "SPONSOR", emailVerified: true },
+    data: { email, name: email, role: "SPONSOR", emailVerified },
   });
   created.userIds.push(user.id);
 
@@ -91,6 +91,23 @@ describe("POST /api/sponsor-invitation/:token/accept (#362)", () => {
     expect(after.invitationAcceptedAt).not.toBeNull();
     // Consumed: the token is cleared, so a replay finds nothing.
     expect(after.invitationToken).toBeNull();
+  });
+
+  it("marks the address verified: the token reached that mailbox (#514)", async () => {
+    // An account signed up by password starts unverified, and better-auth 1.7
+    // wipes the password of an unverified account on its first magic-link
+    // sign-in. The invitation already proved the mailbox; the account must say so.
+    const email = `verify-${Date.now()}@example.org`;
+    const { token } = await createSponsorWithInvitation("Verify Co", email);
+    const { user, bearer } = await createAccount(email, false);
+
+    await app.inject({
+      method: "POST",
+      url: `/api/sponsor-invitation/${token}/accept`,
+      headers: { authorization: `Bearer ${bearer}` },
+    });
+
+    expect((await prisma.user.findUniqueOrThrow({ where: { id: user.id } })).emailVerified).toBe(true);
   });
 
   it("refuses an account whose email differs from the invited one", async () => {
