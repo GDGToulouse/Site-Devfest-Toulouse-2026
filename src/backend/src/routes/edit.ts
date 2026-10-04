@@ -16,6 +16,7 @@ import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { cleanSocial } from "../lib/sponsor-write.js";
+import { setActor } from "../lib/request-context.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -175,6 +176,9 @@ async function resolveToken(token: string) {
     },
   });
   if (speaker) {
+    // The link holder acts as the speaker: no account, so the history names
+    // them by the label alone (#513).
+    setActor({ userId: null, label: `${speaker.name} (speaker #${speaker.id})` });
     // Flatten back to the { edition: { startDate } } shape the rest of the route
     // and editingBlockedReason expect, so the join stays contained here.
     const { editions, ...rest } = speaker;

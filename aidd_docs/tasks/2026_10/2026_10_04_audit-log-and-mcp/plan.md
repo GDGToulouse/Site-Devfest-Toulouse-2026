@@ -1,6 +1,6 @@
 ---
 objective: "Chaque écriture du site est tracée (qui, quand, quoi, par quel canal) et consultable 13 mois, et un utilisateur peut brancher un agent MCP par OAuth qui agit avec ses droits exacts, en prod avant l'événement si l'audit des droits passe."
-status: pending
+status: in-progress
 ---
 
 # Plan: Historique des modifications (#513) et connecteur MCP OAuth (#514)

@@ -528,6 +528,7 @@ model User {
   // The sponsor spaces this account may act on (#362). A sponsor account holds
   // no back-office UserRole — its rights live entirely on these contacts.
   sponsorContacts SponsorContact[]
+  auditLogs       AuditLog[]
 
   @@index([deletedAt])
   @@map("user")
@@ -1034,4 +1035,62 @@ model EditionCategory {
   @@unique([editionId, categoryId])
   @@index([editionId])
   @@index([categoryId])
+}
+
+// ============================================
+// Audit log (#513)
+// ============================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  // Soft delete and its undo, told apart from a plain UPDATE of `deletedAt`:
+  // "who put this in the bin" is the question people actually ask.
+  TRASH
+  RESTORE
+}
+
+// Where a write came from. Set per request from the route prefix, then refined
+// by whoever authenticates the caller (an API key, an edit link, an import).
+enum AuditChannel {
+  ADMIN
+  SPONSOR
+  EDIT_LINK
+  IMPORT
+  API_KEY
+  MCP
+  PUBLIC
+  SYSTEM
+  AUTH
+}
+
+// One row per written record, filled by the Prisma extension in lib/audit.ts
+// rather than by each route: a route that forgot to log would be an invisible
+// change. Append-only; purged past 13 months.
+model AuditLog {
+  id          BigInt       @id @default(autoincrement())
+  createdAt   DateTime     @default(now())
+  action      AuditAction
+  // Prisma model name ("Speaker", "Talk"…) and the record's id as text, since
+  // ids are ints on content and cuids on accounts.
+  entity      String
+  entityId    String
+  channel     AuditChannel
+  // SetNull: deleting an account must not erase what it did. actorLabel keeps
+  // the name it had, and is the only trace for actors without an account
+  // (a speaker through their edit link, a scheduled task).
+  actorUserId String?
+  actor       User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorLabel  String
+  // No foreign key: a revoked or purged key must not take its history along.
+  apiKeyId    String?
+  // { field: { before, after } } — secrets are masked before they get here.
+  changes     Json?
+  ip          String?
+
+  @@index([entity, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([channel, createdAt])
+  @@index([createdAt])
 }

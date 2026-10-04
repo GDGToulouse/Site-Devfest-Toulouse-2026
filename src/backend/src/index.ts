@@ -8,6 +8,7 @@ import fastifyStatic from "@fastify/static";
 import { auth } from "./lib/auth.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { startScheduledTasks } from "./lib/scheduler.js";
+import { registerRequestContext } from "./lib/request-context.js";
 import { registerSwagger } from "./plugins/swagger.js";
 import { registerCommonSchemas } from "./schemas/common.js";
 import { registerApiKeySchemas } from "./schemas/api-key.js";
@@ -79,6 +80,10 @@ app.addContentTypeParser(
 // preHandler runs returns undefined.
 app.decorateRequest("adminUser");
 app.decorateRequest("authContext");
+
+// Who is acting and through which door, for the audit log (#513). Registered
+// before every route so no write escapes it.
+registerRequestContext(app);
 
 // Server errors are logged as today, and additionally pushed to the alert
 // webhook when one is configured (#118). Only 5xx are alerted: 4xx are client

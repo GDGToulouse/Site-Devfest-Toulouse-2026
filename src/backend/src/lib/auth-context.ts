@@ -6,6 +6,7 @@ import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 import { extractPrefix, verifyApiKey } from "./api-key.js";
 import { notDeleted } from "./admin-helpers.js";
+import { setActor } from "./request-context.js";
 
 // Update `lastUsedAt` at most once per minute to avoid spamming the DB on
 // high-traffic keys. Good enough for "seen recently" UI hints.
@@ -48,7 +49,9 @@ async function resolveSession(request: FastifyRequest): Promise<AuthenticatedUse
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
-async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser | null> {
+async function resolveBearer(
+  request: FastifyRequest,
+): Promise<{ user: AuthenticatedUser; apiKeyId: string } | null> {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
 
@@ -114,11 +117,18 @@ async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser
 
   request.log.debug({ authPhase: "auth-context.bearer.ok", keyId: apiKey.id, role: apiKey.user.role });
   return {
-    id: apiKey.user.id,
-    email: apiKey.user.email,
-    name: apiKey.user.name,
-    role: apiKey.user.role,
+    user: {
+      id: apiKey.user.id,
+      email: apiKey.user.email,
+      name: apiKey.user.name,
+      role: apiKey.user.role,
+    },
+    apiKeyId: apiKey.id,
   };
+}
+
+function actorOf(user: AuthenticatedUser) {
+  return { userId: user.id, label: user.name || user.email };
 }
 
 /**
@@ -126,13 +136,22 @@ async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser
  * cookie, then an `Authorization: Bearer <api-key>` header. Returns null
  * if neither succeeds. The caller's role reflects the DB state at request
  * time, so API tokens always mirror their owner's current role.
+ *
+ * Also records the caller as the request's actor, so every write that follows
+ * is attributed to them in the audit log (#513).
  */
 export async function getAuthContext(request: FastifyRequest): Promise<AuthContext | null> {
   const sessionUser = await resolveSession(request);
-  if (sessionUser) return { user: sessionUser, source: "session" };
+  if (sessionUser) {
+    setActor(actorOf(sessionUser));
+    return { user: sessionUser, source: "session" };
+  }
 
-  const apiKeyUser = await resolveBearer(request);
-  if (apiKeyUser) return { user: apiKeyUser, source: "apiKey" };
+  const bearer = await resolveBearer(request);
+  if (bearer) {
+    setActor(actorOf(bearer.user), { apiKeyId: bearer.apiKeyId });
+    return { user: bearer.user, source: "apiKey" };
+  }
 
   return null;
 }

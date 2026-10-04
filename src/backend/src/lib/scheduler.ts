@@ -2,6 +2,7 @@ import type { FastifyBaseLogger } from "fastify";
 import cron from "node-cron";
 
 import { rotateFeaturedSpeakers } from "./featured-speakers.js";
+import { runInContext, systemContext } from "./request-context.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
@@ -21,7 +22,12 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     FEATURED_ROTATION_CRON,
     async () => {
       try {
-        const result = await rotateFeaturedSpeakers();
+        // No request here: open a context so the rotation is filed as the
+        // system's doing rather than left unattributed (#513).
+        const result = await runInContext(
+          systemContext("Rotation des speakers mis en avant"),
+          rotateFeaturedSpeakers,
+        );
         if (result.edition === null) {
           log.warn("Featured speakers rotation skipped: no featured edition");
           return;
