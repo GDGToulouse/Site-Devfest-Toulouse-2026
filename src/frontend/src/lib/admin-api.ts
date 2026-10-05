@@ -352,3 +352,47 @@ export async function adminListAudit(filters: AuditFilters) {
   }
   return adminFetch<AuditPage>(`/audit?${q}`);
 }
+
+// --- Sessionize import (#509, #519) ---
+
+export interface SessionizeImportReport {
+  speakers: { created: number; updated: number };
+  talks: { created: number; updated: number; scheduled: number };
+  categories: { created: number; reused: number };
+  links: number;
+  unmappedRooms: { sessionizeId: number; name: string; sessions: number }[];
+  absent: {
+    talks: {
+      id: number;
+      title: string;
+      publicationStatus: string;
+      startsAt: string | null;
+      roomLabel: string | null;
+    }[];
+    speakers: { id: number; name: string; publicationStatus: string }[];
+  };
+  warnings: string[];
+}
+
+export interface SessionizeRoomPairing {
+  sessionizeId: number;
+  name: string;
+  roomId: number | null;
+}
+
+export interface SessionizeRooms {
+  venue: { id: number; name: string } | null;
+  venueRooms: { id: number; name: string }[];
+  pairings: SessionizeRoomPairing[];
+}
+
+export async function adminGetSessionizeRooms(editionId: number) {
+  return adminFetch<SessionizeRooms>(`/import/sessionize/${editionId}/rooms`);
+}
+
+export async function adminPairSessionizeRoom(editionId: number, sessionizeId: number, roomId: number | null) {
+  return adminFetch<SessionizeRoomPairing>(`/import/sessionize/${editionId}/rooms/${sessionizeId}`, {
+    method: "PUT",
+    body: JSON.stringify({ roomId }),
+  });
+}

@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers, revalidateConferences } from "../../lib/revalidate.js";
 import { importSessionize, loadSessionizeData } from "../../lib/sessionize-import.js";
 import { setChannel } from "../../lib/request-context.js";
+import { notFound } from "../../lib/admin-helpers.js";
 
 interface SessionizeImportBody {
   editionId: number;
@@ -41,4 +42,72 @@ export default async function adminImportRoutes(app: FastifyInstance) {
     revalidateConferences();
     return report;
   });
+
+  // GET /api/admin/import/sessionize/:editionId/rooms — the Sessionize rooms
+  // seen by the edition's imports, each with the venue room it is paired with,
+  // and the venue rooms to choose from (#519).
+  app.get<{ Params: { editionId: number } }>("/import/sessionize/:editionId/rooms", {
+    schema: { params: { type: "object", required: ["editionId"], properties: { editionId: { type: "integer", minimum: 1 } } } },
+  }, async (request, reply) => {
+    const edition = await prisma.edition.findUnique({
+      where: { id: request.params.editionId },
+      select: {
+        venue: {
+          select: { id: true, name: true, rooms: { select: { id: true, name: true }, orderBy: [{ sortOrder: "asc" }, { name: "asc" }] } },
+        },
+        sessionizeRooms: { select: { sessionizeId: true, name: true, roomId: true }, orderBy: { sortOrder: "asc" } },
+      },
+    });
+    if (!edition) return notFound(reply, "Edition");
+    return {
+      venue: edition.venue ? { id: edition.venue.id, name: edition.venue.name } : null,
+      venueRooms: edition.venue?.rooms ?? [],
+      pairings: edition.sessionizeRooms,
+    };
+  });
+
+  // PUT /api/admin/import/sessionize/:editionId/rooms/:sessionizeId — pair a
+  // Sessionize room with a venue room, or unpair it with null. Talks already
+  // imported keep their room until the next import applies the pairing.
+  app.put<{ Params: { editionId: number; sessionizeId: number }; Body: { roomId: number | null } }>(
+    "/import/sessionize/:editionId/rooms/:sessionizeId",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["editionId", "sessionizeId"],
+          properties: { editionId: { type: "integer", minimum: 1 }, sessionizeId: { type: "integer" } },
+        },
+        body: {
+          type: "object",
+          required: ["roomId"],
+          additionalProperties: false,
+          properties: { roomId: { type: ["integer", "null"], minimum: 1 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, sessionizeId } = request.params;
+      const { roomId } = request.body;
+      const pairing = await prisma.sessionizeRoom.findUnique({
+        where: { editionId_sessionizeId: { editionId, sessionizeId } },
+        select: { id: true, edition: { select: { venueId: true } } },
+      });
+      if (!pairing) return notFound(reply, "Sessionize room");
+
+      if (roomId !== null) {
+        const room = await prisma.room.findUnique({ where: { id: roomId }, select: { venueId: true } });
+        if (!room || room.venueId !== pairing.edition.venueId) {
+          return reply.code(422).send({ error: "Invalid room", message: "Cette salle n'appartient pas au lieu de l'édition." });
+        }
+      }
+
+      const updated = await prisma.sessionizeRoom.update({
+        where: { id: pairing.id },
+        data: { roomId },
+        select: { sessionizeId: true, name: true, roomId: true },
+      });
+      return updated;
+    },
+  );
 }

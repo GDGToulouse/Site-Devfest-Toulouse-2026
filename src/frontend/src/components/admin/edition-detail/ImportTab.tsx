@@ -1,20 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+
+import type { SessionizeImportReport as ImportReport } from "@/lib/admin-api";
+import { formatEventTime } from "@/lib/datetime";
+import SessionizeRoomPairing from "./SessionizeRoomPairing";
 
 interface ImportTabProps {
   editionId: number;
 }
 
-interface ImportReport {
-  speakers: { created: number; updated: number };
-  talks: { created: number; updated: number };
-  categories: { created: number; reused: number };
-  links: number;
-  warnings: string[];
-}
-
 type Source = "url" | "json";
+
+function statusLabel(status: string): string {
+  return status === "PUBLISHED" ? "publié" : "brouillon";
+}
 
 export default function ImportTab({ editionId }: ImportTabProps) {
   const [source, setSource] = useState<Source>("url");
@@ -23,6 +24,7 @@ export default function ImportTab({ editionId }: ImportTabProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importCount, setImportCount] = useState(0);
 
   async function handleImport() {
     setIsImporting(true);
@@ -46,6 +48,7 @@ export default function ImportTab({ editionId }: ImportTabProps) {
         setError(body?.detail || body?.error || `Erreur ${res.status}`);
       } else {
         setReport(body as ImportReport);
+        setImportCount((count) => count + 1);
       }
     } catch {
       setError("Impossible de contacter le serveur.");
@@ -67,7 +70,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
           Importez les speakers et sessions depuis un export Sessionize «&nbsp;All
           data&nbsp;» (JSON). L&apos;import est idempotent&nbsp;: relancer met à jour
           les fiches existantes (rapprochées par leur slug) sans créer de doublons.
-          Les fiches importées sont créées en <strong>brouillon</strong>.
+          Les fiches importées sont créées en <strong>brouillon</strong>. Créneaux et
+          salles suivent Sessionize, même pour une session déplacée à la main.
         </p>
       </div>
 
@@ -149,7 +153,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
             </li>
             <li>
               Sessions&nbsp;: <strong>{report.talks.created}</strong> créées,{" "}
-              <strong>{report.talks.updated}</strong> mises à jour
+              <strong>{report.talks.updated}</strong> mises à jour, dont{" "}
+              <strong>{report.talks.scheduled}</strong> avec un créneau
             </li>
             <li>
               Catégories&nbsp;: <strong>{report.categories.created}</strong> créées,{" "}
@@ -173,6 +178,61 @@ export default function ImportTab({ editionId }: ImportTabProps) {
           )}
         </div>
       )}
+
+      {report && (report.absent.talks.length > 0 || report.absent.speakers.length > 0) && (
+        <section
+          aria-labelledby="import-absent-title"
+          className="rounded-lg border border-gris/30 bg-blanc-casse p-4 space-y-3"
+        >
+          <div>
+            <h3 id="import-absent-title" className="font-medium text-noir">
+              Absents de l&apos;import
+            </h3>
+            <p className="text-sm text-gris mt-1">
+              Présents sur le site pour cette édition, mais pas dans Sessionize&nbsp;: désistement,
+              session annulée, ou fiche créée à la main. Rien n&apos;a été modifié&nbsp;; dépubliez ou
+              mettez à la corbeille ce qui doit l&apos;être.
+            </p>
+          </div>
+          {report.absent.talks.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-noir">Sessions ({report.absent.talks.length})</p>
+              <ul className="text-sm text-noir list-disc pl-5 mt-1 space-y-0.5">
+                {report.absent.talks.map((talk) => (
+                  <li key={talk.id}>
+                    <Link href={`/admin/talks/${talk.id}`} className="text-malachite underline">
+                      {talk.title}
+                    </Link>{" "}
+                    <span className="text-gris">
+                      ({statusLabel(talk.publicationStatus)}
+                      {talk.startsAt &&
+                        `, créneau à réaffecter : ${formatEventTime(talk.startsAt)}${talk.roomLabel ? `, ${talk.roomLabel}` : ""}`}
+                      )
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {report.absent.speakers.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-noir">Speakers ({report.absent.speakers.length})</p>
+              <ul className="text-sm text-noir list-disc pl-5 mt-1 space-y-0.5">
+                {report.absent.speakers.map((speaker) => (
+                  <li key={speaker.id}>
+                    <Link href={`/admin/speakers/${speaker.id}`} className="text-malachite underline">
+                      {speaker.name}
+                    </Link>{" "}
+                    <span className="text-gris">({statusLabel(speaker.publicationStatus)})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      <SessionizeRoomPairing editionId={editionId} refreshKey={importCount} />
     </div>
   );
 }
