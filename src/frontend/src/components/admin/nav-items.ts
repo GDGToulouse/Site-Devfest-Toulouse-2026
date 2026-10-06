@@ -27,7 +27,9 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
       { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"] },
       { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"] },
-      { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN", "EDITOR"] },
+      // An offer commits the association to a price: ADMIN-only like its API
+      // writes (#521). Editors still read the catalogue from the sponsor form.
+      { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN"] },
       { label: "Catégories", path: "/admin/categories", icon: "tag", roles: ["ADMIN", "EDITOR"] },
     ],
   },
