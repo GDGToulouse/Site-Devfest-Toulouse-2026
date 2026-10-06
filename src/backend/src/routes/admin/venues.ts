@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
 import { revalidateVenue } from "../../lib/revalidate.js";
 import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
 
@@ -80,7 +81,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/venues
-  app.post<{ Body: VenueBody }>("/venues", async (request, reply) => {
+  app.post<{ Body: VenueBody }>("/venues", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const error = validateVenue(request.body);
     if (error) return reply.code(422).send({ error: "invalid_venue", message: error });
 
@@ -100,7 +101,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/admin/venues/:id
-  app.put<{ Params: { id: string }; Body: Partial<VenueBody> }>("/venues/:id", async (request, reply) => {
+  app.put<{ Params: { id: string }; Body: Partial<VenueBody> }>("/venues/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     const error = validateVenue(request.body);
     if (error) return reply.code(422).send({ error: "invalid_venue", message: error });
@@ -115,7 +116,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/venues/:id — refused while an edition still points here.
-  app.delete<{ Params: { id: string } }>("/venues/:id", async (request, reply) => {
+  app.delete<{ Params: { id: string } }>("/venues/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     const venue = await prisma.venue.findUnique({
       where: { id },
@@ -138,7 +139,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   // --- Rooms ------------------------------------------------------------
 
   // POST /api/admin/venues/:id/rooms
-  app.post<{ Params: { id: string }; Body: RoomBody }>("/venues/:id/rooms", async (request, reply) => {
+  app.post<{ Params: { id: string }; Body: RoomBody }>("/venues/:id/rooms", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const venueId = Number(request.params.id);
     const { name, capacity, sortOrder } = request.body;
 
@@ -166,7 +167,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/admin/rooms/:id
-  app.put<{ Params: { id: string }; Body: Partial<RoomBody> }>("/rooms/:id", async (request, reply) => {
+  app.put<{ Params: { id: string }; Body: Partial<RoomBody> }>("/rooms/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     const { name, capacity, sortOrder } = request.body;
 
@@ -192,7 +193,7 @@ export default async function adminVenueRoutes(app: FastifyInstance) {
   });
 
   // DELETE /api/admin/rooms/:id — refused while a talk is scheduled in it.
-  app.delete<{ Params: { id: string } }>("/rooms/:id", async (request, reply) => {
+  app.delete<{ Params: { id: string } }>("/rooms/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     const room = await prisma.room.findUnique({
       where: { id },
