@@ -1,10 +1,21 @@
 "use client";
 
+import { useMemo, useState } from "react";
+
 interface Column<T> {
   key: string;
   label: string;
   render?: (item: T) => React.ReactNode;
+  // Sorting is opt-in per column (#498): give the value to sort on, and the
+  // header becomes a button cycling ascending then descending.
+  sortValue?: (item: T) => string | number;
 }
+
+type SortDirection = "ascending" | "descending";
+
+// French collation, so accents and case do not scatter the alphabet ("alice"
+// next to "Alice", "Élise" among the E).
+const collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true });
 
 interface DataTableProps<T> {
   columns: Column<T>[];
@@ -27,6 +38,29 @@ export default function DataTable<T extends { id: number }>({
   selectedIds,
   onSelectionChange,
 }: DataTableProps<T>) {
+  const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(null);
+
+  const rows = useMemo(() => {
+    if (!sort) return data;
+    const column = columns.find((c) => c.key === sort.key);
+    if (!column?.sortValue) return data;
+    const value = column.sortValue;
+    const sign = sort.direction === "ascending" ? 1 : -1;
+    return [...data].sort((a, b) => {
+      const va = value(a);
+      const vb = value(b);
+      const order = typeof va === "number" && typeof vb === "number" ? va - vb : collator.compare(String(va), String(vb));
+      return order * sign;
+    });
+  }, [data, columns, sort]);
+
+  const toggleSort = (key: string) =>
+    setSort((current) =>
+      current?.key === key && current.direction === "ascending"
+        ? { key, direction: "descending" }
+        : { key, direction: "ascending" },
+    );
+
   if (data.length === 0) {
     return <p className="text-gris py-8 text-center">{emptyMessage}</p>;
   }
@@ -70,8 +104,25 @@ export default function DataTable<T extends { id: number }>({
               </th>
             )}
             {columns.map((col) => (
-              <th key={col.key} className="text-left px-4 py-3 font-medium text-gris">
-                {col.label}
+              <th
+                key={col.key}
+                className="text-left px-4 py-3 font-medium text-gris"
+                aria-sort={sort?.key === col.key ? sort.direction : col.sortValue ? "none" : undefined}
+              >
+                {col.sortValue ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(col.key)}
+                    className="inline-flex items-center gap-1 hover:text-noir"
+                  >
+                    {col.label}
+                    <span aria-hidden="true" className="text-xs">
+                      {sort?.key === col.key ? (sort.direction === "ascending" ? "▲" : "▼") : "↕"}
+                    </span>
+                  </button>
+                ) : (
+                  col.label
+                )}
               </th>
             ))}
             {(onEdit || onDelete) && (
@@ -80,7 +131,7 @@ export default function DataTable<T extends { id: number }>({
           </tr>
         </thead>
         <tbody>
-          {data.map((item) => (
+          {rows.map((item) => (
             <tr key={item.id} className="border-b border-gris/10 hover:bg-blanc-casse/50">
               {isSelectable && (
                 <td className="px-4 py-3">
