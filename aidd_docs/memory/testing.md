@@ -9,7 +9,7 @@
 ## Tools
 
 - Vitest partout, Testing Library côté frontend
-- Chrome DevTools MCP pour la vérification navigateur ; Playwright CLI à l'essai via `aidd-dev:11-browser-qa` (exige ffmpeg)
+- Vérification navigateur : MCP Chrome DevTools et MCP Playwright (sur Chrome), déclarés dans `.mcp.json` ; le second écrit ses sorties dans `.playwright-mcp/` (ignoré par git)
 
 ## Conventions
 
