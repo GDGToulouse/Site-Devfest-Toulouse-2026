@@ -251,7 +251,9 @@ describe("trash endpoints (#148)", () => {
       // The trash must not become a side door around the per-entity role rules.
       // `users` is labelled by email, so listing alone would leak admin
       // addresses; restoring a trashed admin account escalates privilege.
-      for (const key of ["users", "editions", "ticket-tiers", "sponsor-tiers"]) {
+      // Contact messages carry visitors' addresses and only an ADMIN deletes
+      // them, so only an ADMIN brings them back (#522).
+      for (const key of ["users", "editions", "ticket-tiers", "sponsor-tiers", "contact-messages", "contact-categories"]) {
         const list = await app.inject({ method: "GET", url: `/api/admin/trash/${key}` });
         expect(list.statusCode, `GET ${key}`).toBe(403);
 
@@ -279,6 +281,7 @@ describe("trash endpoints (#148)", () => {
     const adminView = await app.inject({ method: "GET", url: "/api/admin/trash" });
     const adminKeys = adminView.json().entities.map((e: { entity: string }) => e.entity);
     expect(adminKeys).toContain("users");
+    expect(adminKeys).toContain("contact-messages");
 
     authContext.current = {
       user: { id: "test-editor", email: "editor@test.local", name: "Ed", role: "EDITOR" },
@@ -288,6 +291,7 @@ describe("trash endpoints (#148)", () => {
       const editorKeys = editorView.json().entities.map((e: { entity: string }) => e.entity);
       expect(editorKeys).not.toContain("users");
       expect(editorKeys).not.toContain("editions");
+      expect(editorKeys).not.toContain("contact-messages");
       expect(editorKeys).toContain("articles");
     } finally {
       authContext.current = asAdmin;

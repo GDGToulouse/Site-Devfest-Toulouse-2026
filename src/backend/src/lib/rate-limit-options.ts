@@ -67,3 +67,24 @@ export const rateLimitOptions = {
     "x-ratelimit-reset": true,
   },
 };
+
+/**
+ * Invitations a sponsor space may send, per sponsor and per hour (#524). Each
+ * one mails any address from the DevFest's SMTP server, so the per-IP budget
+ * is not enough: a RESPONSABLE could still flood strangers' inboxes. Twenty an
+ * hour is well above a company inviting its team.
+ */
+export const TEAM_INVITE_RATE_LIMIT_MAX = 20;
+
+/**
+ * Route-level budget for POST /api/sponsor-space/:sponsorId/team. Counted in
+ * preHandler, after the sponsor guard: on the default onRequest hook an
+ * anonymous caller could spend a sponsor's budget and block its invitations.
+ */
+export const teamInviteRateLimit = {
+  hook: "preHandler" as const,
+  timeWindow: "1 hour",
+  max: TEAM_INVITE_RATE_LIMIT_MAX,
+  keyGenerator: (request: FastifyRequest) =>
+    `team-invite:${(request.params as { sponsorId?: string }).sponsorId}`,
+};

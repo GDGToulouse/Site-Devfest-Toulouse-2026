@@ -1,11 +1,16 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
 import { revalidateSponsors } from "../../lib/revalidate.js";
 import { notDeleted, notFound, softDeleteData, parkUniqueValue } from "../../lib/admin-helpers.js";
 
 // CRUD for the global sponsoring-tier catalogue (#318). A tier is shared across
 // editions; its per-edition binding (price, visibility, order) lives in
 // EditionSponsorTier and is managed under /admin/editions/:id/sponsor-tiers.
+//
+// Reads stay open to editors (the sponsor form picks its tier from here);
+// writes are ADMIN-only, like the edition bindings and the trash entry: an
+// offer commits the association to a price and its counterparts (#521).
 
 interface SponsorTierCreateBody {
   key: string;
@@ -56,7 +61,7 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/sponsor-tiers
-  app.post<{ Body: SponsorTierCreateBody }>("/sponsor-tiers", async (request, reply) => {
+  app.post<{ Body: SponsorTierCreateBody }>("/sponsor-tiers", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const body = request.body;
 
     if (!body.key?.trim() || !body.nameFr?.trim() || !body.nameEn?.trim()) {
@@ -92,6 +97,7 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
 
   // PUT /api/admin/sponsor-tiers/:id
   app.put<{ Params: SponsorTierIdParams; Body: SponsorTierUpdateBody }>("/sponsor-tiers/:id", {
+    preHandler: [requireAdminRole],
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } },
   }, async (request, reply) => {
     const id = Number(request.params.id);
@@ -132,7 +138,7 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
   // DELETE /api/admin/sponsor-tiers/:id — moves the tier to the trash (#147).
   // Refused while any live sponsor or edition binding still points at it, so a
   // sponsor can never end up attached to a trashed tier.
-  app.delete<{ Params: SponsorTierIdParams }>("/sponsor-tiers/:id", async (request, reply) => {
+  app.delete<{ Params: SponsorTierIdParams }>("/sponsor-tiers/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 

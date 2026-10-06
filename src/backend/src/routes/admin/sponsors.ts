@@ -3,7 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
-import { resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
+import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
@@ -627,15 +627,32 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   // the token and does the same job.
   app.post<{ Params: SponsorIdParams; Body: { email?: string; name?: string; role?: string } }>(
     "/sponsors/:id/contacts",
-    { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
+    {
+      schema: {
+        params: { type: "object", required: ["id"], properties: { id: { type: "string" } } },
+        // A missing or malformed body answered 500 (#524).
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: invitationEmailSchema,
+            name: { type: "string", maxLength: 200 },
+            role: { type: "string", maxLength: 200 },
+          },
+        },
+      },
+      attachValidation: true,
+    },
     async (request, reply) => {
+      if (request.validationError) {
+        return reply.code(400).send(invalidInvitationBody(request.validationError.validation));
+      }
       const sponsorId = Number(request.params.id);
       // findFirst, not findUnique: a trashed sponsor must not gain new contacts.
       const sponsor = await prisma.sponsor.findFirst({ where: { id: sponsorId, ...notDeleted } });
       if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
 
-      const email = request.body.email?.trim();
-      if (!email) return reply.code(400).send({ error: "No contact email provided" });
+      const email = request.body.email!.trim();
 
       // Send first, persist second (#223): if the mail fails we create nothing,
       // so the sign-up door never opens for an invitation nobody received.

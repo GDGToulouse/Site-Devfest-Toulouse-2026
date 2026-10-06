@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 211 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 213 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -17,7 +17,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Verdict
 
-**Aucun trou connu ne reste ouvert sur ce qu'un agent peut atteindre.** Les trous trouvés qui concernaient le connecteur sont corrigés et couverts par des tests. Restent des points d'arbitrage et des défauts mineurs, qui existaient avant le connecteur (voir plus bas).
+**Aucun trou connu ne reste ouvert sur ce qu'un agent peut atteindre.** Les trous trouvés qui concernaient le connecteur sont corrigés et couverts par des tests. Les défauts mineurs antérieurs au connecteur sont corrigés aussi (#521 à #524) ; reste un point d'arbitrage, accepté (voir plus bas).
 
 La décision d'ouvrir le connecteur en production revient à Julien (décision du 4 octobre 2026 : avant l'événement si l'audit passe). Elle sera consignée sur #514.
 
@@ -30,6 +30,10 @@ La décision d'ouvrir le connecteur en production revient à Julien (décision d
 | Un compte dont l'adresse n'est pas vérifiée perdait son mot de passe au premier lien magique (better-auth 1.7). C'était le cas de tous les sponsors inscrits par mot de passe. | Moyenne | L'acceptation d'une invitation vérifie l'adresse, et une migration rattrape les comptes existants. |
 | Un chemin encodé (`/api/%6De/agents`) passait la liste des routes interdites aux agents. | Faible | Le chemin est décodé avant le contrôle. |
 | `PUT /api/admin/profile` sans schéma : un nom qui n'est pas du texte provoquait une erreur 500. | Faible | Schéma de corps ajouté. |
+| Un EDITOR pouvait créer, modifier ou supprimer les offres de sponsoring (`/api/admin/sponsor-tiers`), quota d'offres d'emploi et options Platinum compris, alors que la corbeille et le rattachement aux éditions les réservent aux ADMIN. | Moyenne | Écritures réservées aux ADMIN, lecture laissée à l'équipe pour la fiche sponsor ; écran masqué aux EDITOR (#521). |
+| La corbeille laissait un EDITOR lister et restaurer un message ou une catégorie de contact qu'un ADMIN seul peut supprimer. | Faible | `contact-messages` et `contact-categories` en `adminOnly` (#522). |
+| Le lien de modification d'un speaker ou d'une conférence mis à la corbeille fonctionnait encore. | Faible | `resolveToken` écarte le speaker et les conférences à la corbeille ; restaurer le speaker rouvre le lien (#523). |
+| L'invitation d'un collaborateur sponsor n'avait ni schéma ni limite : un corps absent ou mal typé provoquait une erreur 500, une adresse mal formée partait quand même. Même défaut côté admin (`/api/admin/sponsors/:id/contacts`). | Faible | Schéma sur les deux routes (400 en français), et 20 invitations par heure et par sponsor côté espace partenaire, comptées après la garde (#524). |
 
 ## Constats ouverts
 
@@ -37,11 +41,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 | Constat | Gravité | Proposition |
 |---|---|---|
-| Un EDITOR peut modifier ou supprimer les offres de sponsoring (`/api/admin/sponsor-tiers`), y compris quota d'offres d'emploi et options Platinum. Ailleurs, le code les traite comme réservées aux ADMIN (corbeille). | Moyenne | Réserver les écritures aux ADMIN (décision du 4 octobre 2026) : #521. |
-| La corbeille laisse un EDITOR restaurer un message ou une catégorie de contact qu'un ADMIN seul peut supprimer. | Faible | Passer `contact-messages` et `contact-categories` en `adminOnly` : #522. |
 | L'URL de la brochure FR est publique (`GET /api/editions/current`), le formulaire ne conditionne donc pas le téléchargement et le compteur sous-compte. | Faible | **Accepté** (décision du 4 octobre 2026) : la brochure n'est pas un outil de collecte. |
-| Le lien de modification d'un speaker ou d'une conférence mis à la corbeille fonctionne encore. | Faible | Filtrer `deletedAt` dans `resolveToken` (`routes/edit.ts`) : #523. |
-| L'invitation d'un collaborateur sponsor (`POST /api/sponsor-space/:id/team`) n'a ni schéma ni limite propre. Un RESPONSABLE peut envoyer des invitations en nombre à n'importe quelle adresse, et un e-mail mal formé provoque une erreur 500. Même défaut côté admin (`/api/admin/sponsors/:id/contacts`). | Faible | Schéma (format e-mail) et limite de débit dédiée : #524. |
 
 **Note de conception.** L'agent d'un ADMIN a tous les pouvoirs ADMIN, hors comptes et clés : corbeille, paramètres, purge. C'est le principe retenu (l'agent agit avec les droits de la personne). Le resserrer passerait par des scopes OAuth par domaine.
 
@@ -76,7 +76,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (126)
+### Back-office (128)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -123,6 +123,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/files/:filename/generate-alt` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/files/:filename/metadata` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/import/sessionize` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/import/sessionize/:editionId/rooms` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/import/sessionize/:editionId/rooms/:sessionizeId` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/pages` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/pages` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/pages/:id` | Équipe (ADMIN, EDITOR) |
@@ -155,10 +157,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/speakers/bulk` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/speakers/rotate-featured` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
-| POST | `/api/admin/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
-| DELETE | `/api/admin/sponsor-tiers/:id` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsor-tiers` | ADMIN |
+| DELETE | `/api/admin/sponsor-tiers/:id` | ADMIN |
 | GET | `/api/admin/sponsor-tiers/:id` | Équipe (ADMIN, EDITOR) |
-| PUT | `/api/admin/sponsor-tiers/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/sponsor-tiers/:id` | ADMIN |
 | GET | `/api/admin/sponsors` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/sponsors/:id` | Équipe (ADMIN, EDITOR) |
