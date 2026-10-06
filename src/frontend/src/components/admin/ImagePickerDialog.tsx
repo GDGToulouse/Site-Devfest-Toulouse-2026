@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
 
@@ -390,14 +391,14 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                         const filename = await preUploadForAi();
                         if (!filename) return;
                         // Trigger generation right after the pre-upload finishes.
-                        const { data, status } = await adminFetch<{ alt: string }>(
+                        const { data, status, errorBody } = await adminFetch<{ alt: string }>(
                           `/files/${encodeURIComponent(filename)}/generate-alt`,
                           { method: "POST" },
                         );
                         if (status === 200 && data?.alt !== undefined) {
                           setPendingAlt(data.alt);
                         } else {
-                          setError("Échec de la génération du texte alternatif.");
+                          setError(altGenerationErrorMessage(status, errorBody));
                         }
                       }}
                       disabled={isUploading || isPreUploading}
