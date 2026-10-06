@@ -396,3 +396,13 @@ export async function adminPairSessionizeRoom(editionId: number, sessionizeId: n
     body: JSON.stringify({ roomId }),
   });
 }
+
+// The API link an edition kept from its last successful import (#529).
+export async function adminGetSessionizeSource(editionId: number) {
+  return adminFetch<{ url: string | null }>(`/import/sessionize/${editionId}/source`);
+}
+
+// ADMIN-only on the backend: an editor gets a 403.
+export async function adminDeleteSessionizeSource(editionId: number) {
+  return adminFetch<null>(`/import/sessionize/${editionId}/source`, { method: "DELETE" });
+}

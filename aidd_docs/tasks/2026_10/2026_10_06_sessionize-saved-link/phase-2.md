@@ -1,5 +1,5 @@
 ---
-status: pending
+status: done
 ---
 
 <!-- Fill or omit these sections; never add, rename, or reorder one. -->
@@ -101,18 +101,24 @@ journey
 2. Après un import réussi depuis une URL, relire le lien pour basculer sur l'affichage enregistré.
 3. Échec de suppression : message qui reste affiché (`forms.md`, #394), succès = statut `204` uniquement (#428).
 
-### `3)` Suivre l'édition choisie
+### `3)` Message d'échec en français
+
+> Un import en échec dit ce qui s'est passé et quoi faire.
+
+1. Sur un 422, afficher « Sessionize n'a pas renvoyé de données exploitables : vérifiez le lien (endpoint « All » de l'événement) puis réessayez. », suivi du détail technique (décision du 2026-10-06).
+
+### `4)` Suivre l'édition choisie
 
 > Jamais le lien d'une autre année.
 
 1. `key={editionId}` sur `ImportTab` dans `app/admin/import/page.tsx`.
 
-### `4)` Vérifier
+### `5)` Vérifier
 
 > Vu marcher avant de pousser.
 
 1. Lint, tests et build frontend.
-2. Parcours du Test Scope dans Chrome (MCP), console propre.
+2. Parcours du Test Scope dans Chrome (MCP), console propre. Le cas EDITOR suppose #530 (lecture des éditions ouverte à l'équipe) : sans lui, la page d'import d'un EDITOR reste vide.
 
 ## Test acceptance criteria
 
@@ -120,5 +126,6 @@ journey
 | ---- | ------------------- |
 | 1 | Les appels renvoient le lien gardé, ou `null`, et la suppression répond `204` |
 | 2 | Après un import réussi, le lien s'affiche en lecture seule et survit au rechargement ; « Mettre à jour les données » réimporte sans ressaisie ; pour un ADMIN, « Supprimer le lien » demande confirmation puis rend le champ vide ; un EDITOR ne voit pas ce bouton |
-| 3 | Passer d'une édition à l'autre n'affiche jamais le lien d'une autre édition |
-| 4 | Le parcours complet est vu marcher dans Chrome, sans erreur console |
+| 3 | Un import en échec affiche un message en français suivi du détail technique, et aucun lien n'est gardé |
+| 4 | Passer d'une édition à l'autre n'affiche jamais le lien d'une autre édition |
+| 5 | Le parcours complet est vu marcher dans Chrome, sans erreur console |
