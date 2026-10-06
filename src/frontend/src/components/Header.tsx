@@ -9,7 +9,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { getLogoUrl } from "@/lib/identity";
-import { getPublicNavEntries } from "@/lib/nav";
+import { getPublicNavEntries, getSubmenuEntries } from "@/lib/nav";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -75,7 +75,7 @@ export default function Header() {
                     </svg>
                   </Link>
                   <div className="absolute left-0 top-full hidden min-w-[180px] flex-col rounded-[12px] bg-blanc py-2 shadow-card group-hover:flex group-focus-within:flex">
-                    {entry.children.map((child) => (
+                    {getSubmenuEntries(entry, edition?.year).map((child) => (
                       <Link
                         key={child.key}
                         href={child.href}
@@ -83,6 +83,7 @@ export default function Header() {
                         className="px-4 py-2 text-gris text-base hover:text-noir hover:bg-blanc-casse transition-colors"
                       >
                         {child.label ?? t(child.labelKey)}
+                        {child.yearSuffix ? ` ${child.yearSuffix}` : null}
                       </Link>
                     ))}
                   </div>

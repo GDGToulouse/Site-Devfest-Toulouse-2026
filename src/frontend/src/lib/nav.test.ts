@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { getFooterPageEntries, getPublicNavEntries } from "./nav";
+import { getFooterPageEntries, getPublicNavEntries, getSubmenuEntries } from "./nav";
 import type { ContentPageSummary, Edition } from "./types";
 import fr from "../../messages/fr.json";
 import en from "../../messages/en.json";
@@ -247,5 +247,34 @@ describe("content pages in the navigation", () => {
       "en",
     );
     expect(entry.label).toBe("Nous rejoindre");
+  });
+});
+
+// #506 — hovering a menu opens its dropdown at once, so the parent link above it
+// reads as a heading: "Conférences" seemed to lead only to the replays. Each
+// dropdown now opens on a link to the parent page itself, with the year.
+describe("getSubmenuEntries (#506)", () => {
+  it("should lead every dropdown with its parent page, labelled with the year", () => {
+    const [program] = getPublicNavEntries(edition({ isScheduleReady: true, isProgramPublished: true }));
+
+    const items = getSubmenuEntries(program, 2026);
+
+    expect(items[0]).toMatchObject({ href: "/programme", labelKey: "program", yearSuffix: 2026 });
+    expect(items.slice(1).map((i) => i.key)).toEqual(["conferences", "replays"]);
+  });
+
+  it("should do the same for speakers and sponsors", () => {
+    const entries = getPublicNavEntries(edition({ hasSpeakers: true, hasSponsors: true, hasJobOffers: true }));
+    const speakers = entries.find((e) => e.key === "speakers")!;
+    const sponsors = entries.find((e) => e.key === "sponsors")!;
+
+    expect(getSubmenuEntries(speakers, 2026)[0].href).toBe("/speakers");
+    expect(getSubmenuEntries(sponsors, 2026)[0].href).toBe("/sponsors");
+  });
+
+  it("should give the leading entry a key distinct from its parent's", () => {
+    const [program] = getPublicNavEntries(edition({ isScheduleReady: true }));
+
+    expect(getSubmenuEntries(program, 2026)[0].key).not.toBe(program.key);
   });
 });

@@ -13,6 +13,8 @@ export interface NavEntry {
   // i18n key, so they bring a ready-made label instead (#420). Callers must
   // prefer it over translating `labelKey`.
   label?: string;
+  // Rendered after the label, e.g. "Programme 2026" (#506).
+  yearSuffix?: number;
 }
 
 const CONFERENCES_ENTRY: NavEntry = {
@@ -119,4 +121,23 @@ export function getPublicNavEntries(
   entries.push(...pagesAt(pages, "HEADER", locale));
 
   return entries;
+}
+
+// The items of a desktop dropdown (#506). Hovering a menu opens its dropdown at
+// once, so the parent link above it reads as a heading: "Conférences" seemed to
+// lead only to the replays, "Speakers" only to the hall of fame. The dropdown
+// therefore opens on the parent page itself, named with the year. Desktop only:
+// on mobile the parent is a plain link above its children, and the footer has
+// no dropdowns, so neither needs it.
+export function getSubmenuEntries(entry: NavEntry, year: number | undefined): NavEntry[] {
+  const children = entry.children ?? [];
+  if (children.length === 0) return children;
+  const self: NavEntry = {
+    key: `${entry.key}-current`,
+    labelKey: entry.labelKey,
+    href: entry.href,
+    label: entry.label,
+    yearSuffix: year,
+  };
+  return [self, ...children];
 }
