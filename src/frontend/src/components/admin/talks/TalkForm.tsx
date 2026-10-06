@@ -1,6 +1,7 @@
 "use client";
 
 import type { TalkFormat, TalkLevel, Category, Speaker } from "@/lib/types";
+import SpeakerPicker from "./SpeakerPicker";
 
 const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
@@ -62,14 +63,6 @@ interface TalkFormProps {
 }
 
 export default function TalkForm({ value, onChange, categories, speakers, rooms }: TalkFormProps) {
-  function toggleSpeaker(id: number) {
-    onChange({
-      ...value,
-      speakerIds: value.speakerIds.includes(id)
-        ? value.speakerIds.filter((x) => x !== id)
-        : [...value.speakerIds, id],
-    });
-  }
 
   return (
     <div className="space-y-4">
@@ -182,26 +175,18 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms 
         )}
       </fieldset>
 
-      <div>
-        <span className="block text-sm font-medium text-noir mb-1">Speakers</span>
-        {speakers.length === 0 ? (
+      {speakers.length === 0 ? (
+        <div>
+          <span className="block text-sm font-medium text-noir mb-1">Speakers</span>
           <p className="text-sm text-gris">Aucun speaker disponible pour cette édition.</p>
-        ) : (
-          <div className="flex flex-wrap gap-3">
-            {speakers.map((sp) => (
-              <label key={sp.id} className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={value.speakerIds.includes(sp.id)}
-                  onChange={() => toggleSpeaker(sp.id)}
-                  className="rounded border-gris/30 text-malachite focus:ring-malachite"
-                />
-                <span className="text-sm text-noir">{sp.name}</span>
-              </label>
-            ))}
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <SpeakerPicker
+          speakers={speakers}
+          selectedIds={value.speakerIds}
+          onChange={(speakerIds) => onChange({ ...value, speakerIds })}
+        />
+      )}
 
       <label className="flex items-center gap-2 cursor-pointer">
         <input
