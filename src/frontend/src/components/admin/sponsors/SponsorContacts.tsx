@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { SPONSOR_ROLE_OPTIONS } from "@/lib/sponsor-roles";
@@ -57,10 +57,11 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
     }
     setBusy(true);
     setMsg(null);
-    const { status } = await adminFetch(`/sponsors/${sponsorId}/contacts`, {
+    const result = await adminFetch(`/sponsors/${sponsorId}/contacts`, {
       method: "POST",
       body: JSON.stringify({ email: email.trim(), name: name.trim(), role: role.trim() }),
     });
+    const { status } = result;
     setBusy(false);
     if (status === 201) {
       setMsg({ ok: true, text: `Invitation envoyée à ${email.trim()}.` });
@@ -69,7 +70,12 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
       setRole("");
       void load();
     } else {
-      setMsg({ ok: false, text: "Échec de l'envoi. Réessayez." });
+      // A rejected address comes back explained in French (#524); anything
+      // else is a send that failed.
+      setMsg({
+        ok: false,
+        text: status === 400 ? humanError(result, "Adresse email invalide.") : "Échec de l'envoi. Réessayez.",
+      });
     }
   }
 

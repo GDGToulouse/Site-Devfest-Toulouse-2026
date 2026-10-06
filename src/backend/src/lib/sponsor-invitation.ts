@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { isInvitationExpired } from "./edit-token.js";
+import type { FastifySchemaValidationError } from "fastify";
 import type { SponsorAccessRole } from "./sponsor-guard.js";
 
 // Invitations to a sponsor space (#362).
@@ -74,4 +75,21 @@ export async function hasPendingInvitation(email: string): Promise<boolean> {
   return contacts.some(
     (c) => normalizeEmail(c.email) === normalized && !isInvitationExpired(c.invitationSentAt),
   );
+}
+
+/** The address an invitation is mailed to, as both invitation routes take it (#524). */
+export const invitationEmailSchema = { type: "string", format: "email", maxLength: 254 } as const;
+
+/**
+ * The 400 an invitation answers when its body fails the schema (#524). Fastify's
+ * own message is technical English; the screens show this one as is.
+ */
+export function invalidInvitationBody(validation: FastifySchemaValidationError[]) {
+  // instancePath "" is the body itself: absent or not an object, so no address.
+  const isEmail = validation.some(
+    (v) => v.instancePath === "/email" || v.instancePath === "" || v.params?.missingProperty === "email",
+  );
+  return isEmail
+    ? { error: "invalid_email", message: "Adresse e-mail invalide." }
+    : { error: "invalid_body", message: "Invitation invalide : vérifiez les champs saisis." };
 }
