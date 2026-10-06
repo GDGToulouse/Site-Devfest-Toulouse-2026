@@ -24,15 +24,12 @@ interface EditTalk {
 }
 
 interface EditData {
-  // "sponsor-invitation" carries no profile: the token belonged to a sponsor,
-  // and the API turned it into an invitation to open an account (#362).
-  kind: "speaker" | "sponsor-invitation";
+  kind: "speaker";
   locale?: Locale;
   name: string;
   fields: Record<string, unknown>;
   // Speaker only (#229, editable per talk since #289).
   talks?: EditTalk[];
-  invitationUrl?: string;
 }
 
 type SocialLinks = Record<string, string>;
@@ -88,9 +85,6 @@ const T = {
         "Les modifications sont clôturées à l'approche de l'événement. Contactez l'organisation si un changement est indispensable.",
       locked: "Les modifications de votre fiche ont été suspendues. Contactez l'organisation.",
       blocked: "Les modifications sont actuellement clôturées. Contactez l'organisation si nécessaire.",
-      // A sponsor whose link converted earlier, or who was invited directly.
-      already_has_account:
-        "Vous avez déjà un compte pour gérer votre fiche. Connectez-vous sur devfesttoulouse.fr/sponsor.",
     },
   },
   en: {
@@ -140,8 +134,6 @@ const T = {
         "Editing is closed as the event approaches. Contact the organisers if a change is essential.",
       locked: "Editing of your profile has been suspended. Please contact the organisers.",
       blocked: "Editing is currently closed. Please contact the organisers if needed.",
-      already_has_account:
-        "You already have an account to manage your profile. Sign in at devfesttoulouse.fr/sponsor.",
     },
   },
 } as const;
@@ -192,15 +184,6 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
           return;
         }
         const json: EditData = await res.json();
-
-        // A sponsor link from before accounts existed (#362). The API turned it
-        // into an invitation as we asked for it; follow that through. replace(),
-        // not push(): the old link is spent, going back to it would 404.
-        if (json.kind === "sponsor-invitation" && json.invitationUrl) {
-          window.location.replace(json.invitationUrl);
-          return;
-        }
-
         setData(json);
         if (json.locale) setLocale(json.locale);
         const f = json.fields;

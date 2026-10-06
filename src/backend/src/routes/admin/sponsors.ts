@@ -569,17 +569,13 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     },
   );
 
-  // A sponsor can have several contacts, each with its own modification link
-  // (#250). The token itself is never returned to the admin — only whether a
-  // link is active, when it was sent, and if it's locked.
+  // A sponsor can have several contacts (#250), each with its own account
+  // access (#362).
   const serializeContact = (c: {
     id: number;
     email: string;
     name: string | null;
     role: string | null;
-    editToken: string | null;
-    editLinkLocked: boolean;
-    editTokenSentAt: Date | null;
     accessRole?: SponsorAccessRole;
     userId?: string | null;
     invitationToken?: string | null;
@@ -590,11 +586,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     email: c.email,
     name: c.name,
     role: c.role,
-    hasLink: !!c.editToken,
-    editLinkLocked: c.editLinkLocked,
-    editTokenSentAt: c.editTokenSentAt,
-    // Account access (#362). Like the edit token above, the invitation token
-    // itself is never returned — only whether one is outstanding.
+    // Account access (#362). The invitation token itself is never returned —
+    // only whether one is outstanding.
     accessRole: c.accessRole,
     hasAccount: !!c.userId,
     // The 7-day TTL is a server rule: reported here rather than recomputed from
@@ -778,23 +771,6 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       const updated = await prisma.sponsorContact.update({
         where: { id: contact.id },
         data: { accessRole },
-      });
-      return serializeContact(updated);
-    },
-  );
-
-  // PUT /api/admin/sponsors/:id/contacts/:contactId/lock — lock/unlock a link.
-  app.put<{ Params: SponsorIdParams & { contactId: string }; Body: { locked: boolean } }>(
-    "/sponsors/:id/contacts/:contactId/lock",
-    { schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } } },
-    async (request, reply) => {
-      const contact = await prisma.sponsorContact.findUnique({ where: { id: Number(request.params.contactId) } });
-      if (!contact || contact.sponsorId !== Number(request.params.id)) {
-        return reply.code(404).send({ error: "Contact not found" });
-      }
-      const updated = await prisma.sponsorContact.update({
-        where: { id: contact.id },
-        data: { editLinkLocked: !!request.body.locked },
       });
       return serializeContact(updated);
     },
