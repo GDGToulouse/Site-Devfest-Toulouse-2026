@@ -110,6 +110,34 @@ const nextConfig: NextConfig = {
         source: "/api/replays",
         destination: `${backendUrl}/api/replays`,
       },
+      // The rest of the public API (docs/api-publique.md). The site's own pages
+      // reach the backend through BACKEND_URL, so nothing on the site broke
+      // without these: only external clients got Next's HTML 404 (#494).
+      // frontend-api-rewrites.test.ts (backend) fails on a route left out here.
+      {
+        source: "/api/articles/:path*",
+        destination: `${backendUrl}/api/articles/:path*`,
+      },
+      {
+        source: "/api/tags",
+        destination: `${backendUrl}/api/tags`,
+      },
+      {
+        source: "/api/pages/:path*",
+        destination: `${backendUrl}/api/pages/:path*`,
+      },
+      {
+        source: "/api/categories",
+        destination: `${backendUrl}/api/categories`,
+      },
+      {
+        source: "/api/settings/:path*",
+        destination: `${backendUrl}/api/settings/:path*`,
+      },
+      {
+        source: "/api/job-offers",
+        destination: `${backendUrl}/api/job-offers`,
+      },
       {
         source: "/api/me/:path*",
         destination: `${backendUrl}/api/me/:path*`,
