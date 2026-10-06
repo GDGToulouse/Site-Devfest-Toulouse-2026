@@ -15,7 +15,7 @@ Commandes à lancer avec l'environnement local démarré (`docker compose -f doc
 | ----- | ------- | ------ |
 | 1 | `cd src/frontend && pnpm exec vitest run` | Tests frontend |
 | 2 | `docker exec devfest-local-backend pnpm exec vitest run` | Tests backend contre la base locale (`DATABASE_URL` pointe déjà sur `db:5432` dans le conteneur) |
-| 3 | `cd src/frontend && pnpm build` | Build Next, qui porte aussi le typage frontend |
+| 3 | `cd src/frontend && pnpm build` | Build Next, qui porte aussi le typage frontend. Dans le conteneur : `docker exec devfest-local-frontend sh -c 'NODE_ENV=production pnpm build'` — avec le `NODE_ENV=development` du conteneur, la génération de `/_global-error` échoue sur du code sain |
 | 4 | Vérification dans le navigateur, cf. `testing.md` § Browser QA | Rien n'est poussé sans avoir été vu marcher (`.claude/rules/testing.md`) |
 
 En conteneur, **un échec est attendu et n'est pas à corriger** : `stat-icons.test.ts` (« catalogue parity with the frontend ») lit `src/frontend/src/lib/stat-icons.ts`, et le conteneur backend ne monte que `src/backend`. Il passe en CI, où tout le dépôt est présent.
