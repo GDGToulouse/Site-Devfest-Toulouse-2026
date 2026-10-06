@@ -17,6 +17,7 @@ import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { cleanSocial } from "../lib/sponsor-write.js";
 import { setActor } from "../lib/request-context.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -137,10 +138,12 @@ function findUnsafeUrl(body: Record<string, unknown>): string | null {
 
 // Resolve a modification token to the speaker who holds it. Returns null if no
 // speaker carries it — the token may still be a sponsor one, which GET turns
-// into an invitation rather than serving (#362).
+// into an invitation rather than serving (#362). A trashed speaker, or a trashed
+// session, is gone for the site and for the link alike; the token is left
+// untouched, so restoring the speaker brings the link back (#523).
 async function resolveToken(token: string) {
-  const speaker = await prisma.speaker.findUnique({
-    where: { editToken: token },
+  const speaker = await prisma.speaker.findFirst({
+    where: { editToken: token, ...notDeleted },
     include: {
       // The 48h freeze (RG-246) keys on an event date, and a global identity no
       // longer has one (#351). The link is sent for the upcoming edition, so the
@@ -157,7 +160,7 @@ async function resolveToken(token: string) {
       // selected: the speaker needs to see how their session is programmed.
       // isSpeakerEditable tells the UI whether to render a form or a plain view.
       talks: {
-        where: { publicationStatus: "PUBLISHED" },
+        where: { publicationStatus: "PUBLISHED", ...notDeleted },
         select: {
           id: true,
           slug: true,
