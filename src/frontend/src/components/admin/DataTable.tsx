@@ -27,7 +27,28 @@ interface DataTableProps<T> {
   // the checkbox column on. Left undefined, the table renders exactly as before.
   selectedIds?: Set<number>;
   onSelectionChange?: (ids: Set<number>) => void;
+  // Names the row in its action buttons ("Modifier Acme", #499). Defaults to
+  // the row's name or title, which covers the lists that use the table.
+  rowLabel?: (item: T) => string;
 }
+
+function defaultRowLabel(item: { id: number }): string {
+  const row = item as { name?: unknown; title?: unknown; nameFr?: unknown };
+  const label = row.name ?? row.title ?? row.nameFr;
+  return typeof label === "string" && label.trim() ? label : `ligne ${item.id}`;
+}
+
+const ICON_PROPS = {
+  width: 16,
+  height: 16,
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 2,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  "aria-hidden": true,
+};
 
 export default function DataTable<T extends { id: number }>({
   columns,
@@ -37,6 +58,7 @@ export default function DataTable<T extends { id: number }>({
   emptyMessage = "Aucun element",
   selectedIds,
   onSelectionChange,
+  rowLabel = defaultRowLabel,
 }: DataTableProps<T>) {
   const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(null);
 
@@ -150,23 +172,35 @@ export default function DataTable<T extends { id: number }>({
                 </td>
               ))}
               {(onEdit || onDelete) && (
-                <td className="px-4 py-3 text-right space-x-2">
-                  {onEdit && (
-                    <button
-                      onClick={() => onEdit(item)}
-                      className="text-bleu hover:underline text-sm"
-                    >
-                      Modifier
-                    </button>
-                  )}
-                  {onDelete && (
-                    <button
-                      onClick={() => onDelete(item)}
-                      className="text-terre-cuite hover:underline text-sm"
-                    >
-                      Supprimer
-                    </button>
-                  )}
+                <td className="px-4 py-3 text-right">
+                  {/* Icon buttons, like the users list (#499). The aria-label
+                      names the row: a `title` alone is not read reliably, and
+                      ten identical "Modifier" tell a screen reader nothing.
+                      p-2 around a 16 px icon keeps the target above 24 px. */}
+                  <div className="flex justify-end gap-1">
+                    {onEdit && (
+                      <button
+                        type="button"
+                        onClick={() => onEdit(item)}
+                        aria-label={`Modifier ${rowLabel(item)}`}
+                        title="Modifier"
+                        className="p-2 rounded-lg text-bleu hover:bg-bleu/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-bleu transition-colors"
+                      >
+                        <svg {...ICON_PROPS}><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path d="m15 5 4 4" /></svg>
+                      </button>
+                    )}
+                    {onDelete && (
+                      <button
+                        type="button"
+                        onClick={() => onDelete(item)}
+                        aria-label={`Supprimer ${rowLabel(item)}`}
+                        title="Supprimer"
+                        className="p-2 rounded-lg text-terre-cuite hover:bg-terre-cuite/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-terre-cuite transition-colors"
+                      >
+                        <svg {...ICON_PROPS}><path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" /><line x1="10" x2="10" y1="11" y2="17" /><line x1="14" x2="14" y1="11" y2="17" /></svg>
+                      </button>
+                    )}
+                  </div>
                 </td>
               )}
             </tr>
