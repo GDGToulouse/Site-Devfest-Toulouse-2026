@@ -129,6 +129,9 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
               fill
               priority
               fetchPriority="high"
+              // 60 rather than the default 75: on this photo 75 cost ~48 kB
+              // more for no visible gain (PageSpeed, #480). Checked by eye.
+              quality={60}
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="hero-photo-img"
             />
