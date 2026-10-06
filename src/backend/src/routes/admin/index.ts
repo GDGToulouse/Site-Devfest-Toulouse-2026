@@ -48,14 +48,17 @@ export default async function adminRoutes(app: FastifyInstance) {
     // Editors may consult and restore; the purge route carries its own
     // ADMIN-only guard, since destroying a row for good is not theirs to do.
     await editorApp.register(adminTrashRoutes);
+    // Editions, venues and rooms: the team reads them, its screens list them
+    // (import, speakers, talks, sponsors, dashboard); every write route carries
+    // its own requireAdminRole (#530), pinned by route-guards.test.ts.
+    await editorApp.register(adminEditionRoutes);
+    await editorApp.register(adminVenueRoutes);
   });
 
   // Routes restricted to ADMIN only
   await app.register(async (adminApp) => {
     adminApp.addHook("preHandler", requireAdminRole);
     await adminApp.register(adminCacheRoutes);
-    await adminApp.register(adminEditionRoutes);
-    await adminApp.register(adminVenueRoutes);
     await adminApp.register(adminTicketRoutes);
     await adminApp.register(adminSettingsRoutes);
     // Accounts and keys stay a person's decision, never an AI agent's (#514).

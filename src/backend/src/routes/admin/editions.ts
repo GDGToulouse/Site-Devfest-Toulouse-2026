@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
 import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
@@ -165,7 +166,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   app.put<{
     Params: { id: string };
     Body: EditionBody;
-  }>("/editions/:id", async (request, reply) => {
+  }>("/editions/:id", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
@@ -226,7 +227,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   });
 
   // POST /api/admin/editions — create edition
-  app.post<{ Body: EditionBody }>("/editions", async (request, reply) => {
+  app.post<{ Body: EditionBody }>("/editions", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const body = request.body;
 
     if (!body.year) return reply.status(400).send({ error: "year is required" });
@@ -258,6 +259,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   // DELETE /api/admin/editions/:id — delete edition (cascade deletes key figures + ticket tiers)
   app.delete<{ Params: { id: string } }>(
     "/editions/:id",
+    { preHandler: [requireAdminRole] },
     async (request, reply) => {
       const id = Number(request.params.id);
       if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
@@ -347,7 +349,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   app.put<{
     Params: { id: string };
     Body: { icon: string; value: string; labelFr: string; labelEn: string }[];
-  }>("/editions/:id/key-figures", async (request, reply) => {
+  }>("/editions/:id/key-figures", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
@@ -414,7 +416,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   app.put<{
     Params: { id: string; tierId: string };
     Body: { isVisible?: boolean; price?: string | null; sortOrder?: number };
-  }>("/editions/:id/sponsor-tiers/:tierId", async (request, reply) => {
+  }>("/editions/:id/sponsor-tiers/:tierId", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const editionId = Number(request.params.id);
     const tierId = Number(request.params.tierId);
     if (isNaN(editionId) || isNaN(tierId)) return reply.status(400).send({ error: "Invalid ID" });
@@ -447,7 +449,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
   // DELETE /api/admin/editions/:id/sponsor-tiers/:tierId — stop offering a tier
   // for this edition. Hard delete of the join row; idempotent.
-  app.delete<{ Params: { id: string; tierId: string } }>("/editions/:id/sponsor-tiers/:tierId", async (request, reply) => {
+  app.delete<{ Params: { id: string; tierId: string } }>("/editions/:id/sponsor-tiers/:tierId", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const editionId = Number(request.params.id);
     const tierId = Number(request.params.tierId);
     if (isNaN(editionId) || isNaN(tierId)) return reply.status(400).send({ error: "Invalid ID" });
@@ -462,6 +464,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   // PUT /api/admin/editions/featured — set the featured edition
   app.put<{ Body: { editionId: number } }>(
     "/editions/featured",
+    { preHandler: [requireAdminRole] },
     async (request, reply) => {
       const { editionId } = request.body;
 
