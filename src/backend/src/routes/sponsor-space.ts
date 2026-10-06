@@ -5,7 +5,8 @@ import { getAuthContext } from "../lib/auth-context.js";
 import { notDeleted } from "../lib/admin-helpers.js";
 import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
 import { generateInvitationToken } from "../lib/edit-token.js";
-import { resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
+import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
+import { teamInviteRateLimit } from "../lib/rate-limit-options.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
 import { isSafeUrl, sanitizeRichHtml } from "../lib/sanitize.js";
@@ -108,6 +109,18 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     });
 
     return contacts.map((c) => ({ ...c.sponsor, accessRole: c.accessRole }));
+  });
+
+  // GET /api/sponsor-space/me — who is signed in (#411).
+  //
+  // The space was built around the company, so a person invited by two of them
+  // never saw which address they were signed in with. /api/admin/session would
+  // tell, but it refuses a SPONSOR on purpose; this returns the identity only.
+  app.get("/sponsor-space/me", async (request, reply) => {
+    const ctx = await getAuthContext(request);
+    if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+
+    return { id: ctx.user.id, email: ctx.user.email, name: ctx.user.name };
   });
 
   // GET /api/sponsor-space/:sponsorId — the company's own profile.
@@ -359,16 +372,34 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
   // company invites its own colleagues without going through the organisers.
   app.post<{ Params: { sponsorId: string }; Body: { email?: string; name?: string; accessRole?: SponsorAccessRole } }>(
     "/sponsor-space/:sponsorId/team",
-    { schema: { params: sponsorIdParams }, preHandler: requireSponsorAccess("RESPONSABLE") },
+    {
+      // Each invitation mails any address from our SMTP server: a budget per
+      // sponsor, counted after the guard (#524).
+      config: { rateLimit: teamInviteRateLimit },
+      schema: {
+        params: sponsorIdParams,
+        body: {
+          type: "object",
+          required: ["email"],
+          properties: {
+            email: invitationEmailSchema,
+            name: { type: "string", maxLength: 200 },
+            accessRole: { type: "string", enum: ACCESS_ROLES },
+          },
+        },
+      },
+      // Answered by the handler, after the guard: an anonymous caller gets its
+      // 401/403, never a hint about the body.
+      attachValidation: true,
+      preHandler: requireSponsorAccess("RESPONSABLE"),
+    },
     async (request, reply) => {
-      const sponsorId = request.sponsorAccess!.sponsorId;
-      const email = request.body?.email?.trim();
-      if (!email) return reply.code(400).send({ error: "email_required" });
-
-      const accessRole = request.body?.accessRole ?? "EDITEUR";
-      if (!ACCESS_ROLES.includes(accessRole)) {
-        return reply.code(422).send({ error: "invalid_access_role" });
+      if (request.validationError) {
+        return reply.code(400).send(invalidInvitationBody(request.validationError.validation));
       }
+      const sponsorId = request.sponsorAccess!.sponsorId;
+      const email = request.body.email!.trim();
+      const accessRole = request.body.accessRole ?? "EDITEUR";
 
       const sponsor = await prisma.sponsor.findFirst({
         where: { id: sponsorId, ...notDeleted },
@@ -410,7 +441,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
         data: {
           sponsorId,
           email,
-          name: request.body?.name?.trim() || null,
+          name: request.body.name?.trim() || null,
           accessRole: promoted ?? accessRole,
           invitationToken: token,
           invitationSentAt: new Date(),

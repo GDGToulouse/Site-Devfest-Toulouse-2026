@@ -4,11 +4,16 @@ import { APIError } from "better-auth/api";
 // Configuring any plugin makes better-auth's inferred type reach into zod's,
 // which TypeScript must name in the emitted .d.ts (`declaration: true`). pnpm
 // isolation put zod out of reach, so it is a direct dependency now — declared
-// for its types, never imported (TS2742).
-import { magicLink } from "better-auth/plugins";
+// for its types, never imported (TS2742). @better-auth/oauth-provider, which
+// mcp() returns, is direct for the same reason.
+import { jwt, magicLink } from "better-auth/plugins";
+import { mcp } from "@better-auth/mcp";
+import { cimd } from "@better-auth/cimd";
+import { fetchClientMetadataResource } from "@better-auth/cimd/node";
 import { prisma } from "./prisma.js";
-import { sendEmail, escapeHtml } from "./email.js";
+import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
+import { sendPasswordResetEmail } from "./password-reset-email.js";
 import { hasPendingInvitation, normalizeEmail } from "./sponsor-invitation.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
@@ -37,8 +42,21 @@ function buildWildcardOrigin(url: string): string | null {
   }
 }
 
-const baseUrl = normalizeUrl(process.env.BASE_URL || "http://localhost:4000");
+// An absolute URL, or the local default. Vite injects BASE_URL="/" (its own base
+// path) under Vitest, and mcp() refuses anything but an absolute resource URL —
+// at import time, which would take every test that loads auth down with it.
+function absoluteUrlOr(value: string | undefined, fallback: string): string {
+  return value && /^https?:\/\//.test(value) ? value : fallback;
+}
+
+const baseUrl = normalizeUrl(absoluteUrlOr(process.env.BASE_URL, "http://localhost:4000"));
 const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3000");
+
+// The MCP endpoint agents call (#514), as seen from outside: tokens are bound to
+// this exact URL, so it must be the public one, not the container address.
+export const MCP_RESOURCE = `${baseUrl}/api/mcp`;
+// Who signs the agents' tokens: better-auth names itself by its base path.
+export const AUTH_ISSUER = `${baseUrl}/api/auth`;
 const wildcardOrigin = buildWildcardOrigin(baseUrl);
 const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrigin] : [])].filter(
   (v, i, arr) => arr.indexOf(v) === i,
@@ -58,26 +76,10 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
-    sendResetPassword: async ({ user, token }) => {
-      // Build the reset URL manually pointing to the frontend page (not the
-      // Better Auth callback endpoint, which is an API route and not
-      // navigable). baseUrl is the public BASE_URL injected by Coolify or
-      // overridden locally.
-      const resetUrl = `${baseUrl}/admin/reset-password?token=${token}`;
-      await sendEmail({
-        to: [user.email],
-        subject: "DevFest Toulouse — Réinitialisation de mot de passe",
-        text: `Bonjour ${user.name || ""},\n\nCliquez sur ce lien pour réinitialiser votre mot de passe :\n${resetUrl}\n\nCe lien expire dans 1 heure.\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez cet email.`,
-        html: `
-          ${emailHeading("Réinitialisation de mot de passe")}
-          <p>Bonjour ${escapeHtml(user.name || "")},</p>
-          <p>Cliquez sur le bouton ci-dessous pour réinitialiser votre mot de passe :</p>
-          ${emailButton(resetUrl, "Réinitialiser mon mot de passe")}
-          <p>Ce lien expire dans 1 heure.</p>
-          <p><em>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</em></p>
-        `,
-      });
-    },
+    // The link points to a frontend page, not to better-auth's own callback
+    // (an API route, not navigable), and to the admin or the partner space
+    // depending on the account's role (#411).
+    sendResetPassword: sendPasswordResetEmail,
   },
   socialProviders: {
     // Implicit sign-up stays enabled so an allow-listed admin can sign in via
@@ -138,6 +140,32 @@ export const auth = betterAuth({
           `,
         });
       },
+    }),
+    // An AI agent (MCP client) connects on behalf of a person (#514). The site
+    // becomes an OAuth authorization server for that one resource: the agent
+    // gets a token bound to /api/mcp, and /api/mcp then acts with exactly the
+    // rights of the person who consented — no account type, no extra role.
+    //
+    // jwt() signs those tokens (mcp() requires it). Clients identify by a
+    // metadata document URL (CIMD) rather than registering: MCP deprecates
+    // dynamic registration, and leaving it off means nobody can create clients
+    // here. The Node fetcher resolves DNS once and refuses private addresses,
+    // the same SSRF guard as our own outbound fetches (#306).
+    jwt(),
+    mcp({
+      loginPage: "/connect",
+      consentPage: "/connect/consent",
+      resource: MCP_RESOURCE,
+      // The provider lets ANY signed-in account create, update and list OAuth
+      // clients over HTTP unless told otherwise — a sponsor could mint a
+      // confidential client. Clients come from metadata documents (CIMD), which
+      // do not go through this check; nobody manages them by hand here.
+      clientPrivileges: () => false,
+      resourcePrivileges: () => false,
+    }),
+    cimd({
+      fetchClientMetadataResource,
+      metadataProfile: "mcp-2026-07-28",
     }),
   ],
   databaseHooks: {

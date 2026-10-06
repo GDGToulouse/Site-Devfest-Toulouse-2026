@@ -24,6 +24,19 @@ const nextConfig: NextConfig = {
         destination: "/:locale/sponsors",
         permanent: true,
       },
+      // The WordPress programme URL, still linked from the GDG Toulouse page
+      // (#386). The infra redirects of #380 don't cover it, and without a
+      // locale it would get /fr prepended and 404.
+      {
+        source: "/conferences-list",
+        destination: "/fr/conferences",
+        permanent: true,
+      },
+      {
+        source: "/:locale(fr|en)/conferences-list",
+        destination: "/:locale/conferences",
+        permanent: true,
+      },
     ];
   },
   async rewrites() {
@@ -35,6 +48,19 @@ const nextConfig: NextConfig = {
       {
         source: "/api/auth/:path*",
         destination: `${backendUrl}/api/auth/:path*`,
+      },
+      {
+        // The MCP server AI agents call (#514). Its public URL is the resource
+        // their tokens are bound to.
+        source: "/api/mcp",
+        destination: `${backendUrl}/api/mcp`,
+      },
+      {
+        // OAuth discovery for the MCP connector (#514): clients look for these
+        // documents at the origin root (RFC 8414, RFC 9728), the backend serves
+        // them. The dot in ".well-known" already keeps proxy.ts (next-intl) out.
+        source: "/.well-known/:doc(oauth-protected-resource|oauth-authorization-server|openid-configuration)/:path*",
+        destination: `${backendUrl}/.well-known/:doc/:path*`,
       },
       {
         source: "/api/contact/:path*",
@@ -83,6 +109,34 @@ const nextConfig: NextConfig = {
       {
         source: "/api/replays",
         destination: `${backendUrl}/api/replays`,
+      },
+      // The rest of the public API (docs/api-publique.md). The site's own pages
+      // reach the backend through BACKEND_URL, so nothing on the site broke
+      // without these: only external clients got Next's HTML 404 (#494).
+      // frontend-api-rewrites.test.ts (backend) fails on a route left out here.
+      {
+        source: "/api/articles/:path*",
+        destination: `${backendUrl}/api/articles/:path*`,
+      },
+      {
+        source: "/api/tags",
+        destination: `${backendUrl}/api/tags`,
+      },
+      {
+        source: "/api/pages/:path*",
+        destination: `${backendUrl}/api/pages/:path*`,
+      },
+      {
+        source: "/api/categories",
+        destination: `${backendUrl}/api/categories`,
+      },
+      {
+        source: "/api/settings/:path*",
+        destination: `${backendUrl}/api/settings/:path*`,
+      },
+      {
+        source: "/api/job-offers",
+        destination: `${backendUrl}/api/job-offers`,
       },
       {
         source: "/api/me/:path*",
@@ -204,6 +258,14 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Sponsor logos are asked at 190-360 CSS px. Between Next's default 384
+    // and 640 widths there was nothing, so at DPR 1.75-2 every logo of the
+    // wall was served at 640 (#480). 448 and 512 fill the gap; imageSizes
+    // must stay under the smallest deviceSize (640).
+    imageSizes: [32, 48, 64, 96, 128, 256, 384, 448, 512],
+    // Next 16 only serves the qualities listed here, snapping any other to
+    // the closest one: 60 is the hero photo's (#480), 75 the default.
+    qualities: [60, 75],
     localPatterns: [
       { pathname: "/images/**" },
       { pathname: "/uploads/**" },

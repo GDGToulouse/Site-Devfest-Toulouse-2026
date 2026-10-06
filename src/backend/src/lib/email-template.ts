@@ -18,6 +18,15 @@ const SITE_NAME = "DevFest Toulouse";
 
 type Locale = "fr" | "en";
 
+export function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function baseUrl(): string {
   return (process.env.BASE_URL || "https://devfesttoulouse.fr").replace(/\/$/, "");
 }
@@ -48,16 +57,22 @@ const FOOTER = {
  * interpolateHtml in email.ts).
  *
  * `previewText` is the snippet inboxes show next to the subject; keep it short
- * and meaningful, it is hidden in the rendered email.
+ * and meaningful, it is hidden in the rendered email. It is plain text and is
+ * escaped here: it defaults to the subject, which can carry a company name.
+ *
+ * `acceptsReplies` drops the do-not-reply notice, for the few emails that ask
+ * the reader to answer (#505) — otherwise the footer contradicts the body.
  */
 export function renderEmail({
   locale = "fr",
   previewText = "",
   bodyHtml,
+  acceptsReplies = false,
 }: {
   locale?: Locale;
   previewText?: string;
   bodyHtml: string;
+  acceptsReplies?: boolean;
 }): string {
   const t = FOOTER[locale] ?? FOOTER.fr;
   const year = new Date().getFullYear();
@@ -70,7 +85,7 @@ export function renderEmail({
 <title>${SITE_NAME}</title>
 </head>
 <body style="margin:0;padding:0;background-color:${COLORS.blancCasse};">
-${previewText ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${previewText}</div>` : ""}
+${previewText ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(previewText)}</div>` : ""}
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background-color:${COLORS.blancCasse};">
   <tr>
     <td align="center" style="padding:24px 12px;">
@@ -97,7 +112,7 @@ ${bodyHtml}
             <p style="margin:0 0 6px;">
               <a href="${baseUrl()}" style="color:${COLORS.malachite};text-decoration:none;">${t.site}</a>
             </p>
-            <p style="margin:0;color:#9A9A99;font-size:12px;">${t.automated}</p>
+            ${acceptsReplies ? "" : `<p style="margin:0;color:#9A9A99;font-size:12px;">${t.automated}</p>`}
             <p style="margin:8px 0 0;color:#9A9A99;font-size:12px;">© ${year} ${SITE_NAME} — GDG Toulouse</p>
           </td>
         </tr>

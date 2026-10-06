@@ -1,21 +1,33 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminFetch } from "@/lib/admin-api";
+import Link from "next/link";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+
+type UserRole = "ADMIN" | "EDITOR" | "SPONSOR";
 
 interface AdminUser {
   id: string;
   email: string;
   name: string | null;
-  role: "ADMIN" | "EDITOR";
+  role: UserRole;
   banned: boolean;
   emailVerified: boolean;
   createdAt: string;
   lastLogin: string | null;
+  sponsors: { id: number; name: string }[];
 }
+
+// A sponsor contact is not part of the team (#500): its own badge, and no role
+// change from here — its rights live on the sponsor's contact.
+const ROLE_BADGES: Record<UserRole, { label: string; variant: "green" | "blue" | "gray" }> = {
+  ADMIN: { label: "Administrateur", variant: "green" },
+  EDITOR: { label: "Éditeur", variant: "blue" },
+  SPONSOR: { label: "Sponsor", variant: "gray" },
+};
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -70,10 +82,13 @@ export default function UsersAdminPage() {
   }
 
   async function handleRôleChange(userId: string, newRôle: string) {
-    await adminFetch(`/users/${userId}`, {
+    const result = await adminFetch(`/users/${userId}`, {
       method: "PUT",
       body: JSON.stringify({ role: newRôle }),
     });
+    // Success is 200 only: status 0 means the request never reached the
+    // backend, and a refusal must stay on screen (#394, #428).
+    setError(result.status === 200 ? null : humanError(result, "Le rôle n'a pas pu être modifié. Réessayez."));
     setEditingRôle(null);
     loadUsers();
   }
@@ -169,10 +184,17 @@ export default function UsersAdminPage() {
                       <option value="EDITOR">Éditeur</option>
                     </select>
                   ) : (
-                    <StatusBadge
-                      status={user.role === "ADMIN" ? "Administrateur" : "Éditeur"}
-                      variant={user.role === "ADMIN" ? "green" : "blue"}
-                    />
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <StatusBadge status={ROLE_BADGES[user.role].label} variant={ROLE_BADGES[user.role].variant} />
+                      {user.sponsors.map((sponsor, i) => (
+                        <span key={sponsor.id} className="text-xs text-gris">
+                          <Link href={`/admin/sponsors/${sponsor.id}`} className="text-bleu hover:underline">
+                            {sponsor.name}
+                          </Link>
+                          {i < user.sponsors.length - 1 && ","}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </td>
                 <td className="px-4 py-3 text-gris text-xs">
@@ -180,17 +202,22 @@ export default function UsersAdminPage() {
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
-                    <button
-                      onClick={() => setEditingRôle({ id: user.id, role: user.role })}
-                      className="p-2 rounded-lg text-bleu hover:bg-bleu/10 transition-colors"
-                      title="Modifier le rôle"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
-                    </button>
+                    {user.role !== "SPONSOR" && (
+                      <button
+                        onClick={() => setEditingRôle({ id: user.id, role: user.role })}
+                        className="p-2 rounded-lg text-bleu hover:bg-bleu/10 transition-colors"
+                        title="Modifier le rôle"
+                        // A title alone is not read reliably: name the account (#499).
+                        aria-label={`Modifier le rôle de ${user.email}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                      </button>
+                    )}
                     <button
                       onClick={() => handleToggleBan(user.id)}
                       className={`p-2 rounded-lg transition-colors ${user.banned ? "text-malachite hover:bg-malachite/10" : "text-orange hover:bg-orange/10"}`}
                       title={user.banned ? "Débloquer" : "Bloquer"}
+                      aria-label={`${user.banned ? "Débloquer" : "Bloquer"} ${user.email}`}
                     >
                       {user.banned ? (
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>
@@ -202,6 +229,7 @@ export default function UsersAdminPage() {
                       onClick={() => setDeleteTarget(user)}
                       className="p-2 rounded-lg text-terre-cuite hover:bg-terre-cuite/10 transition-colors"
                       title="Supprimer"
+                      aria-label={`Supprimer ${user.email}`}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
                     </button>

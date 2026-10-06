@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch, getAdminSession } from "@/lib/admin-api";
 import ApiKeysSection from "@/components/admin/ApiKeysSection";
+import ConnectedAgents from "@/components/account/ConnectedAgents";
 
 interface AdminUser {
   id: string;
@@ -175,6 +176,11 @@ export default function ProfilePage() {
       {/* API keys */}
       <div className="mb-6">
         <ApiKeysSection />
+      </div>
+
+      {/* AI agents acting for this account (#514) */}
+      <div className="bg-blanc rounded-xl shadow-card p-6 mb-6">
+        <ConnectedAgents />
       </div>
 
       {/* Password change */}

@@ -297,3 +297,112 @@ export async function adminRevokeApiKey(id: string): Promise<boolean> {
   const { status } = await adminFetch(`/api-keys/${id}`, { method: "DELETE" });
   return status === 200;
 }
+
+// --- Audit log (#513) ---
+
+export type AuditChannel =
+  | "ADMIN"
+  | "SPONSOR"
+  | "EDIT_LINK"
+  | "IMPORT"
+  | "API_KEY"
+  | "MCP"
+  | "PUBLIC"
+  | "SYSTEM"
+  | "AUTH";
+
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "TRASH" | "RESTORE";
+
+export interface AuditEntry {
+  id: string;
+  createdAt: string;
+  action: AuditAction;
+  entity: string;
+  entityId: string;
+  entityLabel: string | null;
+  channel: AuditChannel;
+  actorUserId: string | null;
+  actorLabel: string;
+  apiKeyId: string | null;
+  ip: string | null;
+  changes: Record<string, { before: unknown; after: unknown }> | null;
+}
+
+export interface AuditPage {
+  items: AuditEntry[];
+  nextCursor: string | null;
+}
+
+export interface AuditFilters {
+  entity?: string;
+  entityId?: string;
+  actorUserId?: string;
+  channel?: AuditChannel;
+  from?: string;
+  to?: string;
+  before?: string;
+  limit?: number;
+}
+
+/** The status comes back too: a 403 means "not for this role", not an outage. */
+export async function adminListAudit(filters: AuditFilters) {
+  const q = new URLSearchParams();
+  for (const [key, value] of Object.entries(filters)) {
+    if (value !== undefined && value !== "") q.set(key, String(value));
+  }
+  return adminFetch<AuditPage>(`/audit?${q}`);
+}
+
+// --- Sessionize import (#509, #519) ---
+
+export interface SessionizeImportReport {
+  speakers: { created: number; updated: number };
+  talks: { created: number; updated: number; scheduled: number };
+  categories: { created: number; reused: number };
+  links: number;
+  unmappedRooms: { sessionizeId: number; name: string; sessions: number }[];
+  absent: {
+    talks: {
+      id: number;
+      title: string;
+      publicationStatus: string;
+      startsAt: string | null;
+      roomLabel: string | null;
+    }[];
+    speakers: { id: number; name: string; publicationStatus: string }[];
+  };
+  warnings: string[];
+}
+
+export interface SessionizeRoomPairing {
+  sessionizeId: number;
+  name: string;
+  roomId: number | null;
+}
+
+export interface SessionizeRooms {
+  venue: { id: number; name: string } | null;
+  venueRooms: { id: number; name: string }[];
+  pairings: SessionizeRoomPairing[];
+}
+
+export async function adminGetSessionizeRooms(editionId: number) {
+  return adminFetch<SessionizeRooms>(`/import/sessionize/${editionId}/rooms`);
+}
+
+export async function adminPairSessionizeRoom(editionId: number, sessionizeId: number, roomId: number | null) {
+  return adminFetch<SessionizeRoomPairing>(`/import/sessionize/${editionId}/rooms/${sessionizeId}`, {
+    method: "PUT",
+    body: JSON.stringify({ roomId }),
+  });
+}
+
+// The API link an edition kept from its last successful import (#529).
+export async function adminGetSessionizeSource(editionId: number) {
+  return adminFetch<{ url: string | null }>(`/import/sessionize/${editionId}/source`);
+}
+
+// ADMIN-only on the backend: an editor gets a 403.
+export async function adminDeleteSessionizeSource(editionId: number) {
+  return adminFetch<null>(`/import/sessionize/${editionId}/source`, { method: "DELETE" });
+}

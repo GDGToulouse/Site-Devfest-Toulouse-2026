@@ -11,6 +11,28 @@ const DEV_ACCOUNTS = [
   { name: "Editor DevFest", email: "editor@devfesttoulouse.fr", password: "editor1234!dev", role: "EDITOR" as const },
 ];
 
+// Sponsor contacts with a password, so the partner space and the SPONSOR rows
+// of /admin/users can be tested without the MailHog invitation round-trip
+// (#500, #411). The first one spans two companies with two access roles: it is
+// the case that exercises the company picker and the multi-company display.
+const DEV_SPONSOR_ACCOUNTS = [
+  {
+    name: "Sophie Responsable",
+    email: "responsable@aeronova.example.com",
+    password: "sponsor1234!dev",
+    contacts: [
+      { sponsorSlug: "aeronova-systems", accessRole: "RESPONSABLE" as const },
+      { sponsorSlug: "garonne-digital", accessRole: "STAND" as const },
+    ],
+  },
+  {
+    name: "Paul Éditeur",
+    email: "editeur@cassoulet.example.com",
+    password: "sponsor1234!dev",
+    contacts: [{ sponsorSlug: "cassoulet-code", accessRole: "EDITEUR" as const }],
+  },
+];
+
 /**
  * Puts the documented password back on an account that already exists (#433).
  *
@@ -1212,6 +1234,41 @@ async function seedDev() {
         console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
       }
     }
+  }
+
+  // --- Dev sponsor accounts (with passwords) ---
+  // Written straight to the database: sign-up is closed (#362) and would reject
+  // these addresses, which are neither in ADMIN_EMAILS nor invited. The role is
+  // set explicitly — the column default is EDITOR, which opens the back-office.
+  for (const account of DEV_SPONSOR_ACCOUNTS) {
+    const user = await prisma.user.upsert({
+      where: { email: account.email },
+      update: { name: account.name, role: "SPONSOR", emailVerified: true },
+      create: { email: account.email, name: account.name, role: "SPONSOR", emailVerified: true },
+    });
+    await applyDevPassword(user.id, account.password);
+
+    for (const link of account.contacts) {
+      const sponsor = await prisma.sponsor.findUniqueOrThrow({ where: { slug: link.sponsorSlug } });
+      // SponsorContact has no unique key on (sponsor, email): find first, so a
+      // reseed updates the contact instead of adding a duplicate.
+      const contact = await prisma.sponsorContact.findFirst({
+        where: { sponsorId: sponsor.id, email: account.email },
+      });
+      const data = {
+        name: account.name,
+        accessRole: link.accessRole,
+        userId: user.id,
+        invitationAcceptedAt: contact?.invitationAcceptedAt ?? new Date(),
+      };
+      if (contact) {
+        await prisma.sponsorContact.update({ where: { id: contact.id }, data });
+      } else {
+        await prisma.sponsorContact.create({ data: { ...data, sponsorId: sponsor.id, email: account.email } });
+      }
+    }
+    const companies = account.contacts.map((c) => `${c.sponsorSlug} (${c.accessRole})`).join(", ");
+    console.log(`Dev sponsor account: ${account.email} — password: ${account.password} — ${companies}`);
   }
 
   console.log("Dev seeding complete!");

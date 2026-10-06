@@ -27,7 +27,17 @@ export default async function adminAuthRoutes(app: FastifyInstance) {
   });
 
   // PUT /api/admin/profile — update current user's name
-  app.put<{ Body: { name?: string } }>("/profile", async (request, reply) => {
+  // The body schema is the boundary check (#514): without it, a `name` that is
+  // not a string reached `.trim()` and answered 500.
+  app.put<{ Body: { name?: string } }>("/profile", {
+    schema: {
+      body: {
+        type: "object",
+        additionalProperties: false,
+        properties: { name: { type: "string", maxLength: 200 } },
+      },
+    },
+  }, async (request, reply) => {
     const ctx = await getAuthContext(request);
     if (!ctx) return reply.status(403).send({ error: "Forbidden" });
     if (ctx.user.role !== "ADMIN" && ctx.user.role !== "EDITOR") {

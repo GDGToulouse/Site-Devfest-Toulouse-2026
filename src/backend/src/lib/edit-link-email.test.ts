@@ -6,7 +6,9 @@ vi.mock("nodemailer", () => ({
   default: { createTransport: () => ({ sendMail: sendMailMock }) },
 }));
 
-import { normalizeLocale, sendEditLinkEmail } from "./edit-link-email.js";
+import { normalizeLocale, sendEditLinkEmail, sendSponsorInvitationEmail } from "./edit-link-email.js";
+
+const BASE_URL = (process.env.BASE_URL || "http://localhost:3000").replace(/\/$/, "");
 
 describe("normalizeLocale", () => {
   it("should keep English when explicitly set", () => {
@@ -78,5 +80,67 @@ describe("sendEditLinkEmail", () => {
       expect(body).not.toContain("Pour le logo");
       expect(body).not.toContain("About the logo");
     }
+  });
+});
+
+// The invitation used to say only "you have been invited to manage X's
+// profile", and the team had to chase sponsors to explain what the space was
+// for (#505). It now has to do that itself, in both languages.
+describe("sendSponsorInvitationEmail (#505)", () => {
+  beforeEach(() => sendMailMock.mockClear());
+
+  const sent = () =>
+    sendMailMock.mock.calls[0][0] as { subject: string; text: string; html: string };
+  const invite = (locale: string) =>
+    sendSponsorInvitationEmail({ to: "jane@acme.example", sponsorName: "Acme", token: "inv123", locale });
+
+  it("says in French what the space is for and how to come back", async () => {
+    await invite("fr");
+
+    const { subject, text, html } = sent();
+    expect(subject).toBe("Acme sur le site du DevFest Toulouse — mettez à jour votre fiche");
+    for (const body of [text, html]) {
+      expect(body).toContain("/sponsor/invitation/inv123");
+      expect(body).toContain(`${BASE_URL}/sponsor`);
+      expect(body).toContain("offres d'emploi");
+      expect(body).toContain("répondez simplement à cet e-mail");
+      expect(body).toContain("7 jours");
+      expect(body).toContain("jane@acme.example");
+    }
+  });
+
+  it("says the same in English", async () => {
+    await invite("en");
+
+    const { subject, text, html } = sent();
+    expect(subject).toBe("Acme on the DevFest Toulouse website — update your listing");
+    for (const body of [text, html]) {
+      expect(body).toContain(`${BASE_URL}/sponsor`);
+      expect(body).toContain("job offers");
+      expect(body).toContain("simply reply to this email");
+      expect(body).toContain("7 days");
+    }
+  });
+
+  it("shows a preview line that does not repeat the subject", async () => {
+    await invite("fr");
+
+    const { subject, html } = sent();
+    const preview = html.match(/display:none[^>]*>([^<]*)</)?.[1];
+    expect(preview).toBeTruthy();
+    expect(preview).not.toBe(subject);
+  });
+
+  it("keeps the do-not-reply notice out, since it asks for replies", async () => {
+    await invite("fr");
+
+    expect(sent().html).not.toContain("ne pas y répondre");
+  });
+
+  it("escapes the company name in the HTML", async () => {
+    await sendSponsorInvitationEmail({ to: "a@b.fr", sponsorName: "Acme <script>", token: "t" });
+
+    expect(sent().html).not.toContain("<script>");
+    expect(sent().html).toContain("Acme &lt;script&gt;");
   });
 });

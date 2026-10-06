@@ -38,6 +38,9 @@ npm-debug.log*
 .claude/agent-memory/
 .claude/scheduled_tasks.lock
 
+# Playwright MCP output (snapshots, console logs, screenshots)
+.playwright-mcp/
+
 # Uploaded files
 uploads/
 

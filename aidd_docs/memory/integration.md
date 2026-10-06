@@ -17,3 +17,4 @@
 - Les webhooks ont un délai de 10 s et ne lèvent jamais d'erreur ; les alertes sont dédupliquées par signature sur 5 min, en mémoire
 - Gemini : quotas RPM/RPD/TPM tenus par un token bucket en mémoire ; un 429 remonte en `quota_exhausted` avec `Retry-After`
 - L'appel Sessionize n'a pas de délai d'expiration
+- Sessionize donne les horaires en heure murale de Paris, **sans fuseau** : les lire avec `parseWallTime` (`lib/zoned-time.ts`), jamais `new Date()`, le conteneur tourne en UTC. Ses salles ne portent pas nos noms : l'admin les associe une fois par édition (`SessionizeRoom`), et un réimport réécrit créneau et salle (#519). L'import liste ce qui a disparu de Sessionize sans rien modifier (#509)

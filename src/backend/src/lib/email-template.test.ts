@@ -57,6 +57,19 @@ describe("renderEmail", () => {
   it("omits the preview block entirely when no preview text is given", () => {
     expect(renderEmail({ bodyHtml: "<p>x</p>" })).not.toContain("display:none");
   });
+
+  // The preview defaults to the subject, plain text that can carry a company
+  // name: it has to be escaped like any other value placed in the HTML.
+  it("escapes the preview text", () => {
+    const html = renderEmail({ bodyHtml: "", previewText: "Acme <b>&</b> Co" });
+    expect(html).toContain("Acme &lt;b&gt;&amp;&lt;/b&gt; Co");
+    expect(html).not.toContain("<b>&</b>");
+  });
+
+  it("drops the do-not-reply notice from an email that asks for replies (#505)", () => {
+    expect(renderEmail({ bodyHtml: "", locale: "fr", acceptsReplies: true })).not.toContain("ne pas y répondre");
+    expect(renderEmail({ bodyHtml: "", locale: "en", acceptsReplies: true })).not.toContain("do not reply");
+  });
 });
 
 describe("emailButton", () => {

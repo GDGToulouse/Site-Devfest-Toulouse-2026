@@ -19,6 +19,7 @@ Chaque fait a **une seule maison**. Avant d'en écrire un, chercher s'il existe 
 - Étager les fichiers un par un — jamais `git add .` ni `git add -A`
 - Une commande git par appel Bash — jamais de `&&`, jamais `cd`, jamais `git -C`
 - Jamais de force-push sur `main`, jamais de `--no-verify`
+- Jamais de connexion SSH au VPS, même en lecture seule : préparer la commande et la donner à Julien, qui l'exécute
 - Utiliser Context7 MCP pour la doc des bibliothèques avant de les employer
 
 ## Règles détaillées
@@ -49,6 +50,7 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 | `design-system.md` | Charte, palette, tokens, kit UI |
 | `maquettes-figma.md` | Inventaire des maquettes ([Figma](https://www.figma.com/design/5dw9ggMfrdFrB9qEKYvHH6/DevFestToulouse-2025?node-id=22-499)) |
 | `api-publique.md` | API REST publique (OpenAPI/Swagger) |
+| `audit-droits-api.md` | Qui peut appeler chaque route, constats de l'audit avant le connecteur MCP (#514) |
 | `variables-environnement.md` | Variables d'environnement |
 | `comptes-dev-local.md` | Comptes de test, MailHog |
 | `priorisation-developpement.md` | Lots de développement, rétroplanning 2026 |

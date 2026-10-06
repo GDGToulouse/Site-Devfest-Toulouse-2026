@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 
 import { getAuthContext } from "../lib/auth-context.js";
+import { setActor, setChannel } from "../lib/request-context.js";
 import { isValidPurgeSecret, purgeExpiredTrash, retentionDays, cutoffDate } from "../lib/trash-purge.js";
 
 /**
@@ -47,10 +48,16 @@ export default async function maintenanceRoutes(app: FastifyInstance) {
 async function isAuthorised(request: FastifyRequest): Promise<boolean> {
   const header = request.headers[PURGE_SECRET_HEADER];
   const provided = typeof header === "string" ? header : undefined;
-  if (isValidPurgeSecret(provided)) return true;
+  if (isValidPurgeSecret(provided)) {
+    setActor({ userId: null, label: "Purge planifiée" });
+    return true;
+  }
 
   // Falls back to an ADMIN session so the purge can also be triggered by hand
   // from the back-office (#150) without minting a secret for a browser.
   const ctx = await getAuthContext(request);
-  return ctx?.user.role === "ADMIN";
+  if (ctx?.user.role !== "ADMIN") return false;
+  // A person pressed the button: the history must not file it as the cron.
+  setChannel("ADMIN");
+  return true;
 }

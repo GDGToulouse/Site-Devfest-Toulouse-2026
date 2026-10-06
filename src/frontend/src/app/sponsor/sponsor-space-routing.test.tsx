@@ -32,6 +32,7 @@ vi.mock("@/components/sponsor-space/PrivateTab", () => ({ default: () => null })
 vi.mock("@/components/sponsor-space/TeamTab", () => ({ default: () => null }));
 vi.mock("@/components/sponsor-space/JobOffersTab", () => ({ default: () => null }));
 vi.mock("@/components/admin/Tabs", () => ({ default: () => null }));
+vi.mock("@/components/sponsor-space/SponsorAccountBar", () => ({ default: () => null }));
 
 import SponsorSpacePage from "./[sponsorId]/page";
 import { metadata as sponsorMetadata } from "./layout";

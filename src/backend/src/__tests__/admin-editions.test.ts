@@ -1,4 +1,15 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
+
+// Edition and venue writes carry their own requireAdminRole (#530), which the
+// guard-free test app cannot skip: the caller is stubbed as an ADMIN. Who may
+// write is covered by admin-editions-venues-roles.test.ts.
+vi.mock("../lib/auth-context.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/auth-context.js")>()),
+  getAuthContext: async () => ({
+    user: { id: "test-admin", email: "admin@test.local", name: "Test", role: "ADMIN" },
+  }),
+}));
+
 import { buildAdminApp } from "./test-admin-app.js";
 import { prisma } from "../lib/prisma.js";
 import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";

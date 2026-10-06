@@ -1,6 +1,6 @@
 ---
 objective: "Every outbound link a sponsor gets from the site carries rel=\"sponsored noopener noreferrer\", and the DevITJobs.fr record no longer smuggles the rel into its URL."
-status: in-progress
+status: implemented
 ---
 
 # Plan: Qualify sponsor links as sponsored

@@ -3,6 +3,8 @@
 import { useState, useCallback } from "react";
 import Image from "next/image";
 
+import { extractYouTubeId } from "@/lib/youtube";
+
 interface YouTubeFacadeProps {
   videoUrl: string;
   title?: string;
@@ -14,22 +16,10 @@ interface YouTubeFacadeProps {
 // empty frame on exactly the older talks the replay archive is made of (#474).
 const THUMBNAIL_QUALITIES = ["maxresdefault", "hqdefault"] as const;
 
-function extractVideoId(url: string): string | null {
-  const patterns = [
-    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern);
-    if (match) return match[1];
-  }
-  return null;
-}
-
 export default function YouTubeFacade({ videoUrl, title = "Video" }: YouTubeFacadeProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [qualityIndex, setQualityIndex] = useState(0);
-  const videoId = extractVideoId(videoUrl);
+  const videoId = extractYouTubeId(videoUrl);
 
   const handlePlay = useCallback(() => {
     setIsPlaying(true);

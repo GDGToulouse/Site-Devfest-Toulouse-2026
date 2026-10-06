@@ -15,7 +15,7 @@ import {
 } from "../../lib/image-store.js";
 import { sanitizeSvg } from "../../lib/svg-sanitize.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
-import { listFileReferences, type FileReferenceUsage } from "../../lib/trash-files.js";
+import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
 
 const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
@@ -217,6 +217,9 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       where: { filename: { in: filenames } },
     });
     const metaByFilename = new Map(metaRows.map((m) => [m.filename, m]));
+    // Who uses each file, by name (#483): a handful of queries for the whole
+    // list, never one per file.
+    const usagesByUrl = await listFileUsages(filenames.map((f) => `/uploads/${f}`));
 
     const items = await Promise.all(
       filenames.map(async (filename) => {
@@ -234,6 +237,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           // Null for anything uploaded before #378 — there is nothing to
           // recover, and the library falls back to the stored name.
           originalName: metaByFilename.get(filename)?.originalName ?? null,
+          usages: usagesByUrl.get(`/uploads/${filename}`) ?? [],
         };
       }),
     );
@@ -289,14 +293,14 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       }
 
       const ext = path.extname(filename).toLowerCase();
-      // Vision works best on raster images. SVG / ICO are too constrained
-      // (vector / multi-resolution containers) — refuse them upfront so the
-      // admin doesn't burn quota for nothing.
-      const supportedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
+      // Vision reads pixels: an SVG is rendered before it is sent (alt-text.ts),
+      // which is what most logos are (#504). ICO stays refused — a container of
+      // tiny icons, not worth the quota.
+      const supportedExts = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
       if (!supportedExts.includes(ext)) {
         return reply.code(415).send({
           error: "unsupported_format",
-          message: `Alt-text generation only supports raster images (got ${ext}).`,
+          message: `Alt-text generation does not support ${ext} files.`,
         });
       }
 
@@ -314,6 +318,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
         ".png": "image/png",
         ".webp": "image/webp",
         ".gif": "image/gif",
+        ".svg": "image/svg+xml",
       };
 
       try {

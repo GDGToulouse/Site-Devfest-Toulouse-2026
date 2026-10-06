@@ -64,6 +64,12 @@ export default async function sponsorInvitationRoutes(app: FastifyInstance) {
     });
     if (updated.count === 0) return reply.code(404).send({ error: "invitation_invalid" });
 
+    // The token was mailed to this exact address: the mailbox is proven. Left
+    // unverified, a password account would lose its password on its first
+    // magic-link sign-in — better-auth 1.7 treats an unverified account's
+    // credentials as unproven and clears them (#514).
+    await prisma.user.update({ where: { id: ctx.user.id }, data: { emailVerified: true } });
+
     return { sponsorId: contact.sponsorId, sponsorSlug: contact.sponsor.slug, accessRole: contact.accessRole };
   });
 }

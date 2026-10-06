@@ -58,11 +58,15 @@ export default function TeamTab({ sponsorId }: { sponsorId: number }) {
     setMessage({
       isOk: false,
       text:
-        error === "already_on_team"
-          ? "Cette adresse fait déjà partie de l'équipe."
-          : error === "email_failed"
-            ? "L'email n'a pas pu être envoyé. Réessayez."
-            : "L'invitation a échoué.",
+        status === 429
+          ? "Trop d'invitations envoyées en peu de temps. Réessayez dans une heure, ou écrivez-nous si vous devez inviter davantage de collègues."
+          : error === "already_on_team"
+            ? "Cette adresse fait déjà partie de l'équipe."
+            : error === "invalid_email"
+              ? "Cette adresse email n'est pas valide. Vérifiez-la puis réessayez."
+              : error === "email_failed"
+                ? "L'email n'a pas pu être envoyé. Réessayez."
+                : "L'invitation a échoué.",
     });
   }
 

@@ -9,7 +9,7 @@
 ## Tools
 
 - Vitest partout, Testing Library côté frontend
-- Chrome DevTools MCP pour la vérification navigateur ; Playwright CLI à l'essai via `aidd-dev:11-browser-qa` (exige ffmpeg)
+- Vérification navigateur : MCP Chrome DevTools et MCP Playwright (sur Chrome), déclarés dans `.mcp.json` ; le second écrit ses sorties dans `.playwright-mcp/` (ignoré par git)
 
 ## Conventions
 
@@ -29,7 +29,7 @@
 
 - Entry: `docker compose -f docker-compose.local.yml up -d`, puis `http://localhost:3000` ; back-office sur `/admin` (pas `/fr/admin`)
 - Auth: `admin@devfesttoulouse.fr` / `admin1234!dev` (ADMIN) et `editor@devfesttoulouse.fr` / `editor1234!dev` (EDITOR), reposés par `seed-dev.ts` même sur des comptes existants (#433) — `docs/comptes-dev-local.md`
-- Auth sponsor: créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
+- Auth sponsor: `responsable@aeronova.example.com` (deux fiches) et `editeur@cassoulet.example.com`, mot de passe `sponsor1234!dev`, posés par `seed-dev.ts` sur `/sponsor/login`. Pour tester l'invitation elle-même : créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
 - State: `src/backend/prisma/seed-dev.ts`, lancé à la main
 
 ## Local environment
@@ -46,4 +46,5 @@ Le code local ment souvent ; l'environnement avant le code. Test discriminant : 
   docker compose -f docker-compose.local.yml up -d frontend
   ```
 
+- **Le compose local ne migre ni ne seede** (pas de `db-boot.sh`) : sur un volume `pgdata` neuf, toutes les tables manquent (`The table … does not exist`). `docker exec devfest-local-backend sh -c 'pnpm exec prisma migrate deploy && pnpm exec tsx prisma/seed.ts && pnpm exec tsx prisma/seed-dev.ts'`
 - `.next/dev/types/{routes.d.ts,validator.ts}` se régénèrent tronqués et font échouer `tsc` sur du code sain : les supprimer, charger une page, relancer
