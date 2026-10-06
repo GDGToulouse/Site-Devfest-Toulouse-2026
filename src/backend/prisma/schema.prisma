@@ -1163,18 +1163,6 @@ model SponsorContact {
   // to act is accessRole below (#362). Two different things, close names.
   role  String?
 
-  // Modification-link token (issue #79, RG-242 to RG-251). Read-only since
-  // #362: nothing writes these any more, and a sponsor edits from an account.
-  // They survive because they carry the links still sitting in mailboxes —
-  // opening one converts it into an invitation, and editLinkLocked is what
-  // still lets an organiser refuse that conversion.
-  //
-  // Droppable once no editTokenSentAt is within its 30-day window, i.e. a month
-  // after #362 reaches production.
-  editToken       String?   @unique
-  editLinkLocked  Boolean   @default(false)
-  editTokenSentAt DateTime?
-
   // What this person may do on the sponsor's space (#362). Every contact used
   // to have equal rights; the default keeps that true for rows created before
   // the split, since they were all full editors.

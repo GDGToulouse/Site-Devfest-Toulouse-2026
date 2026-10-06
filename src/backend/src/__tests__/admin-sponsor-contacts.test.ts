@@ -50,7 +50,6 @@ describe("Admin sponsor contacts (#250)", () => {
     expect(body.email).toBe("alice@example.org");
     // An invitation, not the edit link it replaced (#362).
     expect(body.invitationPending).toBe(true);
-    expect(body.hasLink).toBe(false);
     // The first contact runs the space, or nobody can invite the rest.
     expect(body.accessRole).toBe("RESPONSABLE");
     // Neither secret is ever returned to the admin.
@@ -68,17 +67,9 @@ describe("Admin sponsor contacts (#250)", () => {
     expect(list.some((c: { email: string }) => c.email === "alice@example.org")).toBe(true);
   });
 
-  it("locks then deletes a contact", async () => {
+  it("deletes a contact", async () => {
     const contact = await prisma.sponsorContact.findFirst({ where: { sponsorId } });
     if (!contact) throw new Error("contact missing");
-
-    const lockRes = await app.inject({
-      method: "PUT",
-      url: `/api/admin/sponsors/${sponsorId}/contacts/${contact.id}/lock`,
-      payload: { locked: true },
-    });
-    expect(lockRes.statusCode).toBe(200);
-    expect(lockRes.json().editLinkLocked).toBe(true);
 
     const delRes = await app.inject({
       method: "DELETE",

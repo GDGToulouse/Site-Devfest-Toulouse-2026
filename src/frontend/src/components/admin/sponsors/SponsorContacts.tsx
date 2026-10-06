@@ -13,9 +13,6 @@ interface Contact {
   email: string;
   name: string | null;
   role: string | null;
-  hasLink: boolean;
-  editLinkLocked: boolean;
-  editTokenSentAt: string | null;
   // Account access (#362). The API has always sent these; the screen used to
   // drop them, which is why no way in existed from the back-office.
   accessRole: SponsorAccessRole;
@@ -27,8 +24,7 @@ interface Contact {
 }
 
 // Admin management of a sponsor's contacts: who may act on the sponsor's space,
-// and as what (#362). The older modification link (#250) is still listed while
-// the ones already sent stay in circulation.
+// and as what (#362).
 export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,19 +112,6 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
     });
   }
 
-  async function toggleLock(contact: Contact) {
-    setBusy(true);
-    setMsg(null);
-    const next = !contact.editLinkLocked;
-    const { status } = await adminFetch(`/sponsors/${sponsorId}/contacts/${contact.id}/lock`, {
-      method: "PUT",
-      body: JSON.stringify({ locked: next }),
-    });
-    setBusy(false);
-    if (status === 200) void load();
-    else setMsg({ ok: false, text: "Échec." });
-  }
-
   async function remove(id: number) {
     setBusy(true);
     setMsg(null);
@@ -169,16 +152,6 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                 {c.name && <p className="truncate text-xs text-gris" title={c.email}>{c.email}</p>}
               </div>
               <AccessStatus contact={c} />
-              {/* An edit link still in a mailbox (#362). It no longer edits
-                  anything — opening it turns it into an invitation — but
-                  locking it is what refuses that conversion, so the organisers
-                  need to see it exists. */}
-              {c.hasLink &&
-                (c.editLinkLocked ? (
-                  <StatusBadge status="Ancien lien verrouillé" variant="orange" />
-                ) : (
-                  <StatusBadge status="Ancien lien encore valable" variant="gray" />
-                ))}
 
               {/* Setting a role on someone who was never invited has no visible
                   effect — the control appears once access is on its way. */}
@@ -208,11 +181,6 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                 <button type="button" onClick={() => invite(c)} disabled={busy} className={`${rowActionClass} text-malachite focus:ring-malachite/50`}>
                   {c.invitationPending || c.invitationExpired ? "Relancer l'invitation" : "Inviter"}
                   <span className="sr-only"> {c.email}</span>
-                </button>
-              )}
-              {c.hasLink && (
-                <button type="button" onClick={() => toggleLock(c)} disabled={busy} className={`${rowActionClass} text-noir focus:ring-noir/30`}>
-                  {c.editLinkLocked ? "Déverrouiller" : "Verrouiller"}<span className="sr-only"> l&apos;ancien lien de {c.email}</span>
                 </button>
               )}
               <button type="button" onClick={() => setRemoveTarget(c)} disabled={busy} className={`${rowActionClass} text-terre-cuite focus:ring-terre-cuite/50`}>
