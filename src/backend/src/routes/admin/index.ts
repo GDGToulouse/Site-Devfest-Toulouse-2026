@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAdmin, requireAdminRole } from "../../lib/admin-guard.js";
+import { refuseAgents } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
@@ -21,6 +22,7 @@ import adminTranslateRoutes from "./translate.js";
 import adminTrashRoutes from "./trash.js";
 import adminVenueRoutes from "./venues.js";
 import adminScheduleRoutes from "./schedule.js";
+import adminAuditRoutes from "./audit.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -46,17 +48,26 @@ export default async function adminRoutes(app: FastifyInstance) {
     // Editors may consult and restore; the purge route carries its own
     // ADMIN-only guard, since destroying a row for good is not theirs to do.
     await editorApp.register(adminTrashRoutes);
+    // Editions, venues and rooms: the team reads them, its screens list them
+    // (import, speakers, talks, sponsors, dashboard); every write route carries
+    // its own requireAdminRole (#530), pinned by route-guards.test.ts.
+    await editorApp.register(adminEditionRoutes);
+    await editorApp.register(adminVenueRoutes);
   });
 
   // Routes restricted to ADMIN only
   await app.register(async (adminApp) => {
     adminApp.addHook("preHandler", requireAdminRole);
     await adminApp.register(adminCacheRoutes);
-    await adminApp.register(adminEditionRoutes);
-    await adminApp.register(adminVenueRoutes);
     await adminApp.register(adminTicketRoutes);
     await adminApp.register(adminSettingsRoutes);
-    await adminApp.register(adminUserRoutes);
-    await adminApp.register(adminApiKeyRoutes);
+    // Accounts and keys stay a person's decision, never an AI agent's (#514).
+    await adminApp.register(async (credentialsApp) => {
+      credentialsApp.addHook("preHandler", refuseAgents);
+      await credentialsApp.register(adminUserRoutes);
+      await credentialsApp.register(adminApiKeyRoutes);
+    });
+    // Who changed what, from where: personal data, not for editors (#513).
+    await adminApp.register(adminAuditRoutes);
   });
 }

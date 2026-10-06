@@ -97,13 +97,15 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     fileFields: [],
     adminOnly: true,
   },
+  // Deleting contact categories and messages is ADMIN-only (routes/admin/contact.ts),
+  // so is restoring them: an editor must not undo an admin's deletion (#522).
   {
     key: "contact-categories",
     model: "contactCategory",
     labelField: "nameFr",
     parkedFields: ["slug"],
     fileFields: [],
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     key: "contact-messages",
@@ -111,7 +113,7 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     labelField: "email",
     parkedFields: [],
     fileFields: [],
-    adminOnly: false,
+    adminOnly: true,
   },
   {
     key: "editions",

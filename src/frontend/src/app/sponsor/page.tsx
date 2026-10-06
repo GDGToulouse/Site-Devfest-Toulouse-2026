@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+import SponsorAccountBar from "@/components/sponsor-space/SponsorAccountBar";
 import { getMySponsorSpaces, type SponsorSpaceSummary } from "@/lib/sponsor-api";
 import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
 
@@ -38,7 +39,7 @@ export default function SponsorHomePage() {
 
   if (isDenied) {
     return (
-      <Shell>
+      <Shell hasAccount>
         <p className="text-center text-noir">
           Votre compte n&apos;est rattaché à aucune fiche partenaire.
         </p>
@@ -55,14 +56,14 @@ export default function SponsorHomePage() {
 
   if (spaces.length === 0) {
     return (
-      <Shell>
+      <Shell hasAccount>
         <p className="text-center text-noir">Aucune fiche partenaire rattachée à votre compte.</p>
       </Shell>
     );
   }
 
   return (
-    <Shell>
+    <Shell hasAccount>
       <p className="mb-4 text-sm text-gris">Choisissez la fiche à gérer :</p>
       <ul className="space-y-2">
         {spaces.map((s) => (
@@ -81,12 +82,17 @@ export default function SponsorHomePage() {
   );
 }
 
-function Shell({ children }: { children: React.ReactNode }) {
+function Shell({ children, hasAccount }: { children: React.ReactNode; hasAccount?: boolean }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-blanc-casse px-6 py-10">
       <div className="w-full max-w-md rounded-3xl bg-blanc p-8 shadow-card">
         <h1 className="mb-6 text-center text-2xl font-bold text-noir">Espace partenaire</h1>
         {children}
+        {hasAccount && (
+          <div className="mt-6 border-t border-gris/10 pt-4">
+            <SponsorAccountBar />
+          </div>
+        )}
       </div>
     </div>
   );

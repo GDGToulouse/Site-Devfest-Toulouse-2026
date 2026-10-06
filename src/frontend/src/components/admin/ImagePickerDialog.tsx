@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { pastedFile } from "@/lib/clipboard-file";
+import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
 
@@ -34,6 +36,12 @@ function formatKb(bytes: number): string {
     ? `${(bytes / 1_000_000).toFixed(1)} Mo`
     : `${Math.round(bytes / 1024)} Ko`;
 }
+
+// What the picker takes, by file input, drop or paste alike.
+const IMAGE_TYPES = {
+  mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml", "image/x-icon", "image/vnd.microsoft.icon"],
+  extensions: [".ico", ".svg"],
+};
 
 interface ImagePickerDialogProps {
   open: boolean;
@@ -219,6 +227,21 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     if (file) handleFileSelected(file);
   }
 
+  // A pasted image takes the drop's path, from whichever tab is open (#372).
+  // On the dialog rather than the drop zone, which cannot hold focus. A text
+  // paste (search, alt text) is left alone.
+  function handlePaste(e: React.ClipboardEvent) {
+    const pasted = pastedFile(e.clipboardData, IMAGE_TYPES);
+    if (!pasted) return;
+    e.preventDefault();
+    if (pasted.kind === "refused") {
+      setError("Le fichier collé n'est pas une image acceptée (JPEG, PNG, WebP, GIF, SVG, ICO).");
+      return;
+    }
+    setTab("upload");
+    handleFileSelected(pasted.file);
+  }
+
   function handleInsert() {
     if (selected) {
       onSelect(selected);
@@ -237,6 +260,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
         aria-labelledby={titleId}
         className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        onPaste={handlePaste}
       >
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
@@ -321,7 +345,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
               onDrop={handleDrop}
               className="border-2 border-dashed border-gris/30 rounded-xl p-8 text-center hover:border-malachite/50 transition-colors"
             >
-              <p className="text-gris mb-4">Glissez une image ici ou cliquez pour sélectionner</p>
+              <p className="text-gris mb-4">Glissez ou collez (Ctrl+V) une image ici, ou cliquez pour sélectionner</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90"
@@ -333,7 +357,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,.ico,.svg"
+                accept={[...IMAGE_TYPES.mimeTypes, ...IMAGE_TYPES.extensions].join(",")}
                 onChange={handleFileChange}
                 className="hidden"
               />
@@ -390,14 +414,14 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                         const filename = await preUploadForAi();
                         if (!filename) return;
                         // Trigger generation right after the pre-upload finishes.
-                        const { data, status } = await adminFetch<{ alt: string }>(
+                        const { data, status, errorBody } = await adminFetch<{ alt: string }>(
                           `/files/${encodeURIComponent(filename)}/generate-alt`,
                           { method: "POST" },
                         );
                         if (status === 200 && data?.alt !== undefined) {
                           setPendingAlt(data.alt);
                         } else {
-                          setError("Échec de la génération du texte alternatif.");
+                          setError(altGenerationErrorMessage(status, errorBody));
                         }
                       }}
                       disabled={isUploading || isPreUploading}

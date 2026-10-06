@@ -1,7 +1,9 @@
 import { resolveSpeakerPhoto } from "./speaker-photo.js";
 import { prisma } from "./prisma.js";
+import { findRoomClash } from "./room-clash.js";
 import { slugify, uniqueSlug } from "./slug.js";
 import { validateWebhookUrl } from "./webhook-url.js";
+import { parseWallTime } from "./zoned-time.js";
 
 // --- Sessionize "All data" JSON shapes (only the fields we consume) ---
 
@@ -42,21 +44,105 @@ interface SzSession {
   isServiceSession?: boolean;
   speakers?: string[];
   categoryItems?: number[];
-  room?: string | null;
+  // Paris wall-clock times with no offset (#519), see zoned-time.ts.
+  startsAt?: string | null;
+  endsAt?: string | null;
+  roomId?: number | null;
+}
+
+interface SzRoom {
+  id: number;
+  name: string;
+  sort?: number;
 }
 
 interface SessionizeData {
   sessions?: SzSession[];
   speakers?: SzSpeaker[];
   categories?: SzCategory[];
+  rooms?: SzRoom[];
 }
 
 export interface ImportReport {
   speakers: { created: number; updated: number };
-  talks: { created: number; updated: number };
+  talks: { created: number; updated: number; scheduled: number };
   categories: { created: number; reused: number };
   links: number;
+  // Sessionize rooms with no venue room paired yet: their sessions came in
+  // without a room (#519).
+  unmappedRooms: Array<{ sessionizeId: number; name: string; sessions: number }>;
+  // On the site for this edition, missing from the payload (#509). Listed,
+  // never changed: a partial payload would otherwise unpublish the programme.
+  absent: {
+    talks: Array<{
+      id: number;
+      title: string;
+      publicationStatus: string;
+      startsAt: string | null;
+      roomLabel: string | null;
+    }>;
+    speakers: Array<{ id: number; name: string; publicationStatus: string }>;
+  };
   warnings: string[];
+}
+
+interface VenueRoom {
+  id: number;
+  name: string;
+}
+
+// "Hémicycle" in Sessionize and "hemicycle " in the venue are the same room;
+// "Amphi" and "Amphithéâtre" are not guessed, the admin pairs those.
+function roomKey(name: string): string {
+  return name.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
+}
+
+/**
+ * The venue room each Sessionize room stands for (#519). Pairings saved by
+ * the admin are kept; a room seen for the first time is paired with the venue
+ * room of the same name if there is one, and stored either way so the admin
+ * finds it in the pairing list. A pairing to a room of another venue (the
+ * edition moved) counts as unpaired.
+ */
+async function resolveSessionizeRooms(
+  editionId: number,
+  rooms: SzRoom[],
+  report: ImportReport,
+): Promise<Map<number, VenueRoom | null>> {
+  const edition = await prisma.edition.findUnique({
+    where: { id: editionId },
+    select: { venue: { select: { rooms: { select: { id: true, name: true } } } } },
+  });
+  const venueRooms = edition?.venue?.rooms ?? [];
+  if (rooms.length > 0 && !edition?.venue) {
+    report.warnings.push("L'édition n'a pas de lieu : les sessions sont importées sans salle. Choisissez le lieu, puis relancez l'import.");
+  }
+  const venueRoomById = new Map(venueRooms.map((room) => [room.id, room]));
+  const venueRoomByKey = new Map(venueRooms.map((room) => [roomKey(room.name), room]));
+
+  const saved = await prisma.sessionizeRoom.findMany({ where: { editionId } });
+  const savedById = new Map(saved.map((pairing) => [pairing.sessionizeId, pairing]));
+
+  const resolved = new Map<number, VenueRoom | null>();
+  for (const room of rooms) {
+    const pairing = savedById.get(room.id);
+    if (pairing) {
+      if (pairing.name !== room.name || pairing.sortOrder !== (room.sort ?? 0)) {
+        await prisma.sessionizeRoom.update({
+          where: { id: pairing.id },
+          data: { name: room.name, sortOrder: room.sort ?? 0 },
+        });
+      }
+      resolved.set(room.id, pairing.roomId === null ? null : venueRoomById.get(pairing.roomId) ?? null);
+      continue;
+    }
+    const guess = venueRoomByKey.get(roomKey(room.name)) ?? null;
+    await prisma.sessionizeRoom.create({
+      data: { editionId, sessionizeId: room.id, name: room.name, sortOrder: room.sort ?? 0, roomId: guess?.id ?? null },
+    });
+    resolved.set(room.id, guess);
+  }
+  return resolved;
 }
 
 // Map a Sessionize link to our socialLinks key. Sessionize sets linkType for
@@ -144,9 +230,11 @@ export async function importSessionize(
 ): Promise<ImportReport> {
   const report: ImportReport = {
     speakers: { created: 0, updated: 0 },
-    talks: { created: 0, updated: 0 },
+    talks: { created: 0, updated: 0, scheduled: 0 },
     categories: { created: 0, reused: 0 },
     links: 0,
+    unmappedRooms: [],
+    absent: { talks: [], speakers: [] },
     warnings: [],
   };
 
@@ -307,6 +395,11 @@ export async function importSessionize(
   });
   const takenTalkSlugs = new Set(existingTalks.map((t) => t.slug));
   const talkSlugToId = new Map(existingTalks.map((t) => [t.slug, t.id]));
+  const importedTalkIds = new Set<number>();
+
+  const szRooms = data.rooms ?? [];
+  const roomBySzId = await resolveSessionizeRooms(editionId, szRooms, report);
+  const unpairedSessions = new Map<number, number>();
 
   for (const sz of data.sessions ?? []) {
     if (sz.isServiceSession) continue; // breaks, lunch, etc.
@@ -330,6 +423,26 @@ export async function importSessionize(
 
     const description = sz.description?.trim() ?? "";
 
+    // Sessionize is the reference for the slot, as it is for the title (#519):
+    // a re-import moves a session back where Sessionize has it, even if it was
+    // moved by hand. A session Sessionize has not scheduled yet keeps whatever
+    // slot the admin gave it, so an export taken during the CFP wipes nothing.
+    let schedule = {};
+    if (sz.startsAt || sz.roomId != null) {
+      const startsAt = parseWallTime(sz.startsAt);
+      const endsAt = parseWallTime(sz.endsAt);
+      if (sz.startsAt && !startsAt) {
+        report.warnings.push(`Session « ${title} » : horaire illisible (« ${sz.startsAt} »), importée sans créneau.`);
+      }
+      const room = sz.roomId != null ? roomBySzId.get(sz.roomId) ?? null : null;
+      if (sz.roomId != null && !room) {
+        unpairedSessions.set(sz.roomId, (unpairedSessions.get(sz.roomId) ?? 0) + 1);
+      }
+      // The label is frozen when the talk is placed, as in the admin (#375).
+      schedule = { startsAt, endsAt, roomId: room?.id ?? null, roomLabel: room?.name ?? null };
+      if (startsAt) report.talks.scheduled++;
+    }
+
     const existingId = talkSlugToId.get(baseSlug);
     if (existingId) {
       await prisma.talk.update({
@@ -341,14 +454,16 @@ export async function importSessionize(
           level,
           language,
           categoryId,
+          ...schedule,
           speakers: { set: speakerDbIds.map((id) => ({ id })) },
         },
       });
+      importedTalkIds.add(existingId);
       report.talks.updated++;
     } else {
       const slug = uniqueSlug(baseSlug, takenTalkSlugs);
       takenTalkSlugs.add(slug);
-      await prisma.talk.create({
+      const created = await prisma.talk.create({
         data: {
           editionId,
           slug,
@@ -358,15 +473,91 @@ export async function importSessionize(
           level,
           language,
           categoryId,
+          ...schedule,
           publicationStatus: "DRAFT",
           speakers: { connect: speakerDbIds.map((id) => ({ id })) },
         },
       });
+      importedTalkIds.add(created.id);
       report.talks.created++;
     }
   }
 
+  // In Sessionize's room order, which is the order of the pairing list.
+  const knownRoomIds = szRooms.map((room) => room.id);
+  const unknownRoomIds = [...unpairedSessions.keys()].filter((id) => !knownRoomIds.includes(id));
+  for (const sessionizeId of [...knownRoomIds, ...unknownRoomIds]) {
+    const sessions = unpairedSessions.get(sessionizeId);
+    if (!sessions) continue;
+    const name = szRooms.find((room) => room.id === sessionizeId)?.name ?? `salle Sessionize ${sessionizeId}`;
+    report.unmappedRooms.push({ sessionizeId, name, sessions });
+    report.warnings.push(`Salle Sessionize « ${name} » sans salle du lieu associée : ${sessions} session(s) importée(s) sans salle.`);
+  }
+
+  await warnOnRoomClash(editionId, report);
+  // A payload without one of the lists says nothing about what it lacks.
+  await listAbsent(
+    editionId,
+    Array.isArray(data.sessions) ? importedTalkIds : null,
+    Array.isArray(data.speakers) ? new Set(dbIdBySzSpeakerId.values()) : null,
+    report,
+  );
+
   return report;
+}
+
+// Two sessions in one room at once is a Sessionize mistake the grid would draw
+// on top of each other (#462); the import says so rather than refusing.
+async function warnOnRoomClash(editionId: number, report: ImportReport): Promise<void> {
+  const placed = await prisma.talk.findMany({
+    where: { editionId, deletedAt: null, roomId: { not: null }, startsAt: { not: null }, endsAt: { not: null } },
+    select: { slug: true, title: true, roomId: true, roomLabel: true, startsAt: true, endsAt: true },
+  });
+  const clash = findRoomClash(
+    placed.map((talk) => ({
+      slug: talk.slug,
+      room: talk.roomLabel ?? "",
+      roomId: talk.roomId!,
+      start: talk.startsAt!,
+      end: talk.endsAt!,
+    })),
+  );
+  if (!clash) return;
+  const titleOf = new Map(placed.map((talk) => [talk.slug, talk.title]));
+  report.warnings.push(
+    `Salle « ${clash.current.room} » : « ${titleOf.get(clash.previous.slug)} » et « ${titleOf.get(clash.current.slug)} » se chevauchent. Corrigez dans Sessionize, puis relancez l'import.`,
+  );
+}
+
+// What the edition holds that the payload no longer does (#509): withdrawn
+// speakers, cancelled sessions, and also sessions created by hand outside
+// Sessionize, hence the neutral "absent from the import" wording in the admin.
+async function listAbsent(
+  editionId: number,
+  importedTalkIds: Set<number> | null,
+  importedSpeakerIds: Set<number> | null,
+  report: ImportReport,
+): Promise<void> {
+  if (importedTalkIds) {
+    const talks = await prisma.talk.findMany({
+      where: { editionId, deletedAt: null, id: { notIn: [...importedTalkIds] } },
+      select: { id: true, title: true, publicationStatus: true, startsAt: true, roomLabel: true },
+      orderBy: { title: "asc" },
+    });
+    report.absent.talks = talks.map((talk) => ({ ...talk, startsAt: talk.startsAt?.toISOString() ?? null }));
+  }
+
+  if (!importedSpeakerIds) return;
+  const participations = await prisma.speakerEdition.findMany({
+    where: { editionId, speaker: { deletedAt: null }, speakerId: { notIn: [...importedSpeakerIds] } },
+    select: { publicationStatus: true, speaker: { select: { id: true, name: true } } },
+    orderBy: { speaker: { name: "asc" } },
+  });
+  report.absent.speakers = participations.map(({ speaker, publicationStatus }) => ({
+    id: speaker.id,
+    name: speaker.name,
+    publicationStatus,
+  }));
 }
 
 // Fetch + parse a Sessionize "All data" payload from either a raw JSON string

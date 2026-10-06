@@ -16,6 +16,7 @@ import { prisma } from "../src/lib/prisma.js";
 import { slugify, uniqueSlug } from "../src/lib/slug.js";
 import { resolveSpeakerPhoto } from "../src/lib/speaker-photo.js";
 import { revalidateAll } from "../src/lib/revalidate.js";
+import { runInContext, systemContext } from "../src/lib/request-context.js";
 import {
   buildSocialLinks,
   normalizeCategory,
@@ -325,7 +326,9 @@ async function main() {
   await prisma.$disconnect();
 }
 
-main().catch(async (err) => {
+// A CLI run has no request: name it, so its writes are filed under the system in
+// the history rather than left unattributed (#513).
+runInContext(systemContext("Import de l'historique"), main).catch(async (err) => {
   console.error("Import failed:", err);
   await prisma.$disconnect();
   process.exit(1);

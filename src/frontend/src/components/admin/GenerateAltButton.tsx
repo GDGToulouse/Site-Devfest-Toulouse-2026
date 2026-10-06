@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 
 interface GenerateAltButtonProps {
   /** Server-side filename (under /uploads). Required to call the API. */
@@ -19,12 +20,6 @@ interface GenerateAltResponse {
   model: string;
   durationMs: number;
   tokensUsed: { input: number; output: number };
-}
-
-interface GenerateAltErrorResponse {
-  error: string;
-  message?: string;
-  retryAfterSec?: number;
 }
 
 /**
@@ -46,33 +41,19 @@ export default function GenerateAltButton({
     setIsGenerating(true);
     setLocalError(null);
 
-    const { data, status } = await adminFetch<GenerateAltResponse | GenerateAltErrorResponse>(
+    const { data, status, errorBody } = await adminFetch<GenerateAltResponse>(
       `/files/${encodeURIComponent(filename)}/generate-alt`,
       { method: "POST" },
     );
 
     setIsGenerating(false);
 
-    if (status === 200 && data && "alt" in data) {
+    if (status === 200 && data) {
       onGenerated(data.alt);
       return;
     }
 
-    // Friendly error messages for the most common cases — the rest fall
-    // through to a generic message so we never expose stack traces.
-    const errBody = data as GenerateAltErrorResponse | null;
-    let message = "Échec de la génération automatique du texte alternatif.";
-    if (status === 429) {
-      message = errBody?.retryAfterSec
-        ? `Quota Gemini atteint. Réessayez dans ${errBody.retryAfterSec}s.`
-        : "Quota Gemini atteint. Réessayez plus tard.";
-    } else if (status === 503) {
-      message = "Service IA non configuré (clé API manquante).";
-    } else if (status === 415) {
-      message = "Ce format d'image n'est pas pris en charge (SVG / ICO non supportés).";
-    } else if (status === 400) {
-      message = "L'image n'a pas pu être analysée.";
-    }
+    const message = altGenerationErrorMessage(status, errorBody);
     setLocalError(message);
     onError?.(message);
   }

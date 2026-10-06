@@ -2,8 +2,7 @@
 
 Le backend expose une API REST documentée via OpenAPI/Swagger, consommable par le site, une application mobile, ou tout client externe (partenaires, scripts, intégrations).
 
-**URL de la doc interactive** : [`/api/docs`](https://devfesttoulouse.fr/api/docs) (Swagger UI)
-**Spec JSON brute** : `/api/docs/json` (OpenAPI 3.0.3)
+**Doc interactive** : `/api/docs` (Swagger UI) et spec brute `/api/docs/json` (OpenAPI 3.0.3), **ouvertes seulement hors production**. Le backend les coupe dès que `NODE_ENV=production`, donc en production et en beta, sauf si `SWAGGER_PUBLIC=true` : elles listent toutes les routes d'administration, ce qui facilite la reconnaissance. En local : `http://localhost:4000/api/docs`.
 
 ---
 
@@ -141,5 +140,5 @@ Les réponses d'erreur suivent le schéma :
 
 ## Liens utiles
 
-- Documentation OpenAPI interactive : [`/api/docs`](https://devfesttoulouse.fr/api/docs)
+- Documentation OpenAPI interactive : `/api/docs`, hors production seulement (voir en tête de page)
 - Spécification métier du projet : [`docs/modele-donnees-metier.md`](modele-donnees-metier.md)

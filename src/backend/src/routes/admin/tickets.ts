@@ -75,6 +75,25 @@ function unixToDate(ts: unknown): Date | null {
   return new Date(n * 1000);
 }
 
+// Billetweb only credits a sale to the site when the shop link carries `src`
+// (#507). Its API returns the bare shop URL, so the import adds the source the
+// editor chose; a blank source keeps the URL as Billetweb sent it.
+export function withTrackingSource(
+  shopUrl: string | undefined,
+  source: string | undefined,
+): string | null {
+  if (!shopUrl) return null;
+  const src = source?.trim();
+  if (!src) return shopUrl;
+  try {
+    const url = new URL(shopUrl);
+    url.searchParams.set("src", src);
+    return url.toString();
+  } catch {
+    return shopUrl;
+  }
+}
+
 function toDateOrNull(value: string | null | undefined): Date | null {
   if (!value) return null;
   const d = new Date(value);
@@ -109,9 +128,9 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
 
   // POST /api/admin/tickets/import/billetweb — import tiers from Billetweb
   app.post<{
-    Body: { editionId: number; billetwebEventId: string };
+    Body: { editionId: number; billetwebEventId: string; trackingSource?: string };
   }>("/tickets/import/billetweb", async (request, reply) => {
-    const { editionId, billetwebEventId } = request.body;
+    const { editionId, billetwebEventId, trackingSource } = request.body;
 
     if (!editionId || !billetwebEventId) {
       return reply.status(400).send({ error: "editionId and billetwebEventId are required" });
@@ -132,7 +151,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       return reply.status(502).send({ error: "Failed to fetch Billetweb event" });
     }
     const eventData = (await eventRes.json()) as Array<Record<string, unknown>>;
-    const shopUrl = eventData[0]?.shop as string | undefined;
+    const shopUrl = withTrackingSource(eventData[0]?.shop as string | undefined, trackingSource);
 
     // Fetch tickets
     const ticketsRes = await fetch(
@@ -173,7 +192,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
           isVisible,
           saleStartDate: unixToDate(t.start_time),
           saleEndDate: unixToDate(t.end_time),
-          externalUrl: shopUrl || null,
+          externalUrl: shopUrl,
           isSoldOut: soldOutByTicket.get(String(t.id ?? "")) ?? null,
           sortOrder: i,
           editionId,

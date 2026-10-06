@@ -8,6 +8,7 @@ import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
+import AuditTrail from "@/components/admin/AuditTrail";
 
 interface TalkData extends Talk {
   edition?: { id: number; year: number };
@@ -154,8 +155,11 @@ export default function TalkEditorPage() {
 
   if (isLoading) return <p className="text-gris">Chargement...</p>;
 
+  // 1152 px rather than 768 (#410): a contact row or a bilingual field had
+  // two thirds of the screen empty beside it; a cap still keeps text lines
+  // readable on wide screens.
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <div className="mb-8 flex items-center gap-4">
         <button onClick={() => router.push("/admin/talks")} className="text-gris hover:text-noir" title="Retour">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -203,6 +207,8 @@ export default function TalkEditorPage() {
           </button>
         </div>
       </div>
+
+      {talkId && <AuditTrail entity="Talk" entityId={talkId} refreshKey={saveState} />}
     </div>
   );
 }

@@ -6,6 +6,8 @@ import { auth } from "./auth.js";
 import { prisma } from "./prisma.js";
 import { extractPrefix, verifyApiKey } from "./api-key.js";
 import { notDeleted } from "./admin-helpers.js";
+import { getRequestContext, setActor, setChannel } from "./request-context.js";
+import { looksLikeJwt, verifyAgentToken } from "./agent-token.js";
 
 // Update `lastUsedAt` at most once per minute to avoid spamming the DB on
 // high-traffic keys. Good enough for "seen recently" UI hints.
@@ -20,7 +22,7 @@ export interface AuthenticatedUser {
 
 export interface AuthContext {
   user: AuthenticatedUser;
-  source: "session" | "apiKey";
+  source: "session" | "apiKey" | "mcp";
 }
 
 async function resolveSession(request: FastifyRequest): Promise<AuthenticatedUser | null> {
@@ -48,7 +50,9 @@ async function resolveSession(request: FastifyRequest): Promise<AuthenticatedUse
   return { id: user.id, email: user.email, name: user.name, role: user.role };
 }
 
-async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser | null> {
+async function resolveBearer(
+  request: FastifyRequest,
+): Promise<{ user: AuthenticatedUser; apiKeyId: string } | null> {
   const authHeader = request.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
 
@@ -114,27 +118,90 @@ async function resolveBearer(request: FastifyRequest): Promise<AuthenticatedUser
 
   request.log.debug({ authPhase: "auth-context.bearer.ok", keyId: apiKey.id, role: apiKey.user.role });
   return {
-    id: apiKey.user.id,
-    email: apiKey.user.email,
-    name: apiKey.user.name,
-    role: apiKey.user.role,
+    user: {
+      id: apiKey.user.id,
+      email: apiKey.user.email,
+      name: apiKey.user.name,
+      role: apiKey.user.role,
+    },
+    apiKeyId: apiKey.id,
   };
+}
+
+// An AI agent acting for a person (#514). Same account checks as a session —
+// a banned or trashed account loses its agents with everything else.
+async function resolveAgent(request: FastifyRequest): Promise<AuthenticatedUser | null> {
+  const header = request.headers.authorization;
+  const raw = header?.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : "";
+  if (!looksLikeJwt(raw)) return null;
+
+  const token = await verifyAgentToken(raw);
+  if (!token) {
+    request.log.debug({ authPhase: "auth-context.agent.reject" });
+    return null;
+  }
+
+  const user = await prisma.user.findFirst({
+    where: { id: token.userId, ...notDeleted },
+    select: { id: true, email: true, name: true, role: true, banned: true },
+  });
+  if (!user || user.banned) {
+    request.log.debug({ authPhase: "auth-context.agent.reject", reason: !user ? "no_user" : "banned" });
+    return null;
+  }
+  return { id: user.id, email: user.email, name: user.name, role: user.role };
+}
+
+function actorOf(user: AuthenticatedUser) {
+  return { userId: user.id, label: user.name || user.email };
 }
 
 /**
  * Resolve the current caller by trying (in order): a Better Auth session
- * cookie, then an `Authorization: Bearer <api-key>` header. Returns null
- * if neither succeeds. The caller's role reflects the DB state at request
- * time, so API tokens always mirror their owner's current role.
+ * cookie, an `Authorization: Bearer <api-key>` header, then an AI agent's OAuth
+ * token (#514). Returns null if none succeeds. The caller's role reflects the
+ * DB state at request time, so tokens always mirror their owner's current role.
+ *
+ * Also records the caller as the request's actor, so every write that follows
+ * is attributed to them in the audit log (#513).
  */
 export async function getAuthContext(request: FastifyRequest): Promise<AuthContext | null> {
   const sessionUser = await resolveSession(request);
-  if (sessionUser) return { user: sessionUser, source: "session" };
+  if (sessionUser) {
+    setActor(actorOf(sessionUser));
+    return { user: sessionUser, source: "session" };
+  }
 
-  const apiKeyUser = await resolveBearer(request);
-  if (apiKeyUser) return { user: apiKeyUser, source: "apiKey" };
+  const bearer = await resolveBearer(request);
+  if (bearer) {
+    setActor(actorOf(bearer.user), { apiKeyId: bearer.apiKeyId });
+    return { user: bearer.user, source: "apiKey" };
+  }
+
+  const agentUser = await resolveAgent(request);
+  if (agentUser) {
+    setActor(actorOf(agentUser));
+    setChannel("MCP");
+    return { user: agentUser, source: "mcp" };
+  }
 
   return null;
+}
+
+/**
+ * preHandler that keeps AI agents (#514) away from credentials and accounts:
+ * API keys, user management. An agent minting an API key would keep its access
+ * after its person withdrew consent; an admin's agent could hand out roles.
+ * Runs after the area's own guard, which already resolved the caller and set
+ * the MCP channel when the credential was an agent token.
+ */
+export async function refuseAgents(_request: FastifyRequest, reply: FastifyReply) {
+  if (getRequestContext()?.channel === "MCP") {
+    reply.code(403).send({
+      error: "Forbidden",
+      message: "Un agent IA ne peut pas gérer les comptes ni les clés d'accès.",
+    });
+  }
 }
 
 /**

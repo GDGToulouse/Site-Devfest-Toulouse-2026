@@ -110,6 +110,11 @@ model Edition {
   sponsorPageStatus       SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
   sponsorTemporaryFormUrl String?
+  // The Sessionize API endpoint (…/api/v2/<id>/view/All) of this edition's
+  // last successful import from a link, so the next one needs no pasting
+  // (#529). Back-office only: not the public call for papers page, which is
+  // the `cfp_sessionize_url` site setting.
+  sessionizeApiUrl        String?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -126,6 +131,7 @@ model Edition {
   editionSponsors EditionSponsor[]
   categories      EditionCategory[]
   scheduleEntries ScheduleEntry[]
+  sessionizeRooms SessionizeRoom[]
 
   @@index([deletedAt])
   @@index([venueId])
@@ -176,9 +182,36 @@ model Room {
   talks          Talk[]
   scheduleEntries ScheduleEntry[]
   simulcasts      TalkSimulcast[]
+  sessionizeRooms SessionizeRoom[]
 
   @@unique([venueId, name])
   @@index([venueId])
+}
+
+/// A room as Sessionize names it, and the venue room it stands for (#519).
+///
+/// The names do not line up ("Amphi" is our "Amphithéâtre", "Agora" our
+/// "Agora 1"), so the admin pairs them once and every later import of the same
+/// edition reuses the pairing. Per edition because Sessionize room ids belong
+/// to one Sessionize event. A null `roomId` is a room seen but not paired yet:
+/// its sessions are imported without a room, and the import report says so.
+model SessionizeRoom {
+  id           Int    @id @default(autoincrement())
+  sessionizeId Int
+  name         String
+  sortOrder    Int    @default(0)
+
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  roomId Int?
+  room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([editionId, sessionizeId])
+  @@index([roomId])
 }
 
 /// One room a talk is relayed to (#456).
@@ -528,6 +561,12 @@ model User {
   // The sponsor spaces this account may act on (#362). A sponsor account holds
   // no back-office UserRole — its rights live entirely on these contacts.
   sponsorContacts SponsorContact[]
+  auditLogs       AuditLog[]
+
+  oauthClients       OauthClient[]
+  oauthAccessTokens  OauthAccessToken[]
+  oauthRefreshTokens OauthRefreshToken[]
+  oauthConsents      OauthConsent[]
 
   @@index([deletedAt])
   @@map("user")
@@ -566,6 +605,9 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  oauthAccessTokens  OauthAccessToken[]
+  oauthRefreshTokens OauthRefreshToken[]
+
   @@index([userId])
   @@map("session")
 }
@@ -600,6 +642,197 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+// --- MCP connector: OAuth authorization server (#514) ---
+// Tables declared by better-auth's jwt() and mcp() (oauth-provider) plugins,
+// field for field: the adapter reads and writes them by these names. Required
+// lists are native arrays; optional ones are `Json?`, because the provider reads
+// null as "no restriction" and a Prisma list cannot hold null
+// (lib/oauth-nullable-lists.ts). The plugin's `json` fields are text: the
+// adapter serializes them. None of it is content: the audit log skips them.
+
+model Jwks {
+  id         String    @id
+  publicKey  String
+  // Signs the agents' access tokens. Never logged, never exported.
+  privateKey String
+  createdAt  DateTime
+  expiresAt  DateTime?
+  alg        String?
+  crv        String?
+
+  @@map("jwks")
+}
+
+model OauthClient {
+  id                               String    @id
+  clientId                         String    @unique
+  clientSecret                     String?
+  clientDiscoveryId                String?
+  disabled                         Boolean?  @default(false)
+  skipConsent                      Boolean?
+  enableEndSession                 Boolean?
+  subjectType                      String?
+  scopes                           Json?
+  clientCredentialsScopes          Json?
+  userId                           String?
+  user                             User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt                        DateTime?
+  updatedAt                        DateTime?
+  name                             String?
+  uri                              String?
+  icon                             String?
+  contacts                         Json?
+  tos                              String?
+  policy                           String?
+  softwareId                       String?
+  softwareVersion                  String?
+  softwareStatement                String?
+  redirectUris                     String[]
+  postLogoutRedirectUris           Json?
+  backchannelLogoutUri             String?
+  backchannelLogoutSessionRequired Boolean?
+  tokenEndpointAuthMethod          String?
+  applicationType                  String?
+  jwks                             String?
+  jwksUri                          String?
+  grantTypes                       Json?
+  responseTypes                    Json?
+  requirePKCE                      Boolean?
+  dpopBoundAccessTokens            Boolean?  @default(false)
+  referenceId                      String?
+  metadata                         String?
+
+  resources     OauthClientResource[]
+  accessTokens  OauthAccessToken[]
+  refreshTokens OauthRefreshToken[]
+  consents      OauthConsent[]
+
+  @@index([userId])
+  @@map("oauth_client")
+}
+
+model OauthResource {
+  id                            String    @id
+  identifier                    String    @unique
+  name                          String
+  accessTokenTtl                Int?
+  refreshTokenTtl               Int?
+  signingAlgorithm              String?
+  signingKeyId                  String?
+  allowedScopes                 Json?
+  customClaims                  String?
+  dpopBoundAccessTokensRequired Boolean?  @default(false)
+  disabled                      Boolean?  @default(false)
+  createdAt                     DateTime?
+  updatedAt                     DateTime?
+  policyVersion                 Int?      @default(1)
+  metadata                      String?
+
+  clients OauthClientResource[]
+
+  @@map("oauth_resource")
+}
+
+model OauthClientResource {
+  id         String        @id
+  clientId   String
+  client     OauthClient   @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  resourceId String
+  resource   OauthResource @relation(fields: [resourceId], references: [identifier], onDelete: Cascade)
+  metadata   String?
+  createdAt  DateTime?
+
+  @@index([clientId])
+  @@index([resourceId])
+  @@map("oauth_client_resource")
+}
+
+model OauthRefreshToken {
+  id                      String       @id
+  token                   String       @unique
+  clientId                String
+  client                  OauthClient  @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?     @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String
+  user                    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               Json?
+  requestedUserInfoClaims Json?
+  expiresAt               DateTime?
+  createdAt               DateTime?
+  revoked                 DateTime?
+  rotatedAt               DateTime?
+  rotationReplayResponse  String?
+  rotationReplayExpiresAt DateTime?
+  authTime                DateTime?
+  confirmation            String?
+  scopes                  String[]
+
+  accessTokens OauthAccessToken[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@map("oauth_refresh_token")
+}
+
+model OauthAccessToken {
+  id                      String             @id
+  token                   String?            @unique
+  clientId                String
+  client                  OauthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  sessionId               String?
+  session                 Session?           @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  userId                  String?
+  user                    User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  authorizationCodeId     String?
+  resources               Json?
+  requestedUserInfoClaims Json?
+  refreshId               String?
+  refresh                 OauthRefreshToken? @relation(fields: [refreshId], references: [id], onDelete: Cascade)
+  expiresAt               DateTime?
+  createdAt               DateTime?
+  revoked                 DateTime?
+  confirmation            String?
+  scopes                  String[]
+
+  @@index([clientId])
+  @@index([sessionId])
+  @@index([userId])
+  @@index([authorizationCodeId])
+  @@index([refreshId])
+  @@map("oauth_access_token")
+}
+
+model OauthConsent {
+  id                      String      @id
+  clientId                String
+  client                  OauthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  userId                  String?
+  user                    User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  referenceId             String?
+  resources               Json?
+  requestedUserInfoClaims Json?
+  scopes                  String[]
+  createdAt               DateTime?
+  updatedAt               DateTime?
+
+  @@index([clientId])
+  @@index([userId])
+  @@map("oauth_consent")
+}
+
+model OauthClientAssertion {
+  id        String   @id
+  expiresAt DateTime
+
+  @@map("oauth_client_assertion")
 }
 
 // --- Site Settings ---
@@ -930,18 +1163,6 @@ model SponsorContact {
   // to act is accessRole below (#362). Two different things, close names.
   role  String?
 
-  // Modification-link token (issue #79, RG-242 to RG-251). Read-only since
-  // #362: nothing writes these any more, and a sponsor edits from an account.
-  // They survive because they carry the links still sitting in mailboxes —
-  // opening one converts it into an invitation, and editLinkLocked is what
-  // still lets an organiser refuse that conversion.
-  //
-  // Droppable once no editTokenSentAt is within its 30-day window, i.e. a month
-  // after #362 reaches production.
-  editToken       String?   @unique
-  editLinkLocked  Boolean   @default(false)
-  editTokenSentAt DateTime?
-
   // What this person may do on the sponsor's space (#362). Every contact used
   // to have equal rights; the default keeps that true for rows created before
   // the split, since they were all full editors.
@@ -1034,4 +1255,62 @@ model EditionCategory {
   @@unique([editionId, categoryId])
   @@index([editionId])
   @@index([categoryId])
+}
+
+// ============================================
+// Audit log (#513)
+// ============================================
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  // Soft delete and its undo, told apart from a plain UPDATE of `deletedAt`:
+  // "who put this in the bin" is the question people actually ask.
+  TRASH
+  RESTORE
+}
+
+// Where a write came from. Set per request from the route prefix, then refined
+// by whoever authenticates the caller (an API key, an edit link, an import).
+enum AuditChannel {
+  ADMIN
+  SPONSOR
+  EDIT_LINK
+  IMPORT
+  API_KEY
+  MCP
+  PUBLIC
+  SYSTEM
+  AUTH
+}
+
+// One row per written record, filled by the Prisma extension in lib/audit.ts
+// rather than by each route: a route that forgot to log would be an invisible
+// change. Append-only; purged past 13 months.
+model AuditLog {
+  id          BigInt       @id @default(autoincrement())
+  createdAt   DateTime     @default(now())
+  action      AuditAction
+  // Prisma model name ("Speaker", "Talk"…) and the record's id as text, since
+  // ids are ints on content and cuids on accounts.
+  entity      String
+  entityId    String
+  channel     AuditChannel
+  // SetNull: deleting an account must not erase what it did. actorLabel keeps
+  // the name it had, and is the only trace for actors without an account
+  // (a speaker through their edit link, a scheduled task).
+  actorUserId String?
+  actor       User?        @relation(fields: [actorUserId], references: [id], onDelete: SetNull)
+  actorLabel  String
+  // No foreign key: a revoked or purged key must not take its history along.
+  apiKeyId    String?
+  // { field: { before, after } } — secrets are masked before they get here.
+  changes     Json?
+  ip          String?
+
+  @@index([entity, entityId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([channel, createdAt])
+  @@index([createdAt])
 }

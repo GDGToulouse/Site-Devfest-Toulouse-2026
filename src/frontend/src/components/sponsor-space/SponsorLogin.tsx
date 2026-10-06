@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
-import { requestMagicLink, signUpWithEmail } from "@/lib/sponsor-api";
+import { requestMagicLink, requestSponsorPasswordReset, signUpWithEmail } from "@/lib/sponsor-api";
 import SponsorFeedback from "@/components/sponsor-space/SponsorFeedback";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
@@ -30,6 +30,8 @@ export default function SponsorLogin({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [linkSent, setLinkSent] = useState(false);
+  const [isForgot, setIsForgot] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
   const [providers, setProviders] = useState<Providers | null>(null);
 
   useEffect(() => {
@@ -71,6 +73,19 @@ export default function SponsorLogin({
     setIsLoading(false);
   }
 
+  // The reset link points to /sponsor/reset-password: the backend picks the page
+  // from the account's role (#411). Before that, this button would have sent a
+  // sponsor to the admin's reset page, which then refuses its role.
+  async function handleForgot(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    await requestSponsorPasswordReset(email.trim());
+    // Same message whether or not an account exists, as for the magic link.
+    setResetSent(true);
+    setIsLoading(false);
+  }
+
   async function handleSocial(provider: "google" | "github") {
     setIsLoading(true);
     setError(null);
@@ -97,6 +112,53 @@ export default function SponsorLogin({
           className="mt-6 w-full text-sm font-medium text-gris hover:text-noir"
         >
           Utiliser une autre méthode
+        </button>
+      </Shell>
+    );
+  }
+
+  if (isForgot) {
+    return (
+      <Shell mode={mode}>
+        {resetSent ? (
+          <p role="status" aria-live="polite" className="text-center text-noir">
+            Si un compte existe pour <strong>{email.trim()}</strong>, un lien pour choisir un nouveau mot de
+            passe vient d&apos;y être envoyé. Il est valable 1 heure.
+          </p>
+        ) : (
+          <form onSubmit={handleForgot} className="space-y-4">
+            <p className="text-sm text-gris">
+              Indiquez l&apos;adresse de votre compte : nous vous enverrons un lien pour choisir un nouveau mot de passe.
+            </p>
+            <label className="block">
+              <span className="mb-1 block text-sm font-medium text-noir">Email</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={inputClass}
+              />
+            </label>
+            <button
+              type="submit"
+              disabled={isLoading || !email.trim()}
+              className="w-full rounded-[12px] bg-malachite px-4 py-3 font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-50"
+            >
+              {isLoading ? "Envoi…" : "Recevoir un lien"}
+            </button>
+          </form>
+        )}
+        <button
+          type="button"
+          onClick={() => {
+            setIsForgot(false);
+            setResetSent(false);
+          }}
+          className="mt-6 w-full text-sm font-medium text-gris hover:text-noir"
+        >
+          Retour à la connexion
         </button>
       </Shell>
     );
@@ -154,6 +216,18 @@ export default function SponsorLogin({
             className={inputClass}
           />
         </label>
+        {mode === "signin" && (
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setIsForgot(true);
+            }}
+            className="text-sm font-medium text-bleu hover:underline"
+          >
+            Mot de passe oublié ?
+          </button>
+        )}
 
         <SponsorFeedback message={error ? { isOk: false, text: error } : null} />
 

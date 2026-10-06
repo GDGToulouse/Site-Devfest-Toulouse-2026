@@ -86,6 +86,85 @@ export async function countFileReferences(
   return usages.reduce((total, usage) => total + usage.count, 0);
 }
 
+/** One row using an upload, named the way the admin knows it (#483). */
+export interface FileUsage {
+  model: string;
+  id: number | string;
+  label: string;
+  isTrashed: boolean;
+}
+
+type ListDelegate = { findMany: (args: unknown) => Promise<Record<string, unknown>[]> };
+
+/**
+ * Who uses each of these uploads, by name (#483): the media library shows it
+ * under the thumbnail and filters on it. Derived from the same columns as the
+ * reference count, never typed in, so it stays true when a photo moves.
+ *
+ * One query per model/column pair and one for the settings, whatever the
+ * number of files: the library lists hundreds, and a query per file would be
+ * an N+1 on every page load. Trashed rows are included, flagged: they can come
+ * back, and their file with them.
+ *
+ * An image placed inside a rich-text body is not a column reference, so it is
+ * not seen here; the screen says "aucun usage référencé", not "unused".
+ */
+export async function listFileUsages(urls: readonly string[]): Promise<Map<string, FileUsage[]>> {
+  const byUrl = new Map<string, FileUsage[]>();
+  if (urls.length === 0) return byUrl;
+  const add = (url: unknown, usage: FileUsage) => {
+    if (typeof url !== "string") return;
+    byUrl.set(url, [...(byUrl.get(url) ?? []), usage]);
+  };
+  const list = [...urls];
+
+  for (const entity of TRASH_ENTITIES) {
+    const delegate = (prisma as unknown as Record<string, ListDelegate>)[entity.model];
+    for (const field of entity.fileFields) {
+      const rows = await delegate.findMany({
+        where: { [field]: { in: list } },
+        select: { id: true, deletedAt: true, [field]: true, [entity.labelField]: true },
+      });
+      for (const row of rows) {
+        add(row[field], {
+          model: entity.model,
+          id: row.id as number,
+          label: String(row[entity.labelField]),
+          isTrashed: row.deletedAt != null,
+        });
+      }
+    }
+  }
+
+  // A participation is named after its company and year: that is the logo the
+  // edition froze (#375), not the company's current one.
+  for (const field of FILE_ONLY_MODELS.find((m) => m.model === "editionSponsor")?.fileFields ?? []) {
+    const rows = await (prisma.editionSponsor as unknown as ListDelegate).findMany({
+      where: { [field]: { in: list } },
+      select: { id: true, [field]: true, sponsor: { select: { name: true, deletedAt: true } }, edition: { select: { year: true } } },
+    });
+    for (const row of rows) {
+      const sponsor = row.sponsor as { name: string; deletedAt: Date | null };
+      const edition = row.edition as { year: number };
+      add(row[field], { model: "editionSponsor", id: row.id as number, label: `${sponsor.name} (${edition.year})`, isTrashed: sponsor.deletedAt != null });
+    }
+  }
+
+  // Settings hold URLs inside values (the carousel is a JSON array): fetched
+  // once, matched in memory. They are a few dozen rows.
+  const settings = await prisma.siteSetting.findMany({
+    where: { value: { contains: "/uploads/" } },
+    select: { key: true, value: true },
+  });
+  for (const url of list) {
+    for (const setting of settings) {
+      if (setting.value.includes(url)) add(url, { model: "siteSetting", id: setting.key, label: setting.key, isTrashed: false });
+    }
+  }
+
+  return byUrl;
+}
+
 /** Guard against a crafted path escaping the uploads directory. */
 function resolveUploadPath(url: string): string | null {
   if (!url.startsWith("/uploads/")) return null;

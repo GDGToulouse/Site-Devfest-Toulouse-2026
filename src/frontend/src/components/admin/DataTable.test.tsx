@@ -45,12 +45,22 @@ describe("DataTable", () => {
     const onDelete = vi.fn();
     render(<DataTable columns={columns} data={rows} onEdit={onEdit} onDelete={onDelete} />);
 
-    // Two rows → two Modifier buttons; the first belongs to Alice.
-    await user.click(screen.getAllByRole("button", { name: "Modifier" })[0]);
+    // Icon buttons named after their row (#499): a screen reader hears which
+    // one it is about to act on, not ten identical "Modifier".
+    await user.click(screen.getByRole("button", { name: "Modifier Alice" }));
     expect(onEdit).toHaveBeenCalledWith(rows[0]);
 
-    await user.click(screen.getAllByRole("button", { name: "Supprimer" })[1]);
+    await user.click(screen.getByRole("button", { name: "Supprimer Bob" }));
     expect(onDelete).toHaveBeenCalledWith(rows[1]);
+  });
+
+  it("should show icons rather than text labels, and name rows with rowLabel when given (#499)", () => {
+    render(
+      <DataTable columns={columns} data={rows} onEdit={vi.fn()} rowLabel={(r) => `la ligne de ${r.name}`} />,
+    );
+
+    expect(screen.getByRole("button", { name: "Modifier la ligne de Alice" })).toBeInTheDocument();
+    expect(screen.queryByText("Modifier")).not.toBeInTheDocument();
   });
 
   it("stays non-selectable without selectedIds/onSelectionChange", () => {
@@ -120,5 +130,49 @@ describe("DataTable", () => {
     expect(selectAll.checked).toBe(true);
     await user.click(selectAll);
     expect(onSelectionChange).toHaveBeenLastCalledWith(new Set());
+  });
+});
+
+// #498 — sorting is opt-in per column: a column that declares `sortValue`
+// gets a header button cycling ascending then descending; the others, and the
+// lists that declare none, render exactly as before.
+describe("DataTable sorting (#498)", () => {
+  const people = [
+    { id: 1, name: "Bob", rank: 2 },
+    { id: 2, name: "alice", rank: 3 },
+    { id: 3, name: "Chloé", rank: 1 },
+  ];
+  const sortable = [
+    { key: "name", label: "Nom", sortValue: (p: (typeof people)[number]) => p.name },
+    { key: "rank", label: "Rang", sortValue: (p: (typeof people)[number]) => p.rank },
+    { key: "id", label: "Id" },
+  ];
+  const firstColumn = () => screen.getAllByRole("row").slice(1).map((r) => r.querySelector("td")!.textContent);
+
+  it("should sort a column ascending, then descending, on its header", async () => {
+    render(<DataTable columns={sortable} data={people} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Nom" }));
+    expect(firstColumn()).toEqual(["alice", "Bob", "Chloé"]);
+    expect(screen.getByRole("columnheader", { name: "Nom" })).toHaveAttribute("aria-sort", "ascending");
+
+    await userEvent.click(screen.getByRole("button", { name: "Nom" }));
+    expect(firstColumn()).toEqual(["Chloé", "Bob", "alice"]);
+    expect(screen.getByRole("columnheader", { name: "Nom" })).toHaveAttribute("aria-sort", "descending");
+  });
+
+  it("should sort numbers as numbers", async () => {
+    render(<DataTable columns={sortable} data={people} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Rang" }));
+
+    expect(firstColumn()).toEqual(["Chloé", "Bob", "alice"]);
+  });
+
+  it("should leave a column without sortValue as a plain header, and keep the given order until asked", () => {
+    render(<DataTable columns={sortable} data={people} />);
+
+    expect(screen.queryByRole("button", { name: "Id" })).not.toBeInTheDocument();
+    expect(firstColumn()).toEqual(["Bob", "alice", "Chloé"]);
   });
 });

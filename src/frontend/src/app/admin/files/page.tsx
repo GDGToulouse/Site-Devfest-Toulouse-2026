@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import FileDetailsDialog from "@/components/admin/FileDetailsDialog";
+import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileInfo {
   filename: string;
@@ -16,6 +17,8 @@ interface FileInfo {
   // The name it had on the editor's machine (#378). Null for anything
   // uploaded before that was kept.
   originalName: string | null;
+  // Who uses it, derived from the columns pointing at it (#483).
+  usages: FileUsage[];
 }
 
 function formatSize(bytes: number): string {
@@ -56,7 +59,7 @@ export default function FilesAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "images" | "documents">("all");
+  const [filter, setFilter] = useState<"all" | "images" | "documents" | "unused">("all");
   const [detailsTarget, setDetailsTarget] = useState<FileInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -140,11 +143,13 @@ export default function FilesAdminPage() {
   const filtered = files.filter((f) => {
     if (filter === "images") return f.isImage;
     if (filter === "documents") return !f.isImage;
+    if (filter === "unused") return f.usages.length === 0;
     return true;
   });
 
   const imageCount = files.filter((f) => f.isImage).length;
   const docCount = files.filter((f) => !f.isImage).length;
+  const unusedCount = files.filter((f) => f.usages.length === 0).length;
 
   if (isLoading) return <p className="text-gris">Chargement...</p>;
 
@@ -201,7 +206,27 @@ export default function FilesAdminPage() {
         >
           Documents ({docCount})
         </button>
+        <button
+          onClick={() => setFilter("unused")}
+          className={`px-4 py-2 text-sm font-medium rounded-t-lg -mb-px ${
+            filter === "unused"
+              ? "border border-gris/20 border-b-blanc bg-blanc text-noir"
+              : "text-gris hover:text-noir"
+          }`}
+        >
+          Non utilisés ({unusedCount})
+        </button>
       </div>
+
+      {/* "Unused" means no column points at the file: an image placed inside
+          an article's text is not seen, so the screen says it (#483). */}
+      {filter === "unused" && (
+        <p className="mb-4 text-sm text-gris">
+          Aucun usage référencé : ni speaker, sponsor, article, édition ni réglage n&apos;y renvoie. Une
+          image insérée dans le texte d&apos;un article ou d&apos;une page n&apos;est pas détectée : vérifiez
+          avant de supprimer.
+        </p>
+      )}
 
       {error && (
         <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
@@ -261,6 +286,15 @@ export default function FilesAdminPage() {
                 >
                   {file.originalName ?? file.filename}
                 </p>
+                {file.usages.length > 0 && (
+                  <p
+                    className="text-[10px] text-malachite truncate"
+                    title={file.usages.map(describeUsage).join("\n")}
+                  >
+                    {describeUsage(file.usages[0])}
+                    {file.usages.length > 1 && ` +${file.usages.length - 1}`}
+                  </p>
+                )}
                 <p className="text-[10px] text-gris">{formatSize(file.size)}</p>
                 <div className="flex gap-2">
                   <button

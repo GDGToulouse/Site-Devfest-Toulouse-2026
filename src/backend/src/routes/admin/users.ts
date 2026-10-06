@@ -3,6 +3,7 @@ import { prisma } from "../../lib/prisma.js";
 import { sendEmail, escapeHtml } from "../../lib/email.js";
 import { emailButton, emailHeading } from "../../lib/email-template.js";
 import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
+import { revokeAgents } from "../../lib/agent-grants.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -16,6 +17,35 @@ interface UpdateUserBody {
   role?: "ADMIN" | "EDITOR";
   name?: string;
 }
+
+// Only the two back-office roles can be written from this screen (#500). A
+// SPONSOR account is created by its invitation and its rights live on the
+// sponsor's contact (accessRole); giving it EDITOR would open the back-office.
+const BACK_OFFICE_ROLE = { type: "string", enum: ["ADMIN", "EDITOR"] } as const;
+
+const createUserSchema = {
+  body: {
+    type: "object",
+    required: ["email", "name"],
+    additionalProperties: false,
+    properties: {
+      email: { type: "string", minLength: 1 },
+      name: { type: "string", minLength: 1 },
+      role: BACK_OFFICE_ROLE,
+    },
+  },
+} as const;
+
+const updateUserSchema = {
+  body: {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+      role: BACK_OFFICE_ROLE,
+      name: { type: "string" },
+    },
+  },
+} as const;
 
 export default async function adminUserRoutes(app: FastifyInstance) {
   // GET /api/admin/users — list all admin users
@@ -37,6 +67,12 @@ export default async function adminUserRoutes(app: FastifyInstance) {
           take: 1,
           select: { createdAt: true },
         },
+        // The companies a sponsor contact acts for (#500), so the screen can
+        // tell them apart from the team. Trashed sponsors are left out.
+        sponsorContacts: {
+          where: { sponsor: notDeleted },
+          select: { accessRole: true, sponsor: { select: { id: true, name: true } } },
+        },
       },
     });
 
@@ -49,11 +85,12 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       emailVerified: u.emailVerified,
       createdAt: u.createdAt,
       lastLogin: u.sessions[0]?.createdAt || null,
+      sponsors: u.sponsorContacts.map((c) => ({ id: c.sponsor.id, name: c.sponsor.name, accessRole: c.accessRole })),
     }));
   });
 
   // POST /api/admin/users — invite a new user
-  app.post<{ Body: CreateUserBody }>("/users", async (request, reply) => {
+  app.post<{ Body: CreateUserBody }>("/users", { schema: createUserSchema }, async (request, reply) => {
     const { email, name, role } = request.body;
 
     if (!email || !name) {
@@ -111,12 +148,19 @@ export default async function adminUserRoutes(app: FastifyInstance) {
   app.put<{
     Params: { id: string };
     Body: UpdateUserBody;
-  }>("/users/:id", async (request, reply) => {
+  }>("/users/:id", { schema: updateUserSchema }, async (request, reply) => {
     const { id } = request.params;
     const { role, name } = request.body;
 
     const existing = await prisma.user.findFirst({ where: { id, ...notDeleted } });
     if (!existing) return reply.code(404).send({ error: "User not found" });
+
+    if (role && existing.role === "SPONSOR") {
+      return reply.code(409).send({
+        error: "Sponsor role is locked",
+        message: "Les droits d'un contact sponsor se gèrent sur la fiche du sponsor.",
+      });
+    }
 
     const data: Record<string, string> = {};
     if (role) data.role = role;
@@ -144,9 +188,11 @@ export default async function adminUserRoutes(app: FastifyInstance) {
         data: { banned: !existing.banned },
       });
 
-      // If banning, delete all active sessions
+      // If banning, delete all active sessions — and the AI agents' grants
+      // (#514): lifting the ban must not quietly hand them back.
       if (user.banned) {
         await prisma.session.deleteMany({ where: { userId: id } });
+        await revokeAgents(id);
       }
 
       return { id: user.id, banned: user.banned };
@@ -176,6 +222,8 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       // Kill live sessions: a trashed account must not stay signed in. Without
       // this, the user keeps their admin access until the cookie expires.
       await prisma.session.deleteMany({ where: { userId: id } });
+      // Same for the AI agents acting for this account (#514).
+      await revokeAgents(id);
 
       return { success: true };
     }

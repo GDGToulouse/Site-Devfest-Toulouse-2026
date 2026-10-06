@@ -35,6 +35,7 @@ export default function SponsorsDataPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
   const [tierKey, setTierKey] = useState<string>("");
+  const [status, setStatus] = useState<"" | "DRAFT" | "PUBLISHED">("");
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<SponsorRow | null>(null);
@@ -72,8 +73,17 @@ export default function SponsorsDataPage() {
       setError(apiError ?? "Action groupée impossible.");
       return;
     }
+    // The participation is what the status column and filter read (#498).
     setSponsors((prev) =>
-      prev.map((s) => (selectedIds.has(s.id) ? { ...s, publicationStatus: value } : s)),
+      prev.map((s) =>
+        selectedIds.has(s.id)
+          ? {
+              ...s,
+              publicationStatus: value,
+              editions: s.editions?.map((e) => (e.editionId === editionId ? { ...e, publicationStatus: value } : e)),
+            }
+          : s,
+      ),
     );
     setSelectedIds(new Set());
   }
@@ -109,34 +119,53 @@ export default function SponsorsDataPage() {
     ? (sponsors.flatMap((s) => s.editions ?? []).find((e) => String(e.edition.year) === year)?.editionId ?? null)
     : null;
 
+  const tierOf = (s: SponsorRow) => currentParticipation(s, year)?.tier ?? s.tier;
+  const statusOf = (s: SponsorRow) => currentParticipation(s, year)?.publicationStatus ?? s.publicationStatus;
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return sponsors.filter((s) => {
       if (year && !(s.editions ?? []).some((e) => String(e.edition.year) === year)) return false;
-      if (tierKey && s.tier?.key !== tierKey) return false;
+      // Tier and status belong to the participation of the year looked at
+      // (#129): a company published on 2026 may still be a draft on 2025 (#498).
+      if (tierKey && tierOf(s)?.key !== tierKey) return false;
+      if (status && statusOf(s) !== status) return false;
       if (q && !s.name.toLowerCase().includes(q)) return false;
       return true;
     });
-  }, [sponsors, year, tierKey, search]);
+    // tierOf and statusOf read `year`, already a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sponsors, year, tierKey, status, search]);
 
   useEffect(() => {
     setSelectedIds(new Set());
-  }, [year, tierKey, search]);
+  }, [year, tierKey, status, search]);
 
   const columns = [
-    { key: "name", label: "Sponsor", render: (s: SponsorRow) => <span className="font-medium text-noir">{s.name}</span> },
+    {
+      key: "name",
+      label: "Sponsor",
+      render: (s: SponsorRow) => <span className="font-medium text-noir">{s.name}</span>,
+      sortValue: (s: SponsorRow) => s.name,
+    },
     {
       key: "tier",
       label: "Niveau",
-      render: (s: SponsorRow) => currentParticipation(s, year)?.tier?.nameFr ?? s.tier?.nameFr ?? "—",
+      render: (s: SponsorRow) => tierOf(s)?.nameFr ?? "—",
+      // The public page's order, most important tier first (#498).
+      sortValue: (s: SponsorRow) => -(tierOf(s)?.rank ?? -Infinity),
     },
     {
       key: "status",
       label: "Statut",
+      sortValue: (s: SponsorRow) => statusOf(s) ?? "",
       render: (s: SponsorRow) => {
         // Publication is per participation (#129): a company published in 2026
         // may still be a draft for 2025.
-        const status = currentParticipation(s, year)?.publicationStatus ?? s.publicationStatus;
+        const status = statusOf(s);
+        // A company with no participation has no status at all: showing it as a
+        // draft made the "Brouillon" filter look broken (#498).
+        if (!status) return "—";
         return (
           <StatusBadge
             status={status === "PUBLISHED" ? "Publié" : "Brouillon"}
@@ -149,6 +178,7 @@ export default function SponsorsDataPage() {
       key: "edition",
       label: "Édition",
       render: (s: SponsorRow) => currentParticipation(s, year)?.edition.year ?? s.edition?.year ?? "—",
+      sortValue: (s: SponsorRow) => currentParticipation(s, year)?.edition.year ?? s.edition?.year ?? 0,
     },
   ];
 
@@ -180,6 +210,7 @@ export default function SponsorsDataPage() {
               className="w-64 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
             />
             <select
+              aria-label="Édition"
               value={year}
               onChange={(e) => setYear(e.target.value)}
               className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
@@ -190,6 +221,7 @@ export default function SponsorsDataPage() {
               ))}
             </select>
             <select
+              aria-label="Niveau"
               value={tierKey}
               onChange={(e) => setTierKey(e.target.value)}
               className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
@@ -198,6 +230,16 @@ export default function SponsorsDataPage() {
               {tiers.map((tier) => (
                 <option key={tier.key} value={tier.key}>{tier.nameFr}</option>
               ))}
+            </select>
+            <select
+              aria-label="Statut"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as "" | "DRAFT" | "PUBLISHED")}
+              className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+            >
+              <option value="">Tous les statuts</option>
+              <option value="PUBLISHED">Publié</option>
+              <option value="DRAFT">Brouillon</option>
             </select>
             <span className="text-sm text-gris">{filtered.length} sponsor{filtered.length > 1 ? "s" : ""}</span>
           </div>

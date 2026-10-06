@@ -1,7 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { isEditingFrozen, isEditTokenExpired, generateInvitationToken } from "../lib/edit-token.js";
-import { resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
+import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { isSafeUrl } from "../lib/sanitize.js";
 import {
@@ -16,6 +15,8 @@ import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { cleanSocial } from "../lib/sponsor-write.js";
+import { setActor } from "../lib/request-context.js";
+import { notDeleted } from "../lib/admin-helpers.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -134,12 +135,13 @@ function findUnsafeUrl(body: Record<string, unknown>): string | null {
   return null;
 }
 
-// Resolve a modification token to the speaker who holds it. Returns null if no
-// speaker carries it — the token may still be a sponsor one, which GET turns
-// into an invitation rather than serving (#362).
+// Resolve a modification token to the speaker who holds it, or null. A trashed
+// speaker, or a trashed session, is gone for the site and for the link alike;
+// the token is left untouched, so restoring the speaker brings the link back
+// (#523).
 async function resolveToken(token: string) {
-  const speaker = await prisma.speaker.findUnique({
-    where: { editToken: token },
+  const speaker = await prisma.speaker.findFirst({
+    where: { editToken: token, ...notDeleted },
     include: {
       // The 48h freeze (RG-246) keys on an event date, and a global identity no
       // longer has one (#351). The link is sent for the upcoming edition, so the
@@ -156,7 +158,7 @@ async function resolveToken(token: string) {
       // selected: the speaker needs to see how their session is programmed.
       // isSpeakerEditable tells the UI whether to render a form or a plain view.
       talks: {
-        where: { publicationStatus: "PUBLISHED" },
+        where: { publicationStatus: "PUBLISHED", ...notDeleted },
         select: {
           id: true,
           slug: true,
@@ -175,6 +177,9 @@ async function resolveToken(token: string) {
     },
   });
   if (speaker) {
+    // The link holder acts as the speaker: no account, so the history names
+    // them by the label alone (#513).
+    setActor({ userId: null, label: `${speaker.name} (speaker #${speaker.id})` });
     // Flatten back to the { edition: { startDate } } shape the rest of the route
     // and editingBlockedReason expect, so the join stays contained here.
     const { editions, ...rest } = speaker;
@@ -185,64 +190,8 @@ async function resolveToken(token: string) {
   }
 
   // Sponsors no longer resolve here (#362): a company edits its page from an
-  // account, not from a link anyone holding the URL can use. GET /edit/:token
-  // still recognises a sponsor token — to turn it into an invitation — but
-  // nothing downstream of this function serves sponsors any more.
+  // account, not from a link anyone holding the URL can use.
   return null;
-}
-
-// A sponsor token still sitting in a mailbox (#362). The link no longer edits
-// anything, so opening it mints the invitation that replaces it and burns the
-// token: whoever holds the link was, by definition, someone we wrote to.
-//
-// This lives in GET only. resolveToken is called by seven handlers, some of
-// them writes — converting from there would consume the token on a concurrent
-// PUT, or on a browser prefetch.
-type SponsorTokenConversion =
-  | { outcome: "invited"; invitationToken: string; locale: string }
-  | { outcome: "has_account" }
-  | { outcome: "locked" }
-  | null;
-
-async function convertSponsorEditToken(token: string): Promise<SponsorTokenConversion> {
-  const contact = await prisma.sponsorContact.findUnique({
-    where: { editToken: token },
-    include: { sponsor: { select: { id: true, name: true, locale: true, deletedAt: true } } },
-  });
-  if (!contact) return null;
-  // A company in the bin hands out nothing, same rule as findPendingInvitation.
-  if (contact.sponsor.deletedAt) return null;
-
-  // Revoking a link is the only lever organisers have over one already sent
-  // (RG-245). Letting it open an account instead would take that back.
-  if (contact.editLinkLocked) return { outcome: "locked" };
-
-  // An account already exists: nothing to mint, and the token stays untouched
-  // so closing the tab and coming back still explains the situation.
-  if (contact.userId) return { outcome: "has_account" };
-
-  // An expired link converts anyway. It proves we wrote to this person, and the
-  // invitation it produces carries its own, shorter deadline — refusing would
-  // strand a sponsor whose only fault is having read their mail late.
-  const invitationToken = generateInvitationToken();
-  const promoted = await resolveInitialAccessRole(contact.sponsorId, contact.id);
-
-  // Single use, by compare-and-swap: two clicks on the same link race here and
-  // exactly one sees a row updated.
-  const claimed = await prisma.sponsorContact.updateMany({
-    where: { id: contact.id, editToken: token },
-    data: {
-      editToken: null,
-      editTokenSentAt: null,
-      invitationToken,
-      invitationSentAt: new Date(),
-      invitationAcceptedAt: null,
-      ...(promoted ? { accessRole: promoted } : {}),
-    },
-  });
-  if (claimed.count === 0) return null;
-
-  return { outcome: "invited", invitationToken, locale: contact.sponsor.locale };
 }
 
 function parseSocial(raw: string | null): Record<string, string> {
@@ -314,28 +263,10 @@ export default async function editRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const resolved = await resolveToken(request.params.token);
 
-    if (!resolved) {
-      // Not a speaker link. It may be a sponsor one, still in a mailbox from
-      // before accounts existed (#362) — hand back the invitation that replaces
-      // it rather than a dead end. 200, not a redirect: the client fetches this
-      // endpoint, and a 302 would be followed into the JSON parser.
-      const converted = await convertSponsorEditToken(request.params.token);
-      if (converted?.outcome === "invited") {
-        return {
-          kind: "sponsor-invitation" as const,
-          locale: normalizeLocale(converted.locale),
-          invitationUrl: `/sponsor/invitation/${converted.invitationToken}`,
-        };
-      }
-      if (converted?.outcome === "has_account") {
-        return reply.code(409).send({ error: "already_has_account" });
-      }
-      if (converted?.outcome === "locked") {
-        return reply.code(403).send({ error: "locked" });
-      }
-      // Invalid/unknown token -> 404 (RG-249 cas limite).
-      return reply.code(404).send({ error: "invalid_token" });
-    }
+    // Invalid/unknown token -> 404 (RG-249 cas limite). Old sponsor links
+    // (#362) land here too since their columns were dropped (#404): an
+    // organiser re-invites the contact from the admin.
+    if (!resolved) return reply.code(404).send({ error: "invalid_token" });
 
     const { kind, entity } = resolved;
     const locale = normalizeLocale(entity.locale);

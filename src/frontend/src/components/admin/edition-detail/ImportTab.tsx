@@ -1,20 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+import {
+  adminDeleteSessionizeSource,
+  adminGetSessionizeSource,
+  getAdminSession,
+  type SessionizeImportReport as ImportReport,
+} from "@/lib/admin-api";
+import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { formatEventTime } from "@/lib/datetime";
+import SessionizeRoomPairing from "./SessionizeRoomPairing";
 
 interface ImportTabProps {
   editionId: number;
 }
 
-interface ImportReport {
-  speakers: { created: number; updated: number };
-  talks: { created: number; updated: number };
-  categories: { created: number; reused: number };
-  links: number;
-  warnings: string[];
-}
-
 type Source = "url" | "json";
+
+function statusLabel(status: string): string {
+  return status === "PUBLISHED" ? "publié" : "brouillon";
+}
 
 export default function ImportTab({ editionId }: ImportTabProps) {
   const [source, setSource] = useState<Source>("url");
@@ -23,16 +30,33 @@ export default function ImportTab({ editionId }: ImportTabProps) {
   const [isImporting, setIsImporting] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [importCount, setImportCount] = useState(0);
+  // The link the edition kept from its last successful import (#529);
+  // undefined while it loads. The page mounts this tab with key={editionId},
+  // so it is never another edition's link.
+  const [savedUrl, setSavedUrl] = useState<string | null | undefined>(undefined);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+
+  useEffect(() => {
+    adminGetSessionizeSource(editionId).then(({ data }) => setSavedUrl(data?.url ?? null));
+    // Removing the link is ADMIN-only; the backend enforces it, the button
+    // only follows (decision of 2026-10-06).
+    getAdminSession().then((session) => setIsAdmin(session?.role === "ADMIN"));
+  }, [editionId]);
 
   async function handleImport() {
     setIsImporting(true);
     setReport(null);
     setError(null);
 
+    // With a saved link, the backend re-imports from it: nothing to send.
     const payload =
-      source === "url"
-        ? { editionId, url: url.trim() }
-        : { editionId, json: json.trim() };
+      source === "json"
+        ? { editionId, json: json.trim() }
+        : savedUrl
+          ? { editionId }
+          : { editionId, url: url.trim() };
 
     try {
       const res = await fetch(`/api/admin/import/sessionize`, {
@@ -42,10 +66,23 @@ export default function ImportTab({ editionId }: ImportTabProps) {
         body: JSON.stringify(payload),
       });
       const body = await res.json().catch(() => null);
-      if (!res.ok) {
-        setError(body?.detail || body?.error || `Erreur ${res.status}`);
+      if (res.status === 422) {
+        // The detail is Sessionize's or the parser's, in English: say first what
+        // happened and what to do, keep the detail for whoever investigates.
+        setError(
+          "Sessionize n'a pas renvoyé de données exploitables : vérifiez le lien (endpoint « All » de l'événement) puis réessayez." +
+            (body?.detail ? ` Détail : ${body.detail}` : ""),
+        );
+      } else if (!res.ok) {
+        setError(body?.message || body?.detail || body?.error || `Erreur ${res.status}`);
       } else {
         setReport(body as ImportReport);
+        setImportCount((count) => count + 1);
+        // A link that has just worked is now the saved one.
+        if (source === "url" && !savedUrl) {
+          setSavedUrl(url.trim());
+          setUrl("");
+        }
       }
     } catch {
       setError("Impossible de contacter le serveur.");
@@ -53,8 +90,25 @@ export default function ImportTab({ editionId }: ImportTabProps) {
     setIsImporting(false);
   }
 
+  async function handleDeleteLink() {
+    setIsConfirmingDelete(false);
+    setError(null);
+    const { status } = await adminDeleteSessionizeSource(editionId);
+    if (status === 204) {
+      setSavedUrl(null);
+      return;
+    }
+    // Stays on screen: a failure that fades reads as a success (#394).
+    setError(
+      status === 403
+        ? "Seul un administrateur peut supprimer ce lien."
+        : "Le lien n'a pas pu être supprimé. Réessayez.",
+    );
+  }
+
   const canImport =
-    !isImporting && (source === "url" ? url.trim().length > 0 : json.trim().length > 0);
+    !isImporting &&
+    (source === "url" ? Boolean(savedUrl) || url.trim().length > 0 : json.trim().length > 0);
 
   const inputClass =
     "w-full rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
@@ -67,7 +121,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
           Importez les speakers et sessions depuis un export Sessionize «&nbsp;All
           data&nbsp;» (JSON). L&apos;import est idempotent&nbsp;: relancer met à jour
           les fiches existantes (rapprochées par leur slug) sans créer de doublons.
-          Les fiches importées sont créées en <strong>brouillon</strong>.
+          Les fiches importées sont créées en <strong>brouillon</strong>. Créneaux et
+          salles suivent Sessionize, même pour une session déplacée à la main.
         </p>
       </div>
 
@@ -94,7 +149,34 @@ export default function ImportTab({ editionId }: ImportTabProps) {
         </button>
       </div>
 
-      {source === "url" ? (
+      {source === "url" && savedUrl === undefined ? (
+        <p className="text-sm text-gris">Chargement…</p>
+      ) : source === "url" && savedUrl ? (
+        <div className="rounded-lg border border-gris/30 bg-blanc-casse p-4 space-y-3">
+          <div>
+            <p className="text-sm font-medium text-noir">Lien Sessionize enregistré</p>
+            <p className="mt-1 break-all font-mono text-xs text-gris">{savedUrl}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleImport}
+              disabled={!canImport}
+              className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+            >
+              {isImporting ? "Import en cours…" : "Mettre à jour les données"}
+            </button>
+            {isAdmin && (
+              <button
+                onClick={() => setIsConfirmingDelete(true)}
+                disabled={isImporting}
+                className="px-4 py-2 rounded-lg border border-terre-cuite text-sm font-medium text-terre-cuite hover:bg-terre-cuite hover:text-blanc disabled:opacity-50"
+              >
+                Supprimer le lien
+              </button>
+            )}
+          </div>
+        </div>
+      ) : source === "url" ? (
         <label className="block">
           <span className="block text-sm font-medium text-noir mb-1">
             URL de l&apos;API Sessionize
@@ -125,13 +207,15 @@ export default function ImportTab({ editionId }: ImportTabProps) {
         </label>
       )}
 
-      <button
-        onClick={handleImport}
-        disabled={!canImport}
-        className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
-      >
-        {isImporting ? "Import en cours…" : "Lancer l'import"}
-      </button>
+      {!(source === "url" && savedUrl !== null) && (
+        <button
+          onClick={handleImport}
+          disabled={!canImport}
+          className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+        >
+          {isImporting ? "Import en cours…" : "Lancer l'import"}
+        </button>
+      )}
 
       {error && (
         <div className="rounded-lg border border-terre-cuite/30 bg-terre-cuite/5 p-4 text-sm text-terre-cuite">
@@ -149,7 +233,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
             </li>
             <li>
               Sessions&nbsp;: <strong>{report.talks.created}</strong> créées,{" "}
-              <strong>{report.talks.updated}</strong> mises à jour
+              <strong>{report.talks.updated}</strong> mises à jour, dont{" "}
+              <strong>{report.talks.scheduled}</strong> avec un créneau
             </li>
             <li>
               Catégories&nbsp;: <strong>{report.categories.created}</strong> créées,{" "}
@@ -173,6 +258,71 @@ export default function ImportTab({ editionId }: ImportTabProps) {
           )}
         </div>
       )}
+
+      {report && (report.absent.talks.length > 0 || report.absent.speakers.length > 0) && (
+        <section
+          aria-labelledby="import-absent-title"
+          className="rounded-lg border border-gris/30 bg-blanc-casse p-4 space-y-3"
+        >
+          <div>
+            <h3 id="import-absent-title" className="font-medium text-noir">
+              Absents de l&apos;import
+            </h3>
+            <p className="text-sm text-gris mt-1">
+              Présents sur le site pour cette édition, mais pas dans Sessionize&nbsp;: désistement,
+              session annulée, ou fiche créée à la main. Rien n&apos;a été modifié&nbsp;; dépubliez ou
+              mettez à la corbeille ce qui doit l&apos;être.
+            </p>
+          </div>
+          {report.absent.talks.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-noir">Sessions ({report.absent.talks.length})</p>
+              <ul className="text-sm text-noir list-disc pl-5 mt-1 space-y-0.5">
+                {report.absent.talks.map((talk) => (
+                  <li key={talk.id}>
+                    <Link href={`/admin/talks/${talk.id}`} className="text-malachite underline">
+                      {talk.title}
+                    </Link>{" "}
+                    <span className="text-gris">
+                      ({statusLabel(talk.publicationStatus)}
+                      {talk.startsAt &&
+                        `, créneau à réaffecter : ${formatEventTime(talk.startsAt)}${talk.roomLabel ? `, ${talk.roomLabel}` : ""}`}
+                      )
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {report.absent.speakers.length > 0 && (
+            <div>
+              <p className="text-sm font-medium text-noir">Speakers ({report.absent.speakers.length})</p>
+              <ul className="text-sm text-noir list-disc pl-5 mt-1 space-y-0.5">
+                {report.absent.speakers.map((speaker) => (
+                  <li key={speaker.id}>
+                    <Link href={`/admin/speakers/${speaker.id}`} className="text-malachite underline">
+                      {speaker.name}
+                    </Link>{" "}
+                    <span className="text-gris">({statusLabel(speaker.publicationStatus)})</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
+
+      <SessionizeRoomPairing editionId={editionId} refreshKey={importCount} />
+
+      <ConfirmDialog
+        isOpen={isConfirmingDelete}
+        title="Supprimer le lien Sessionize"
+        message="Le lien ne sera plus proposé pour cette édition. Les speakers et sessions déjà importés ne changent pas."
+        confirmLabel="Supprimer le lien"
+        variant="danger"
+        onConfirm={handleDeleteLink}
+        onCancel={() => setIsConfirmingDelete(false)}
+      />
     </div>
   );
 }

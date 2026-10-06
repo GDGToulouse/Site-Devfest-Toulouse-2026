@@ -50,7 +50,9 @@ export default function ImportPage() {
           </select>
         </label>
 
-        {editionId && <ImportTab editionId={editionId} />}
+        {/* Keyed by edition: the tab loads that edition's saved link and must
+            never keep another year's (#529). */}
+        {editionId && <ImportTab key={editionId} editionId={editionId} />}
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { getCurrentEdition, getTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
-import { canonicalLocaleFor } from "@/lib/seo";
+import { buildTalkEventJsonLd, canonicalLocaleFor, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
 import { Link } from "@/i18n/navigation";
@@ -75,9 +75,18 @@ export default async function TalkDetailPage({
     { label: title, href: `/${locale}/conferences/${slug}` },
   ];
 
+  // The session as an Event (#382), once it has an hour and the edition a venue.
+  const eventJsonLd = buildTalkEventJsonLd(talk, edition, `/${locale}/conferences/${slug}`);
+
   return (
     <div className="px-6 py-8 lg:py-12">
       <div className="mx-auto max-w-4xl">
+        {eventJsonLd && isCompleteEvent(eventJsonLd) && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
+          />
+        )}
         <Breadcrumb items={breadcrumbItems} />
 
         {/* Meta badges */}

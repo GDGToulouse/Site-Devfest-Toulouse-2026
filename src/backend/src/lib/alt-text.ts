@@ -69,11 +69,12 @@ export async function generateAltText(
   let prepared: Buffer;
   let preparedMime: string;
   try {
-    const pipeline = sharp(imageBuffer, { failOn: "none" })
+    const pipeline = (await decoderFor(imageBuffer, mimeType))
       .rotate()
       .resize({ width: MAX_IMAGE_WIDTH, withoutEnlargement: true });
 
-    if (mimeType === "image/png") {
+    // PNG for logos (PNG, SVG): keeps their transparency.
+    if (mimeType === "image/png" || mimeType === "image/svg+xml") {
       prepared = await pipeline.png({ compressionLevel: 9 }).toBuffer();
       preparedMime = "image/png";
     } else if (mimeType === "image/webp") {
@@ -162,6 +163,21 @@ export async function generateAltText(
     durationMs: Date.now() - start,
     model: MODEL,
   };
+}
+
+// A vector has no pixels: librsvg renders it at 72 dpi, so a logo whose
+// viewBox is 10 units wide would reach the model 10 px wide, and
+// `withoutEnlargement` would keep it so. Render it at the density that lands
+// on MAX_IMAGE_WIDTH instead (#504). The density is set from the longer side,
+// so neither side of the raster librsvg allocates exceeds MAX_IMAGE_WIDTH:
+// sized from the width alone, a 1×1000 drawing would render 768×768 000 px.
+// The file on disk is already sanitized (sanitizeSvg, on upload): nothing
+// remote is fetched while rendering.
+async function decoderFor(imageBuffer: Buffer, mimeType: string) {
+  if (mimeType !== "image/svg+xml") return sharp(imageBuffer, { failOn: "none" });
+  const { width = 0, height = 0 } = await sharp(imageBuffer).metadata();
+  const longerSide = Math.max(width, height) || MAX_IMAGE_WIDTH;
+  return sharp(imageBuffer, { failOn: "none", density: (72 * MAX_IMAGE_WIDTH) / longerSide });
 }
 
 // Strip wrapping quotes / Markdown / leading "Image:" the model occasionally

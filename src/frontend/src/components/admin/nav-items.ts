@@ -27,7 +27,9 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
       { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"] },
       { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"] },
-      { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN", "EDITOR"] },
+      // An offer commits the association to a price: ADMIN-only like its API
+      // writes (#521). Editors still read the catalogue from the sponsor form.
+      { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN"] },
       { label: "Catégories", path: "/admin/categories", icon: "tag", roles: ["ADMIN", "EDITOR"] },
     ],
   },
@@ -57,6 +59,9 @@ export const adminNavGroups: AdminNavGroup[] = [
       // Both roles reach the page; ADMIN-only entities (users, editions…) are
       // filtered out inside it, mirroring the API's 403 (#150).
       { label: "Corbeille", path: "/admin/trash", icon: "trash", roles: ["ADMIN", "EDITOR"] },
+      // Who changed what, from which address: personal data, ADMIN only like
+      // its API (#513).
+      { label: "Historique", path: "/admin/history", icon: "clock", roles: ["ADMIN"] },
       { label: "Paramètres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
     ],
   },

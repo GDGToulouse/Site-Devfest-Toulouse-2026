@@ -14,6 +14,7 @@ import SponsorParticipationFields from "@/components/admin/sponsors/SponsorParti
 import SponsorComKitFields from "@/components/admin/sponsors/SponsorComKitFields";
 import SponsorYearPicker from "@/components/admin/sponsors/SponsorYearPicker";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import AuditTrail from "@/components/admin/AuditTrail";
 import {
   emptySponsorForm,
   participationValue,
@@ -278,8 +279,11 @@ export default function SponsorEditorPage() {
 
   const isSaveBlocked = !form.name.trim() || !editionId || !form.tierId;
 
+  // 1152 px rather than 768 (#410): a contact row or a bilingual field had
+  // two thirds of the screen empty beside it; a cap still keeps text lines
+  // readable on wide screens.
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-6xl">
       <div className="mb-8 flex items-center gap-4">
         <button onClick={() => router.push("/admin/sponsors")} className="text-gris hover:text-noir" title="Retour">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
@@ -484,6 +488,8 @@ export default function SponsorEditorPage() {
           </div>
         )}
       </div>
+
+      {sponsorId && <AuditTrail entity="Sponsor" entityId={sponsorId} refreshKey={saveState} />}
     </div>
   );
 }

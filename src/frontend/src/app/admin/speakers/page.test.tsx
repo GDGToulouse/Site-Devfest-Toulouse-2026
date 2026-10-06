@@ -42,7 +42,7 @@ describe("SpeakersDataPage delete (#300)", () => {
     await screen.findByText("Ada Lovelace");
 
     // The delete button exists (the bug was that it did not).
-    await user.click(screen.getByRole("button", { name: "Supprimer" }));
+    await user.click(screen.getByRole("button", { name: "Supprimer Ada Lovelace" }));
 
     // A danger confirm dialog names the speaker.
     const dialog = await screen.findByRole("dialog");
@@ -68,7 +68,7 @@ describe("SpeakersDataPage delete (#300)", () => {
     render(<SpeakersDataPage />);
     await screen.findByText("Ada Lovelace");
 
-    await user.click(screen.getByRole("button", { name: "Supprimer" }));
+    await user.click(screen.getByRole("button", { name: "Supprimer Ada Lovelace" }));
     await screen.findByRole("dialog");
     await user.click(screen.getByRole("button", { name: "Annuler" }));
 
@@ -106,7 +106,7 @@ describe("SpeakersDataPage delete (#300)", () => {
     render(<SpeakersDataPage />);
     await screen.findByText("Ada Lovelace");
 
-    await user.click(screen.getByRole("button", { name: "Supprimer" }));
+    await user.click(screen.getByRole("button", { name: "Supprimer Ada Lovelace" }));
     const dialog = await screen.findByRole("dialog");
 
     // A 409 (or any non-204) must show a message and keep the row.
