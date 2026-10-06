@@ -12,6 +12,48 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.10.0] - 2026-10-06
+
+Le **programme se construit désormais depuis Sessionize sans retouche** : l'import place chaque session dans sa salle et sur son créneau, se relance d'un clic, et signale ce qui a disparu de Sessionize sans rien supprimer. L'admin garde aussi la **trace de chaque modification** — qui, quand, par quel canal — et le site devient utilisable par un **agent IA**, connecté avec les droits de la personne qui l'autorise.
+
+Le reste de la version renforce les droits (l'équipe lit les éditions, seuls les administrateurs les modifient), rend la saisie plus confortable pour les éditeurs, et ajoute le balisage qui permet à Google de présenter les conférences et les replays.
+
+> Six migrations. **Une est destructive** : `drop_sponsor_contact_edit_token` supprime trois colonnes de `SponsorContact` (`editToken`, `editLinkLocked`, `editTokenSentAt`), inutilisées depuis la arrivée de l'espace partenaire en 1.7.0. `verify_invited_sponsor_emails` marque vérifiée l'adresse des contacts sponsor qui ont accepté leur invitation. Les quatre autres sont additives (`audit_log`, `mcp_oauth_provider`, `sessionize_rooms`, `edition_sessionize_api_url`). **Sauvegarde de la base obligatoire avant déploiement.**
+
+### Ajouté
+
+- **Créneaux et salles importés depuis Sessionize** : chaque salle Sessionize est associée une fois par édition à une salle du lieu, et un réimport replace créneau et salle de chaque session, même déplacée à la main (#519).
+- **Ce qui a disparu de Sessionize est signalé** à l'import, sessions comme speakers, avec leur statut : rien n'est modifié, l'éditeur décide de dépublier ou de mettre à la corbeille (#509).
+- **Le lien Sessionize est enregistré par édition** : on relance l'import d'un clic, sans le recoller (#529).
+- **Historique des modifications** : qui a changé quoi, quand, et par quel canal (admin, import, API, agent), avec l'avant et l'après de chaque champ (#513).
+- **Connecteur pour agents IA** : un agent comme Claude se connecte au site et agit avec les droits du compte qui l'a autorisé, chaque action étant tracée dans l'historique. Les agents connectés se révoquent depuis son profil (#514).
+- **Choix des speakers d'une conférence par recherche** : on tape un nom ou une entreprise, accents ignorés, au lieu de cocher dans une longue liste (#508).
+- **Coller une image** (Ctrl+V) dans le sélecteur d'image ou de fichier (#372).
+- **La médiathèque dit qui utilise chaque fichier** et propose un onglet « Non utilisés » (#483).
+- **Tableaux de l'admin triables et filtrables**, à commencer par les sponsors par statut (#498), avec des actions en boutons icône nommés pour les lecteurs d'écran (#499).
+- **Espace partenaire** : le compte connecté est affiché, avec une page « Mon compte » (#411) ; l'e-mail d'invitation explique à quoi sert l'espace (#505).
+- **Balisage Google des conférences et des replays** : `Event` sur les fiches conférence, `VideoObject` sur les replays (#382).
+
+### Corrigé
+
+- **L'équipe peut lire les éditions et les lieux** dont ses écrans ont besoin ; leur modification reste réservée aux administrateurs (#530).
+- **Les offres de sponsoring ne sont plus modifiables par un éditeur** (#521), ni les messages et catégories de contact restaurables depuis la corbeille (#522).
+- **Le lien de modification d'un speaker mis à la corbeille ne fonctionne plus** (#523).
+- **Invitations d'équipe sponsor validées et limitées** : une adresse invalide est refusée avec un message clair au lieu d'une erreur serveur (#524).
+- **Les contacts sponsor n'apparaissent plus comme « Éditeur »** dans la liste des utilisateurs, et leur rôle n'est plus modifiable (#500).
+- **L'API publique répond sur le site** pour les articles, pages, tags, catégories, réglages et offres d'emploi, au lieu d'une page 404 (#494).
+- **La description automatique fonctionne pour les images SVG**, la plupart des logos (#504).
+- **Ajouter une salle à un lieu ne ramène plus en haut de page** (#533).
+- **Les écrans de détail de l'admin utilisent toute la largeur** (#410).
+- **Le premier élément d'un sous-menu mène à la page de la rubrique**, avec l'année quand c'est le programme ou les speakers (#506).
+- **Les liens vers Billetweb portent le suivi `?src=site`** à l'import des tarifs : un réimport est nécessaire pour les tarifs déjà en base (#507).
+- **Perf** : logo de l'en-tête chargé d'emblée (#475), tailles et qualités d'image ajustées, environ 70 ko de moins sur l'accueil (#480).
+
+### Modifié
+
+- **Colonnes du lien anonyme sponsor supprimées** de la base, et la route qui le verrouillait retirée (#404).
+- **better-auth passe en 1.7**.
+
 ## [1.9.0] - 2026-09-30
 
 Les **pages de contenu deviennent gérables de bout en bout depuis l'admin** : on peut en écrire une à l'avance en brouillon, la publier au bon moment, la placer dans le menu ou le pied de page, et la retirer. Jusqu'ici, une page créée était en ligne dès l'enregistrement, impossible à dépublier ou à supprimer, et introuvable pour qui n'en connaissait pas l'adresse.
