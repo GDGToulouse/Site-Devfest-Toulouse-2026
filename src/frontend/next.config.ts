@@ -258,6 +258,14 @@ const nextConfig: NextConfig = {
   },
   images: {
     formats: ["image/avif", "image/webp"],
+    // Sponsor logos are asked at 190-360 CSS px. Between Next's default 384
+    // and 640 widths there was nothing, so at DPR 1.75-2 every logo of the
+    // wall was served at 640 (#480). 448 and 512 fill the gap; imageSizes
+    // must stay under the smallest deviceSize (640).
+    imageSizes: [32, 48, 64, 96, 128, 256, 384, 448, 512],
+    // Next 16 only serves the qualities listed here, snapping any other to
+    // the closest one: 60 is the hero photo's (#480), 75 the default.
+    qualities: [60, 75],
     localPatterns: [
       { pathname: "/images/**" },
       { pathname: "/uploads/**" },
