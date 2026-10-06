@@ -85,6 +85,19 @@ describe("API route guards (#514)", () => {
     expect(open).toEqual([]);
   });
 
+  it("should keep writes on editions, venues and rooms ADMIN-only, reads open to the team", () => {
+    // The team reads them; writing is an ADMIN's call (#530). The group grants
+    // the read, so each write route must carry requireAdminRole itself.
+    const AREAS = ["/api/admin/editions", "/api/admin/venues", "/api/admin/rooms"];
+    const inAreas = routes.filter((r) => AREAS.some((area) => r.path.startsWith(area)));
+    const openWrites = inAreas
+      .filter((r) => r.method !== "GET" && !r.preHandlers.includes("requireAdminRole"))
+      .map(key);
+
+    expect(inAreas.length).toBeGreaterThan(0);
+    expect(openWrites).toEqual([]);
+  });
+
   it("should keep the exceptions list to routes that exist", () => {
     const existing = new Set(routes.map(key));
 

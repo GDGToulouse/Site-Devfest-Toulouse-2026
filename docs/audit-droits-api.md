@@ -34,6 +34,7 @@ La décision d'ouvrir le connecteur en production revient à Julien (décision d
 | La corbeille laissait un EDITOR lister et restaurer un message ou une catégorie de contact qu'un ADMIN seul peut supprimer. | Faible | `contact-messages` et `contact-categories` en `adminOnly` (#522). |
 | Le lien de modification d'un speaker ou d'une conférence mis à la corbeille fonctionnait encore. | Faible | `resolveToken` écarte le speaker et les conférences à la corbeille ; restaurer le speaker rouvre le lien (#523). |
 | L'invitation d'un collaborateur sponsor n'avait ni schéma ni limite : un corps absent ou mal typé provoquait une erreur 500, une adresse mal formée partait quand même. Même défaut côté admin (`/api/admin/sponsors/:id/contacts`). | Faible | Schéma sur les deux routes (400 en français), et 20 invitations par heure et par sponsor côté espace partenaire, comptées après la garde (#524). |
+| Les lectures des éditions, lieux et salles étaient réservées aux ADMIN, alors que des écrans ouverts aux EDITOR en ont besoin (import, fiches speaker, talk, sponsor, tableau de bord) : sélecteurs vides et 403. | Faible (fonctionnel) | Lecture ouverte à l'équipe, chaque route d'écriture garde `requireAdminRole`, verrouillé par le garde-fou (#530). |
 
 ## Constats ouverts
 
@@ -104,18 +105,18 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/contact/messages/:id/forward` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/contact/messages/:id/read` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/contact/messages/:id/retry-webhook` | Équipe (ADMIN, EDITOR) |
-| GET | `/api/admin/editions` | ADMIN |
+| GET | `/api/admin/editions` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/editions` | ADMIN |
 | DELETE | `/api/admin/editions/:id` | ADMIN |
-| GET | `/api/admin/editions/:id` | ADMIN |
+| GET | `/api/admin/editions/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id` | ADMIN |
-| GET | `/api/admin/editions/:id/key-figures` | ADMIN |
+| GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id/key-figures` | ADMIN |
-| GET | `/api/admin/editions/:id/sponsor-tiers` | ADMIN |
+| GET | `/api/admin/editions/:id/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
 | PUT | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
-| GET | `/api/admin/editions/current` | ADMIN |
-| GET | `/api/admin/editions/featured` | ADMIN |
+| GET | `/api/admin/editions/current` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/editions/featured` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/featured` | ADMIN |
 | GET | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
@@ -202,10 +203,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/users/:id` | ADMIN ; refusé aux agents IA |
 | PUT | `/api/admin/users/:id` | ADMIN ; refusé aux agents IA |
 | PUT | `/api/admin/users/:id/ban` | ADMIN ; refusé aux agents IA |
-| GET | `/api/admin/venues` | ADMIN |
+| GET | `/api/admin/venues` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/venues` | ADMIN |
 | DELETE | `/api/admin/venues/:id` | ADMIN |
-| GET | `/api/admin/venues/:id` | ADMIN |
+| GET | `/api/admin/venues/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/venues/:id` | ADMIN |
 | POST | `/api/admin/venues/:id/rooms` | ADMIN |
 
