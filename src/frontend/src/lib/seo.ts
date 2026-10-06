@@ -1,3 +1,5 @@
+import { extractYouTubeId } from "./youtube";
+
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
 /**
@@ -64,4 +66,89 @@ export function isCompleteEvent(event: { startDate?: string; location?: unknown 
  */
 export function canonicalLocaleFor(language: string | null | undefined): string | undefined {
   return language === "fr" || language === "en" ? language : undefined;
+}
+
+const ORGANIZER = {
+  "@type": "Organization" as const,
+  name: "GDG Toulouse",
+  url: "https://gdg.community.dev/gdg-toulouse/",
+};
+
+/**
+ * One session as a schema.org Event (#382), the way the home page announces
+ * the whole edition. `path` is the page's own path: the Event points back at
+ * it, and borrows its generated social card as image.
+ *
+ * Null until the session has an hour and the edition a venue: Google requires
+ * both, and an Event short of one is a critical error rather than a missing
+ * rich result (#464). Same choices as the edition's Event, for the same
+ * reasons: no `superEvent`, no `previousStartDate` (#185, #239).
+ */
+export function buildTalkEventJsonLd(
+  talk: {
+    title: string;
+    description: string;
+    startsAt: string | null;
+    endsAt: string | null;
+    room: string | null;
+    speakers: { name: string }[];
+  },
+  edition: { venueName: string | null; venueAddress: string | null } | null,
+  path: string,
+) {
+  if (!talk.startsAt || !edition?.venueName) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: talk.title,
+    description: talk.description || talk.title,
+    url: absoluteUrl(path),
+    image: absoluteUrl(`${path}/opengraph-image`),
+    startDate: talk.startsAt,
+    endDate: talk.endsAt ?? undefined,
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+    location: {
+      "@type": "Place",
+      name: talk.room ? `${talk.room}, ${edition.venueName}` : edition.venueName,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: edition.venueAddress ?? undefined,
+        addressRegion: "Occitanie",
+        addressCountry: "FR",
+      },
+    },
+    organizer: ORGANIZER,
+    ...(talk.speakers.length > 0 && {
+      performer: talk.speakers.map((s) => ({ "@type": "Person" as const, name: s.name })),
+    }),
+  };
+}
+
+/**
+ * A replay as a schema.org VideoObject (#382), which opens video rich results:
+ * searching a DevFest's replays surfaced YouTube and third-party lists, never
+ * the conference's own archive.
+ *
+ * Google requires `uploadDate`, which we do not store. The edition's date
+ * stands in: a recording cannot be published before the talk was given, so it
+ * is a true lower bound. Without it, or without a YouTube id to build the
+ * thumbnail from, nothing is emitted — a VideoObject short of a required field
+ * is an error, not a missing result.
+ */
+export function buildVideoJsonLd(
+  talk: { title: string; description: string; videoUrl: string },
+  uploadDate: string | null,
+) {
+  const id = extractYouTubeId(talk.videoUrl);
+  if (!id || !uploadDate) return null;
+  return {
+    "@context": "https://schema.org",
+    "@type": "VideoObject",
+    name: talk.title,
+    description: talk.description || talk.title,
+    thumbnailUrl: [`https://i.ytimg.com/vi/${id}/hqdefault.jpg`],
+    uploadDate,
+    embedUrl: `https://www.youtube.com/embed/${id}`,
+  };
 }

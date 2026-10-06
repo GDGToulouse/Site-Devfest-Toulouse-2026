@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getEditionTalkBySlug } from "@/lib/api";
+import { getEditionByYear, getEditionTalkBySlug } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
-import { canonicalLocaleFor } from "@/lib/seo";
+import { buildVideoJsonLd, canonicalLocaleFor, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import YouTubeFacade from "@/components/YouTubeFacade";
@@ -57,6 +57,13 @@ export default async function EditionTalkDetailPage({
   const talk = await getEditionTalkBySlug(yearNum, slug);
   if (!talk) notFound();
 
+  // A replay as a VideoObject (#382). Its upload date is the edition's: a
+  // recording cannot precede the talk. Fetched only for filmed talks.
+  const edition = talk.videoUrl ? await getEditionByYear(yearNum) : null;
+  const videoJsonLd = talk.videoUrl
+    ? buildVideoJsonLd({ ...talk, videoUrl: talk.videoUrl }, edition?.startDate?.split("T")[0] ?? null)
+    : null;
+
   const categoryName = talk.category ? localizedField(talk.category, "name", locale) : null;
   const languageLabel = talk.language === "en" ? t("language.en") : t("language.fr");
 
@@ -69,6 +76,12 @@ export default async function EditionTalkDetailPage({
   return (
     <div className="px-6 py-8 lg:py-12">
       <div className="mx-auto max-w-4xl">
+        {videoJsonLd && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(videoJsonLd) }}
+          />
+        )}
         <Breadcrumb items={breadcrumbItems} />
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
