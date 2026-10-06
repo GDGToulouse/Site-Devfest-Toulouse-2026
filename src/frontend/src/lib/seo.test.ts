@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { absoluteUrl, isCompleteEvent, jsonLdScript } from "./seo";
+import { absoluteUrl, buildTalkEventJsonLd, buildVideoJsonLd, isCompleteEvent, jsonLdScript } from "./seo";
 
 // JSON-LD is injected through dangerouslySetInnerHTML on every page carrying
 // structured data. `JSON.stringify` alone leaves `</script>` intact, which ends
@@ -99,5 +99,61 @@ describe("absoluteUrl", () => {
 
   it("leaves a plain http host alone too", () => {
     expect(absoluteUrl("http://example.org/a.png")).toBe("http://example.org/a.png");
+  });
+});
+
+// #382 — a talk page announces itself as an Event, and a filmed talk as a
+// VideoObject. Both stay silent rather than emit what Google would reject.
+describe("buildTalkEventJsonLd (#382)", () => {
+  const talk = {
+    title: "Kubernetes en production",
+    description: "Retour d'expérience.",
+    startsAt: "2026-11-19T10:55:00.000Z",
+    endsAt: "2026-11-19T11:40:00.000Z",
+    room: "Amphithéâtre",
+    speakers: [{ name: "Ada Lovelace" }],
+  };
+  const venue = { venueName: "Diagora", venueAddress: "Labège" };
+
+  it("should describe the session: times, room within the venue, speakers", () => {
+    const event = buildTalkEventJsonLd(talk, venue, "/fr/conferences/kubernetes");
+
+    expect(event).toMatchObject({
+      "@type": "Event",
+      name: "Kubernetes en production",
+      startDate: "2026-11-19T10:55:00.000Z",
+      endDate: "2026-11-19T11:40:00.000Z",
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: { "@type": "Place", name: "Amphithéâtre, Diagora" },
+      performer: [{ "@type": "Person", name: "Ada Lovelace" }],
+    });
+    expect(isCompleteEvent(event!)).toBe(true);
+  });
+
+  it("should emit nothing before the session is placed on the grid or the venue is known", () => {
+    expect(buildTalkEventJsonLd({ ...talk, startsAt: null }, venue, "/x")).toBeNull();
+    expect(buildTalkEventJsonLd(talk, { venueName: null, venueAddress: null }, "/x")).toBeNull();
+  });
+});
+
+describe("buildVideoJsonLd (#382)", () => {
+  it("should describe a YouTube replay with its thumbnail and upload date", () => {
+    const video = buildVideoJsonLd({ title: "Talk", description: "", videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ" }, "2024-11-21");
+
+    expect(video).toMatchObject({
+      "@type": "VideoObject",
+      name: "Talk",
+      thumbnailUrl: ["https://i.ytimg.com/vi/dQw4w9WgXcQ/hqdefault.jpg"],
+      uploadDate: "2024-11-21",
+      embedUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
+    });
+    // Google requires a description: the title stands in for an empty one.
+    expect(video!.description).toBe("Talk");
+  });
+
+  it("should emit nothing without a date or a recognisable YouTube URL", () => {
+    expect(buildVideoJsonLd({ title: "T", description: "", videoUrl: "https://youtu.be/dQw4w9WgXcQ" }, null)).toBeNull();
+    expect(buildVideoJsonLd({ title: "T", description: "", videoUrl: "https://vimeo.com/1" }, "2024-11-21")).toBeNull();
   });
 });
