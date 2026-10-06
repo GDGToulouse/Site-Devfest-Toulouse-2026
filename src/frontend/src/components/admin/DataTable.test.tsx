@@ -45,12 +45,22 @@ describe("DataTable", () => {
     const onDelete = vi.fn();
     render(<DataTable columns={columns} data={rows} onEdit={onEdit} onDelete={onDelete} />);
 
-    // Two rows → two Modifier buttons; the first belongs to Alice.
-    await user.click(screen.getAllByRole("button", { name: "Modifier" })[0]);
+    // Icon buttons named after their row (#499): a screen reader hears which
+    // one it is about to act on, not ten identical "Modifier".
+    await user.click(screen.getByRole("button", { name: "Modifier Alice" }));
     expect(onEdit).toHaveBeenCalledWith(rows[0]);
 
-    await user.click(screen.getAllByRole("button", { name: "Supprimer" })[1]);
+    await user.click(screen.getByRole("button", { name: "Supprimer Bob" }));
     expect(onDelete).toHaveBeenCalledWith(rows[1]);
+  });
+
+  it("should show icons rather than text labels, and name rows with rowLabel when given (#499)", () => {
+    render(
+      <DataTable columns={columns} data={rows} onEdit={vi.fn()} rowLabel={(r) => `la ligne de ${r.name}`} />,
+    );
+
+    expect(screen.getByRole("button", { name: "Modifier la ligne de Alice" })).toBeInTheDocument();
+    expect(screen.queryByText("Modifier")).not.toBeInTheDocument();
   });
 
   it("stays non-selectable without selectedIds/onSelectionChange", () => {
