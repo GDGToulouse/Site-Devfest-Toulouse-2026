@@ -49,11 +49,16 @@ export default function Header() {
         {/* Logo + Nav grouped on left */}
         <div className="flex items-center gap-8">
           <Link href="/" prefetch={prefetchUnlessHere("/")} className="shrink-0">
+            {/* In the first screen of every page: lazy (next/image's default)
+                held its request until layout, and the header painted with a
+                hole on slow links (#475). Eager rather than preload, which
+                would compete in <head> with the hero photo, the LCP. */}
             <Image
               src={logoUrl}
               alt="DevFest Toulouse"
               width={40}
               height={40}
+              loading="eager"
               className="rounded-full"
             />
           </Link>
