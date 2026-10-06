@@ -106,8 +106,6 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
         )}
       </div>
 
-      <SaveFeedback state={feedback} onDismiss={() => setFeedback(null)} />
-
       {entries.length === 0 ? (
         <p className="text-sm text-gris">Aucun moment déclaré.</p>
       ) : (
@@ -128,6 +126,11 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
           ))}
         </ul>
       )}
+
+      {/* Between the list and the form it reports on: SaveFeedback scrolls to
+          its message (#453), and above the list it pulled the page up on every
+          moment added (#533). */}
+      <SaveFeedback state={feedback} onDismiss={() => setFeedback(null)} />
 
       <div className="rounded-[12px] border border-gris-clair p-4 space-y-3">
         <p className="text-base font-medium text-noir">Ajouter un moment</p>

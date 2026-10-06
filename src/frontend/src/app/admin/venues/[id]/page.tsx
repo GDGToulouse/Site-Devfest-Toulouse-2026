@@ -34,6 +34,10 @@ export default function VenueDetailPage() {
   const [feedback, setFeedback] = useState<SaveState>(null);
 
   const [newRoom, setNewRoom] = useState({ name: "", capacity: "", sortOrder: "" });
+  // Room actions report next to the room form, not at the top of the page:
+  // SaveFeedback scrolls to its message (#453), and from the top it pulled the
+  // page up on every room added (#533).
+  const [roomFeedback, setRoomFeedback] = useState<SaveState>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminRoom | null>(null);
 
   const load = useCallback(async () => {
@@ -119,11 +123,11 @@ export default function VenueDetailPage() {
       }),
     });
     if (result.status !== 201) {
-      setFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être créée.") });
+      setRoomFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être créée.") });
       return;
     }
     setNewRoom({ name: "", capacity: "", sortOrder: "" });
-    setFeedback({ kind: "ok", text: "Salle ajoutée." });
+    setRoomFeedback({ kind: "ok", text: "Salle ajoutée." });
     load();
   }
 
@@ -136,10 +140,10 @@ export default function VenueDetailPage() {
     if (result.status !== 204) {
       // The backend refuses with a readable reason when sessions are scheduled
       // in the room — surface it rather than a generic failure.
-      setFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être supprimée.") });
+      setRoomFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être supprimée.") });
       return;
     }
-    setFeedback({ kind: "ok", text: `Salle « ${room.name} » supprimée.` });
+    setRoomFeedback({ kind: "ok", text: `Salle « ${room.name} » supprimée.` });
     load();
   }
 
@@ -221,6 +225,8 @@ export default function VenueDetailPage() {
             ))}
           </ul>
         )}
+
+        <SaveFeedback state={roomFeedback} onDismiss={() => setRoomFeedback(null)} />
 
         <div className="flex flex-wrap items-end gap-3">
           <div className="flex-1 min-w-[180px]">
