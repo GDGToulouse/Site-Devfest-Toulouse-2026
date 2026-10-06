@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
+import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileForDetails {
   filename: string;
@@ -15,6 +16,8 @@ interface FileForDetails {
   alt: string | null;
   /** Name on the editor's machine (#378); null for files uploaded before it was kept. */
   originalName: string | null;
+  /** Who uses it (#483). */
+  usages: FileUsage[];
 }
 
 interface FileDetailsDialogProps {
@@ -138,6 +141,18 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
             <dd className="text-noir">{formatDate(file.uploadedAt)}</dd>
             <dt className="text-gris">URL</dt>
             <dd className="text-noir font-mono text-xs break-all">{file.url}</dd>
+            <dt className="text-gris">Utilisé par</dt>
+            <dd className="text-noir">
+              {file.usages.length === 0 ? (
+                <span className="text-gris">Aucun usage référencé</span>
+              ) : (
+                <ul className="space-y-0.5">
+                  {file.usages.map((u) => (
+                    <li key={`${u.model}-${u.id}`}>{describeUsage(u)}</li>
+                  ))}
+                </ul>
+              )}
+            </dd>
           </dl>
 
           {file.isImage && (
