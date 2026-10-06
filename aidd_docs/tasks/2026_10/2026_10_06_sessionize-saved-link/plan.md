@@ -1,6 +1,6 @@
 ---
 objective: "Une fois un import Sessionize réussi depuis son URL, l'édition garde ce lien : l'admin relance l'import d'un clic ou supprime le lien, sans jamais le recoller."
-status: in-progress
+status: implemented
 ---
 
 <!-- Fill or omit these sections; never add, rename, or reorder one. -->
