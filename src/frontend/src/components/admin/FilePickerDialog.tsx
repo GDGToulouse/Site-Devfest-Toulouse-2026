@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { pastedFile } from "@/lib/clipboard-file";
 import { useDialog } from "@/lib/use-dialog";
 
 // Stripped-down sibling of ImagePickerDialog used for documents (today:
@@ -124,6 +125,20 @@ export default function FilePickerDialog({
     if (file) handleUpload(file);
   }
 
+  // A pasted file takes the drop's path: straight to upload, no preview here
+  // (#372). A text paste (search) is left alone.
+  function handlePaste(e: React.ClipboardEvent) {
+    const pasted = pastedFile(e.clipboardData, { mimeTypes, extensions });
+    if (!pasted) return;
+    e.preventDefault();
+    if (pasted.kind === "refused") {
+      setError(`Le fichier collé n'est pas accepté ici (${hint}).`);
+      return;
+    }
+    setTab("upload");
+    handleUpload(pasted.file);
+  }
+
   function handleInsert() {
     if (selected) {
       onSelect(selected);
@@ -142,6 +157,7 @@ export default function FilePickerDialog({
         aria-labelledby={titleId}
         className="bg-blanc rounded-xl shadow-card w-full max-w-2xl max-h-[80vh] flex flex-col"
         onClick={(e) => e.stopPropagation()}
+        onPaste={handlePaste}
       >
         <div className="flex items-center justify-between p-4 border-b border-gris/20">
           <h2 id={titleId} className="text-lg font-bold text-noir">{title}</h2>
@@ -228,7 +244,7 @@ export default function FilePickerDialog({
               onDrop={handleDrop}
               className="border-2 border-dashed border-gris/30 rounded-xl p-8 text-center hover:border-malachite/50 transition-colors"
             >
-              <p className="text-gris mb-4">Glissez un fichier ici ou cliquez pour sélectionner</p>
+              <p className="text-gris mb-4">Glissez ou collez (Ctrl+V) un fichier ici, ou cliquez pour sélectionner</p>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
