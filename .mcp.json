@@ -20,6 +20,13 @@
         "--isolated",
         "--viewport-size=1280x860"
       ]
+    },
+    "coolify": {
+      "type": "http",
+      "url": "https://infra.devfesttoulouse.fr/mcp",
+      "headers": {
+        "Authorization": "Bearer ${COOLIFY_MCP_TOKEN:-}"
+      }
     }
   }
 }
