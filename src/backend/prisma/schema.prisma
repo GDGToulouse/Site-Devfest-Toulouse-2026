@@ -110,6 +110,11 @@ model Edition {
   sponsorPageStatus       SponsorPageStatus @default(PRE_ANNOUNCEMENT)
   // External form URL used in PRE_ANNOUNCEMENT and TEMPORARY modes
   sponsorTemporaryFormUrl String?
+  // The Sessionize API endpoint (…/api/v2/<id>/view/All) of this edition's
+  // last successful import from a link, so the next one needs no pasting
+  // (#529). Back-office only: not the public call for papers page, which is
+  // the `cfp_sessionize_url` site setting.
+  sessionizeApiUrl        String?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
