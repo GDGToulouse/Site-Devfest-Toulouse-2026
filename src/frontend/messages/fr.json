@@ -359,7 +359,13 @@
     "empty": "Aucune offre d'emploi pour le moment. Revenez bientôt !",
     "home": "Accueil",
     "cta": "Voir l'offre",
-    "offersAt": "Offres chez {name}"
+    "offersAt": "Offres chez {name}",
+    "careersLink": "Voir toutes leurs offres",
+    "careersHint": "Sur le site carrière de {name}",
+    "backToList": "Toutes les offres",
+    "offerTitle": "{title} — {name}",
+    "postedBy": "Une offre de {name}",
+    "readOffer": "Lire l'annonce"
   },
   "calendar": {
     "heading": "Ajouter à mon agenda",
