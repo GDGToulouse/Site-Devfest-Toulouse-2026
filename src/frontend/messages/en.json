@@ -466,5 +466,32 @@
       "KEYNOTE": "Keynote",
       "WORKSHOP": "Workshop"
     }
+  },
+  "feedback": {
+    "title": "Your feedback on this session",
+    "intro": "Tick whatever applies, as many as you like. It's anonymous.",
+    "send": "Send my feedback",
+    "sending": "Sending…",
+    "thanks": "Thanks for your feedback!",
+    "messageLabel": "A word for the speaker?",
+    "messageHint": "Optional. Only the speaker and the team will read it; it won't be published.",
+    "sendMessage": "Send the message",
+    "messageSent": "Your message has been passed on.",
+    "trendTitle": "What the audience thought",
+    "trendPending": "The trend will show from 5 votes.",
+    "voteError": "Your feedback could not be sent. Please try again in a moment.",
+    "messageError": "Your message could not be sent. Please try again in a moment.",
+    "closedError": "Feedback is closed for this session.",
+    "credit": "Inspired by <openfeedback>OpenFeedback</openfeedback> by Hugo Gresse (also available as a hosted version on <openplanner>OpenPlanner</openplanner>).",
+    "items": {
+      "fun": "Fun 😃",
+      "learned": "I've learned a lot 🤓",
+      "interesting": "Very interesting 👍",
+      "speaker": "Good speaker 👏",
+      "notClear": "Not clear 🧐",
+      "tooTechnical": "Too technical 🤖",
+      "lackOfDemo": "Lack of demo/example 🤔",
+      "tooComplex": "Too complex 🤯"
+    }
   }
 }
