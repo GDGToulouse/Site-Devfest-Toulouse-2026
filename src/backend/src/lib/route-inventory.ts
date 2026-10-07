@@ -48,6 +48,10 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "message privé au speaker (#564) : seulement après le vote du même navigateur, une fois, débit limité",
   },
   "GET /api/edit/:token": { why: "lien de modification du speaker : le jeton est l'accès", anonymous: [404] },
+  "GET /api/edit/:token/feedback": {
+    why: "avis du public sur ses sessions (#565) : le jeton est l'accès, lecture seule, même pendant le gel",
+    anonymous: [404],
+  },
   "GET /api/maintenance/purge-trash": { why: "secret partagé du cron, ou session ADMIN", anonymous: [401] },
   "POST /api/maintenance/purge-trash": { why: "secret partagé du cron, ou session ADMIN", anonymous: [401] },
   "POST /api/mcp": { why: "jeton OAuth d'un agent IA, vérifié par la route", anonymous: [401] },
