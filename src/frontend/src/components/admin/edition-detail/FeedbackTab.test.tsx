@@ -18,7 +18,10 @@ let state: { enabled: boolean; canEnable: boolean; opensAt: string | null; testV
 beforeEach(() => {
   state = { enabled: false, canEnable: true, opensAt: "2026-11-18T23:00:00.000Z", testVotes: 0 };
   adminFetch.mockReset();
-  adminFetch.mockImplementation(async (_path: string, options?: { method?: string; body?: string }) => {
+  adminFetch.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
+    // The tab's other sections (#565, #567) load their own data.
+    if (path.endsWith("/feedback")) return { status: 200, data: { talks: [] } };
+    if (path.endsWith("/feedback-recap")) return { status: 200, data: { phase: "upcoming", speakers: 0, withoutEmail: [], lastSentAt: null } };
     if (options?.method === "PUT") {
       const { enabled } = JSON.parse(options.body!);
       const deleted = enabled ? 0 : state.testVotes;

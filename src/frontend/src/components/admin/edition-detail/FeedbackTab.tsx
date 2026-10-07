@@ -5,9 +5,10 @@ import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import FeedbackResults from "./FeedbackResults";
+import FeedbackRecap from "./FeedbackRecap";
 
-// The audience feedback of an edition (#563): its results (#565) and its test
-// mode (#566), which opens voting before the event day so the team can try it,
+// The audience feedback of an edition (#563): its results (#565), the recap to
+// the speakers (#567) and its test mode (#566), which opens voting before the event day so the team can try it,
 // production included.
 
 interface TestModeState {
@@ -68,6 +69,8 @@ export default function FeedbackTab({ editionId }: { editionId: number }) {
   return (
     <div className="space-y-8">
       <FeedbackResults editionId={editionId} />
+
+      <FeedbackRecap editionId={editionId} />
 
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-noir">Mode test des avis</h2>

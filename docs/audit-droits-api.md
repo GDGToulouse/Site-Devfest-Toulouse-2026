@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 223 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 225 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (134)
+### Back-office (136)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -111,6 +111,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/editions/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback` | ADMIN |
+| GET | `/api/admin/editions/:id/feedback-recap` | ADMIN |
+| POST | `/api/admin/editions/:id/feedback-recap` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | PUT | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
