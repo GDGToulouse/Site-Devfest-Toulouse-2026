@@ -324,26 +324,21 @@ body {
   font-weight: 700;
 }
 .hero-meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 24px;
+  margin: 0;
+  line-height: 1.6;
   font-size: clamp(14px, 1.05vw, 17px);
 }
-.hero-meta-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-.hero-meta-item strong {
+.hero-meta strong {
   font-weight: 700;
 }
 .hero-meta-dot {
   width: 4px;
   height: 4px;
+  margin: 0 6px;
   border-radius: 50%;
   background: var(--color-gris);
   display: inline-block;
+  vertical-align: middle;
 }
 .hero-ctas {
   display: flex;
