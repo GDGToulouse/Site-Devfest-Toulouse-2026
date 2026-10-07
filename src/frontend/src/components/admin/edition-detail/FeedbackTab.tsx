@@ -4,10 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
+import FeedbackResults from "./FeedbackResults";
 
-// The audience feedback of an edition (#563). For now its test mode (#566),
-// which opens voting before the event day so the team can try it, production
-// included; the results (#565) will join this tab.
+// The audience feedback of an edition (#563): its results (#565) and its test
+// mode (#566), which opens voting before the event day so the team can try it,
+// production included.
 
 interface TestModeState {
   enabled: boolean;
@@ -65,7 +66,9 @@ export default function FeedbackTab({ editionId }: { editionId: number }) {
   const opensAt = state.opensAt ? DATE_TIME.format(new Date(state.opensAt)) : null;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
+      <FeedbackResults editionId={editionId} />
+
       <section className="space-y-3">
         <h2 className="text-lg font-bold text-noir">Mode test des avis</h2>
         <p className="text-sm text-gris">
