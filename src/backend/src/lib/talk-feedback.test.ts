@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { feedbackPhase, feedbackWindow, publicTrend } from "./talk-feedback.js";
+import { feedbackPhase, feedbackWindow, isTestVote, publicTrend } from "./talk-feedback.js";
 
 // #564 — votes open the day of the event and the next, on Paris clocks; the
 // public trend needs five votes and shows positive appreciations only.
@@ -65,5 +65,25 @@ describe("publicTrend", () => {
   it("should never show a negative appreciation, however ticked", () => {
     const trend = publicTrend([...votes(5, ["tooComplex", "notClear"]), ...votes(1, ["learned"])]);
     expect(trend).toEqual([{ code: "learned", percent: 17 }]);
+  });
+});
+
+describe("test mode (#566)", () => {
+  const TEST = { ...EDITION, feedbackTestMode: true };
+
+  it("should open voting before the event day", () => {
+    expect(feedbackPhase(TEST, new Date("2026-10-07T10:00:00.000Z"))).toBe("open");
+  });
+
+  it("should mark a vote cast before the event day as a test", () => {
+    expect(isTestVote(TEST, new Date("2026-11-18T22:59:00.000Z"))).toBe(true);
+  });
+
+  it("should make a vote real from the event day, even with the test mode left on", () => {
+    expect(isTestVote(TEST, new Date("2026-11-18T23:00:00.000Z"))).toBe(false);
+  });
+
+  it("should not reopen voting once it is over", () => {
+    expect(feedbackPhase(TEST, new Date("2026-11-21T10:00:00.000Z"))).toBe("closed");
   });
 });

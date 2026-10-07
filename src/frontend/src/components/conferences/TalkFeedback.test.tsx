@@ -10,7 +10,7 @@ import TalkFeedback, { FEEDBACK_ITEMS } from "./TalkFeedback";
 // a private message. Nothing shows before the event day; the trend waits for
 // one's own vote, or for voting to be over.
 
-type Status = { phase: string; hasVoted: boolean; hasMessage: boolean; trend: { code: string; percent: number }[] | null };
+type Status = { phase: string; isTest?: boolean; hasVoted: boolean; hasMessage: boolean; trend: { code: string; percent: number }[] | null };
 
 let status: Status;
 const posts: { url: string; body: Record<string, unknown> }[] = [];
@@ -97,6 +97,13 @@ describe("TalkFeedback (#564)", () => {
     expect(screen.queryByRole("button", { name: "Envoyer mon avis" })).not.toBeInTheDocument();
   });
 
+  it("should warn that votes cast in test mode will be deleted (#566)", async () => {
+    status = { ...status, isTest: true };
+    renderBlock();
+
+    expect(await screen.findByText(/Mode test : ces avis servent à vérifier le site/)).toBeInTheDocument();
+  });
+
   it("should credit OpenFeedback and OpenPlanner with links", async () => {
     renderBlock();
 
@@ -111,7 +118,7 @@ describe("TalkFeedback (#564)", () => {
 });
 
 describe("TalkFeedback — translations", () => {
-  const keys = ["title", "intro", "send", "sending", "thanks", "messageLabel", "messageHint", "sendMessage", "messageSent", "trendTitle", "trendPending", "voteError", "messageError", "closedError", "credit"] as const;
+  const keys = ["title", "intro", "send", "sending", "thanks", "messageLabel", "messageHint", "sendMessage", "messageSent", "trendTitle", "trendPending", "voteError", "messageError", "closedError", "credit", "testBanner"] as const;
 
   it.each(keys)("should resolve feedback.%s in French and English", (key) => {
     expect(fr.feedback[key]).toBeTruthy();

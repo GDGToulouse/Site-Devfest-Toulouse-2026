@@ -23,6 +23,7 @@ import adminTrashRoutes from "./trash.js";
 import adminVenueRoutes from "./venues.js";
 import adminScheduleRoutes from "./schedule.js";
 import adminAuditRoutes from "./audit.js";
+import adminFeedbackRoutes from "./feedback.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -69,5 +70,6 @@ export default async function adminRoutes(app: FastifyInstance) {
     });
     // Who changed what, from where: personal data, not for editors (#513).
     await adminApp.register(adminAuditRoutes);
+    await adminApp.register(adminFeedbackRoutes);
   });
 }

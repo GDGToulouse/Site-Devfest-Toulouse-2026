@@ -115,6 +115,11 @@ model Edition {
   // (#529). Back-office only: not the public call for papers page, which is
   // the `cfp_sessionize_url` site setting.
   sessionizeApiUrl        String?
+  // Opens the audience feedback before the event day so the team can try it,
+  // production included (#566). Only before the day; the votes cast meanwhile
+  // are marked as tests and deleted when it goes off, by hand or at midnight
+  // on the day (lib/talk-feedback-test-mode.ts).
+  feedbackTestMode        Boolean           @default(false)
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.

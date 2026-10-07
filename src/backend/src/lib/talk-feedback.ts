@@ -30,6 +30,8 @@ export type FeedbackPhase = "upcoming" | "open" | "closed";
 interface EditionDates {
   startDate: Date | null;
   endDate: Date | null;
+  /** #566: opens voting before the day, for the team to try it. */
+  feedbackTestMode?: boolean;
 }
 
 // Edition dates are calendar days stored at UTC midnight; read the day, not the
@@ -54,8 +56,19 @@ export function feedbackWindow(edition: EditionDates): { opensAt: Date; closesAt
 
 export function feedbackPhase(edition: EditionDates, now: Date = new Date()): FeedbackPhase {
   const window = feedbackWindow(edition);
-  if (!window || now < window.opensAt) return "upcoming";
+  if (!window) return "upcoming";
+  if (now < window.opensAt) return edition.feedbackTestMode ? "open" : "upcoming";
   return now < window.closesAt ? "open" : "closed";
+}
+
+/**
+ * A vote cast now is a test (#566): the test mode is on and the real window
+ * has not opened yet. From the event day on, a vote is real whatever the flag
+ * says, so a test mode left on cannot taint the day.
+ */
+export function isTestVote(edition: EditionDates, now: Date = new Date()): boolean {
+  const window = feedbackWindow(edition);
+  return Boolean(edition.feedbackTestMode && window && now < window.opensAt);
 }
 
 /**

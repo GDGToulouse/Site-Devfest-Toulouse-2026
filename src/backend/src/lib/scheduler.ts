@@ -4,11 +4,14 @@ import cron from "node-cron";
 import { rotateFeaturedSpeakers } from "./featured-speakers.js";
 import { runInContext, systemContext } from "./request-context.js";
 import { AUDIT_RETENTION_MONTHS, purgeExpiredAuditLog } from "./audit-purge.js";
+import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
 const FEATURED_ROTATION_CRON = "0 1 * * *";
 const AUDIT_PURGE_CRON = "0 3 * * *";
+// Midnight Paris time, when the event day starts and real votes open (#566).
+const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 const TIMEZONE = "Europe/Paris";
 
 /**
@@ -62,8 +65,28 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "audit-log-purge", timezone: TIMEZONE, noOverlap: true },
   );
 
+  // A feedback test mode left on is switched off when real voting opens, and
+  // the votes of the trial go with it (#566). Every night, not only on the
+  // day: a run missed at midnight (a redeploy) is caught by the next. Votes
+  // cast meanwhile are real whatever the flag, so a late run harms nothing.
+  cron.schedule(
+    FEEDBACK_TEST_MODE_CRON,
+    async () => {
+      try {
+        const switchedOff = await runInContext(
+          systemContext("Fin du mode test des avis"),
+          () => disableExpiredTestModes(),
+        );
+        if (switchedOff.length > 0) log.info({ switchedOff }, "Feedback test mode switched off");
+      } catch (err) {
+        log.error({ err }, "Feedback test mode switch-off failed");
+      }
+    },
+    { name: "feedback-test-mode-off", timezone: TIMEZONE, noOverlap: true },
+  );
+
   log.info(
-    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON], timezone: TIMEZONE },
+    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, FEEDBACK_TEST_MODE_CRON], timezone: TIMEZONE },
     "Scheduled tasks started",
   );
 }
