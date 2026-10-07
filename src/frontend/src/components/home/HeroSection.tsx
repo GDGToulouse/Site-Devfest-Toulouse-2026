@@ -69,19 +69,20 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
           </p>
 
           {(dateLabel || venueLabel) && (
-            <div className="hero-meta">
-              {dateLabel && (
-                <span className="hero-meta-item">
-                  <strong className="text-noir">{dateLabel}</strong>
-                </span>
+            // Inline text, not three flex items: a venue too long for the line
+            // used to wrap whole and leave the dot alone after the date (#558).
+            // The no-break space glues the dot to the date, so the venue text
+            // is what breaks.
+            <p className="hero-meta">
+              {dateLabel && <strong className="text-noir">{dateLabel}</strong>}
+              {dateLabel && venueLabel && (
+                <>
+                  {" "}
+                  <span aria-hidden className="hero-meta-dot" />{" "}
+                </>
               )}
-              {dateLabel && venueLabel && <span className="hero-meta-dot" />}
-              {venueLabel && (
-                <span className="hero-meta-item">
-                  <span className="text-gris">{venueLabel}</span>
-                </span>
-              )}
-            </div>
+              {venueLabel && <span className="text-gris">{venueLabel}</span>}
+            </p>
           )}
 
           {(showSponsorCta || cfpUrl) && (
