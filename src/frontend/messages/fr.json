@@ -466,5 +466,32 @@
       "KEYNOTE": "Keynote",
       "WORKSHOP": "Workshop"
     }
+  },
+  "feedback": {
+    "title": "Votre avis sur cette session",
+    "intro": "Cochez ce qui s'applique, autant que vous voulez. C'est anonyme.",
+    "send": "Envoyer mon avis",
+    "sending": "Envoi…",
+    "thanks": "Merci pour votre avis !",
+    "messageLabel": "Un mot pour le speaker ?",
+    "messageHint": "Facultatif. Seul le speaker et l'équipe le liront, il ne sera pas publié.",
+    "sendMessage": "Envoyer le message",
+    "messageSent": "Votre message a bien été transmis.",
+    "trendTitle": "Ce que le public en a pensé",
+    "trendPending": "La tendance s'affichera à partir de 5 avis.",
+    "voteError": "Votre avis n'a pas pu être envoyé. Réessayez dans un instant.",
+    "messageError": "Votre message n'a pas pu être envoyé. Réessayez dans un instant.",
+    "closedError": "Les avis sont fermés pour cette session.",
+    "credit": "Inspiré d’<openfeedback>OpenFeedback</openfeedback> d’Hugo Gresse (aussi dispo en version hébergée sur <openplanner>OpenPlanner</openplanner>).",
+    "items": {
+      "fun": "Drôle/original 😃",
+      "learned": "J'ai beaucoup appris 🤓",
+      "interesting": "Super intéressant 👍",
+      "speaker": "Très bon orateur/oratrice 👏",
+      "notClear": "Pas clair 🧐",
+      "tooTechnical": "Trop technique 🤖",
+      "lackOfDemo": "Pas assez de démo/exemple 🤔",
+      "tooComplex": "Trop complexe 🤯"
+    }
   }
 }

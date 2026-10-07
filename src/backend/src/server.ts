@@ -20,6 +20,7 @@ import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import contactRoutes from "./routes/contact.js";
+import talkFeedbackRoutes from "./routes/talk-feedback.js";
 import brochureRoutes from "./routes/brochure.js";
 import sponsorRoutes from "./routes/sponsors.js";
 import speakerRoutes from "./routes/speakers.js";
@@ -256,6 +257,7 @@ export async function buildServer() {
   await app.register(speakerRoutes, { prefix: "/api" });
   await app.register(categoryRoutes, { prefix: "/api" });
   await app.register(talkRoutes, { prefix: "/api" });
+  await app.register(talkFeedbackRoutes, { prefix: "/api" });
   await app.register(replayRoutes, { prefix: "/api" });
   await app.register(editRoutes, { prefix: "/api" });
   await app.register(sponsorInvitationRoutes, { prefix: "/api" });
