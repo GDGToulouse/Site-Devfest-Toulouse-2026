@@ -9,7 +9,7 @@
 ## Tools
 
 - Vitest partout, Testing Library côté frontend
-- Vérification navigateur : MCP Chrome DevTools et MCP Playwright (sur Chrome), déclarés dans `.mcp.json` ; le second écrit ses sorties dans `.playwright-mcp/` (ignoré par git)
+- Vérification navigateur : MCP Chrome DevTools, et MCP Playwright en trois instances (`playwright-chrome`, `playwright-firefox`, `playwright-webkit` pour Safari), déclarés dans `.mcp.json` ; Playwright écrit ses sorties dans `.playwright-mcp/` (ignoré par git). Firefox et WebKit demandent une fois `npx playwright install firefox webkit`
 
 ## Conventions
 
@@ -31,6 +31,7 @@
 - Auth: `admin@devfesttoulouse.fr` / `admin1234!dev` (ADMIN) et `editor@devfesttoulouse.fr` / `editor1234!dev` (EDITOR), reposés par `seed-dev.ts` même sur des comptes existants (#433) — `docs/comptes-dev-local.md`
 - Auth sponsor: `responsable@aeronova.example.com` (deux fiches) et `editeur@cassoulet.example.com`, mot de passe `sponsor1234!dev`, posés par `seed-dev.ts` sur `/sponsor/login`. Pour tester l'invitation elle-même : créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
 - State: `src/backend/prisma/seed-dev.ts`, lancé à la main
+- Multi-navigateur : tout changement de mise en page (tableau, grille, `sticky`, hauteurs) se vérifie aussi dans Firefox et WebKit. Chrome seul a laissé passer en prod une grille du programme écrasée sous Firefox (#550). Comparer des mesures (hauteur, débordement via `scrollHeight`) plutôt que des captures à l'œil
 
 ## Local environment
 

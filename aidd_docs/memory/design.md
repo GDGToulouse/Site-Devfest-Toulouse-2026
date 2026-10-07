@@ -30,3 +30,4 @@ Une classe qui ne génère rien échoue en silence : vérifier au runtime (`getC
 - Jamais de `*/` dans un commentaire CSS (`bg-*/text-*` ferme le commentaire et casse tout le bloc qui suit)
 - Pleine hauteur sur mobile : `h-dvh` et un `padding-bottom` de sécurité sur la zone qui défile, sinon le dernier bouton passe sous les barres du navigateur (#257)
 - Un `sticky` vertical est mort dans un parent `overflow-x: auto`, et borner la hauteur du parent est une fausse solution. Modèle qui marche : `ScheduleGrid.tsx` (#460), qui duplique la ligne d'en-têtes hors du conteneur
+- Faire remplir une cellule de tableau par son contenu (`h-full`) : la hauteur nominale va sur le `<table>` (`h-px`), jamais sur la cellule. Un `h-px` sur une cellule à `rowSpan` passe dans Chrome et Safari, mais Firefox le prend au pied de la lettre et écrase les lignes (#550)
