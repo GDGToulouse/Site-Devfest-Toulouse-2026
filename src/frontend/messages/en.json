@@ -492,6 +492,7 @@
       "tooTechnical": "Too technical 🤖",
       "lackOfDemo": "Lack of demo/example 🤔",
       "tooComplex": "Too complex 🤯"
-    }
+    },
+    "testBanner": "Test mode: this feedback is for checking the site and will be deleted before the event."
   }
 }

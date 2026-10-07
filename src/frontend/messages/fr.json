@@ -492,6 +492,7 @@
       "tooTechnical": "Trop technique 🤖",
       "lackOfDemo": "Pas assez de démo/exemple 🤔",
       "tooComplex": "Trop complexe 🤯"
-    }
+    },
+    "testBanner": "Mode test : ces avis servent à vérifier le site et seront effacés avant l’événement."
   }
 }

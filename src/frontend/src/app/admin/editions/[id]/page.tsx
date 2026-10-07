@@ -9,6 +9,7 @@ import GeneralTab from "@/components/admin/edition-detail/GeneralTab";
 import VenueTab from "@/components/admin/edition-detail/VenueTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
+import FeedbackTab from "@/components/admin/edition-detail/FeedbackTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
@@ -56,6 +57,7 @@ const TABS = [
   { key: "sponsors", label: "Sponsors" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
+  { key: "feedback", label: "Avis" },
 ];
 
 export default function EditionDetailPage() {
@@ -145,6 +147,9 @@ export default function EditionDetailPage() {
         )}
         {activeTab === "key-figures" && (
           <KeyFiguresTab editionId={edition.id} />
+        )}
+        {activeTab === "feedback" && (
+          <FeedbackTab editionId={edition.id} />
         )}
       </div>
     </div>

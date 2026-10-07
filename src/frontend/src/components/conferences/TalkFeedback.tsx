@@ -24,6 +24,8 @@ const MESSAGE_MAX_LENGTH = 2000;
 
 interface FeedbackStatus {
   phase: "upcoming" | "open" | "closed";
+  /** The edition's test mode is on (#566): what is cast now will be wiped. */
+  isTest: boolean;
   hasVoted: boolean;
   hasMessage: boolean;
   trend: { code: string; percent: number }[] | null;
@@ -111,6 +113,9 @@ export default function TalkFeedback({ slug }: { slug: string }) {
 
   return (
     <section aria-labelledby="talk-feedback-title" className="mt-8 rounded-2xl border border-gris/15 bg-blanc p-5 shadow-sm lg:p-6">
+      {status.isTest && (
+        <p className="mb-3 rounded-[12px] bg-jaune-clair px-3 py-2 text-sm font-bold text-noir">{t("testBanner")}</p>
+      )}
       <h2 id="talk-feedback-title" className="text-xl font-bold text-noir">
         {canVote ? t("title") : status.hasVoted ? t("thanks") : t("trendTitle")}
       </h2>
