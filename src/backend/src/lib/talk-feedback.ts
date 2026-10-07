@@ -6,15 +6,18 @@ import { parseWallTime } from "./zoned-time.js";
 
 // OpenFeedback's default voting form, in its order. Codes are stored, labels
 // live in the frontend translations: wording can change without touching votes.
+// The labels serve the recap email (#567); the site reads its own from
+// messages/*.json (feedback.items), and talk-feedback-labels.test.ts keeps the
+// two identical.
 export const TALK_FEEDBACK_ITEMS = [
-  { code: "fun", isPositive: true },
-  { code: "learned", isPositive: true },
-  { code: "interesting", isPositive: true },
-  { code: "speaker", isPositive: true },
-  { code: "notClear", isPositive: false },
-  { code: "tooTechnical", isPositive: false },
-  { code: "lackOfDemo", isPositive: false },
-  { code: "tooComplex", isPositive: false },
+  { code: "fun", isPositive: true, fr: "Drôle/original 😃", en: "Fun 😃" },
+  { code: "learned", isPositive: true, fr: "J'ai beaucoup appris 🤓", en: "I've learned a lot 🤓" },
+  { code: "interesting", isPositive: true, fr: "Super intéressant 👍", en: "Very interesting 👍" },
+  { code: "speaker", isPositive: true, fr: "Très bon orateur/oratrice 👏", en: "Good speaker 👏" },
+  { code: "notClear", isPositive: false, fr: "Pas clair 🧐", en: "Not clear 🧐" },
+  { code: "tooTechnical", isPositive: false, fr: "Trop technique 🤖", en: "Too technical 🤖" },
+  { code: "lackOfDemo", isPositive: false, fr: "Pas assez de démo/exemple 🤔", en: "Lack of demo/example 🤔" },
+  { code: "tooComplex", isPositive: false, fr: "Trop complexe 🤯", en: "Too complex 🤯" },
 ] as const;
 
 export const TALK_FEEDBACK_CODES = TALK_FEEDBACK_ITEMS.map((item) => item.code);

@@ -3,10 +3,11 @@ import { prisma } from "../../lib/prisma.js";
 import { notDeleted } from "../../lib/admin-helpers.js";
 import { feedbackPhase, feedbackWindow } from "../../lib/talk-feedback.js";
 import { resultsForTalks } from "../../lib/talk-feedback-results.js";
+import { recapRecipients, sendFeedbackRecaps } from "../../lib/feedback-recap.js";
 import { canEnableTestMode, countTestVotes, disableTestMode } from "../../lib/talk-feedback-test-mode.js";
 
 // The audience feedback of an edition, back-office side (#563): its test mode
-// (#566) and its results (#565). ADMIN only: the switch-off deletes data, and
+// (#566), its results (#565) and the recap sent to the speakers (#567). ADMIN only: the switch-off deletes data, and
 // the private messages were written for the speaker and the organisers.
 
 const ID_PARAMS = { type: "object", required: ["id"], properties: { id: { type: "integer", minimum: 1 } } } as const;
@@ -14,7 +15,7 @@ const ID_PARAMS = { type: "object", required: ["id"], properties: { id: { type: 
 async function findEdition(id: number) {
   return prisma.edition.findFirst({
     where: { id, ...notDeleted },
-    select: { id: true, startDate: true, endDate: true, feedbackTestMode: true },
+    select: { id: true, startDate: true, endDate: true, feedbackTestMode: true, feedbackRecapSentAt: true },
   });
 }
 
@@ -124,5 +125,32 @@ export default async function adminFeedbackRoutes(app: FastifyInstance) {
     });
     if (count === 0) return reply.code(404).send({ error: "Message not found" });
     return { id: request.params.id, hidden: request.body.hidden };
+  });
+
+  // GET /api/admin/editions/:id/feedback-recap — who the recap would reach,
+  // for the confirmation before sending: speakers with at least one real vote,
+  // and those of them with no address to write to.
+  app.get<{ Params: { id: number } }>("/editions/:id/feedback-recap", {
+    schema: { params: ID_PARAMS },
+  }, async (request, reply) => {
+    const edition = await findEdition(request.params.id);
+    if (!edition) return reply.code(404).send({ error: "Edition not found" });
+    const recipients = await recapRecipients(edition.id);
+    return {
+      phase: feedbackPhase(edition),
+      speakers: recipients.length,
+      withoutEmail: recipients.filter((r) => !r.email).map((r) => r.name),
+      lastSentAt: edition.feedbackRecapSentAt,
+    };
+  });
+
+  // POST /api/admin/editions/:id/feedback-recap — send it, now. Only ever on an
+  // admin's action: nothing goes out by itself (#563).
+  app.post<{ Params: { id: number } }>("/editions/:id/feedback-recap", {
+    schema: { params: ID_PARAMS },
+  }, async (request, reply) => {
+    const edition = await findEdition(request.params.id);
+    if (!edition) return reply.code(404).send({ error: "Edition not found" });
+    return sendFeedbackRecaps(edition.id);
   });
 }

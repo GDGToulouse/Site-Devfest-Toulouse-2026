@@ -30,12 +30,16 @@ function emptyResults(): TalkResults {
  * Results per session. One query for all of them: a DevFest is ~50 sessions
  * and at most a few thousand votes over two days, read whole and summed here.
  */
-export async function resultsForTalks(talkIds: number[]): Promise<Map<number, TalkResults>> {
+export async function resultsForTalks(
+  talkIds: number[],
+  { realOnly = false }: { realOnly?: boolean } = {},
+): Promise<Map<number, TalkResults>> {
   const results = new Map(talkIds.map((id) => [id, emptyResults()]));
   if (talkIds.length === 0) return results;
 
   const rows = await prisma.talkFeedback.findMany({
-    where: { talkId: { in: talkIds } },
+    // realOnly: the recap to speakers (#567) never carries the trial's votes.
+    where: { talkId: { in: talkIds }, ...(realOnly ? { isTest: false } : {}) },
     select: { id: true, talkId: true, items: true, message: true, messageAt: true, messageHidden: true, isTest: true },
     orderBy: { messageAt: "desc" },
   });
