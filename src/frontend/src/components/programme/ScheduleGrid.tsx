@@ -196,7 +196,10 @@ export default function ScheduleGrid({
 
       {/* Scrolls inside its own box: the page body must never scroll sideways. */}
       <div ref={scroller} className={GRID_VIEWPORT}>
-        <table className="w-full border-separate border-spacing-2">
+        {/* `h-px` gives the table a height for its cells' `h-full` to resolve
+            against; it still grows to its content, like any table. See the
+            cells below. */}
+        <table className="h-px w-full border-separate border-spacing-2">
           <thead>
             <tr ref={headerRow}>
               {/* Pinned horizontally, and above the room row it crosses: the
@@ -256,15 +259,19 @@ export default function ScheduleGrid({
                     // still running (#462): the one above spans onto this one,
                     // and a second `<td>` would push the whole row sideways.
                     cells.length === 0 && row.covered[index] ? null : (
-                    // `h-px` is not a height, it is the way to give the cell one:
-                    // a table cell has no resolvable height of its own, so a card
+                    // A table cell has no resolvable height of its own, so a card
                     // asking for `h-full` inside it stays at its content size and
-                    // the row ends up ragged. Declaring a nominal height makes the
-                    // browser resolve it against the row it actually computed.
+                    // the row ends up ragged (#462). The nominal height goes on the
+                    // table and the cell takes `h-full` of it, which every engine
+                    // resolves against the rows it actually computed. The earlier
+                    // `h-px` on the cell itself worked in Chrome only: Firefox took
+                    // it literally on cells spanning several rows, sized the rows
+                    // without their content and let every session spill over the
+                    // next ones (#550).
                     <td
                       key={rooms[index]?.id ?? index}
                       rowSpan={cells[0]?.rowSpan}
-                      className={`${MIN_COLUMN} h-px align-top`}
+                      className={`${MIN_COLUMN} h-full align-top`}
                     >
                       {cells.length === 0 ? (
                         // A hole in an otherwise full row reads as "the page did
