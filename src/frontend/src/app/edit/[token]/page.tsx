@@ -42,6 +42,8 @@ const T = {
   fr: {
     loading: "Chargement…",
     unavailable: "Lien indisponible",
+    // Frozen is not unavailable: the link still opens the feedback (#565).
+    closed: "Modifications clôturées",
     title: "Modifier ma fiche",
     intro:
       "Complétez ou mettez à jour les informations de votre fiche. Elles seront visibles publiquement sur le site du DevFest Toulouse.",
@@ -101,6 +103,7 @@ const T = {
   en: {
     loading: "Loading…",
     unavailable: "Link unavailable",
+    closed: "Editing closed",
     title: "Edit my profile",
     intro:
       "Complete or update your profile information. It will be shown publicly on the DevFest Toulouse website.",
@@ -265,7 +268,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
     return (
       <PageShell>
         <div className="py-16 text-center">
-          <h1 className="text-2xl font-bold text-noir">{t.unavailable}</h1>
+          <h1 className="text-2xl font-bold text-noir">{errorKind === "frozen" ? t.closed : t.unavailable}</h1>
           <p className="mt-4 text-gris">{t.errors[errorKind]}</p>
           <a
             href="mailto:contact@devfesttoulouse.fr"
