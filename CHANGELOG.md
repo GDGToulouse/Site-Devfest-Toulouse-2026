@@ -12,6 +12,14 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.10.1] - 2026-10-07
+
+Correctif de la grille du programme sous Firefox. Aucune migration.
+
+### Corrigé
+
+- **La grille du programme s'affiche de nouveau correctement sous Firefox** : les lignes horaires s'écrasaient et les sessions se chevauchaient. Chrome et Safari n'étaient pas touchés (#550).
+
 ## [1.10.0] - 2026-10-06
 
 Le **programme se construit désormais depuis Sessionize sans retouche** : l'import place chaque session dans sa salle et sur son créneau, se relance d'un clic, et signale ce qui a disparu de Sessionize sans rien supprimer. L'admin garde aussi la **trace de chaque modification** — qui, quand, par quel canal — et le site devient utilisable par un **agent IA**, connecté avec les droits de la personne qui l'autorise.
