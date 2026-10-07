@@ -359,7 +359,13 @@
     "empty": "No job offers yet. Check back soon!",
     "home": "Home",
     "cta": "View offer",
-    "offersAt": "Offers at {name}"
+    "offersAt": "Offers at {name}",
+    "careersLink": "See all their openings",
+    "careersHint": "On {name}'s careers site",
+    "backToList": "All job offers",
+    "offerTitle": "{title} — {name}",
+    "postedBy": "An offer from {name}",
+    "readOffer": "Read the offer"
   },
   "calendar": {
     "heading": "Add to my calendar",

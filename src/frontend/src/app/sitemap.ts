@@ -8,7 +8,9 @@ import {
   getEditionTalks,
   getHallOfFame,
   getIndexableSponsors,
+  getJobOffers,
 } from "@/lib/api";
+import { isCareersLink, offerOnlyLocale, offerPath } from "@/lib/job-offers";
 import { canonicalLocaleFor } from "@/lib/seo";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
@@ -246,6 +248,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           0.5,
         ),
       );
+    }
+  }
+
+  // One page per partner job offer (#556), in its own language when it is
+  // written in one only, like a talk (#468). A careers-site link has no page.
+  for (const sponsor of await getJobOffers()) {
+    for (const offer of sponsor.jobOffers) {
+      if (isCareersLink(offer)) continue;
+      const path = offerPath(offer);
+      const only = offerOnlyLocale(offer);
+      const locales: Locale[] = only ? [only] : ["fr", "en"];
+      for (const locale of locales) {
+        entries.push(buildEntry(`${BASE_URL}/${locale}${path}`, locales, path, undefined, "weekly", 0.5));
+      }
     }
   }
 
