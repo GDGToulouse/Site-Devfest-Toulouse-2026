@@ -39,6 +39,10 @@ export default function VenueDetailPage() {
   // page up on every room added (#533).
   const [roomFeedback, setRoomFeedback] = useState<SaveState>(null);
   const [pendingDelete, setPendingDelete] = useState<AdminRoom | null>(null);
+  // A room could only be deleted and re-added, and re-adding detaches its
+  // scheduled sessions and its Sessionize pairing, which point at the room id
+  // (#554). Editing happens in place, one room at a time.
+  const [editingRoom, setEditingRoom] = useState<{ id: number; name: string; capacity: string; sortOrder: string } | null>(null);
 
   const load = useCallback(async () => {
     const { data } = await adminFetch<AdminVenue>(`/venues/${venueId}`);
@@ -131,6 +135,25 @@ export default function VenueDetailPage() {
     load();
   }
 
+  async function saveRoom() {
+    if (!editingRoom || !editingRoom.name.trim()) return;
+    const result = await adminFetch(`/rooms/${editingRoom.id}`, {
+      method: "PUT",
+      body: JSON.stringify({
+        name: editingRoom.name.trim(),
+        capacity: editingRoom.capacity.trim() === "" ? null : Number(editingRoom.capacity),
+        sortOrder: editingRoom.sortOrder.trim() === "" ? 0 : Number(editingRoom.sortOrder),
+      }),
+    });
+    if (result.status !== 200) {
+      setRoomFeedback({ kind: "error", text: humanError(result, "La salle n'a pas pu être modifiée.") });
+      return;
+    }
+    setEditingRoom(null);
+    setRoomFeedback({ kind: "ok", text: "Salle modifiée." });
+    load();
+  }
+
   async function confirmDeleteRoom() {
     if (!pendingDelete) return;
     const room = pendingDelete;
@@ -212,17 +235,92 @@ export default function VenueDetailPage() {
           <p className="text-sm text-gris">Aucune salle — le programme ne pourra pas être établi.</p>
         ) : (
           <ul className="space-y-2">
-            {venue.rooms.map((room) => (
-              <li key={room.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-blanc shadow-card px-4 py-3">
-                <span className="text-base text-noir">
-                  <span className="text-gris">{room.sortOrder}.</span> {room.name}
-                  {room.capacity ? <span className="text-gris"> — {room.capacity} places</span> : null}
-                </span>
-                <button type="button" onClick={() => setPendingDelete(room)} className="text-sm text-rouge underline">
-                  Supprimer
-                </button>
-              </li>
-            ))}
+            {venue.rooms.map((room) =>
+              editingRoom?.id === room.id ? (
+                <li key={room.id} className="space-y-2 rounded-[12px] bg-blanc shadow-card px-4 py-3">
+                  <div className="flex flex-wrap items-end gap-3">
+                    <div className="flex-1 min-w-[180px]">
+                      <label htmlFor={`room-${room.id}-name`} className="block text-sm font-medium text-noir mb-1">Nom de la salle</label>
+                      <input
+                        id={`room-${room.id}-name`}
+                        value={editingRoom.name}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, name: e.target.value })}
+                        onKeyDown={(e) => e.key === "Enter" && saveRoom()}
+                        className="w-full rounded-[12px] border border-gris-clair px-3 py-2 text-base"
+                      />
+                    </div>
+                    <div className="w-28">
+                      <label htmlFor={`room-${room.id}-capacity`} className="block text-sm font-medium text-noir mb-1">Places</label>
+                      <input
+                        id={`room-${room.id}-capacity`}
+                        inputMode="numeric"
+                        value={editingRoom.capacity}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, capacity: e.target.value })}
+                        className="w-full rounded-[12px] border border-gris-clair px-3 py-2 text-base"
+                      />
+                    </div>
+                    <div className="w-24">
+                      <label htmlFor={`room-${room.id}-order`} className="block text-sm font-medium text-noir mb-1">Ordre</label>
+                      <input
+                        id={`room-${room.id}-order`}
+                        inputMode="numeric"
+                        value={editingRoom.sortOrder}
+                        onChange={(e) => setEditingRoom({ ...editingRoom, sortOrder: e.target.value })}
+                        className="w-full rounded-[12px] border border-gris-clair px-3 py-2 text-base"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={saveRoom}
+                      disabled={!editingRoom.name.trim()}
+                      className="rounded-[12px] bg-malachite px-[18px] py-3 text-base font-bold text-blanc disabled:opacity-50"
+                    >
+                      Enregistrer
+                    </button>
+                    <button type="button" onClick={() => setEditingRoom(null)} className="px-2 py-3 text-sm text-gris underline">
+                      Annuler
+                    </button>
+                  </div>
+                  {/* Sessions keep the room name they were scheduled under (#375):
+                      a rename shows on them only once they are scheduled again. */}
+                  <p className="text-sm text-gris">
+                    Les sessions déjà programmées gardent l’ancien nom jusqu’au prochain import Sessionize.
+                  </p>
+                </li>
+              ) : (
+                <li key={room.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] bg-blanc shadow-card px-4 py-3">
+                  <span className="text-base text-noir">
+                    <span className="text-gris">{room.sortOrder}.</span> {room.name}
+                    {room.capacity ? <span className="text-gris"> — {room.capacity} places</span> : null}
+                  </span>
+                  <span className="flex gap-4">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setEditingRoom({
+                            id: room.id,
+                            name: room.name,
+                            capacity: room.capacity?.toString() ?? "",
+                            sortOrder: room.sortOrder.toString(),
+                          })
+                        }
+                        aria-label={`Modifier ${room.name}`}
+                        className="text-sm text-bleu underline"
+                      >
+                        Modifier
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPendingDelete(room)}
+                        aria-label={`Supprimer ${room.name}`}
+                        className="text-sm text-rouge underline"
+                      >
+                        Supprimer
+                      </button>
+                  </span>
+                </li>
+              ),
+            )}
           </ul>
         )}
 
