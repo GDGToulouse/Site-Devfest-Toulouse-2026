@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 214 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 217 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -258,7 +258,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (56)
+### Public et divers (59)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -318,6 +318,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsors/indexable` | Public |
 | GET | `/api/tags` | Public |
 | GET | `/api/talks/:slug` | Public |
+| GET | `/api/talks/:slug/feedback` | Public |
+| POST | `/api/talks/:slug/feedback` | Contrôlé dans la route : avis du public (#564) : anonyme, un par navigateur et par session, ouvert le jour J et le lendemain, débit limité |
+| POST | `/api/talks/:slug/feedback/message` | Contrôlé dans la route : message privé au speaker (#564) : seulement après le vote du même navigateur, une fois, débit limité |
 
 ### Hors API (2)
 

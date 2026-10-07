@@ -239,6 +239,34 @@ model TalkSimulcast {
   @@index([roomId])
 }
 
+/// One audience member's opinion of a session (#563, #564): the appreciations
+/// they ticked, from a fixed list, and the private message they may leave the
+/// speaker afterwards. Anonymous: `voterId` is a random id kept by the browser,
+/// and the unique pair below is the whole of the "one vote per browser" rule.
+model TalkFeedback {
+  id      Int    @id @default(autoincrement())
+  talkId  Int
+  talk    Talk   @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  voterId String
+  /// Codes from TALK_FEEDBACK_ITEMS (lib/talk-feedback.ts), never labels: the
+  /// wording can change without rewriting the votes.
+  items   String[]
+
+  /// Private to the speaker and the team, never on a public route.
+  message   String?
+  messageAt DateTime?
+  /// Set by the team on a message it judges out of place (#565).
+  messageHidden Boolean @default(false)
+
+  /// Cast while the test mode was on (#566): deleted with it, never a real vote.
+  isTest Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([talkId, voterId])
+  @@index([talkId])
+}
+
 enum ScheduleEntryKind {
   BREAK
   MEAL
@@ -1025,6 +1053,9 @@ model Talk {
   // plays on screens elsewhere; those rooms are not running another session,
   // they are running this one. `roomId` above stays the room it is given in.
   simulcasts TalkSimulcast[]
+
+  // What the audience thought of it (#564).
+  feedback TalkFeedback[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

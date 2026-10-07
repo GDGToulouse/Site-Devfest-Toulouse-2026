@@ -15,7 +15,9 @@ import { getRequestContext } from "./request-context.js";
 // sign-in, and logging them would bury the edits people look for — or store
 // secrets. AuditLog itself is excluded, or each write would log its own log.
 // The OAuth tables of the MCP connector (#514) are the same kind of plumbing,
-// and Jwks holds the private signing key.
+// and Jwks holds the private signing key. TalkFeedback is the audience's
+// anonymous votes (#564): hundreds in two days, by nobody the history could
+// name, they would bury the team's edits under browser ids.
 const EXCLUDED_MODELS = new Set([
   "AuditLog",
   "Session",
@@ -30,6 +32,7 @@ const EXCLUDED_MODELS = new Set([
   "OauthRefreshToken",
   "OauthConsent",
   "OauthClientAssertion",
+  "TalkFeedback",
 ]);
 
 // A field whose change alone is bookkeeping, not an edit.
