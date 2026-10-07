@@ -82,12 +82,14 @@ export default async function VenuePage() {
         {/* venueTransports/venueParking are rich-text HTML sanitized server-side
             on write (sanitizeRichHtml in the edition PUT, #109) — the same model
             as sponsor descriptions and article content. These fields are new and
-            have a single write path, so the stored HTML is always sanitized. */}
+            have a single write path, so the stored HTML is always sanitized.
+            Styled by `.article-content`, the articles' typography: `prose`
+            generates nothing here, there is no typography plugin (#559). */}
         {edition.venueTransports && (
           <section className="mt-10">
             <h2 className="text-2xl font-bold text-noir">{t("transports")}</h2>
             <div
-              className="prose mt-3 max-w-none text-noir"
+              className="article-content mt-3 text-noir"
               dangerouslySetInnerHTML={{ __html: edition.venueTransports }}
             />
           </section>
@@ -97,7 +99,7 @@ export default async function VenuePage() {
           <section className="mt-10">
             <h2 className="text-2xl font-bold text-noir">{t("parking")}</h2>
             <div
-              className="prose mt-3 max-w-none text-noir"
+              className="article-content mt-3 text-noir"
               dangerouslySetInnerHTML={{ __html: edition.venueParking }}
             />
           </section>
