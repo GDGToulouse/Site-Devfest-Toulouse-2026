@@ -5,6 +5,7 @@ import {
   FEEDBACK_MESSAGE_MAX_LENGTH,
   TALK_FEEDBACK_CODES,
   feedbackPhase,
+  isTestVote,
   publicTrend,
 } from "../lib/talk-feedback.js";
 import { getFeaturedEdition } from "./editions.js";
@@ -56,7 +57,9 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
     if (!found) return reply.code(404).send({ error: "Talk not found" });
 
     const phase = feedbackPhase(found.edition);
-    if (phase === "upcoming") return { phase, hasVoted: false, hasMessage: false, trend: null };
+    // Tells the page to say so: what is cast now will be wiped (#566).
+    const isTest = isTestVote(found.edition);
+    if (phase === "upcoming") return { phase, isTest, hasVoted: false, hasMessage: false, trend: null };
 
     const { voterId } = request.query;
     const mine = voterId
@@ -73,6 +76,7 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
 
     return {
       phase,
+      isTest,
       hasVoted,
       hasMessage: Boolean(mine?.message),
       trend: mayShowTrend ? publicTrend(votes) : null,
@@ -107,15 +111,22 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
     }
 
     const { voterId, items } = request.body;
+    const isTest = isTestVote(found.edition);
     try {
-      await prisma.talkFeedback.create({ data: { talkId: found.talkId, voterId, items } });
+      await prisma.talkFeedback.create({ data: { talkId: found.talkId, voterId, items, isTest } });
     } catch (err) {
       // The unique (talk, voter) key: a second vote from this browser, or two
       // clicks racing each other.
-      if ((err as { code?: string }).code === "P2002") {
+      if ((err as { code?: string }).code !== "P2002") throw err;
+      // Unless the first was a trial (#566) the switch-off has not wiped yet:
+      // the real vote of the day replaces it rather than being refused.
+      const replaced = isTest
+        ? 0
+        : (await prisma.talkFeedback.deleteMany({ where: { talkId: found.talkId, voterId, isTest: true } })).count;
+      if (replaced === 0) {
         return reply.code(409).send({ error: "already_voted", message: "Vous avez déjà donné votre avis sur cette session." });
       }
-      throw err;
+      await prisma.talkFeedback.create({ data: { talkId: found.talkId, voterId, items, isTest } });
     }
     return reply.code(201).send({ success: true });
   });

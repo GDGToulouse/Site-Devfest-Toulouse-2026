@@ -152,7 +152,7 @@ describe("GET /api/talks/:slug/feedback (#564)", () => {
     at(new Date(window.opensAt.getTime() - 60 * 1000));
     const res = await status();
 
-    expect(res.json()).toEqual({ phase: "upcoming", hasVoted: false, hasMessage: false, trend: null });
+    expect(res.json()).toEqual({ phase: "upcoming", isTest: false, hasVoted: false, hasMessage: false, trend: null });
   });
 
   it("should not show the trend to a browser that has not voted yet", async () => {
