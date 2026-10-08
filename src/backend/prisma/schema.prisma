@@ -1363,3 +1363,35 @@ model AuditLog {
   @@index([channel, createdAt])
   @@index([createdAt])
 }
+
+// --- FAQ ---
+
+/// The themes the FAQ is grouped under on the public page (#111), in this order.
+enum FaqTheme {
+  VENUE
+  TICKETS
+  PROGRAMME
+  PRACTICAL
+  OTHER
+}
+
+/// One question of the public FAQ (#111). Site-wide rather than per edition:
+/// access, tickets and formats change little from one year to the next, and
+/// the team rewrites an answer when it does. The answers are sanitized rich
+/// text, like the content pages.
+model FaqItem {
+  id                Int               @id @default(autoincrement())
+  theme             FaqTheme          @default(OTHER)
+  questionFr        String
+  questionEn        String            @default("")
+  answerFr          String            @default("")
+  answerEn          String            @default("")
+  /// Order within the theme, smallest first.
+  sortOrder         Int               @default(0)
+  publicationStatus PublicationStatus @default(DRAFT)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
+}

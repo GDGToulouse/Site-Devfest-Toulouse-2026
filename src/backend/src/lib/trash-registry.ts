@@ -27,6 +27,14 @@ export interface TrashEntity {
 
 export const TRASH_ENTITIES: readonly TrashEntity[] = [
   {
+    key: "faq",
+    model: "faqItem",
+    labelField: "questionFr",
+    parkedFields: [],
+    fileFields: [],
+    adminOnly: false,
+  },
+  {
     key: "articles",
     model: "article",
     labelField: "titleFr",

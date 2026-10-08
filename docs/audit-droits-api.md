@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (136)
+### Back-office (141)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -123,6 +123,11 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/editions/current` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/editions/featured` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/featured` | ADMIN |
+| GET | `/api/admin/faq` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/faq` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/faq/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/faq/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/faq/order` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/feedback/:id/message` | ADMIN |
 | GET | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
@@ -266,7 +271,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (59)
+### Public et divers (60)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -299,6 +304,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/editions/current` | Public |
 | GET | `/api/editions/current/sponsor-tiers` | Public |
 | GET | `/api/editions/current/ticket-tiers` | Public |
+| GET | `/api/faq` | Public |
 | GET | `/api/health` | Public |
 | GET | `/api/job-offers` | Public |
 | GET | `/api/maintenance/purge-trash` | Contrôlé dans la route : secret partagé du cron, ou session ADMIN |

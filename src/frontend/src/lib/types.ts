@@ -41,6 +41,8 @@ export interface Edition {
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
   isScheduleReady: boolean;
+  /** At least one published FAQ question (#111), site-wide. */
+  hasFaq?: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
   // At least one partner job offer is published and still within its
@@ -653,4 +655,16 @@ export interface PaginatedArticles {
   total: number;
   page: number;
   totalPages: number;
+}
+
+// One published FAQ question (#111), in both languages.
+export type FaqTheme = "VENUE" | "TICKETS" | "PROGRAMME" | "PRACTICAL" | "OTHER";
+
+export interface FaqItem {
+  id: number;
+  theme: FaqTheme;
+  questionFr: string;
+  questionEn: string;
+  answerFr: string;
+  answerEn: string;
 }
