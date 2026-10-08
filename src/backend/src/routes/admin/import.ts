@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { revalidateSpeakers, revalidateConferences } from "../../lib/revalidate.js";
 import { importSessionize, loadSessionizeData } from "../../lib/sessionize-import.js";
+import { loadServiceSlots, type SzServiceSlot } from "../../lib/sessionize-service-slots.js";
 import { setChannel } from "../../lib/request-context.js";
 import { notFound } from "../../lib/admin-helpers.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
@@ -64,10 +65,27 @@ export default async function adminImportRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "Invalid Sessionize data", detail: (err as Error).message });
     }
 
+    // The service sessions only exist in the GridSmart view, fetched next to
+    // the one given (#546). A pasted export has no URL to derive it from, and a
+    // failed fetch leaves the schedule entries as they are rather than failing
+    // the whole import.
+    let serviceSlots: SzServiceSlot[] | null = null;
+    let slotsWarning: string | null = null;
+    if (url) {
+      try {
+        serviceSlots = await loadServiceSlots(url);
+      } catch (err) {
+        slotsWarning = `Créneaux hors session non importés : ${(err as Error).message}`;
+      }
+    } else {
+      slotsWarning = "Créneaux hors session non importés : ils ne se lisent que depuis le lien de l'API Sessionize, pas depuis un export collé.";
+    }
+
     // Hundreds of writes in one go: the history should say they came from
     // Sessionize, not from the admin editing each speaker by hand (#513).
     setChannel("IMPORT");
-    const report = await importSessionize(editionId, data);
+    const report = await importSessionize(editionId, data, serviceSlots);
+    if (slotsWarning) report.warnings.push(slotsWarning);
 
     // Kept only once a link has worked: an URL that failed is never saved, and
     // a pasted export leaves the saved link alone (#529).

@@ -417,6 +417,8 @@ export interface ScheduleEntry {
   endsAt: string;
   roomId: number | null;
   room: string | null;
+  /** Set on the entries the Sessionize import created and keeps in line (#546). Admin only. */
+  sessionizeId?: string | null;
 }
 
 // The whole grid of one edition, as /api/editions/:year/schedule serves it.

@@ -309,6 +309,11 @@ model ScheduleEntry {
   roomId Int?
   room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
+  /// The Sessionize service session this entry was imported from (#546). The
+  /// import updates and deletes only these; null is an entry typed by hand.
+  sessionizeId String?
+
+  @@unique([editionId, sessionizeId])
   @@index([editionId])
   @@index([roomId])
 }
