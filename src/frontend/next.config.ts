@@ -126,6 +126,11 @@ const nextConfig: NextConfig = {
         source: "/api/pages/:path*",
         destination: `${backendUrl}/api/pages/:path*`,
       },
+      // The FAQ (#111), read by the public API's clients.
+      {
+        source: "/api/faq",
+        destination: `${backendUrl}/api/faq`,
+      },
       {
         source: "/api/categories",
         destination: `${backendUrl}/api/categories`,
