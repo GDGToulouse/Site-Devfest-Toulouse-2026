@@ -448,7 +448,8 @@
     "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final.",
     "printSource": "Session details: {url}",
     "printSelection": "Personal selection — this document is not the whole schedule.",
-    "printCommon": "Shared moments"
+    "printCommon": "Shared moments",
+    "nextSlot": "Next slot · {time}"
   },
   "venue": {
     "pageTitle": "Venue & practical info",
