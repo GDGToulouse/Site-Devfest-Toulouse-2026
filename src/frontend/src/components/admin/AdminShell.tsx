@@ -96,7 +96,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex bg-blanc-casse w-screen h-screen h-dvh overflow-hidden">
+    // The document scrolls, as on any page (#547). A fixed frame holding two
+    // scroll areas of its own (menu and content) fooled every tool that relies
+    // on the page scrolling: full-page captures stretched to the menu with a
+    // hole in the content, printing cut at the fold, the back button lost its
+    // place. The menu stays in view by being sticky instead.
+    <div className="flex min-h-dvh bg-blanc-casse">
       {/* Mobile overlay */}
       {isSidebarOpen && (
         <div
@@ -107,7 +112,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
       {/* Sidebar — always visible on desktop, toggleable on mobile */}
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:relative lg:translate-x-0 ${
+        // Mobile: a drawer over the page. Desktop: pinned to the left at the
+        // height of the window, scrolling on its own if it is taller.
+        className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-200 lg:sticky lg:top-0 lg:z-auto lg:h-dvh lg:shrink-0 lg:translate-x-0 ${
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -120,7 +127,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto">
+      {/* min-w-0: a wide table scrolls inside its own box instead of
+          widening the page (#244). */}
+      <main className="min-w-0 flex-1">
         {/* Mobile header with hamburger */}
         <div className="sticky top-0 z-30 flex items-center gap-4 bg-blanc-casse px-4 py-3 lg:hidden border-b border-gris/10">
           <button
@@ -139,8 +148,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
 
         {/* pb-24 on mobile keeps the last element (often a Save button) clear
-            of the browser's bottom chrome; h-dvh above already excludes it, but
-            the extra padding is a belt-and-braces safeguard (#257). */}
+            of the browser's bottom chrome (#257). */}
         <div className="p-4 pb-24 lg:p-8 lg:pb-8">
           {isAdminPathAllowed(pathname, user.role) ? children : <ForbiddenSection />}
         </div>
