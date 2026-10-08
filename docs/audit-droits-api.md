@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 214 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 225 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (129)
+### Back-office (146)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -105,19 +105,35 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/contact/messages/:id/forward` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/contact/messages/:id/read` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/contact/messages/:id/retry-webhook` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/edition-photos/:photoId` | ADMIN |
+| PUT | `/api/admin/edition-photos/:photoId` | ADMIN |
 | GET | `/api/admin/editions` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/editions` | ADMIN |
 | DELETE | `/api/admin/editions/:id` | ADMIN |
 | GET | `/api/admin/editions/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id` | ADMIN |
+| GET | `/api/admin/editions/:id/feedback` | ADMIN |
+| GET | `/api/admin/editions/:id/feedback-recap` | ADMIN |
+| POST | `/api/admin/editions/:id/feedback-recap` | ADMIN |
+| GET | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
+| PUT | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id/key-figures` | ADMIN |
+| GET | `/api/admin/editions/:id/photos` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/editions/:id/photos` | ADMIN |
+| PUT | `/api/admin/editions/:id/photos/order` | ADMIN |
 | GET | `/api/admin/editions/:id/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
 | PUT | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
 | GET | `/api/admin/editions/current` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/editions/featured` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/featured` | ADMIN |
+| GET | `/api/admin/faq` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/faq` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/faq/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/faq/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/faq/order` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/feedback/:id/message` | ADMIN |
 | GET | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/files/:filename` | Équipe (ADMIN, EDITOR) |
@@ -186,6 +202,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/talks/:id` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/talks/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/talks/:id` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/talks/:id/feedback` | ADMIN |
 | POST | `/api/admin/talks/bulk` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/tickets` | ADMIN |
 | POST | `/api/admin/tickets` | ADMIN |
@@ -241,12 +258,13 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsor-space/me` | Contrôlé dans la route : dit qui est connecté ; vérifie la session elle-même |
 | GET | `/api/sponsor-space/mine` | Contrôlé dans la route : liste les sponsors de l'appelant ; vérifie la session elle-même |
 
-### Lien de modification speaker (4)
+### Lien de modification speaker (5)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
 | GET | `/api/edit/:token` | Contrôlé dans la route : lien de modification du speaker : le jeton est l'accès |
 | PUT | `/api/edit/:token` | Contrôlé dans la route : lien de modification du speaker : le jeton est l'accès |
+| GET | `/api/edit/:token/feedback` | Contrôlé dans la route : avis du public sur ses sessions (#565) : le jeton est l'accès, lecture seule, même pendant le gel |
 | PUT | `/api/edit/:token/talks/:talkId` | Contrôlé dans la route : lien de modification du speaker : le jeton est l'accès |
 | POST | `/api/edit/:token/upload` | Contrôlé dans la route : lien de modification du speaker : le jeton est l'accès |
 
@@ -258,7 +276,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (56)
+### Public et divers (60)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -291,6 +309,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/editions/current` | Public |
 | GET | `/api/editions/current/sponsor-tiers` | Public |
 | GET | `/api/editions/current/ticket-tiers` | Public |
+| GET | `/api/faq` | Public |
 | GET | `/api/health` | Public |
 | GET | `/api/job-offers` | Public |
 | GET | `/api/maintenance/purge-trash` | Contrôlé dans la route : secret partagé du cron, ou session ADMIN |
@@ -318,6 +337,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsors/indexable` | Public |
 | GET | `/api/tags` | Public |
 | GET | `/api/talks/:slug` | Public |
+| GET | `/api/talks/:slug/feedback` | Public |
+| POST | `/api/talks/:slug/feedback` | Contrôlé dans la route : avis du public (#564) : anonyme, un par navigateur et par session, ouvert le jour J et le lendemain, débit limité |
+| POST | `/api/talks/:slug/feedback/message` | Contrôlé dans la route : message privé au speaker (#564) : seulement après le vote du même navigateur, une fois, débit limité |
 
 ### Hors API (2)
 

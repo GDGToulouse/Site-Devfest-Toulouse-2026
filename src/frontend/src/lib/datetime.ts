@@ -85,3 +85,24 @@ export function formatEventDate(iso: string, locale: string): string {
     dateStyle: "long",
   }).format(date);
 }
+
+// `YYYY-MM-DD` of an instant on the event's calendar (en-CA formats that way).
+const eventDayFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: EVENT_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/**
+ * Whole days from `now` to the event day, counted on the Toulouse calendar
+ * (#576): 0 on the day itself, 1 the day before, negative once it is past.
+ * Calendar days, not 24-hour blocks: at 23:00 the evening before, it is
+ * "tomorrow", not "today".
+ */
+export function daysUntilEvent(startIso: string, now: Date): number | null {
+  const start = new Date(startIso);
+  if (Number.isNaN(start.getTime())) return null;
+  const toUtcMidnight = (date: Date) => Date.parse(`${eventDayFormatter.format(date)}T00:00:00Z`);
+  return Math.round((toUtcMidnight(start) - toUtcMidnight(now)) / 86_400_000);
+}

@@ -13,6 +13,7 @@ vi.mock("@/lib/api", () => ({
   getEditionTalks: vi.fn(),
   getHallOfFame: vi.fn(),
   getIndexableSponsors: vi.fn(),
+  getJobOffers: vi.fn(),
   getPublishedPages: vi.fn(),
 }));
 
@@ -24,6 +25,7 @@ import {
   getEditionTalks,
   getHallOfFame,
   getIndexableSponsors,
+  getJobOffers,
   getPublishedPages,
 } from "@/lib/api";
 import sitemap, { dynamic } from "./sitemap";
@@ -39,8 +41,8 @@ function paths(entries: { url: string }[]): string[] {
 
 beforeEach(() => {
   vi.mocked(getEditions).mockResolvedValue([
-    { id: 1, year: 2026, status: "ANNOUNCEMENT", archivedSiteUrl: null, startDate: null, updatedAt: "2026-03-01T00:00:00Z" },
-    { id: 2, year: 2025, status: "SEE_YOU_NEXT_YEAR", archivedSiteUrl: null, startDate: null, updatedAt: "2025-12-01T00:00:00Z" },
+    { id: 1, year: 2026, status: "ANNOUNCEMENT", archivedSiteUrl: null, startDate: null, updatedAt: "2026-03-01T00:00:00Z", venueName: null },
+    { id: 2, year: 2025, status: "SEE_YOU_NEXT_YEAR", archivedSiteUrl: null, startDate: null, updatedAt: "2025-12-01T00:00:00Z", venueName: null },
   ]);
   vi.mocked(getCurrentEdition).mockResolvedValue({ ...FEATURED, hasVenueInfo: true } as never);
   vi.mocked(getEditionTalks).mockImplementation(async (year: number) =>
@@ -58,6 +60,7 @@ beforeEach(() => {
   vi.mocked(getContentPage).mockResolvedValue(null);
   vi.mocked(getArticles).mockResolvedValue({ articles: [], total: 0, page: 1, totalPages: 0 });
   vi.mocked(getPublishedPages).mockResolvedValue([]);
+  vi.mocked(getJobOffers).mockResolvedValue([]);
 });
 
 describe("sitemap — talk pages (#379)", () => {
@@ -209,5 +212,25 @@ describe("sitemap — never served from the build (#426)", () => {
     // crawler after a deployment receives. Observed on beta, 28 URLs against
     // the 1310 a fresh render produces.
     expect(dynamic).toBe("force-dynamic");
+  });
+});
+
+// #556 — one page per partner job offer; a careers-site link has none.
+describe("sitemap — partner job offers", () => {
+  it("lists an offer in its only language and skips a careers-site link", async () => {
+    vi.mocked(getJobOffers).mockResolvedValue([
+      {
+        slug: "celad",
+        name: "Celad",
+        logoUrl: null,
+        jobOffers: [
+          { id: 12, title: "Architecte IA", descriptionFr: "<p>Nous recrutons</p>", descriptionEn: "", url: "https://example.com/a" },
+          { id: 13, title: "Nos offres d'emploi", descriptionFr: "", descriptionEn: "", url: "https://example.com/careers" },
+        ],
+      },
+    ]);
+    const offerPaths = paths(await sitemap()).filter((p) => p.includes("/offres-emploi-partenaires/"));
+
+    expect(offerPaths).toEqual(["/fr/offres-emploi-partenaires/12-architecte-ia"]);
   });
 });

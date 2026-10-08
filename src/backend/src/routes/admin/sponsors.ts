@@ -1,5 +1,17 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import {
+  SPONSOR_MISSING,
+  SPONSOR_PAGE_SIZE,
+  SPONSOR_PAGE_SIZE_MAX,
+  SPONSOR_SORTS,
+  contactState,
+  matchesSponsor,
+  sortSponsors,
+  type ContactState,
+  type SponsorListFilters,
+  type SponsorMissing,
+} from "../../lib/sponsor-list.js";
 import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
@@ -57,6 +69,18 @@ interface SponsorIdParams {
 
 interface SponsorListQuery {
   editionId?: string;
+  page?: string;
+  limit?: string;
+  search?: string;
+  tierKey?: string;
+  status?: "PUBLISHED" | "DRAFT";
+  comKit?: "received" | "missing";
+  logo?: "missing";
+  contacts?: ContactState;
+  jobOffers?: "with" | "without";
+  missing?: string;
+  sort?: (typeof SPONSOR_SORTS)[number];
+  order?: "asc" | "desc";
 }
 
 interface SponsorBulkBody {
@@ -155,12 +179,42 @@ function serialize(s: {
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
   // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
+  // GET /api/admin/sponsors — filters, sort and pagination (#574), as the
+  // speakers list (#572). Without `page` the answer stays the full array: the
+  // edition's sponsors tab, the speaker's sponsor picker and MCP agents read it.
   app.get<{ Querystring: SponsorListQuery }>("/sponsors", {
     schema: {
-      querystring: { type: "object", properties: { editionId: { type: "string" } } },
+      querystring: {
+        type: "object",
+        properties: {
+          editionId: { type: "string", pattern: "^[0-9]+$" },
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          search: { type: "string", maxLength: 200 },
+          tierKey: { type: "string", maxLength: 100 },
+          status: { type: "string", enum: ["PUBLISHED", "DRAFT"] },
+          comKit: { type: "string", enum: ["received", "missing"] },
+          logo: { type: "string", enum: ["missing"] },
+          contacts: { type: "string", enum: ["none", "pending", "active"] },
+          jobOffers: { type: "string", enum: ["with", "without"] },
+          // Comma-separated, e.g. `description,website`.
+          missing: { type: "string", pattern: `^(${SPONSOR_MISSING.join("|")})(,(${SPONSOR_MISSING.join("|")}))*$` },
+          sort: { type: "string", enum: [...SPONSOR_SORTS] },
+          order: { type: "string", enum: ["asc", "desc"] },
+        },
+      },
     },
-  }, async (request) => {
-    const editionId = request.query.editionId ? Number(request.query.editionId) : undefined;
+  }, async (request, reply) => {
+    const q = request.query;
+    const editionId = q.editionId ? Number(q.editionId) : undefined;
+    // The follow-up is a year's (#129, #375): a kit received in 2025 says
+    // nothing about 2026. Without an edition there is no year to read it on.
+    if (!editionId && (q.comKit || q.logo || q.jobOffers)) {
+      return reply.code(400).send({
+        error: "edition_required",
+        message: "Choisissez une édition pour suivre le kit, le logo ou les offres.",
+      });
+    }
 
     // One row per company (#129): the list moves onto the join, mirroring the
     // admin speakers list. `editions` carries every participation so the row
@@ -187,13 +241,53 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
             editionId: true,
             edition: { select: { id: true, year: true } },
             tier: { select: TIER_SELECT },
+            _count: { select: { jobOffers: true } },
           },
           orderBy: { edition: { year: "desc" } },
         },
+        // Read for the access state only: the token itself never leaves (#362).
+        contacts: { select: { userId: true, invitationToken: true } },
       },
       orderBy: { name: "asc" },
     });
-    return sponsors.map(serialize);
+
+    const rows = sponsors.map(({ contacts, editions, ...sponsor }) => {
+      // The participation the row speaks for: the chosen edition's, or the latest.
+      const current = editions[0];
+      return {
+        ...serialize({ ...sponsor, editions: editions.map(({ _count, ...e }) => ({ ...e, jobOffers: undefined })) }),
+        name: sponsor.name,
+        tierKey: current?.tier.key ?? null,
+        tierRank: current?.tier.rank ?? null,
+        status: current?.publicationStatus ?? null,
+        year: current?.edition.year ?? null,
+        comKitReceived: current?.comKitReceived ?? false,
+        // The year's frozen logo, or the company's own until one is frozen (#375).
+        hasLogo: Boolean(current?.logoUrl || sponsor.logoUrl),
+        contactState: contactState(contacts),
+        contactCount: contacts.length,
+        jobOfferCount: current?._count.jobOffers ?? 0,
+        hasDescription: Boolean(sponsor.descriptionFr || sponsor.descriptionEn),
+        hasWebsite: Boolean(sponsor.websiteUrl),
+      };
+    });
+
+    const filters: SponsorListFilters = {
+      search: q.search,
+      tierKey: q.tierKey,
+      status: q.status,
+      comKit: q.comKit,
+      logo: q.logo,
+      contacts: q.contacts,
+      jobOffers: q.jobOffers,
+      missing: (q.missing?.split(",") ?? []) as SponsorMissing[],
+    };
+    const matching = sortSponsors(rows.filter((row) => matchesSponsor(row, filters)), q.sort ?? "name", q.order ?? "asc");
+
+    if (!q.page) return matching;
+    const page = Math.max(1, Number(q.page));
+    const limit = Math.min(SPONSOR_PAGE_SIZE_MAX, Math.max(1, Number(q.limit) || SPONSOR_PAGE_SIZE));
+    return { page, limit, total: matching.length, items: matching.slice((page - 1) * limit, page * limit) };
   });
 
   // GET /api/admin/sponsors/:id

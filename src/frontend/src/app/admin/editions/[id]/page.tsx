@@ -9,11 +9,14 @@ import GeneralTab from "@/components/admin/edition-detail/GeneralTab";
 import VenueTab from "@/components/admin/edition-detail/VenueTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
+import FeedbackTab from "@/components/admin/edition-detail/FeedbackTab";
+import PhotosTab from "@/components/admin/edition-detail/PhotosTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
 import ScheduleTab from "@/components/admin/edition-detail/ScheduleTab";
 import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
+import { editionStatusInfo } from "@/lib/edition-status-labels";
 
 interface EditionData {
   id: number;
@@ -39,12 +42,6 @@ interface EditionData {
   categoriesCount: number;
 }
 
-const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
-  PREPARATION: { label: "Préparation", variant: "gray" },
-  ANNOUNCEMENT: { label: "Annonce", variant: "green" },
-  SEE_YOU_NEXT_YEAR: { label: "À l'année prochaine", variant: "orange" },
-};
-
 const TABS = [
   { key: "general", label: "Général" },
   { key: "venue", label: "Lieu" },
@@ -56,6 +53,8 @@ const TABS = [
   { key: "sponsors", label: "Sponsors" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
+  { key: "feedback", label: "Avis" },
+  { key: "photos", label: "Photos" },
 ];
 
 export default function EditionDetailPage() {
@@ -92,7 +91,7 @@ export default function EditionDetailPage() {
 
   if (isLoading || !edition) return <p className="text-gris">Chargement...</p>;
 
-  const statusInfo = STATUS_LABELS[edition.status] || { label: edition.status, variant: "gray" as const };
+  const statusInfo = editionStatusInfo(edition.status);
 
   return (
     <div>
@@ -146,6 +145,10 @@ export default function EditionDetailPage() {
         {activeTab === "key-figures" && (
           <KeyFiguresTab editionId={edition.id} />
         )}
+        {activeTab === "feedback" && (
+          <FeedbackTab editionId={edition.id} />
+        )}
+        {activeTab === "photos" && <PhotosTab editionId={edition.id} />}
       </div>
     </div>
   );

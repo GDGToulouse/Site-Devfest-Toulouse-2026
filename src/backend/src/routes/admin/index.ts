@@ -23,6 +23,9 @@ import adminTrashRoutes from "./trash.js";
 import adminVenueRoutes from "./venues.js";
 import adminScheduleRoutes from "./schedule.js";
 import adminAuditRoutes from "./audit.js";
+import adminFeedbackRoutes from "./feedback.js";
+import adminEditionPhotoRoutes from "./edition-photos.js";
+import adminFaqRoutes from "./faq.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -33,6 +36,8 @@ export default async function adminRoutes(app: FastifyInstance) {
     editorApp.addHook("preHandler", requireAdmin);
     await editorApp.register(adminArticleRoutes);
     await editorApp.register(adminPageRoutes);
+    await editorApp.register(adminEditionPhotoRoutes);
+    await editorApp.register(adminFaqRoutes);
     await editorApp.register(adminContactRoutes);
     await editorApp.register(adminFileRoutes);
     await editorApp.register(adminTranslateRoutes);
@@ -69,5 +74,6 @@ export default async function adminRoutes(app: FastifyInstance) {
     });
     // Who changed what, from where: personal data, not for editors (#513).
     await adminApp.register(adminAuditRoutes);
+    await adminApp.register(adminFeedbackRoutes);
   });
 }

@@ -236,6 +236,13 @@ export default function ImportTab({ editionId }: ImportTabProps) {
               <strong>{report.talks.updated}</strong> mises à jour, dont{" "}
               <strong>{report.talks.scheduled}</strong> avec un créneau
             </li>
+            {report.scheduleEntries && (
+              <li>
+                Créneaux hors session&nbsp;: <strong>{report.scheduleEntries.created}</strong> créés,{" "}
+                <strong>{report.scheduleEntries.updated}</strong> mis à jour,{" "}
+                <strong>{report.scheduleEntries.deleted}</strong> supprimés
+              </li>
+            )}
             <li>
               Catégories&nbsp;: <strong>{report.categories.created}</strong> créées,{" "}
               <strong>{report.categories.reused}</strong> réutilisées

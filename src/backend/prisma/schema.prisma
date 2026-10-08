@@ -19,6 +19,12 @@ datasource db {
 enum EditionStatus {
   PREPARATION
   ANNOUNCEMENT
+  // The last month before the event (#576): tickets first, no sponsor call.
+  TICKETING
+  // The last week (#577): the home page helps prepare the day.
+  PROGRAMME
+  // The day itself (#577): the home page follows the programme.
+  EVENT_DAY
   SEE_YOU_NEXT_YEAR
 }
 
@@ -115,6 +121,13 @@ model Edition {
   // (#529). Back-office only: not the public call for papers page, which is
   // the `cfp_sessionize_url` site setting.
   sessionizeApiUrl        String?
+  // Opens the audience feedback before the event day so the team can try it,
+  // production included (#566). Only before the day; the votes cast meanwhile
+  // are marked as tests and deleted when it goes off, by hand or at midnight
+  // on the day (lib/talk-feedback-test-mode.ts).
+  feedbackTestMode        Boolean           @default(false)
+  // When an admin last sent the speakers their feedback recap (#567).
+  feedbackRecapSentAt     DateTime?
   createdAt               DateTime          @default(now())
   updatedAt               DateTime          @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -123,6 +136,8 @@ model Edition {
   ticketTiers     TicketTier[]
   articles        Article[]
   keyFigures      KeyFigure[]
+  // The edition's photo gallery (#112), a curated selection.
+  photos          EditionPhoto[]
   sponsorTiers    EditionSponsorTier[]
   // The join since #351, like `categories` above: an edition's speakers are
   // participations, not identities.
@@ -239,6 +254,34 @@ model TalkSimulcast {
   @@index([roomId])
 }
 
+/// One audience member's opinion of a session (#563, #564): the appreciations
+/// they ticked, from a fixed list, and the private message they may leave the
+/// speaker afterwards. Anonymous: `voterId` is a random id kept by the browser,
+/// and the unique pair below is the whole of the "one vote per browser" rule.
+model TalkFeedback {
+  id      Int    @id @default(autoincrement())
+  talkId  Int
+  talk    Talk   @relation(fields: [talkId], references: [id], onDelete: Cascade)
+  voterId String
+  /// Codes from TALK_FEEDBACK_ITEMS (lib/talk-feedback.ts), never labels: the
+  /// wording can change without rewriting the votes.
+  items   String[]
+
+  /// Private to the speaker and the team, never on a public route.
+  message   String?
+  messageAt DateTime?
+  /// Set by the team on a message it judges out of place (#565).
+  messageHidden Boolean @default(false)
+
+  /// Cast while the test mode was on (#566): deleted with it, never a real vote.
+  isTest Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@unique([talkId, voterId])
+  @@index([talkId])
+}
+
 enum ScheduleEntryKind {
   BREAK
   MEAL
@@ -272,6 +315,11 @@ model ScheduleEntry {
   roomId Int?
   room   Room? @relation(fields: [roomId], references: [id], onDelete: SetNull)
 
+  /// The Sessionize service session this entry was imported from (#546). The
+  /// import updates and deletes only these; null is an entry typed by hand.
+  sessionizeId String?
+
+  @@unique([editionId, sessionizeId])
   @@index([editionId])
   @@index([roomId])
 }
@@ -1026,6 +1074,9 @@ model Talk {
   // they are running this one. `roomId` above stays the room it is given in.
   simulcasts TalkSimulcast[]
 
+  // What the audience thought of it (#564).
+  feedback TalkFeedback[]
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -1313,4 +1364,57 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([channel, createdAt])
   @@index([createdAt])
+}
+
+// --- Gallery ---
+
+/// One photo of an edition's gallery (#112): a curated selection shown on the
+/// edition page, picked from the media library. The full album, when there is
+/// one, stays an external link (`Edition.galleryUrl`).
+model EditionPhoto {
+  id        Int      @id @default(autoincrement())
+  /// An /uploads/ path from the media library.
+  url       String
+  /// Overrides the alt text the media library holds for the file, if any.
+  alt       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  @@index([editionId])
+}
+
+// --- FAQ ---
+
+/// The themes the FAQ is grouped under on the public page (#111), in this order.
+enum FaqTheme {
+  VENUE
+  TICKETS
+  PROGRAMME
+  PRACTICAL
+  OTHER
+}
+
+/// One question of the public FAQ (#111). Site-wide rather than per edition:
+/// access, tickets and formats change little from one year to the next, and
+/// the team rewrites an answer when it does. The answers are sanitized rich
+/// text, like the content pages.
+model FaqItem {
+  id                Int               @id @default(autoincrement())
+  theme             FaqTheme          @default(OTHER)
+  questionFr        String
+  questionEn        String            @default("")
+  answerFr          String            @default("")
+  answerEn          String            @default("")
+  /// Order within the theme, smallest first.
+  sortOrder         Int               @default(0)
+  publicationStatus PublicationStatus @default(DRAFT)
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#146): non-null means the row sits in the trash.
+  deletedAt DateTime?
 }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { editionStatusInfo } from "@/lib/edition-status-labels";
 
 interface EditionData {
   id: number;
@@ -13,12 +14,6 @@ interface EditionData {
   ticketTiersCount: number;
   articlesCount: number;
 }
-
-const STATUS_OPTIONS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
-  PREPARATION: { label: "Préparation", variant: "gray" },
-  ANNOUNCEMENT: { label: "Annonce", variant: "green" },
-  SEE_YOU_NEXT_YEAR: { label: "À l'année prochaine", variant: "orange" },
-};
 
 export default function EditionsPage() {
   const router = useRouter();
@@ -124,7 +119,7 @@ export default function EditionsPage() {
 
       <div className="space-y-3">
         {editions.map((edition) => {
-          const statusInfo = STATUS_OPTIONS[edition.status] || { label: edition.status, variant: "gray" as const };
+          const statusInfo = editionStatusInfo(edition.status);
           const isFeatured = edition.id === featuredId;
           return (
             <div key={edition.id} className={`bg-blanc rounded-xl shadow-card p-5 flex items-center justify-between ${isFeatured ? "ring-2 ring-malachite" : ""}`}>

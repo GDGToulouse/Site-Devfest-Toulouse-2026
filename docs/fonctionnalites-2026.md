@@ -82,6 +82,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ### FAQ
 
 - Questions/réponses : accès au lieu, formats des talks, billetterie, remboursement
+- Page `/faq` (#111) : questions groupées par thème (lieu et accès, billetterie, programme et sessions, sur place, autres), en accordéon accessible au clavier, avec le balisage `FAQPage`. FAQ commune au site, pas par édition. Saisie dans l'admin (« FAQ », ADMIN et EDITOR) : FR/EN, brouillon ou publiée, ordre par flèches ; sans traduction, la page anglaise affiche le français. L'entrée de menu n'apparaît qu'à la première question publiée
 
 ### À propos / Historique
 
@@ -97,6 +98,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ### Galerie photos
 
 - Lien vers album Google Photos (officiel + collaboratif)
+- Sélection de photos par édition (#112), choisie dans la médiathèque depuis l'onglet « Photos » de l'édition (ADMIN) : ordre, texte alternatif (à défaut celui de la médiathèque). Affichée sur la page de l'édition en vignettes, agrandissement au clic (flèches, Échap), puis le lien « Voir l'album complet »
 
 ### CFP (Call for Papers)
 
@@ -176,6 +178,10 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 - Configuration du statut annuel de la page d'accueil :
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations
+  - "Dernier mois" (#576) : la billetterie passe en avant, avec un compte à rebours ; les appels à devenir sponsor disparaissent de l'accueil et de l'en-tête de toutes les pages, les logos des sponsors restent
+  - "Dernière semaine" (#577) : le programme passe en avant (bouton « Préparer mon programme », section « Préparez votre journée » : programme et favoris, export agenda, accès au lieu), la billetterie descend ; l'en-tête de toutes les pages propose « Programme »
+  - "Jour J" (#577) : l'accueil suit la journée (« Voir le programme du jour », « C'est aujourd'hui ! »), plus de billetterie.
+  - Passages automatiques (#585) : « Dernier mois » un mois avant le premier jour, « Dernière semaine » une semaine avant, « Jour J » le jour même, à minuit (heure de Paris). Seulement vers l'avant, jamais depuis « Préparation », et seulement le jour du déclenchement : un statut remis à la main ensuite reste tel quel
   - "Rendez-vous l'année prochaine" : bilan, replay, photos
 - Purge du cache (manuelle ou déclenchée par changement de statut)
 - Gestion des sessions, speakers, sponsors, articles

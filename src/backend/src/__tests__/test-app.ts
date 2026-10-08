@@ -3,6 +3,7 @@ import editionRoutes from "../routes/editions.js";
 import articleRoutes from "../routes/articles.js";
 import settingsRoutes from "../routes/settings.js";
 import pageRoutes from "../routes/pages.js";
+import faqRoutes from "../routes/faq.js";
 import contactRoutes from "../routes/contact.js";
 
 export async function buildApp() {
@@ -12,6 +13,7 @@ export async function buildApp() {
   await app.register(articleRoutes, { prefix: "/api" });
   await app.register(settingsRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
+  await app.register(faqRoutes, { prefix: "/api" });
   await app.register(contactRoutes, { prefix: "/api" });
 
   return app;

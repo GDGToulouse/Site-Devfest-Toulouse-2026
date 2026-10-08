@@ -358,6 +358,8 @@ export async function adminListAudit(filters: AuditFilters) {
 export interface SessionizeImportReport {
   speakers: { created: number; updated: number };
   talks: { created: number; updated: number; scheduled: number };
+  // Null when the import had no GridSmart view to read them from (#546).
+  scheduleEntries: { created: number; updated: number; deleted: number } | null;
   categories: { created: number; reused: number };
   links: number;
   unmappedRooms: { sessionizeId: number; name: string; sessions: number }[];

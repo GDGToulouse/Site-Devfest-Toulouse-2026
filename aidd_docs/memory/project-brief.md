@@ -12,7 +12,7 @@
 
 | Term | Meaning |
 | ---- | ------- |
-| Édition | Une année du DevFest. Son statut (`PREPARATION`, `ANNOUNCEMENT`, `SEE_YOU_NEXT_YEAR`) conditionne la page d'accueil |
+| Édition | Une année du DevFest. Son statut (`PREPARATION`, `ANNOUNCEMENT`, `TICKETING`, `PROGRAMME`, `EVENT_DAY`, `SEE_YOU_NEXT_YEAR`) conditionne la page d'accueil, et l'en-tête de toutes les pages |
 | Speaker | Une personne, partagée entre éditions. Sa participation à une année est un `SpeakerEdition` |
 | Talk | Une session : conférence, keynote, atelier |
 | Sponsor | Une entreprise, partagée entre éditions. Sa participation est un `EditionSponsor`, qui fige le logo et le libellé de niveau affichés cette année-là (#375) |

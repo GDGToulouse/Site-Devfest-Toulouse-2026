@@ -16,6 +16,7 @@ import ProgrammePrint, { type PrintLabels } from "./ProgrammePrint";
 import type { PrintGrouping } from "@/lib/print";
 import ScheduleGrid from "./ScheduleGrid";
 import ScheduleAgenda from "./ScheduleAgenda";
+import NextSlotButton from "./NextSlotButton";
 
 interface Labels extends ControlLabels {
   timeColumn: string;
@@ -272,6 +273,7 @@ export default function ProgrammeBrowser({
             onToggleFavourite={onToggleFavourite}
             favouriteLabels={favouriteLabels}
           />
+          <NextSlotButton rows={rows} />
           <ScheduleAgenda
             rows={rows}
             rooms={rooms}

@@ -8,8 +8,8 @@
 
 **Tech Stack:** Fastify, Prisma 7 (client generated to `src/backend/src/generated/prisma/`), Vitest against a live Postgres, TypeScript ESM (`.js` import specifiers), Next.js 16 App Router for the one frontend file.
 
-**Spec:** [2026-07-29-sponsor-backend-design.md](../specs/2026-07-29-sponsor-backend-design.md)
-**Predecessor:** [2026-07-29-sponsor-identity-schema.md](2026-07-29-sponsor-identity-schema.md) (#129 — schema + migration, already merged into this branch)
+**Spec:** [backend-design.md](backend-design.md)
+**Predecessor:** [identity-schema-plan.md](identity-schema-plan.md) (#129 — schema + migration, already merged into this branch)
 
 ## Global Constraints
 

@@ -18,17 +18,20 @@
     "sponsors": "Sponsors",
     "jobOffers": "Offres d'emploi",
     "venue": "Lieu",
-    "blog": "Actus"
+    "blog": "Actus",
+    "faq": "FAQ"
   },
   "cta": {
     "becomeSponsor": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
-    "contactUs": "Contactez-nous"
+    "contactUs": "Contactez-nous",
+    "tickets": "Billetterie",
+    "programme": "Programme"
   },
   "home": {
     "title": "DevFest Toulouse",
-    "pageTitle": "DevFest Toulouse 2026 — la conférence tech du Sud-Ouest",
-    "description": "Le DevFest Toulouse 2026, c'est une journée de conférences tech organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité et communauté.",
+    "pageTitle": "DevFest Toulouse 2026 — la conférence des développeurs",
+    "description": "Le DevFest Toulouse 2026, c'est une journée de conférences pour développeurs et développeuses, organisée par le GDG Toulouse : web, cloud, IA, mobile, sécurité.",
     "hero": {
       "subtitleLine1": "La conférence Toulousaine par",
       "subtitleLine2devs": "les devs",
@@ -36,7 +39,16 @@
       "subtitleLine2devs2": "devs.",
       "ctaSponsor": "Devenir sponsor",
       "ctaTalk": "Proposer un talk",
-      "cfpBadge": "CFP ouvert"
+      "cfpBadge": "CFP ouvert",
+      "ctaTickets": "Prendre mon billet",
+      "ctaSoldOut": "Complet",
+      "countdown": {
+        "days": "Dans {count} jours",
+        "tomorrow": "Demain",
+        "today": "Aujourd’hui"
+      },
+      "ctaProgramme": "Préparer mon programme",
+      "ctaProgrammeToday": "Voir le programme du jour"
     },
     "stats": {
       "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
@@ -76,6 +88,23 @@
       "titleFallback": "Revivez la dernière édition en 2 minutes !",
       "viewGallery": "Voir l'album photo",
       "viewEdition": "Voir l'édition {year}"
+    },
+    "dayPlan": {
+      "title": "Préparez votre journée",
+      "titleToday": "C’est aujourd’hui !",
+      "programme": {
+        "title": "Votre programme",
+        "titleToday": "Le programme du jour",
+        "text": "Repérez les sessions qui vous intéressent et ajoutez-les à vos favoris."
+      },
+      "agenda": {
+        "title": "Dans votre agenda",
+        "text": "Téléchargez le programme pour l’ajouter à votre calendrier."
+      },
+      "venue": {
+        "title": "Venir sur place",
+        "text": "Adresse, transports et stationnement pour rejoindre le lieu."
+      }
     }
   },
   "footer": {
@@ -225,13 +254,24 @@
     "sessions": "Conférences ({count})",
     "sponsors": "Partenaires ({count})",
     "replay": "Revoir",
-    "allNews": "Voir toutes les actualités"
+    "allNews": "Voir toutes les actualités",
+    "photoAlt": "Photo du DevFest Toulouse {year} ({n})",
+    "photoOpen": "Agrandir : {alt}",
+    "photoCount": "{n} sur {total}",
+    "photoPrevious": "Précédente",
+    "photoNext": "Suivante",
+    "photoClose": "Fermer",
+    "galleryAlbum": "Voir l’album complet"
   },
   "editionsList": {
     "home": "Accueil",
     "pageTitle": "Éditions précédentes",
     "description": "Revivez les éditions passées du DevFest Toulouse : speakers, conférences et replays.",
-    "empty": "Aucune édition précédente pour le moment."
+    "empty": "Aucune édition précédente pour le moment.",
+    "upcoming": "Prochaine édition",
+    "first": "Première édition",
+    "gap": "{from}–{to} : pas d’édition",
+    "gapYear": "{year} : pas d’édition"
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
@@ -278,7 +318,7 @@
     "home": "Accueil"
   },
   "conferences": {
-    "title": "Programme",
+    "title": "Conférences",
     "description": "Découvrez le programme des conférences du DevFest Toulouse 2026 : web, cloud, IA, mobile et bien plus.",
     "heading": "Programme du DevFest Toulouse {year}",
     "comingSoonTitle": "Le programme arrive bientôt",
@@ -359,7 +399,13 @@
     "empty": "Aucune offre d'emploi pour le moment. Revenez bientôt !",
     "home": "Accueil",
     "cta": "Voir l'offre",
-    "offersAt": "Offres chez {name}"
+    "offersAt": "Offres chez {name}",
+    "careersLink": "Voir toutes leurs offres",
+    "careersHint": "Sur le site carrière de {name}",
+    "backToList": "Toutes les offres",
+    "offerTitle": "{title} — {name}",
+    "postedBy": "Une offre de {name}",
+    "readOffer": "Lire l'annonce"
   },
   "calendar": {
     "heading": "Ajouter à mon agenda",
@@ -383,7 +429,7 @@
   },
   "programme": {
     "title": "Programme",
-    "pageTitle": "Programme — la grille horaire",
+    "pageTitle": "Programme",
     "description": "La grille horaire du DevFest Toulouse {year} : toutes les sessions, salle par salle.",
     "heading": "Programme du DevFest Toulouse {year}",
     "home": "Accueil",
@@ -414,7 +460,8 @@
     "comingSoonBody": "Les sessions du DevFest Toulouse {year} sont en cours de placement. La grille sera publiée ici dès qu'elle sera figée.",
     "printSource": "Détail des sessions : {url}",
     "printSelection": "Sélection personnelle — ce document ne contient pas tout le programme.",
-    "printCommon": "Moments communs"
+    "printCommon": "Moments communs",
+    "nextSlot": "Prochain créneau · {time}"
   },
   "venue": {
     "pageTitle": "Lieu & infos pratiques",
@@ -459,6 +506,48 @@
       "QUICKIE": "Quickie",
       "KEYNOTE": "Keynote",
       "WORKSHOP": "Workshop"
+    }
+  },
+  "feedback": {
+    "title": "Votre avis sur cette session",
+    "intro": "Cochez ce qui s'applique, autant que vous voulez. C'est anonyme.",
+    "send": "Envoyer mon avis",
+    "sending": "Envoi…",
+    "thanks": "Merci pour votre avis !",
+    "messageLabel": "Un mot pour le speaker ?",
+    "messageHint": "Facultatif. Seul le speaker et l'équipe le liront, il ne sera pas publié.",
+    "sendMessage": "Envoyer le message",
+    "messageSent": "Votre message a bien été transmis.",
+    "trendTitle": "Ce que le public en a pensé",
+    "trendPending": "La tendance s'affichera à partir de 5 avis.",
+    "voteError": "Votre avis n'a pas pu être envoyé. Réessayez dans un instant.",
+    "messageError": "Votre message n'a pas pu être envoyé. Réessayez dans un instant.",
+    "closedError": "Les avis sont fermés pour cette session.",
+    "credit": "Inspiré d’<openfeedback>OpenFeedback</openfeedback> d’Hugo Gresse (aussi dispo en version hébergée sur <openplanner>OpenPlanner</openplanner>).",
+    "items": {
+      "fun": "Drôle/original 😃",
+      "learned": "J'ai beaucoup appris 🤓",
+      "interesting": "Super intéressant 👍",
+      "speaker": "Très bon orateur/oratrice 👏",
+      "notClear": "Pas clair 🧐",
+      "tooTechnical": "Trop technique 🤖",
+      "lackOfDemo": "Pas assez de démo/exemple 🤔",
+      "tooComplex": "Trop complexe 🤯"
+    },
+    "testBanner": "Mode test : ces avis servent à vérifier le site et seront effacés avant l’événement."
+  },
+  "faq": {
+    "home": "Accueil",
+    "pageTitle": "Questions fréquentes",
+    "description": "Les réponses aux questions courantes sur le DevFest Toulouse : lieu et accès, billetterie, formats des sessions, langue des conférences et vie sur place.",
+    "intro": "Lieu, billets, programme, vie sur place : les réponses aux questions qu’on nous pose le plus. La vôtre n’y est pas ? <contact>Écrivez-nous</contact>.",
+    "empty": "Aucune question pour le moment.",
+    "themes": {
+      "VENUE": "Lieu et accès",
+      "TICKETS": "Billetterie",
+      "PROGRAMME": "Programme et sessions",
+      "PRACTICAL": "Sur place",
+      "OTHER": "Autres questions"
     }
   }
 }

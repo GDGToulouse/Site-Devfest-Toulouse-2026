@@ -4,6 +4,10 @@ import { formatEventTime } from "@/lib/datetime";
 import { localizedField } from "@/lib/i18n-helpers";
 import SessionCard from "./SessionCard";
 
+// Where "next slot" lands (#575): under the 60 px site header, with some air.
+// No focus ring on a row that only takes focus to be announced.
+const SLOT_TARGET = "scroll-mt-[76px] outline-none";
+
 interface ScheduleAgendaProps {
   rows: ScheduleRow[];
   rooms: ScheduleRoom[];
@@ -37,7 +41,7 @@ export default function ScheduleAgenda({
     <div className="print-agenda space-y-6 lg:hidden">
       {rows.map((row) =>
         row.type === "band" ? (
-          <div key={row.key} className="rounded-2xl bg-blanc-casse px-4 py-3">
+          <div key={row.key} data-slot={row.key} tabIndex={-1} className={`rounded-2xl bg-blanc-casse px-4 py-3 ${SLOT_TARGET}`}>
             <p className="text-sm font-bold text-noir">
               {localizedField(row.entry, "label", locale)}
             </p>
@@ -46,7 +50,7 @@ export default function ScheduleAgenda({
             </p>
           </div>
         ) : (
-          <section key={row.key}>
+          <section key={row.key} data-slot={row.key} tabIndex={-1} className={SLOT_TARGET}>
             <h2 className="text-lg font-bold tabular-nums text-noir">
               {formatEventTime(row.startsAt)}
             </h2>

@@ -2,7 +2,9 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import KeyFiguresSection from "./KeyFiguresSection";
+import EventCountdown from "./EventCountdown";
 import { getCfpCtaUrl } from "@/lib/cfp";
+import { invitesSponsors, isEventDay, isProgrammePhase, showsCountdown } from "@/lib/edition-phase";
 import type { CfpSettings, Edition, KeyFigure } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
@@ -19,9 +21,11 @@ interface HeroSectionProps {
   cfp: CfpSettings | null;
   locale: string;
   figures?: KeyFigure[];
+  /** The ticket button of the last month (#576): open, or every tier sold out. */
+  tickets?: "open" | "soldOut" | null;
 }
 
-export default function HeroSection({ edition, cfp, locale, figures = [] }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale, figures = [], tickets = null }: HeroSectionProps) {
   const t = useTranslations("home.hero");
   const tStats = useTranslations("home.stats");
 
@@ -32,9 +36,10 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition?.venueName || null;
 
-  // Show "Become a sponsor" CTA whenever the page is meant to receive
-  // visitors (i.e. anything but the sold-out state).
-  const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
+  const showSponsorCta = invitesSponsors(edition);
+  // The last week and the day itself lead to the programme first (#577); the
+  // ticket button follows while seats are left, not on the day.
+  const programmeCta = isProgrammePhase(edition) ? (isEventDay(edition) ? t("ctaProgrammeToday") : t("ctaProgramme")) : null;
   const cfpUrl = getCfpCtaUrl(cfp);
 
   // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
@@ -69,23 +74,51 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
           </p>
 
           {(dateLabel || venueLabel) && (
-            <div className="hero-meta">
-              {dateLabel && (
-                <span className="hero-meta-item">
-                  <strong className="text-noir">{dateLabel}</strong>
-                </span>
+            // Inline text, not three flex items: a venue too long for the line
+            // used to wrap whole and leave the dot alone after the date (#558).
+            // The no-break space glues the dot to the date, so the venue text
+            // is what breaks.
+            <p className="hero-meta">
+              {dateLabel && <strong className="text-noir">{dateLabel}</strong>}
+              {dateLabel && venueLabel && (
+                <>
+                  {" "}
+                  <span aria-hidden className="hero-meta-dot" />{" "}
+                </>
               )}
-              {dateLabel && venueLabel && <span className="hero-meta-dot" />}
-              {venueLabel && (
-                <span className="hero-meta-item">
-                  <span className="text-gris">{venueLabel}</span>
-                </span>
-              )}
-            </div>
+              {venueLabel && <span className="text-gris">{venueLabel}</span>}
+            </p>
           )}
 
-          {(showSponsorCta || cfpUrl) && (
+          {showsCountdown(edition) && edition?.startDate && <EventCountdown startDate={edition.startDate} />}
+
+          {(programmeCta || tickets || showSponsorCta || cfpUrl) && (
             <div className="hero-ctas">
+              {programmeCta && (
+                <Link
+                  href="/programme"
+                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                >
+                  {programmeCta}
+                </Link>
+              )}
+              {tickets === "open" && (
+                <Link
+                  href="/billetterie"
+                  className={`rounded-[12px] border-2 border-bleu px-7 py-3.5 text-lg font-bold transition-colors ${
+                    programmeCta ? "bg-blanc text-bleu hover:bg-bleu hover:text-blanc" : "bg-bleu text-blanc hover:bg-bleu/90"
+                  }`}
+                >
+                  {t("ctaTickets")}
+                </Link>
+              )}
+              {/* Not a link: a button leading to a closed ticket office would
+                  only be a disappointment one click later. */}
+              {tickets === "soldOut" && (
+                <span className="rounded-[12px] border-2 border-gris/30 bg-blanc px-7 py-3.5 text-lg font-bold text-gris">
+                  {t("ctaSoldOut")}
+                </span>
+              )}
               {showSponsorCta && (
                 <Link
                   href="/devenir-sponsor"

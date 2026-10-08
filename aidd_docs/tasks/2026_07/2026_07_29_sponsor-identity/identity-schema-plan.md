@@ -8,7 +8,7 @@
 
 **Tech Stack:** Prisma 7 (config-first, `prisma.config.ts`), PostgreSQL, Fastify, Vitest, TypeScript ESM (`.js` import specifiers).
 
-**Spec:** [2026-07-29-sponsor-identity-design.md](../specs/2026-07-29-sponsor-identity-design.md)
+**Spec:** [identity-design.md](identity-design.md)
 
 ## Global Constraints
 
