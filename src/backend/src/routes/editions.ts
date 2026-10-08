@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
 import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
+import { editionGallery } from "../lib/edition-photos.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -116,6 +117,8 @@ export default async function editionRoutes(app: FastifyInstance) {
       aftermovieUrl: edition.aftermovieUrl,
       galleryUrl: edition.galleryUrl,
       archivedSiteUrl: edition.archivedSiteUrl,
+      // The curated gallery (#112); the full album stays at galleryUrl.
+      photos: (await editionGallery(edition.id)).map(({ url, alt }) => ({ url, alt })),
       keyFigures: edition.keyFigures.map((kf) => ({
         icon: kf.icon,
         value: kf.value,

@@ -98,6 +98,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ### Galerie photos
 
 - Lien vers album Google Photos (officiel + collaboratif)
+- Sélection de photos par édition (#112), choisie dans la médiathèque depuis l'onglet « Photos » de l'édition (ADMIN) : ordre, texte alternatif (à défaut celui de la médiathèque). Affichée sur la page de l'édition en vignettes, agrandissement au clic (flèches, Échap), puis le lien « Voir l'album complet »
 
 ### CFP (Call for Papers)
 

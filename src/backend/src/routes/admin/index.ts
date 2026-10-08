@@ -24,6 +24,7 @@ import adminVenueRoutes from "./venues.js";
 import adminScheduleRoutes from "./schedule.js";
 import adminAuditRoutes from "./audit.js";
 import adminFeedbackRoutes from "./feedback.js";
+import adminEditionPhotoRoutes from "./edition-photos.js";
 import adminFaqRoutes from "./faq.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
@@ -35,6 +36,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     editorApp.addHook("preHandler", requireAdmin);
     await editorApp.register(adminArticleRoutes);
     await editorApp.register(adminPageRoutes);
+    await editorApp.register(adminEditionPhotoRoutes);
     await editorApp.register(adminFaqRoutes);
     await editorApp.register(adminContactRoutes);
     await editorApp.register(adminFileRoutes);
