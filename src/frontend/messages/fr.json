@@ -259,7 +259,11 @@
     "home": "Accueil",
     "pageTitle": "Éditions précédentes",
     "description": "Revivez les éditions passées du DevFest Toulouse : speakers, conférences et replays.",
-    "empty": "Aucune édition précédente pour le moment."
+    "empty": "Aucune édition précédente pour le moment.",
+    "upcoming": "Prochaine édition",
+    "first": "Première édition",
+    "gap": "{from}–{to} : pas d’édition",
+    "gapYear": "{year} : pas d’édition"
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",

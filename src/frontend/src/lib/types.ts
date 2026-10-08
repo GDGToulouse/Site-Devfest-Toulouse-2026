@@ -55,6 +55,7 @@ export interface EditionSummary {
   archivedSiteUrl: string | null;
   startDate: string | null;
   updatedAt: string;
+  venueName: string | null;
 }
 
 export interface SocialLinks {

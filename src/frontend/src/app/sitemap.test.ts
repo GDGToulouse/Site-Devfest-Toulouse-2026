@@ -41,8 +41,8 @@ function paths(entries: { url: string }[]): string[] {
 
 beforeEach(() => {
   vi.mocked(getEditions).mockResolvedValue([
-    { id: 1, year: 2026, status: "ANNOUNCEMENT", archivedSiteUrl: null, startDate: null, updatedAt: "2026-03-01T00:00:00Z" },
-    { id: 2, year: 2025, status: "SEE_YOU_NEXT_YEAR", archivedSiteUrl: null, startDate: null, updatedAt: "2025-12-01T00:00:00Z" },
+    { id: 1, year: 2026, status: "ANNOUNCEMENT", archivedSiteUrl: null, startDate: null, updatedAt: "2026-03-01T00:00:00Z", venueName: null },
+    { id: 2, year: 2025, status: "SEE_YOU_NEXT_YEAR", archivedSiteUrl: null, startDate: null, updatedAt: "2025-12-01T00:00:00Z", venueName: null },
   ]);
   vi.mocked(getCurrentEdition).mockResolvedValue({ ...FEATURED, hasVenueInfo: true } as never);
   vi.mocked(getEditionTalks).mockImplementation(async (year: number) =>
