@@ -259,7 +259,11 @@
     "home": "Home",
     "pageTitle": "Previous editions",
     "description": "Relive past DevFest Toulouse editions: speakers, talks and replays.",
-    "empty": "No previous edition yet."
+    "empty": "No previous edition yet.",
+    "upcoming": "Next edition",
+    "first": "First edition",
+    "gap": "{from}–{to}: no edition",
+    "gapYear": "{year}: no edition"
   },
   "sponsor": {
     "pageTitle": "Become a sponsor",

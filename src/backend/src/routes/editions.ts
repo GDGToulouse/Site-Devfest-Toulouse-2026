@@ -54,10 +54,19 @@ export default async function editionRoutes(app: FastifyInstance) {
     const editions = await prisma.edition.findMany({
       where: notDeleted,
       orderBy: { year: "desc" },
-      // `updatedAt` dates the edition page in the sitemap (#379).
-      select: { id: true, year: true, status: true, archivedSiteUrl: true, startDate: true, updatedAt: true },
+      // `updatedAt` dates the edition page in the sitemap (#379); the venue
+      // names each step of the timeline on /editions (#104).
+      select: {
+        id: true,
+        year: true,
+        status: true,
+        archivedSiteUrl: true,
+        startDate: true,
+        updatedAt: true,
+        venue: { select: { name: true } },
+      },
     });
-    return editions;
+    return editions.map(({ venue, ...edition }) => ({ ...edition, venueName: venue?.name ?? null }));
   });
 
   // GET /api/editions/:year — returns full edition data by year

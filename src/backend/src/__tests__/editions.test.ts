@@ -64,3 +64,22 @@ describe("GET /api/editions/current/ticket-tiers", () => {
     await app.close();
   });
 });
+
+describe("GET /api/editions (#104)", () => {
+  // The timeline on /editions names where each edition took place.
+  it("should name each edition's venue, or null without one", async () => {
+    const venue = await prisma.venue.create({ data: { name: "Lieu de test #104" } });
+    const withVenue = await prisma.edition.create({ data: { year: 1958, venueId: venue.id, status: "SEE_YOU_NEXT_YEAR" } });
+    const without = await prisma.edition.create({ data: { year: 1957, status: "SEE_YOU_NEXT_YEAR" } });
+    const app = await buildApp();
+
+    const body: { year: number; venueName: string | null }[] = (await app.inject({ method: "GET", url: "/api/editions" })).json();
+    await app.close();
+    await prisma.edition.deleteMany({ where: { id: { in: [withVenue.id, without.id] } } });
+    await prisma.venue.delete({ where: { id: venue.id } });
+
+    expect(body.find((e) => e.year === 1958)).toMatchObject({ venueName: "Lieu de test #104" });
+    expect(body.find((e) => e.year === 1957)).toMatchObject({ venueName: null });
+    expect(body[0]).not.toHaveProperty("venue");
+  });
+});
