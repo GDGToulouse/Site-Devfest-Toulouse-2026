@@ -4,7 +4,7 @@ Conventional Commits (`feat:`, `fix:`, `docs:`, `chore:`, `refactor:`, `test:`),
 72 caractères. Le corps du message dit **pourquoi**, pas quoi — le diff dit déjà quoi.
 
 Étager les fichiers un par un, jamais `git add .`. Une commande git par appel Bash : ni `&&`,
-ni `cd`, ni `git -C`.
+ni `cd`.
 
 ## Branches
 

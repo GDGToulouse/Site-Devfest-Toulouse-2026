@@ -3,7 +3,7 @@
 **Date** : 2026-07-29
 **Issue** : #130 (123b), sous-étape 2/4 de #123
 **Prérequis** : #129 livré — `Sponsor` est une identité à slug global, `EditionSponsor` porte la participation.
-**Spec parente** : [2026-07-29-sponsor-identity-design.md](2026-07-29-sponsor-identity-design.md)
+**Spec parente** : [identity-design.md](identity-design.md)
 
 ## Problème
 
