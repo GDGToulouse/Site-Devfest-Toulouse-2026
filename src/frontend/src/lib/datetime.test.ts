@@ -5,6 +5,7 @@ import {
   localInputToIso,
   formatEventTime,
   formatEventDuration,
+  daysUntilEvent,
 } from "./datetime";
 
 // The bug these lock down (#105): the talk editor loaded `startsAt` by slicing
@@ -106,5 +107,45 @@ describe("session duration (#457)", () => {
   it("says nothing rather than a negative or empty span", () => {
     expect(formatEventDuration("2026-11-19T09:30:00.000Z", "2026-11-19T08:50:00.000Z")).toBeNull();
     expect(formatEventDuration("2026-11-19T08:50:00.000Z", "pas une date")).toBeNull();
+  });
+});
+
+describe("days until the event (#576)", () => {
+  // The edition stores its first day as midnight UTC, as the admin date field saves it.
+  const START = "2026-11-19T00:00:00.000Z";
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("counts whole days on the Toulouse calendar", () => {
+    expect(daysUntilEvent(START, new Date("2026-10-27T10:00:00.000Z"))).toBe(23);
+  });
+
+  it("says tomorrow late the evening before, not today", () => {
+    // 23:30 in Toulouse on the 18th: fewer than 24 hours left, still the day before.
+    expect(daysUntilEvent(START, new Date("2026-11-18T22:30:00.000Z"))).toBe(1);
+  });
+
+  it("is 0 on the day itself, from just after midnight in Toulouse", () => {
+    expect(daysUntilEvent(START, new Date("2026-11-18T23:05:00.000Z"))).toBe(0);
+  });
+
+  it("goes negative once the day is over", () => {
+    expect(daysUntilEvent(START, new Date("2026-11-20T08:00:00.000Z"))).toBe(-1);
+  });
+
+  it("keeps the Toulouse calendar on a browser set to another zone", async () => {
+    vi.resetModules();
+    vi.stubEnv("TZ", "America/New_York");
+    const { daysUntilEvent: elsewhere } = await import("./datetime");
+
+    // 18:30 on the 18th in New York is already the 19th in Toulouse.
+    expect(elsewhere(START, new Date("2026-11-18T23:30:00.000Z"))).toBe(0);
+  });
+
+  it("says nothing for an unparseable date", () => {
+    expect(daysUntilEvent("pas une date", new Date())).toBeNull();
   });
 });

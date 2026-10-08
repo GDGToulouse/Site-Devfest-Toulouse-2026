@@ -1,11 +1,15 @@
 export type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
 
+// The phase that shapes the home page, in the order an edition goes through it.
+// TICKETING is the last month before the event (#576).
+export type EditionStatus = "PREPARATION" | "ANNOUNCEMENT" | "TICKETING" | "SEE_YOU_NEXT_YEAR";
+
 export interface Edition {
   id: number;
   year: number;
   startDate: string | null;
   endDate: string | null;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   venueName: string | null;
   venueAddress: string | null;
   // Venue & practical-info page (#109). Coordinates drive the map; transports/
@@ -40,7 +44,7 @@ export interface Edition {
 export interface EditionSummary {
   id: number;
   year: number;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   archivedSiteUrl: string | null;
   startDate: string | null;
   updatedAt: string;
@@ -598,7 +602,7 @@ export interface EditionDetail {
   year: number;
   startDate: string | null;
   endDate: string | null;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;

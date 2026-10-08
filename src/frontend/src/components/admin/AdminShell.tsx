@@ -28,12 +28,13 @@ interface EditionSummary {
   status: string;
 }
 
-// The "current edition" is the one being actively worked on: an edition in the
-// ANNOUNCEMENT phase, otherwise one in PREPARATION, otherwise the most recent.
+// The "current edition" is the one being actively worked on: an edition in its
+// last month (#576) or announced, otherwise one in PREPARATION, otherwise the
+// most recent.
 function pickCurrentEdition(editions: EditionSummary[]): CurrentEdition | null {
   if (editions.length === 0) return null;
   const byPriority =
-    editions.find((e) => e.status === "ANNOUNCEMENT") ??
+    editions.find((e) => e.status === "TICKETING" || e.status === "ANNOUNCEMENT") ??
     editions.find((e) => e.status === "PREPARATION") ??
     [...editions].sort((a, b) => b.year - a.year)[0];
   return { id: byPriority.id, year: byPriority.year };

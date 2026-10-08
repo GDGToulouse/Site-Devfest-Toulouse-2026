@@ -48,4 +48,5 @@ Le code local ment souvent ; l'environnement avant le code. Test discriminant : 
   ```
 
 - **Le compose local ne migre ni ne seede** (pas de `db-boot.sh`) : sur un volume `pgdata` neuf, toutes les tables manquent (`The table … does not exist`). `docker exec devfest-local-backend sh -c 'pnpm exec prisma migrate deploy && pnpm exec tsx prisma/seed.ts && pnpm exec tsx prisma/seed-dev.ts'`
+- **Aucune purge de cache en local** sans `REVALIDATE_SECRET` dans `.env` (il n'y a pas de `.env` par défaut) : un enregistrement admin ne change la page qu'au bout d'une heure. Vider `.next/cache/fetch-cache` puis redémarrer le frontend, ou poser le secret dans `.env`
 - `.next/dev/types/{routes.d.ts,validator.ts}` se régénèrent tronqués et font échouer `tsc` sur du code sain : les supprimer, charger une page, relancer

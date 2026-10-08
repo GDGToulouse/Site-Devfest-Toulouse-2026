@@ -26,6 +26,7 @@ import AboutSection from "@/components/home/AboutSection";
 import EcosystemSection from "@/components/home/EcosystemSection";
 import SponsorsSection from "@/components/home/SponsorsSection";
 import FeaturedSpeakersSection from "@/components/home/FeaturedSpeakersSection";
+import { invitesSponsors, isTicketingPhase } from "@/lib/edition-phase";
 
 function buildEventJsonLd(
   edition: {
@@ -155,7 +156,17 @@ export default async function HomePage() {
 
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
+  // The last month (#576) keeps the announcement's content and swaps the
+  // sponsor calls for the ticket office.
+  const isTicketing = isTicketingPhase(edition);
+  const isEventAhead = isAnnouncement || isTicketing;
   const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
+  // "Sold out" only when every tier is: a single one still on sale is a ticket.
+  const ticketsCta = !isTicketing
+    ? null
+    : tiers.length > 0 && tiers.every((tier) => tier.status === "SOLD_OUT")
+      ? "soldOut"
+      : "open";
 
   const eventJsonLd = edition
     ? buildEventJsonLd(edition, tiers, {
@@ -204,7 +215,9 @@ export default async function HomePage() {
     },
     {
       show: sponsors.length > 0,
-      render: (surface) => <SponsorsSection sponsors={sponsors} surface={surface} />,
+      render: (surface) => (
+        <SponsorsSection sponsors={sponsors} surface={surface} invitesSponsors={invitesSponsors(edition)} />
+      ),
     },
     {
       show: speakers.length > 0,
@@ -279,7 +292,8 @@ export default async function HomePage() {
         edition={edition}
         cfp={cfp}
         locale={locale}
-        figures={isAnnouncement ? figures : []}
+        figures={isEventAhead ? figures : []}
+        tickets={ticketsCta}
       />
 
       {/* PREPARATION: teasing + replay from previous edition */}
@@ -291,10 +305,10 @@ export default async function HomePage() {
         />
       )}
 
-      {/* ANNOUNCEMENT: full content, with computed background alternation.
-          Key figures are rendered inside the hero (#134), so they are not in
-          this list. */}
-      {isAnnouncement && renderWithAlternation(announcementSections)}
+      {/* ANNOUNCEMENT and TICKETING: full content, with computed background
+          alternation. Key figures are rendered inside the hero (#134), so they
+          are not in this list. */}
+      {isEventAhead && renderWithAlternation(announcementSections)}
 
       {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
       {isSeeYouNextYear && renderWithAlternation(seeYouNextYearSections)}

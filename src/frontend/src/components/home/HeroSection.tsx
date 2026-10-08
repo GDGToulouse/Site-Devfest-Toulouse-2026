@@ -2,7 +2,9 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import KeyFiguresSection from "./KeyFiguresSection";
+import EventCountdown from "./EventCountdown";
 import { getCfpCtaUrl } from "@/lib/cfp";
+import { invitesSponsors, isTicketingPhase } from "@/lib/edition-phase";
 import type { CfpSettings, Edition, KeyFigure } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
@@ -19,9 +21,11 @@ interface HeroSectionProps {
   cfp: CfpSettings | null;
   locale: string;
   figures?: KeyFigure[];
+  /** The ticket button of the last month (#576): open, or every tier sold out. */
+  tickets?: "open" | "soldOut" | null;
 }
 
-export default function HeroSection({ edition, cfp, locale, figures = [] }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale, figures = [], tickets = null }: HeroSectionProps) {
   const t = useTranslations("home.hero");
   const tStats = useTranslations("home.stats");
 
@@ -32,9 +36,7 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition?.venueName || null;
 
-  // Show "Become a sponsor" CTA whenever the page is meant to receive
-  // visitors (i.e. anything but the sold-out state).
-  const showSponsorCta = edition && edition.sponsorPageStatus !== "SOLD_OUT";
+  const showSponsorCta = invitesSponsors(edition);
   const cfpUrl = getCfpCtaUrl(cfp);
 
   // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
@@ -85,8 +87,25 @@ export default function HeroSection({ edition, cfp, locale, figures = [] }: Hero
             </p>
           )}
 
-          {(showSponsorCta || cfpUrl) && (
+          {isTicketingPhase(edition) && edition?.startDate && <EventCountdown startDate={edition.startDate} />}
+
+          {(tickets || showSponsorCta || cfpUrl) && (
             <div className="hero-ctas">
+              {tickets === "open" && (
+                <Link
+                  href="/billetterie"
+                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                >
+                  {t("ctaTickets")}
+                </Link>
+              )}
+              {/* Not a link: a button leading to a closed ticket office would
+                  only be a disappointment one click later. */}
+              {tickets === "soldOut" && (
+                <span className="rounded-[12px] border-2 border-gris/30 bg-blanc px-7 py-3.5 text-lg font-bold text-gris">
+                  {t("ctaSoldOut")}
+                </span>
+              )}
               {showSponsorCta && (
                 <Link
                   href="/devenir-sponsor"

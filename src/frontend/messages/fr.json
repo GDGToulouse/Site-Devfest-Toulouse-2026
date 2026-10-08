@@ -23,7 +23,8 @@
   "cta": {
     "becomeSponsor": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
-    "contactUs": "Contactez-nous"
+    "contactUs": "Contactez-nous",
+    "tickets": "Billetterie"
   },
   "home": {
     "title": "DevFest Toulouse",
@@ -36,7 +37,14 @@
       "subtitleLine2devs2": "devs.",
       "ctaSponsor": "Devenir sponsor",
       "ctaTalk": "Proposer un talk",
-      "cfpBadge": "CFP ouvert"
+      "cfpBadge": "CFP ouvert",
+      "ctaTickets": "Prendre mon billet",
+      "ctaSoldOut": "Complet",
+      "countdown": {
+        "days": "Dans {count} jours",
+        "tomorrow": "Demain",
+        "today": "Aujourd’hui"
+      }
     },
     "stats": {
       "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"

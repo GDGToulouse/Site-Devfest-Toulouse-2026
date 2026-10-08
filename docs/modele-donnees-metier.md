@@ -58,6 +58,7 @@ Le statut conditionne le contenu affiché sur la page d'accueil :
 |--------|---------------|
 | Édition en préparation | Page minimale de teasing, newsletter, réseaux sociaux, replay de l'édition précédente |
 | Annonce de l'édition | Informations publiées progressivement : date, lieu, CFP, speakers, programme, billetterie |
+| Dernier mois | À activer un mois avant l'événement (#576) : bouton « Prendre mon billet » et compte à rebours dans le bandeau, plus aucun appel à devenir sponsor, logos des sponsors conservés |
 | Rendez-vous l'année prochaine | Bilan de l'édition passée, aftermovie, galerie photos, replays |
 
 ---

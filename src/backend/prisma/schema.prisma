@@ -19,6 +19,8 @@ datasource db {
 enum EditionStatus {
   PREPARATION
   ANNOUNCEMENT
+  // The last month before the event (#576): tickets first, no sponsor call.
+  TICKETING
   SEE_YOU_NEXT_YEAR
 }
 

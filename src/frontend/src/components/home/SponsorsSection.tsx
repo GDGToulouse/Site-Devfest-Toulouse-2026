@@ -9,11 +9,13 @@ import { surfaceBgClass, type SectionSurface } from "./section-surface";
 interface SponsorsSectionProps {
   sponsors: SponsorPublic[];
   surface?: SectionSurface;
+  /** The "Become a partner" button; off in the last month (#576), logos stay. */
+  invitesSponsors?: boolean;
 }
 
 // Sponsors are fetched by the page so it can compute the section alternation
 // over the visible sections (#135).
-export default async function SponsorsSection({ sponsors, surface = "blanc" }: SponsorsSectionProps) {
+export default async function SponsorsSection({ sponsors, surface = "blanc", invitesSponsors = true }: SponsorsSectionProps) {
   const t = await getTranslations("home.sponsors");
   const locale = await getLocale();
 
@@ -47,12 +49,14 @@ export default async function SponsorsSection({ sponsors, surface = "blanc" }: S
       <div className="relative mx-auto max-w-6xl">
         <div className="section-title flex flex-wrap items-center justify-between gap-4">
           <h2 className="text-2xl font-bold text-noir lg:text-4xl">{t("title")}</h2>
-          <Link
-            href="/devenir-sponsor"
-            className="inline-block rounded-[12px] bg-bleu px-6 py-3 font-bold text-blanc transition-colors hover:bg-bleu/90"
-          >
-            {t("cta")}
-          </Link>
+          {invitesSponsors && (
+            <Link
+              href="/devenir-sponsor"
+              className="inline-block rounded-[12px] bg-bleu px-6 py-3 font-bold text-blanc transition-colors hover:bg-bleu/90"
+            >
+              {t("cta")}
+            </Link>
+          )}
         </div>
 
         <div className="mt-6 space-y-10">
