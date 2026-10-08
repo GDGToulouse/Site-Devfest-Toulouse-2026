@@ -176,3 +176,25 @@ describe("DataTable sorting (#498)", () => {
     expect(firstColumn()).toEqual(["Bob", "alice", "Chloé"]);
   });
 });
+
+describe("DataTable sorted by the server (#572)", () => {
+  const people = [
+    { id: 1, name: "Bob" },
+    { id: 2, name: "alice" },
+  ];
+  const serverSorted = [{ key: "name", label: "Nom", sortable: true }];
+  const firstColumn = () => screen.getAllByRole("row").slice(1).map((r) => r.querySelector("td")!.textContent);
+
+  it("should ask for the next order and show the rows as received", async () => {
+    const onSortChange = vi.fn();
+    render(
+      <DataTable columns={serverSorted} data={people} sort={{ key: "name", direction: "ascending" }} onSortChange={onSortChange} />,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Nom" }));
+
+    expect(onSortChange).toHaveBeenCalledWith({ key: "name", direction: "descending" });
+    expect(firstColumn()).toEqual(["Bob", "alice"]);
+    expect(screen.getByRole("columnheader", { name: "Nom" })).toHaveAttribute("aria-sort", "ascending");
+  });
+});
