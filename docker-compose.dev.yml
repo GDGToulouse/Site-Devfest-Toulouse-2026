@@ -16,6 +16,10 @@ services:
       # `backend` hostname picks up other Coolify projects' backends via the
       # shared `coolify` network (IPv6 priority), causing cross-env requests.
       - BACKEND_URL=http://devfest-${ENV_NAME:-local}-backend:4000
+      # Shared with the backend to authorise POST /api/revalidate. Without it
+      # the admin's saves never purged anything here: every change waited for
+      # the hour-long s-maxage, and a status switch looked broken.
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
     expose:
       - "3000"
     depends_on:
@@ -44,6 +48,8 @@ services:
       - BASE_URL=${BASE_URL}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # Shared with the frontend to sign POST /api/revalidate (see frontend).
+      - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
       - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
