@@ -14,6 +14,7 @@
 
 - Site public : composants rangés par domaine sous `src/frontend/src/components/`
 - Back-office : briques partagées sous `src/frontend/src/components/admin/` (`DataTable`, `FormField`, `ConfirmDialog`, `SaveFeedback`, `BilingualInput`, `RichTextEditor`)
+- Liste admin paginée côté API (#572, modèle de #573/#574) : état dans l'URL par `useListParams` (`src/frontend/src/lib/use-list-params.ts`), `DataTable` en tri serveur (`sortable` + `onSortChange`), `ListPagination` ; sans `page`, la route garde sa réponse en tableau complet pour ses autres appelants
 
 ## Accessibility
 

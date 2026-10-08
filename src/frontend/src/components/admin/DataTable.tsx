@@ -9,9 +9,13 @@ interface Column<T> {
   // Sorting is opt-in per column (#498): give the value to sort on, and the
   // header becomes a button cycling ascending then descending.
   sortValue?: (item: T) => string | number;
+  // Sorted by the server instead (#572): the header still toggles, and the
+  // page asks the API for the new order through `onSortChange`.
+  sortable?: boolean;
 }
 
-type SortDirection = "ascending" | "descending";
+export type SortDirection = "ascending" | "descending";
+export type SortState = { key: string; direction: SortDirection } | null;
 
 // French collation, so accents and case do not scatter the alphabet ("alice"
 // next to "Alice", "Élise" among the E).
@@ -30,6 +34,10 @@ interface DataTableProps<T> {
   // Names the row in its action buttons ("Modifier Acme", #499). Defaults to
   // the row's name or title, which covers the lists that use the table.
   rowLabel?: (item: T) => string;
+  // Server-side sorting (#572): pass the current order and a setter, and the
+  // rows are shown as received. Left undefined, the table sorts what it holds.
+  sort?: SortState;
+  onSortChange?: (next: SortState) => void;
 }
 
 function defaultRowLabel(item: { id: number }): string {
@@ -59,11 +67,15 @@ export default function DataTable<T extends { id: number }>({
   selectedIds,
   onSelectionChange,
   rowLabel = defaultRowLabel,
+  sort: controlledSort,
+  onSortChange,
 }: DataTableProps<T>) {
-  const [sort, setSort] = useState<{ key: string; direction: SortDirection } | null>(null);
+  const [localSort, setLocalSort] = useState<SortState>(null);
+  const isServerSorted = onSortChange !== undefined;
+  const sort = isServerSorted ? (controlledSort ?? null) : localSort;
 
   const rows = useMemo(() => {
-    if (!sort) return data;
+    if (!sort || isServerSorted) return data;
     const column = columns.find((c) => c.key === sort.key);
     if (!column?.sortValue) return data;
     const value = column.sortValue;
@@ -74,14 +86,16 @@ export default function DataTable<T extends { id: number }>({
       const order = typeof va === "number" && typeof vb === "number" ? va - vb : collator.compare(String(va), String(vb));
       return order * sign;
     });
-  }, [data, columns, sort]);
+  }, [data, columns, sort, isServerSorted]);
 
-  const toggleSort = (key: string) =>
-    setSort((current) =>
-      current?.key === key && current.direction === "ascending"
+  const toggleSort = (key: string) => {
+    const next: SortState =
+      sort?.key === key && sort.direction === "ascending"
         ? { key, direction: "descending" }
-        : { key, direction: "ascending" },
-    );
+        : { key, direction: "ascending" };
+    if (isServerSorted) onSortChange(next);
+    else setLocalSort(next);
+  };
 
   if (data.length === 0) {
     return <p className="text-gris py-8 text-center">{emptyMessage}</p>;
@@ -129,9 +143,9 @@ export default function DataTable<T extends { id: number }>({
               <th
                 key={col.key}
                 className="text-left px-4 py-3 font-medium text-gris"
-                aria-sort={sort?.key === col.key ? sort.direction : col.sortValue ? "none" : undefined}
+                aria-sort={sort?.key === col.key ? sort.direction : col.sortValue || col.sortable ? "none" : undefined}
               >
-                {col.sortValue ? (
+                {col.sortValue || col.sortable ? (
                   <button
                     type="button"
                     onClick={() => toggleSort(col.key)}
