@@ -136,6 +136,8 @@ model Edition {
   ticketTiers     TicketTier[]
   articles        Article[]
   keyFigures      KeyFigure[]
+  // The edition's photo gallery (#112), a curated selection.
+  photos          EditionPhoto[]
   sponsorTiers    EditionSponsorTier[]
   // The join since #351, like `categories` above: an edition's speakers are
   // participations, not identities.
@@ -1362,4 +1364,25 @@ model AuditLog {
   @@index([actorUserId, createdAt])
   @@index([channel, createdAt])
   @@index([createdAt])
+}
+
+// --- Gallery ---
+
+/// One photo of an edition's gallery (#112): a curated selection shown on the
+/// edition page, picked from the media library. The full album, when there is
+/// one, stays an external link (`Edition.galleryUrl`).
+model EditionPhoto {
+  id        Int      @id @default(autoincrement())
+  /// An /uploads/ path from the media library.
+  url       String
+  /// Overrides the alt text the media library holds for the file, if any.
+  alt       String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionId Int
+  edition   Edition @relation(fields: [editionId], references: [id], onDelete: Cascade)
+
+  @@index([editionId])
 }

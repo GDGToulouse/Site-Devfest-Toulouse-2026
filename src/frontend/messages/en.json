@@ -253,7 +253,14 @@
     "sessions": "Talks ({count})",
     "sponsors": "Partners ({count})",
     "replay": "Watch",
-    "allNews": "See all news"
+    "allNews": "See all news",
+    "photoAlt": "DevFest Toulouse {year} photo ({n})",
+    "photoOpen": "Enlarge: {alt}",
+    "photoCount": "{n} of {total}",
+    "photoPrevious": "Previous",
+    "photoNext": "Next",
+    "photoClose": "Close",
+    "galleryAlbum": "See the full album"
   },
   "editionsList": {
     "home": "Home",

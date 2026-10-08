@@ -618,6 +618,8 @@ export interface EditionDetail {
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  /** The curated gallery (#112), in the team's order. */
+  photos: { url: string; alt: string | null }[];
   keyFigures: KeyFigure[];
   articles: Article[];
 }

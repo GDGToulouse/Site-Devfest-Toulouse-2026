@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (136)
+### Back-office (141)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -105,6 +105,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/contact/messages/:id/forward` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/contact/messages/:id/read` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/contact/messages/:id/retry-webhook` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/edition-photos/:photoId` | ADMIN |
+| PUT | `/api/admin/edition-photos/:photoId` | ADMIN |
 | GET | `/api/admin/editions` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/editions` | ADMIN |
 | DELETE | `/api/admin/editions/:id` | ADMIN |
@@ -117,6 +119,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/editions/:id/key-figures` | ADMIN |
+| GET | `/api/admin/editions/:id/photos` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/editions/:id/photos` | ADMIN |
+| PUT | `/api/admin/editions/:id/photos/order` | ADMIN |
 | GET | `/api/admin/editions/:id/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
 | PUT | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |

@@ -10,6 +10,7 @@ import VenueTab from "@/components/admin/edition-detail/VenueTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import FeedbackTab from "@/components/admin/edition-detail/FeedbackTab";
+import PhotosTab from "@/components/admin/edition-detail/PhotosTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
@@ -53,6 +54,7 @@ const TABS = [
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
   { key: "feedback", label: "Avis" },
+  { key: "photos", label: "Photos" },
 ];
 
 export default function EditionDetailPage() {
@@ -146,6 +148,7 @@ export default function EditionDetailPage() {
         {activeTab === "feedback" && (
           <FeedbackTab editionId={edition.id} />
         )}
+        {activeTab === "photos" && <PhotosTab editionId={edition.id} />}
       </div>
     </div>
   );
