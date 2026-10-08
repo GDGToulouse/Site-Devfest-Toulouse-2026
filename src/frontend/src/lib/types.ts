@@ -1,8 +1,15 @@
 export type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
 
 // The phase that shapes the home page, in the order an edition goes through it.
-// TICKETING is the last month before the event (#576).
-export type EditionStatus = "PREPARATION" | "ANNOUNCEMENT" | "TICKETING" | "SEE_YOU_NEXT_YEAR";
+// TICKETING is the last month before the event (#576), PROGRAMME the last week
+// and EVENT_DAY the day itself (#577).
+export type EditionStatus =
+  | "PREPARATION"
+  | "ANNOUNCEMENT"
+  | "TICKETING"
+  | "PROGRAMME"
+  | "EVENT_DAY"
+  | "SEE_YOU_NEXT_YEAR";
 
 export interface Edition {
   id: number;

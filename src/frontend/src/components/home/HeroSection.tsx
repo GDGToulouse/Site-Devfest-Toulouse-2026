@@ -4,7 +4,7 @@ import { Link } from "@/i18n/navigation";
 import KeyFiguresSection from "./KeyFiguresSection";
 import EventCountdown from "./EventCountdown";
 import { getCfpCtaUrl } from "@/lib/cfp";
-import { invitesSponsors, isTicketingPhase } from "@/lib/edition-phase";
+import { invitesSponsors, isEventDay, isProgrammePhase, showsCountdown } from "@/lib/edition-phase";
 import type { CfpSettings, Edition, KeyFigure } from "@/lib/types";
 
 function formatDate(dateStr: string, locale: string): string {
@@ -37,6 +37,9 @@ export default function HeroSection({ edition, cfp, locale, figures = [], ticket
       : edition?.venueName || null;
 
   const showSponsorCta = invitesSponsors(edition);
+  // The last week and the day itself lead to the programme first (#577); the
+  // ticket button follows while seats are left, not on the day.
+  const programmeCta = isProgrammePhase(edition) ? (isEventDay(edition) ? t("ctaProgrammeToday") : t("ctaProgramme")) : null;
   const cfpUrl = getCfpCtaUrl(cfp);
 
   // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
@@ -87,14 +90,24 @@ export default function HeroSection({ edition, cfp, locale, figures = [], ticket
             </p>
           )}
 
-          {isTicketingPhase(edition) && edition?.startDate && <EventCountdown startDate={edition.startDate} />}
+          {showsCountdown(edition) && edition?.startDate && <EventCountdown startDate={edition.startDate} />}
 
-          {(tickets || showSponsorCta || cfpUrl) && (
+          {(programmeCta || tickets || showSponsorCta || cfpUrl) && (
             <div className="hero-ctas">
+              {programmeCta && (
+                <Link
+                  href="/programme"
+                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                >
+                  {programmeCta}
+                </Link>
+              )}
               {tickets === "open" && (
                 <Link
                   href="/billetterie"
-                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                  className={`rounded-[12px] border-2 border-bleu px-7 py-3.5 text-lg font-bold transition-colors ${
+                    programmeCta ? "bg-blanc text-bleu hover:bg-bleu hover:text-blanc" : "bg-bleu text-blanc hover:bg-bleu/90"
+                  }`}
                 >
                   {t("ctaTickets")}
                 </Link>

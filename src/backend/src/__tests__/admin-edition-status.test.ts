@@ -50,6 +50,18 @@ describe("Edition status TICKETING (#576)", () => {
     expect(revalidateAll).toHaveBeenCalledTimes(1);
   });
 
+  it("should store the last-week and event-day statuses (#577)", async () => {
+    const edition = await createEdition();
+    const app = await buildAdminApp();
+
+    for (const status of ["PROGRAMME", "EVENT_DAY"]) {
+      const res = await app.inject({ method: "PUT", url: `/api/admin/editions/${edition.id}`, payload: { status } });
+      expect(res.statusCode).toBe(200);
+      expect((await prisma.edition.findUniqueOrThrow({ where: { id: edition.id } })).status).toBe(status);
+    }
+    await app.close();
+  });
+
   it("should not purge every page when the status stays the same", async () => {
     const edition = await createEdition();
     const app = await buildAdminApp();

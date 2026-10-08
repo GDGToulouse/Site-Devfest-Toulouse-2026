@@ -57,4 +57,13 @@ describe("Header (#576)", () => {
     expect(screen.getByRole("link", { name: "Devenir sponsor" })).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "Billetterie" })).not.toBeInTheDocument();
   });
+
+  it("should offer the programme in the last week and on the day (#577)", () => {
+    edition.status = "PROGRAMME";
+    renderHeader();
+
+    expect(screen.getByRole("link", { name: "Programme" })).toHaveAttribute("href", "/programme");
+    expect(screen.queryByRole("link", { name: "Billetterie" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Devenir sponsor" })).not.toBeInTheDocument();
+  });
 });

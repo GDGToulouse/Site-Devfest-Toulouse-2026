@@ -24,7 +24,8 @@
     "becomeSponsor": "Devenir sponsor",
     "submitTalk": "Proposer un talk",
     "contactUs": "Contactez-nous",
-    "tickets": "Billetterie"
+    "tickets": "Billetterie",
+    "programme": "Programme"
   },
   "home": {
     "title": "DevFest Toulouse",
@@ -44,7 +45,9 @@
         "days": "Dans {count} jours",
         "tomorrow": "Demain",
         "today": "Aujourd’hui"
-      }
+      },
+      "ctaProgramme": "Préparer mon programme",
+      "ctaProgrammeToday": "Voir le programme du jour"
     },
     "stats": {
       "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
@@ -84,6 +87,23 @@
       "titleFallback": "Revivez la dernière édition en 2 minutes !",
       "viewGallery": "Voir l'album photo",
       "viewEdition": "Voir l'édition {year}"
+    },
+    "dayPlan": {
+      "title": "Préparez votre journée",
+      "titleToday": "C’est aujourd’hui !",
+      "programme": {
+        "title": "Votre programme",
+        "titleToday": "Le programme du jour",
+        "text": "Repérez les sessions qui vous intéressent et ajoutez-les à vos favoris."
+      },
+      "agenda": {
+        "title": "Dans votre agenda",
+        "text": "Téléchargez le programme pour l’ajouter à votre calendrier."
+      },
+      "venue": {
+        "title": "Venir sur place",
+        "text": "Adresse, transports et stationnement pour rejoindre le lieu."
+      }
     }
   },
   "footer": {

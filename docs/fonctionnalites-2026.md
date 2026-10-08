@@ -177,6 +177,8 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations
   - "Dernier mois" (#576) : la billetterie passe en avant, avec un compte à rebours ; les appels à devenir sponsor disparaissent de l'accueil et de l'en-tête de toutes les pages, les logos des sponsors restent
+  - "Dernière semaine" (#577) : le programme passe en avant (bouton « Préparer mon programme », section « Préparez votre journée » : programme et favoris, export agenda, accès au lieu), la billetterie descend ; l'en-tête de toutes les pages propose « Programme »
+  - "Jour J" (#577) : l'accueil suit la journée (« Voir le programme du jour », « C'est aujourd'hui ! »), plus de billetterie
   - "Rendez-vous l'année prochaine" : bilan, replay, photos
 - Purge du cache (manuelle ou déclenchée par changement de statut)
 - Gestion des sessions, speakers, sponsors, articles
