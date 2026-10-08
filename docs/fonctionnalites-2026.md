@@ -176,6 +176,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 - Configuration du statut annuel de la page d'accueil :
   - "Édition en préparation" : page minimale, teasing
   - "Annonce de la nouvelle édition" : affichage progressif des informations
+  - "Dernier mois" (#576) : la billetterie passe en avant, avec un compte à rebours ; les appels à devenir sponsor disparaissent de l'accueil et de l'en-tête de toutes les pages, les logos des sponsors restent
   - "Rendez-vous l'année prochaine" : bilan, replay, photos
 - Purge du cache (manuelle ou déclenchée par changement de statut)
 - Gestion des sessions, speakers, sponsors, articles
