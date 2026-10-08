@@ -52,6 +52,8 @@ const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites
 // Venue & practical-info page (#109). Shown only once the edition has map
 // coordinates or a written transports/parking section (hasVenueInfo).
 const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" };
+// The FAQ (#111), site-wide, once it has a published question.
+const FAQ_ENTRY: NavEntry = { key: "faq", labelKey: "faq", href: "/faq" };
 
 // An admin-authored page as a navigation entry (#420). Only published pages
 // reach here — the API filters drafts out — so no status check is needed.
@@ -114,6 +116,7 @@ export function getPublicNavEntries(
     );
   }
   if (edition?.hasVenueInfo) entries.push(VENUE_ENTRY);
+  if (edition?.hasFaq) entries.push(FAQ_ENTRY);
   entries.push(BLOG_ENTRY);
 
   // Free pages come after the system entries, never between them: the order of

@@ -82,6 +82,7 @@ Liste basée sur l'analyse des éditions 2016 à 2025, alignée sur les maquette
 ### FAQ
 
 - Questions/réponses : accès au lieu, formats des talks, billetterie, remboursement
+- Page `/faq` (#111) : questions groupées par thème (lieu et accès, billetterie, programme et sessions, sur place, autres), en accordéon accessible au clavier, avec le balisage `FAQPage`. FAQ commune au site, pas par édition. Saisie dans l'admin (« FAQ », ADMIN et EDITOR) : FR/EN, brouillon ou publiée, ordre par flèches ; sans traduction, la page anglaise affiche le français. L'entrée de menu n'apparaît qu'à la première question publiée
 
 ### À propos / Historique
 
