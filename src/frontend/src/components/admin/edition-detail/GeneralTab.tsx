@@ -114,8 +114,15 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
               {switchDate.month}.
             </li>
             <li>« Dernière semaine » : met le programme en avant pour préparer la journée. Vers le {switchDate.week}.</li>
-            <li>« Jour J » : l’accueil suit la journée. Le matin du {switchDate.day}.</li>
+            <li>« Jour J » : l’accueil suit la journée. Automatique à minuit le {switchDate.day}, depuis « Dernier mois » ou « Dernière semaine ».</li>
           </ul>
+        )}
+        {/* The midnight switch (#585) only takes an edition of the last
+            stretch: say so when it applies, so nobody stays up to do it. */}
+        {switchDate && (edition.status === "TICKETING" || edition.status === "PROGRAMME") && (
+          <p role="status" className="mt-2 text-sm font-medium text-malachite">
+            Passera automatiquement en « Jour J » le {switchDate.day} à minuit.
+          </p>
         )}
       </div>
 
