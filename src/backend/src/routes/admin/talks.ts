@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
+import { TALK_FORMATS, TALK_PAGE_SIZE, TALK_PAGE_SIZE_MAX, TALK_SORTS, talkOrderBy, talkWhere, type TalkListFilters, type TalkSort } from "../../lib/talk-list.js";
 import { revalidateConferences, revalidateTalk } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
@@ -38,6 +39,19 @@ interface TalkIdParams {
 
 interface TalkListQuery {
   editionId?: string;
+  page?: string;
+  limit?: string;
+  search?: string;
+  format?: TalkListFilters["format"];
+  status?: "PUBLISHED" | "DRAFT";
+  categoryId?: string;
+  scheduled?: "yes" | "no";
+  roomId?: string;
+  speakers?: "none";
+  video?: "with" | "without";
+  speakerEditable?: "yes" | "no";
+  sort?: TalkSort;
+  order?: "asc" | "desc";
 }
 
 interface TalkBulkBody {
@@ -123,25 +137,88 @@ async function resolveSimulcasts(
 
 export default async function adminTalkRoutes(app: FastifyInstance) {
   // GET /api/admin/talks?editionId=X — editionId omitted lists all editions
+  // GET /api/admin/talks — filters, sort and pagination (#573), as the speakers
+  // list (#572). Without `page` the answer stays the full array, in its usual
+  // order: the edition overview and MCP agents read the whole list.
   app.get<{ Querystring: TalkListQuery }>("/talks", {
-    schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request) => {
-    const { editionId } = request.query;
-
-    const talks = await prisma.talk.findMany({
-      where: editionId ? { editionId: Number(editionId), ...notDeleted } : notDeleted,
-      orderBy: editionId ? { title: "asc" } : [{ edition: { year: "desc" } }, { title: "asc" }],
-      include: {
-        // Nested reads need their own filter: a query extension would not reach
-        // them (Prisma applies those to the top-level operation only), and a
-        // trashed speaker would otherwise still show up on a live talk.
-        speakers: { where: notDeleted, select: { id: true, name: true } },
-        category: { select: { id: true, nameFr: true, color: true } },
-        room: { select: { id: true, name: true } },
-        ...(editionId ? {} : { edition: { select: { id: true, year: true } } }),
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          editionId: { type: "string", pattern: "^[0-9]+$" },
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          search: { type: "string", maxLength: 200 },
+          format: { type: "string", enum: [...TALK_FORMATS] },
+          status: { type: "string", enum: ["PUBLISHED", "DRAFT"] },
+          categoryId: { type: "string", pattern: "^[0-9]+$" },
+          scheduled: { type: "string", enum: ["yes", "no"] },
+          roomId: { type: "string", pattern: "^[0-9]+$" },
+          speakers: { type: "string", enum: ["none"] },
+          video: { type: "string", enum: ["with", "without"] },
+          speakerEditable: { type: "string", enum: ["yes", "no"] },
+          sort: { type: "string", enum: [...TALK_SORTS] },
+          order: { type: "string", enum: ["asc", "desc"] },
+        },
       },
+    },
+  }, async (request, reply) => {
+    const q = request.query;
+    const editionId = q.editionId ? Number(q.editionId) : undefined;
+    // Rooms and slots belong to one edition's venue: across editions a room
+    // filter would mix the rooms of several years.
+    if (!editionId && (q.roomId || q.scheduled)) {
+      return reply.code(400).send({
+        error: "edition_required",
+        message: "Choisissez une édition pour filtrer par salle ou par programmation.",
+      });
+    }
+    const where = talkWhere({
+      search: q.search,
+      editionId,
+      format: q.format,
+      status: q.status,
+      categoryId: q.categoryId ? Number(q.categoryId) : undefined,
+      scheduled: q.scheduled,
+      roomId: q.roomId ? Number(q.roomId) : undefined,
+      speakers: q.speakers,
+      video: q.video,
+      speakerEditable: q.speakerEditable,
     });
-    return talks.map(serialize);
+    const include = {
+      // Nested reads need their own filter: a query extension would not reach
+      // them (Prisma applies those to the top-level operation only), and a
+      // trashed speaker would otherwise still show up on a live talk.
+      speakers: { where: notDeleted, select: { id: true, name: true } },
+      category: { select: { id: true, nameFr: true, color: true } },
+      room: { select: { id: true, name: true } },
+      edition: { select: { id: true, year: true } },
+    } as const;
+
+    if (!q.page) {
+      const talks = await prisma.talk.findMany({
+        where,
+        orderBy: q.sort
+          ? talkOrderBy(q.sort, q.order ?? "asc")
+          : editionId ? { title: "asc" } : [{ edition: { year: "desc" } }, { title: "asc" }],
+        include,
+      });
+      return talks.map(serialize);
+    }
+
+    const page = Math.max(1, Number(q.page));
+    const limit = Math.min(TALK_PAGE_SIZE_MAX, Math.max(1, Number(q.limit) || TALK_PAGE_SIZE));
+    const [total, talks] = await Promise.all([
+      prisma.talk.count({ where }),
+      prisma.talk.findMany({
+        where,
+        orderBy: talkOrderBy(q.sort ?? "title", q.order ?? "asc"),
+        include,
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+    ]);
+    return { page, limit, total, items: talks.map(serialize) };
   });
 
   // GET /api/admin/talks/:id
