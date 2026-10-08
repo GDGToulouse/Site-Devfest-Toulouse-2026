@@ -140,6 +140,8 @@ lab et méritent de bloquer une PR.
 - URLs localisées avec préfixe de langue (`/fr/...`, `/en/...`)
 - Attribut `lang` correct sur le `<html>` et les blocs de contenu en langue différente
 - Détection de la langue du navigateur pour suggestion automatique (sans redirection forcée)
+- **Périmètre bilingue** : le site public et les pages de modification par lien (`/edit/<token>`, dans la langue choisie pour le speaker). Le **back-office** (`/admin`) et l'**espace partenaire** (`/sponsor`) sont **monolingues en français, par décision** (2026-10-08, #342) : l'audience est l'équipe organisatrice et les contacts des sponsors, quelques dizaines de personnes, et l'internationaliser coûterait plus que tout le corpus public (~600 chaînes, un champ `User.locale`, un choix de routage). Ce choix ne limite pas le contenu : tout le contenu public FR/EN se saisit depuis cette interface française (`BilingualInput`, traduction assistée).
+- **À rouvrir si** un organisateur non francophone rejoint l'équipe, ou si le socle est repris par une autre communauté.
 
 ## Monitoring et observabilité
 
