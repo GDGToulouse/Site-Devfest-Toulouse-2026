@@ -10,7 +10,7 @@ interface EditionBody {
   year: number;
   startDate?: string;
   endDate?: string;
-  status?: "PREPARATION" | "ANNOUNCEMENT" | "TICKETING" | "SEE_YOU_NEXT_YEAR";
+  status?: "PREPARATION" | "ANNOUNCEMENT" | "TICKETING" | "PROGRAMME" | "EVENT_DAY" | "SEE_YOU_NEXT_YEAR";
   // Which venue hosts this edition (#105). The venue's own details — address,
   // map coordinates, transports, parking (#109) — are edited on its screen.
   venueId?: number | null;

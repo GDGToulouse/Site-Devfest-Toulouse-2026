@@ -73,4 +73,20 @@ describe("HeroSection (#576)", () => {
     expect(screen.queryByRole("link", { name: "Prendre mon billet" })).not.toBeInTheDocument();
     expect(screen.queryByText("Dans 23 jours")).not.toBeInTheDocument();
   });
+
+  it("should lead to the programme in the last week, the ticket coming second (#577)", () => {
+    renderHero("PROGRAMME", "open");
+
+    const links = screen.getAllByRole("link").map((a) => a.textContent);
+    expect(links.slice(0, 2)).toEqual(["Préparer mon programme", "Prendre mon billet"]);
+    expect(screen.getByRole("link", { name: "Préparer mon programme" })).toHaveAttribute("href", "/programme");
+  });
+
+  it("should follow the day on the day itself, with nothing left to sell (#577)", () => {
+    renderHero("EVENT_DAY", null);
+
+    expect(screen.getByRole("link", { name: "Voir le programme du jour" })).toHaveAttribute("href", "/programme");
+    expect(screen.queryByRole("link", { name: "Prendre mon billet" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Devenir sponsor" })).not.toBeInTheDocument();
+  });
 });

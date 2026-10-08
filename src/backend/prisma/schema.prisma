@@ -21,6 +21,10 @@ enum EditionStatus {
   ANNOUNCEMENT
   // The last month before the event (#576): tickets first, no sponsor call.
   TICKETING
+  // The last week (#577): the home page helps prepare the day.
+  PROGRAMME
+  // The day itself (#577): the home page follows the programme.
+  EVENT_DAY
   SEE_YOU_NEXT_YEAR
 }
 

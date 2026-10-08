@@ -8,7 +8,7 @@ import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
-import { invitesSponsors, isTicketingPhase } from "@/lib/edition-phase";
+import { headerCall, invitesSponsors } from "@/lib/edition-phase";
 import { getLogoUrl } from "@/lib/identity";
 import { getPublicNavEntries, getSubmenuEntries } from "@/lib/nav";
 
@@ -27,9 +27,11 @@ export default function Header() {
   const logoUrl = getLogoUrl(identity, "square");
 
   const showSponsorCta = invitesSponsors(edition);
-  // In the last month the slot the sponsor call held goes to the ticket office
-  // (#576), on every page.
-  const showTicketsCta = isTicketingPhase(edition);
+  // In the last stretch the slot the sponsor call held goes to the ticket office
+  // (#576), then to the programme for the last week and the day (#577).
+  const call = headerCall(edition);
+  const callHref = call === "tickets" ? "/billetterie" : "/programme";
+  const callLabel = call === "tickets" ? tCta("tickets") : tCta("programme");
   const cfpUrl = getCfpCtaUrl(cfp);
 
   const navEntries = getPublicNavEntries(edition, pages, locale);
@@ -123,13 +125,13 @@ export default function Header() {
               {tCta("becomeSponsor")}
             </Link>
           )}
-          {showTicketsCta && (
+          {call && (
             <Link
-              href="/billetterie"
-              prefetch={prefetchUnlessHere("/billetterie")}
+              href={callHref}
+              prefetch={prefetchUnlessHere(callHref)}
               className="rounded-[12px] border-2 border-bleu px-[18px] py-1.5 text-base font-bold text-bleu hover:bg-bleu hover:text-blanc transition-colors"
             >
-              {tCta("tickets")}
+              {callLabel}
             </Link>
           )}
           {cfpUrl && (
@@ -194,7 +196,7 @@ export default function Header() {
                 ))}
               </div>
             ))}
-            {(showSponsorCta || showTicketsCta || cfpUrl) && <hr className="border-gray-100" />}
+            {(showSponsorCta || call || cfpUrl) && <hr className="border-gray-100" />}
             {showSponsorCta && (
               <Link
                 href="/devenir-sponsor"
@@ -204,13 +206,13 @@ export default function Header() {
                 {tCta("becomeSponsor")}
               </Link>
             )}
-            {showTicketsCta && (
+            {call && (
               <Link
-                href="/billetterie"
+                href={callHref}
                 className="rounded-[12px] border-2 border-bleu px-[18px] py-3 text-base font-bold text-bleu text-center"
                 onClick={() => setIsMenuOpen(false)}
               >
-                {tCta("tickets")}
+                {callLabel}
               </Link>
             )}
             {cfpUrl && (

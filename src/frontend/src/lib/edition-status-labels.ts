@@ -7,6 +7,8 @@ export const EDITION_STATUSES: { value: EditionStatus; label: string; variant: "
   { value: "PREPARATION", label: "Préparation", variant: "gray" },
   { value: "ANNOUNCEMENT", label: "Annonce", variant: "green" },
   { value: "TICKETING", label: "Dernier mois", variant: "green" },
+  { value: "PROGRAMME", label: "Dernière semaine", variant: "green" },
+  { value: "EVENT_DAY", label: "Jour J", variant: "green" },
   { value: "SEE_YOU_NEXT_YEAR", label: "À l'année prochaine", variant: "orange" },
 ];
 

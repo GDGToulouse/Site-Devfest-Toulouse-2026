@@ -26,7 +26,8 @@ import AboutSection from "@/components/home/AboutSection";
 import EcosystemSection from "@/components/home/EcosystemSection";
 import SponsorsSection from "@/components/home/SponsorsSection";
 import FeaturedSpeakersSection from "@/components/home/FeaturedSpeakersSection";
-import { invitesSponsors, isTicketingPhase } from "@/lib/edition-phase";
+import DayPlanSection from "@/components/home/DayPlanSection";
+import { invitesSponsors, isEventDay, isProgrammePhase, isTicketingPhase } from "@/lib/edition-phase";
 
 function buildEventJsonLd(
   edition: {
@@ -159,14 +160,16 @@ export default async function HomePage() {
   // The last month (#576) keeps the announcement's content and swaps the
   // sponsor calls for the ticket office.
   const isTicketing = isTicketingPhase(edition);
-  const isEventAhead = isAnnouncement || isTicketing;
+  // The last week and the day itself (#577) put the programme first.
+  const isProgramme = isProgrammePhase(edition);
+  const isToday = isEventDay(edition);
+  const isEventAhead = isAnnouncement || isTicketing || isProgramme;
   const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
   // "Sold out" only when every tier is: a single one still on sale is a ticket.
-  const ticketsCta = !isTicketing
-    ? null
-    : tiers.length > 0 && tiers.every((tier) => tier.status === "SOLD_OUT")
-      ? "soldOut"
-      : "open";
+  const isSoldOut = tiers.length > 0 && tiers.every((tier) => tier.status === "SOLD_OUT");
+  // The last month leads with the ticket; the last week offers it after the
+  // programme while seats are left; on the day, nothing is left to sell.
+  const ticketsCta = isTicketing ? (isSoldOut ? "soldOut" : "open") : isProgramme && !isToday && !isSoldOut ? "open" : null;
 
   const eventJsonLd = edition
     ? buildEventJsonLd(edition, tiers, {
@@ -222,6 +225,39 @@ export default async function HomePage() {
     {
       show: speakers.length > 0,
       render: (surface) => <FeaturedSpeakersSection speakers={speakers} surface={surface} />,
+    },
+    {
+      show: articles.length > 0,
+      render: (surface) => <LatestNewsSection articles={articles} locale={locale} surface={surface} />,
+    },
+    {
+      show: true,
+      render: (surface) => <AboutSection surface={surface} />,
+    },
+    {
+      show: partners.length > 0,
+      render: (surface) => <EcosystemSection partners={partners} surface={surface} />,
+    },
+  ];
+
+  // The last week and the day (#577): what helps through the day comes first,
+  // the ticket office goes down the page and leaves it on the day itself.
+  const programmeSections: HomeSection[] = [
+    {
+      show: Boolean(edition),
+      render: (surface) => <DayPlanSection edition={edition!} isToday={isToday} surface={surface} />,
+    },
+    {
+      show: speakers.length > 0,
+      render: (surface) => <FeaturedSpeakersSection speakers={speakers} surface={surface} />,
+    },
+    {
+      show: sponsors.length > 0,
+      render: (surface) => <SponsorsSection sponsors={sponsors} surface={surface} invitesSponsors={false} />,
+    },
+    {
+      show: tiers.length > 0 && !isToday,
+      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} />,
     },
     {
       show: articles.length > 0,
@@ -308,7 +344,10 @@ export default async function HomePage() {
       {/* ANNOUNCEMENT and TICKETING: full content, with computed background
           alternation. Key figures are rendered inside the hero (#134), so they
           are not in this list. */}
-      {isEventAhead && renderWithAlternation(announcementSections)}
+      {(isAnnouncement || isTicketing) && renderWithAlternation(announcementSections)}
+
+      {/* PROGRAMME and EVENT_DAY: the day first (#577). */}
+      {isProgramme && renderWithAlternation(programmeSections)}
 
       {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
       {isSeeYouNextYear && renderWithAlternation(seeYouNextYearSections)}

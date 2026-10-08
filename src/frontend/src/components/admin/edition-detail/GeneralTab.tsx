@@ -21,13 +21,16 @@ interface EditionData {
   archivedSiteUrl: string | null;
 }
 
-// When to switch to the last-month status (#576): a month before the first
-// day. Advice only — the switch stays a decision the organisers make.
-function ticketingSwitchDate(startDate: string): string | null {
-  const date = new Date(`${startDate}T12:00:00Z`);
-  if (Number.isNaN(date.getTime())) return null;
-  date.setUTCMonth(date.getUTCMonth() - 1);
-  return formatEventDate(date.toISOString(), "fr");
+// When to switch to the last-stretch statuses (#576, #577), counted back from
+// the first day. Advice only — each switch stays a decision of the organisers.
+function switchDates(startDate: string): { month: string; week: string; day: string } | null {
+  const start = new Date(`${startDate}T12:00:00Z`);
+  if (Number.isNaN(start.getTime())) return null;
+  const month = new Date(start);
+  month.setUTCMonth(month.getUTCMonth() - 1);
+  const week = new Date(start.getTime() - 7 * 86_400_000);
+  const format = (date: Date) => formatEventDate(date.toISOString(), "fr");
+  return { month: format(month), week: format(week), day: format(start) };
 }
 
 interface GeneralTabProps {
@@ -52,7 +55,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
 
   const statusLabel = (value: string) => editionStatusInfo(value).label;
-  const switchDate = form.startDate ? ticketingSwitchDate(form.startDate) : null;
+  const switchDate = form.startDate ? switchDates(form.startDate) : null;
 
   async function persist() {
     setIsSaving(true);
@@ -105,10 +108,14 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
           ))}
         </select>
         {switchDate && (
-          <p className="mt-1 text-sm text-gris">
-            « Dernier mois » : met la billetterie en avant et retire les appels à devenir sponsor. À activer vers le{" "}
-            {switchDate}.
-          </p>
+          <ul className="mt-1 space-y-0.5 text-sm text-gris">
+            <li>
+              « Dernier mois » : met la billetterie en avant et retire les appels à devenir sponsor. À activer vers le{" "}
+              {switchDate.month}.
+            </li>
+            <li>« Dernière semaine » : met le programme en avant pour préparer la journée. Vers le {switchDate.week}.</li>
+            <li>« Jour J » : l’accueil suit la journée. Le matin du {switchDate.day}.</li>
+          </ul>
         )}
       </div>
 

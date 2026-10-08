@@ -24,7 +24,8 @@
     "becomeSponsor": "Become a sponsor",
     "submitTalk": "Submit a talk",
     "contactUs": "Contact us",
-    "tickets": "Tickets"
+    "tickets": "Tickets",
+    "programme": "Programme"
   },
   "home": {
     "title": "DevFest Toulouse",
@@ -44,7 +45,9 @@
         "days": "In {count} days",
         "tomorrow": "Tomorrow",
         "today": "Today"
-      }
+      },
+      "ctaProgramme": "Plan my day",
+      "ctaProgrammeToday": "Today’s programme"
     },
     "stats": {
       "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
@@ -84,6 +87,23 @@
       "titleFallback": "Relive the last edition in 2 minutes!",
       "viewGallery": "View the photo gallery",
       "viewEdition": "View the {year} edition"
+    },
+    "dayPlan": {
+      "title": "Plan your day",
+      "titleToday": "It’s today!",
+      "programme": {
+        "title": "Your programme",
+        "titleToday": "Today’s programme",
+        "text": "Spot the sessions you want to see and add them to your favourites."
+      },
+      "agenda": {
+        "title": "In your calendar",
+        "text": "Download the programme to add it to your calendar."
+      },
+      "venue": {
+        "title": "Getting there",
+        "text": "Address, public transport and parking to reach the venue."
+      }
     }
   },
   "footer": {
