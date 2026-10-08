@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
-import { revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateAll, revalidateHome, revalidateEdition, revalidateSponsors } from "../../lib/revalidate.js";
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
 import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
@@ -10,7 +10,7 @@ interface EditionBody {
   year: number;
   startDate?: string;
   endDate?: string;
-  status?: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status?: "PREPARATION" | "ANNOUNCEMENT" | "TICKETING" | "SEE_YOU_NEXT_YEAR";
   // Which venue hosts this edition (#105). The venue's own details — address,
   // map coordinates, transports, parking (#109) — are edited on its screen.
   venueId?: number | null;
@@ -218,6 +218,10 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (existing.year !== edition.year) revalidateEdition(existing.year);
     // Sponsor page depends on featured edition fields (status, brochure, etc.)
     revalidateSponsors();
+    // The status also drives the header of every public page: the sponsor call
+    // goes in the last month (#576). Purging the home alone would leave it on
+    // every other page for up to an hour.
+    if (newStatus !== existing.status) void revalidateAll();
 
     return {
       id: edition.id,
