@@ -13,6 +13,28 @@
 - Fil d'Ariane (breadcrumb) avec balisage structuré
 - Attributs `alt` sur toutes les images
 
+### Cibles de mots-clés (#383, 2026-10-08)
+
+Une requête principale par page, sans doublon entre pages : un titre ou une description réécrits partent de cette table. Cibles argumentées sur la composition des résultats de recherche, sans volume chiffré : à revoir dès que l'accès à la Search Console le permet.
+
+| Page | Requête principale | Phase |
+|---|---|---|
+| `/fr` | `devfest toulouse`, `devfest toulouse 2026`, `conférence développeur toulouse` | 1 et 2 |
+| `/fr/programme` | `devfest toulouse programme` | 1 |
+| `/fr/conferences` | `devfest toulouse conférences` | 1 |
+| `/fr/speakers` | `devfest toulouse speakers` | 1 |
+| `/fr/billetterie` | `devfest toulouse billetterie` | 1 |
+| `/fr/replays` | `devfest toulouse replay` | 1 |
+| `/fr/hall-of-fame` | `communauté développeurs toulouse` | 2 |
+| `/fr/proposer-un-talk` | `cfp devfest`, `appel à orateurs toulouse` | saison CFP |
+| `/fr/devenir-sponsor` | `sponsoring conférence tech` | toute l'année |
+| `/fr/conferences/<slug>` | le sujet de la conférence | 3 (longue traîne) |
+
+- **Le pivot est « développeur / développeuse »** : sur « conférence tech Toulouse », La Mêlée, la French Tech et les agrégateurs tiennent le terrain ; sur le vocabulaire développeur, le site est compétitif. Toulouse Tech Hub (`toulouse-tech-hub.fr`, géré par l'association) est un levier sur ce vocabulaire, pas un concurrent (#385).
+- **Pas de cible** : « tech Toulouse », « salon informatique Toulouse » (autorité locale hors d'atteinte), « emploi développeur Toulouse » (Indeed, Welcome to the Jungle) — `/offres-emploi-partenaires` est un service aux participants et un avantage sponsor, pas un actif SEO.
+- **Saisonnalité** : CFP de mars à mai, billetterie de septembre à novembre, programme et speakers en octobre-novembre, replays de novembre à février.
+- **Longue traîne** : ce qui rend une page conférence compétitive, c'est la vidéo intégrée, la bio du speaker et surtout une transcription — un résumé de 300 signes reste du contenu mince.
+
 ## Open Graph Protocol & partage social
 
 - Balises Open Graph (`og:title`, `og:description`, `og:image`, `og:url`, `og:type`) sur toutes les pages
