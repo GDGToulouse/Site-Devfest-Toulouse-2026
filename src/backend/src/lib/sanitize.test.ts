@@ -38,6 +38,16 @@ describe("isSafeUrl", () => {
 });
 
 describe("sanitizeRichHtml", () => {
+  // #490 — a partner logo leads to the partner's site: the editor saves a
+  // linked image as a link around the image, which must survive storage.
+  it("should keep a link around an image", () => {
+    const html = '<a href="https://emmaus.example" target="_blank" rel="noopener noreferrer"><img src="/uploads/logo.png" alt="Emmaüs"></a>';
+
+    expect(sanitizeRichHtml(html)).toBe(
+      '<a href="https://emmaus.example" target="_blank" rel="noopener noreferrer"><img src="/uploads/logo.png" alt="Emmaüs" /></a>',
+    );
+  });
+
   it("keeps allowed formatting", () => {
     const input = "<p>Hello <strong>world</strong></p><h2>Title</h2><ul><li>one</li></ul>";
     expect(sanitizeRichHtml(input)).toBe(input);

@@ -24,6 +24,7 @@
 
 Une classe qui ne génère rien échoue en silence : vérifier au runtime (`getComputedStyle`, règles servies) plutôt que de faire confiance à la classe.
 
+- `prose` ne génère rien (pas de plugin typography) : tout HTML riche (éditeur TipTap, contenu admin) se met en forme par `.article-content` de `globals.css`, typographie partagée avec l'éditeur. Un test l'interdit (`rich-content-typography.test.ts`, #559, #490)
 - `rounded-s` / `rounded-e` sont logiques (un seul côté) : `rounded-[12px]` pour les quatre coins
 - `scrollbar-none` n'existe pas ici : `[scrollbar-width:none] [&::-webkit-scrollbar]:hidden`
 - Les variantes `print:` n'émettent rien : bascules d'impression écrites à la main dans le `@media print` de `globals.css` (`.print-grid`, `.no-print`)
