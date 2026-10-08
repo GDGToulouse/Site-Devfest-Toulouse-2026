@@ -448,7 +448,8 @@
     "comingSoonBody": "Les sessions du DevFest Toulouse {year} sont en cours de placement. La grille sera publiée ici dès qu'elle sera figée.",
     "printSource": "Détail des sessions : {url}",
     "printSelection": "Sélection personnelle — ce document ne contient pas tout le programme.",
-    "printCommon": "Moments communs"
+    "printCommon": "Moments communs",
+    "nextSlot": "Prochain créneau · {time}"
   },
   "venue": {
     "pageTitle": "Lieu & infos pratiques",
