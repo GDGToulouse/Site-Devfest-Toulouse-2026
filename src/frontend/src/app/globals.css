@@ -331,6 +331,12 @@ body {
 .hero-meta strong {
   font-weight: 700;
 }
+.hero-countdown {
+  /* Reads with the date above it, so it eats into the column gap. */
+  margin: calc(clamp(16px, 2vw, 30px) * -0.6) 0 0;
+  font-weight: 700;
+  font-size: clamp(16px, 1.3vw, 20px);
+}
 .hero-meta-dot {
   width: 4px;
   height: 4px;

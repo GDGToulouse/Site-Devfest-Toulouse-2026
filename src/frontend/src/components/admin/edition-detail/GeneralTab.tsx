@@ -5,6 +5,8 @@ import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { EDITION_STATUSES, editionStatusInfo } from "@/lib/edition-status-labels";
+import { formatEventDate } from "@/lib/datetime";
 
 interface EditionData {
   id: number;
@@ -19,11 +21,14 @@ interface EditionData {
   archivedSiteUrl: string | null;
 }
 
-const STATUS_OPTIONS = [
-  { value: "PREPARATION", label: "Préparation" },
-  { value: "ANNOUNCEMENT", label: "Annonce" },
-  { value: "SEE_YOU_NEXT_YEAR", label: "À l'année prochaine" },
-];
+// When to switch to the last-month status (#576): a month before the first
+// day. Advice only — the switch stays a decision the organisers make.
+function ticketingSwitchDate(startDate: string): string | null {
+  const date = new Date(`${startDate}T12:00:00Z`);
+  if (Number.isNaN(date.getTime())) return null;
+  date.setUTCMonth(date.getUTCMonth() - 1);
+  return formatEventDate(date.toISOString(), "fr");
+}
 
 interface GeneralTabProps {
   edition: EditionData;
@@ -46,8 +51,8 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
 
-  const statusLabel = (value: string) =>
-    STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+  const statusLabel = (value: string) => editionStatusInfo(value).label;
+  const switchDate = form.startDate ? ticketingSwitchDate(form.startDate) : null;
 
   async function persist() {
     setIsSaving(true);
@@ -95,10 +100,16 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
           onChange={(e) => setForm({ ...form, status: e.target.value })}
           className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
         >
-          {STATUS_OPTIONS.map((opt) => (
+          {EDITION_STATUSES.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        {switchDate && (
+          <p className="mt-1 text-sm text-gris">
+            « Dernier mois » : met la billetterie en avant et retire les appels à devenir sponsor. À activer vers le{" "}
+            {switchDate}.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

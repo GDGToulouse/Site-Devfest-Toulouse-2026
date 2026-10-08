@@ -23,7 +23,8 @@
   "cta": {
     "becomeSponsor": "Become a sponsor",
     "submitTalk": "Submit a talk",
-    "contactUs": "Contact us"
+    "contactUs": "Contact us",
+    "tickets": "Tickets"
   },
   "home": {
     "title": "DevFest Toulouse",
@@ -36,7 +37,14 @@
       "subtitleLine2devs2": "devs.",
       "ctaSponsor": "Become a sponsor",
       "ctaTalk": "Submit a talk",
-      "cfpBadge": "CFP open"
+      "cfpBadge": "CFP open",
+      "ctaTickets": "Get my ticket",
+      "ctaSoldOut": "Sold out",
+      "countdown": {
+        "days": "In {count} days",
+        "tomorrow": "Tomorrow",
+        "today": "Today"
+      }
     },
     "stats": {
       "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"

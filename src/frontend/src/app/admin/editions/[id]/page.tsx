@@ -15,6 +15,7 @@ import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
 import ScheduleTab from "@/components/admin/edition-detail/ScheduleTab";
 import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
+import { editionStatusInfo } from "@/lib/edition-status-labels";
 
 interface EditionData {
   id: number;
@@ -39,12 +40,6 @@ interface EditionData {
   sponsorsCount: number;
   categoriesCount: number;
 }
-
-const STATUS_LABELS: Record<string, { label: string; variant: "green" | "orange" | "gray" }> = {
-  PREPARATION: { label: "Préparation", variant: "gray" },
-  ANNOUNCEMENT: { label: "Annonce", variant: "green" },
-  SEE_YOU_NEXT_YEAR: { label: "À l'année prochaine", variant: "orange" },
-};
 
 const TABS = [
   { key: "general", label: "Général" },
@@ -94,7 +89,7 @@ export default function EditionDetailPage() {
 
   if (isLoading || !edition) return <p className="text-gris">Chargement...</p>;
 
-  const statusInfo = STATUS_LABELS[edition.status] || { label: edition.status, variant: "gray" as const };
+  const statusInfo = editionStatusInfo(edition.status);
 
   return (
     <div>
