@@ -4,28 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
-import ImageBase from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
 import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import ImagePickerDialog from "./ImagePickerDialog";
-
-const Image = ImageBase.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      "data-align": {
-        default: null,
-        parseHTML: (element) => element.getAttribute("data-align"),
-        renderHTML: (attributes) => {
-          if (!attributes["data-align"]) return {};
-          return { "data-align": attributes["data-align"] };
-        },
-      },
-    };
-  },
-});
+import { LinkedImage } from "./linked-image";
 
 // Prefix https:// when the user types a bare domain (e.g. "www.devfest.fr"),
 // otherwise the browser treats it as a relative link and it 404s (#167).
@@ -75,7 +59,7 @@ export default function RichTextEditor({
         // (not lost) because the Link extension adds none by default.
         HTMLAttributes: { rel: "noopener noreferrer", target: "_blank" },
       }),
-      Image.configure({
+      LinkedImage.configure({
         inline: false,
         allowBase64: false,
       }),
@@ -163,7 +147,11 @@ function Toolbar({
   function applyLink() {
     if (!editor) return;
     const trimmed = linkUrl.trim();
-    if (trimmed) {
+    if (editor.isActive("image")) {
+      // An image carries its link as an attribute: the link mark cannot apply
+      // to a block node (#490). An empty URL removes it.
+      editor.chain().focus().updateAttributes("image", { href: trimmed ? normalizeLinkHref(trimmed) : null }).run();
+    } else if (trimmed) {
       editor.chain().focus().setLink({ href: normalizeLinkHref(trimmed) }).run();
     } else {
       editor.chain().focus().unsetLink().run();
@@ -174,7 +162,10 @@ function Toolbar({
 
   function handleLinkClick() {
     if (!editor) return;
-    if (editor.isActive("link")) {
+    if (editor.isActive("image")) {
+      setLinkUrl(editor.getAttributes("image").href || "");
+      setShowLinkInput(true);
+    } else if (editor.isActive("link")) {
       editor.chain().focus().unsetLink().run();
     } else {
       const existing = editor.getAttributes("link").href || "";
@@ -406,8 +397,8 @@ function Toolbar({
         <button
           type="button"
           onClick={handleLinkClick}
-          className={btnClass(editor.isActive("link"))}
-          title="Lien"
+          className={btnClass(editor.isActive("link") || !!(editor.isActive("image") && editor.getAttributes("image").href))}
+          title={editor.isActive("image") ? "Lien de l'image" : "Lien"}
         >
           Lien
         </button>
