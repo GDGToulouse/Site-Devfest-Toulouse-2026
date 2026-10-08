@@ -18,7 +18,8 @@
     "sponsors": "Sponsors",
     "jobOffers": "Job offers",
     "venue": "Venue",
-    "blog": "News"
+    "blog": "News",
+    "faq": "FAQ"
   },
   "cta": {
     "becomeSponsor": "Become a sponsor",
@@ -266,7 +267,11 @@
     "home": "Home",
     "pageTitle": "Previous editions",
     "description": "Relive past DevFest Toulouse editions: speakers, talks and replays.",
-    "empty": "No previous edition yet."
+    "empty": "No previous edition yet.",
+    "upcoming": "Next edition",
+    "first": "First edition",
+    "gap": "{from}–{to}: no edition",
+    "gapYear": "{year}: no edition"
   },
   "sponsor": {
     "pageTitle": "Become a sponsor",
@@ -530,5 +535,19 @@
       "tooComplex": "Too complex 🤯"
     },
     "testBanner": "Test mode: this feedback is for checking the site and will be deleted before the event."
+  },
+  "faq": {
+    "home": "Home",
+    "pageTitle": "Frequently asked questions",
+    "description": "Answers to the common questions about DevFest Toulouse: venue and access, tickets, session formats, talk languages and life on site during the conference.",
+    "intro": "Venue, tickets, schedule, life on site: answers to the questions we hear most. Yours isn’t here? <contact>Write to us</contact>.",
+    "empty": "No questions yet.",
+    "themes": {
+      "VENUE": "Venue and access",
+      "TICKETS": "Tickets",
+      "PROGRAMME": "Schedule and sessions",
+      "PRACTICAL": "On site",
+      "OTHER": "Other questions"
+    }
   }
 }

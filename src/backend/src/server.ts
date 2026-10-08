@@ -19,6 +19,7 @@ import calendarRoutes from "./routes/calendar.js";
 import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
+import faqRoutes from "./routes/faq.js";
 import contactRoutes from "./routes/contact.js";
 import talkFeedbackRoutes from "./routes/talk-feedback.js";
 import brochureRoutes from "./routes/brochure.js";
@@ -251,6 +252,7 @@ export async function buildServer() {
   await app.register(articleRoutes, { prefix: "/api" });
   await app.register(settingsRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
+  await app.register(faqRoutes, { prefix: "/api" });
   await app.register(contactRoutes, { prefix: "/api" });
   await app.register(brochureRoutes, { prefix: "/api" });
   await app.register(sponsorRoutes, { prefix: "/api" });

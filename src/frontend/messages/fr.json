@@ -18,7 +18,8 @@
     "sponsors": "Sponsors",
     "jobOffers": "Offres d'emploi",
     "venue": "Lieu",
-    "blog": "Actus"
+    "blog": "Actus",
+    "faq": "FAQ"
   },
   "cta": {
     "becomeSponsor": "Devenir sponsor",
@@ -266,7 +267,11 @@
     "home": "Accueil",
     "pageTitle": "Éditions précédentes",
     "description": "Revivez les éditions passées du DevFest Toulouse : speakers, conférences et replays.",
-    "empty": "Aucune édition précédente pour le moment."
+    "empty": "Aucune édition précédente pour le moment.",
+    "upcoming": "Prochaine édition",
+    "first": "Première édition",
+    "gap": "{from}–{to} : pas d’édition",
+    "gapYear": "{year} : pas d’édition"
   },
   "sponsor": {
     "pageTitle": "Devenir sponsor",
@@ -530,5 +535,19 @@
       "tooComplex": "Trop complexe 🤯"
     },
     "testBanner": "Mode test : ces avis servent à vérifier le site et seront effacés avant l’événement."
+  },
+  "faq": {
+    "home": "Accueil",
+    "pageTitle": "Questions fréquentes",
+    "description": "Les réponses aux questions courantes sur le DevFest Toulouse : lieu et accès, billetterie, formats des sessions, langue des conférences et vie sur place.",
+    "intro": "Lieu, billets, programme, vie sur place : les réponses aux questions qu’on nous pose le plus. La vôtre n’y est pas ? <contact>Écrivez-nous</contact>.",
+    "empty": "Aucune question pour le moment.",
+    "themes": {
+      "VENUE": "Lieu et accès",
+      "TICKETS": "Billetterie",
+      "PROGRAMME": "Programme et sessions",
+      "PRACTICAL": "Sur place",
+      "OTHER": "Autres questions"
+    }
   }
 }

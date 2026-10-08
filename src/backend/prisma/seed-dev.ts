@@ -4,6 +4,7 @@ import {
   findRoomClash,
   type RoomOccupation,
 } from "../src/lib/room-clash.js";
+import { FAQ_DRAFTS } from "./faq-drafts.js";
 
 // Dev-only test accounts — see docs/comptes-dev-local.md
 const DEV_ACCOUNTS = [
@@ -1269,6 +1270,15 @@ async function seedDev() {
     }
     const companies = account.contacts.map((c) => `${c.sponsorSlug} (${c.accessRole})`).join(", ");
     console.log(`Dev sponsor account: ${account.email} — password: ${account.password} — ${companies}`);
+  }
+
+  // The FAQ drafts (#111), once: a reseed must not duplicate them nor undo
+  // what the team has edited since.
+  if ((await prisma.faqItem.count()) === 0) {
+    await prisma.faqItem.createMany({
+      data: FAQ_DRAFTS.map((item, index) => ({ ...item, sortOrder: index })),
+    });
+    console.log(`FAQ drafts created: ${FAQ_DRAFTS.length}`);
   }
 
   console.log("Dev seeding complete!");

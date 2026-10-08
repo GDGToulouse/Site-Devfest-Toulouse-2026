@@ -24,6 +24,7 @@ const TRASH_ENTITIES: { key: string; label: string; adminOnly: boolean }[] = [
   { key: "editions", label: "Éditions", adminOnly: true },
   { key: "users", label: "Utilisateurs", adminOnly: true },
   { key: "pages", label: "Pages", adminOnly: false },
+  { key: "faq", label: "FAQ", adminOnly: false },
 ];
 
 interface TrashItem {
