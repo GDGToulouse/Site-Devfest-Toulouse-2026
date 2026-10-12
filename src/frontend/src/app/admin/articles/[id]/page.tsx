@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { adminFetch, humanError } from "@/lib/admin-api";
+import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -293,6 +294,15 @@ export default function ArticleEditorPage() {
           {isNew ? "Nouvel article" : "Modifier l'article"}
         </h1>
         <div className="flex gap-3">
+          {articleId !== null && (
+            <TrashButton
+              className=""
+              path={`/articles/${articleId}`}
+              listHref="/admin/articles"
+              title="Supprimer l'article"
+              message="Il disparaîtra des actualités. Vous pourrez le restaurer depuis la corbeille."
+            />
+          )}
           <button
             onClick={() => router.push(`/admin/articles`)}
             className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse"

@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Speaker } from "@/lib/types";
+import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import EditLinkActions from "@/components/admin/EditLinkActions";
 import SpeakerForm, { emptySpeakerForm, type SpeakerFormValue } from "@/components/admin/speakers/SpeakerForm";
@@ -209,6 +210,16 @@ export default function SpeakerEditorPage() {
           >
             Voir le visuel
           </a>
+        )}
+        {speakerId !== null && (
+          <TrashButton
+            // "Voir le visuel" already pushes the header's right side out.
+            className={current?.editions.some((e) => e.publicationStatus === "PUBLISHED") ? "" : "ml-auto"}
+            path={`/speakers/${speakerId}`}
+            listHref="/admin/speakers"
+            title="Supprimer le speaker"
+            message="Il disparaîtra des pages publiques. Vous pourrez le restaurer depuis la corbeille."
+          />
         )}
       </div>
 

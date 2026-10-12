@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
+import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
@@ -165,6 +166,14 @@ export default function TalkEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouvelle conférence" : "Modifier la conférence"}</h1>
+        {talkId !== null && (
+          <TrashButton
+            path={`/talks/${talkId}`}
+            listHref="/admin/talks"
+            title="Supprimer la conférence"
+            message="Elle disparaîtra des pages publiques. Vous pourrez la restaurer depuis la corbeille."
+          />
+        )}
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
