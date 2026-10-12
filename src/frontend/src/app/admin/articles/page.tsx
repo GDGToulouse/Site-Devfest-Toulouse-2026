@@ -168,7 +168,7 @@ export default function ArticlesListPage() {
       <ConfirmDialog
         isOpen={!!deleteTarget}
         title="Supprimer l'article"
-        message={`Supprimer "${deleteTarget?.titleFr}" ? Cette action est irréversible.`}
+        message={`Supprimer « ${deleteTarget?.titleFr} » ? Il disparaîtra des actualités. Vous pourrez le restaurer depuis la corbeille.`}
         confirmLabel="Supprimer"
         variant="danger"
         onConfirm={handleDelete}

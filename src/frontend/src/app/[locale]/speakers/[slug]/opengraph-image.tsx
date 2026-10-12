@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { getSpeakerBySlug } from "@/lib/api";
+import { imageDataUri } from "@/lib/og-image";
 
 export const alt = "DevFest Toulouse — Speaker";
 export const size = { width: 1200, height: 630 };
@@ -16,7 +17,8 @@ export default async function SpeakerOgImage({
   const speaker = await getSpeakerBySlug(slug);
   const name = speaker?.name ?? "DevFest Toulouse";
   const company = speaker?.company ?? "";
-  const photoUrl = speaker?.photoUrl ?? null;
+  // Satori only takes an absolute or inline source (#600).
+  const photoUrl = speaker?.photoUrl ? await imageDataUri(speaker.photoUrl) : null;
 
   return new ImageResponse(
     (

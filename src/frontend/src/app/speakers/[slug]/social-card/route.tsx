@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
 import { getSpeakerBySlug } from "@/lib/api";
+import { imageDataUri } from "@/lib/og-image";
 
 export const contentType = "image/png";
 
@@ -29,7 +30,9 @@ export async function GET(
   const talk = talks.find((t) => t.slug === talkSlug) ?? talks[0] ?? null;
   const talkTitle = talk?.title ?? "";
 
-  const { name, company, photoUrl } = speaker;
+  const { name, company } = speaker;
+  // Satori only takes an absolute or inline source (#600).
+  const photoUrl = speaker.photoUrl ? await imageDataUri(speaker.photoUrl) : null;
 
   return new ImageResponse(
     (
