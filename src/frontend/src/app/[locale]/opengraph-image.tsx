@@ -2,34 +2,13 @@ import { ImageResponse } from "next/og";
 import { getTranslations } from "next-intl/server";
 
 import { getCurrentEdition, getSeoSettings } from "@/lib/api";
-import { absoluteUrl } from "@/lib/seo";
+import { imageDataUri } from "@/lib/og-image";
 
 export const alt = "DevFest Toulouse";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 const BRAND_GRADIENT = "linear-gradient(135deg, #0B7350 0%, #109E6E 50%, #41B38E 100%)";
-
-// Satori has no network of its own inside the container, so the uploaded image
-// travels as a data URI. Ceiling well above any legitimate OG image (the admin
-// upload limit is 5 MB) — an oversized or unreachable file falls back to the
-// generated card rather than to no image at all.
-const MAX_CUSTOM_IMAGE_BYTES = 8 * 1024 * 1024;
-
-async function fetchAsDataUri(url: string): Promise<string | null> {
-  try {
-    const upstream = await fetch(url);
-    if (!upstream.ok) return null;
-
-    const bytes = await upstream.arrayBuffer();
-    if (bytes.byteLength > MAX_CUSTOM_IMAGE_BYTES) return null;
-
-    const type = upstream.headers.get("content-type") ?? "image/png";
-    return `data:${type};base64,${Buffer.from(bytes).toString("base64")}`;
-  } catch {
-    return null;
-  }
-}
 
 export default async function OpengraphImage({
   params,
@@ -59,7 +38,7 @@ export default async function OpengraphImage({
   // `contain` on the brand gradient, not `cover`: a logo cropped to fill is
   // worse than one with green bands around it.
   const customOgImage = seoSettings.seo_og_image;
-  const customOgDataUri = customOgImage ? await fetchAsDataUri(absoluteUrl(customOgImage)) : null;
+  const customOgDataUri = customOgImage ? await imageDataUri(customOgImage) : null;
   if (customOgDataUri) {
     return new ImageResponse(
       (
