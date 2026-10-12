@@ -6,6 +6,18 @@ import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
+import {
+  EDIT_LINK_STATES,
+  SPEAKER_MISSING,
+  SPEAKER_PAGE_SIZE,
+  SPEAKER_PAGE_SIZE_MAX,
+  SPEAKER_SORTS,
+  editLinkState,
+  sortSpeakers,
+  speakerWhere,
+  type SpeakerListFilters,
+  type SpeakerMissing,
+} from "../../lib/speaker-list.js";
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -34,6 +46,15 @@ interface SpeakerIdParams {
 
 interface SpeakerListQuery {
   editionId?: string;
+  page?: string;
+  limit?: string;
+  search?: string;
+  status?: "PUBLISHED" | "DRAFT";
+  talks?: "with" | "without";
+  missing?: string;
+  editLink?: (typeof EDIT_LINK_STATES)[number];
+  sort?: (typeof SPEAKER_SORTS)[number];
+  order?: "asc" | "desc";
 }
 
 interface SpeakerBulkBody {
@@ -72,8 +93,13 @@ interface SerializableSpeaker {
 }
 
 function serialize(s: SerializableSpeaker) {
+  // The edit token is the speaker's key to their own page: it leaves the server
+  // in the email only, never in an admin response (#572). Any account of the
+  // back-office, EDITOR included, and any MCP agent used to read it here.
+  const { editToken, ...rest } = s;
+  void editToken;
   return {
-    ...s,
+    ...rest,
     socialLinks: s.socialLinks ? JSON.parse(s.socialLinks) : {},
     ...(s.editions
       ? {
@@ -92,24 +118,78 @@ function serialize(s: SerializableSpeaker) {
 }
 
 export default async function adminSpeakerRoutes(app: FastifyInstance) {
-  // GET /api/admin/speakers?editionId=X — editionId omitted lists all editions
+  // GET /api/admin/speakers — filters, sort and pagination (#572). Without
+  // `page` the answer stays the full array: the talk form's speaker picker, the
+  // edition overview and MCP agents read the whole list of an edition.
   app.get<{ Querystring: SpeakerListQuery }>("/speakers", {
-    schema: { querystring: { type: "object", properties: { editionId: { type: "string" } } } },
-  }, async (request) => {
-    const { editionId } = request.query;
-
-    // Filtering goes through the participations since #351. Ordering is
-    // alphabetical in both cases: `edition.year` is no longer a to-one relation
-    // to sort on, and the admin table sorts client-side anyway.
-    const speakers = await prisma.speaker.findMany({
-      where: {
-        ...notDeleted,
-        ...(editionId ? { editions: { some: { editionId: Number(editionId) } } } : {}),
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          editionId: { type: "string", pattern: "^[0-9]+$" },
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          search: { type: "string", maxLength: 200 },
+          status: { type: "string", enum: ["PUBLISHED", "DRAFT"] },
+          talks: { type: "string", enum: ["with", "without"] },
+          // Comma-separated, e.g. `photo,email`.
+          missing: { type: "string", pattern: `^(${SPEAKER_MISSING.join("|")})(,(${SPEAKER_MISSING.join("|")}))*$` },
+          editLink: { type: "string", enum: [...EDIT_LINK_STATES] },
+          sort: { type: "string", enum: [...SPEAKER_SORTS] },
+          order: { type: "string", enum: ["asc", "desc"] },
+        },
       },
-      include: withEditions,
-      orderBy: { name: "asc" },
+    },
+  }, async (request, reply) => {
+    const q = request.query;
+    const editionId = q.editionId ? Number(q.editionId) : undefined;
+    // Status and talks belong to one participation (#351): without an edition
+    // there is no year to read them on, and guessing one would mislead.
+    if (!editionId && (q.status || q.talks || q.sort === "status")) {
+      return reply.code(400).send({
+        error: "edition_required",
+        message: "Choisissez une édition pour filtrer ou trier par statut ou par sessions.",
+      });
+    }
+    const filters: SpeakerListFilters = {
+      search: q.search,
+      editionId,
+      status: q.status,
+      talks: q.talks,
+      missing: (q.missing?.split(",") ?? []) as SpeakerMissing[],
+      editLink: q.editLink,
+      sort: q.sort ?? "name",
+      order: q.order ?? "asc",
+    };
+
+    const speakers = await prisma.speaker.findMany({
+      where: speakerWhere(filters),
+      include: {
+        ...withEditions,
+        _count: { select: { talks: { where: { ...notDeleted, ...(editionId ? { editionId } : {}) } } } },
+      },
     });
-    return speakers.map(serialize);
+    const rows = sortSpeakers(
+      speakers.map(({ _count, ...s }) => ({
+        ...serialize(s),
+        name: s.name,
+        company: s.company,
+        // Sessions of the chosen edition, or of every edition when none is chosen.
+        talkCount: _count.talks,
+        status: editionId ? (s.editions.find((e) => e.editionId === editionId)?.publicationStatus ?? null) : null,
+        hasPhoto: Boolean(s.photoUrl),
+        hasBio: Boolean(s.bioFr || s.bioEn),
+        hasEmail: Boolean(s.contactEmail),
+        editLink: editLinkState(s),
+      })),
+      filters.sort,
+      filters.order,
+    );
+
+    if (!q.page) return rows;
+    const page = Math.max(1, Number(q.page));
+    const limit = Math.min(SPEAKER_PAGE_SIZE_MAX, Math.max(1, Number(q.limit) || SPEAKER_PAGE_SIZE));
+    return { page, limit, total: rows.length, items: rows.slice((page - 1) * limit, page * limit) };
   });
 
   // GET /api/admin/speakers/:id

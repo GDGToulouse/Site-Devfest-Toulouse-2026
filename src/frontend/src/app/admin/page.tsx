@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { editionStatusInfo } from "@/lib/edition-status-labels";
 
 interface GeneralStats {
   totalArticles: number;
@@ -31,12 +32,6 @@ interface KeyFigure {
   labelFr: string;
   labelEn: string;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  PREPARATION: "Préparation",
-  ANNOUNCEMENT: "Annonce",
-  SEE_YOU_NEXT_YEAR: "À l'année prochaine",
-};
 
 export default function AdminDashboard() {
   const [general, setGeneral] = useState<GeneralStats | null>(null);
@@ -106,7 +101,7 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <StatCard
               label="Statut"
-              value={STATUS_LABELS[featured.status] || featured.status}
+              value={editionStatusInfo(featured.status).label}
               color="malachite"
             />
             <StatCard

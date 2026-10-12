@@ -38,6 +38,12 @@ describe("getPublicNavEntries", () => {
     expect(keys(getPublicNavEntries(edition()))).toEqual(["replays", "blog"]);
   });
 
+  // #111: the FAQ is site-wide; its entry waits for a published question.
+  it("offers the FAQ once a question is published, after the venue", () => {
+    expect(keys(getPublicNavEntries(edition({ hasVenueInfo: true, hasFaq: true })))).toEqual(["replays", "venue", "faq", "blog"]);
+    expect(keys(getPublicNavEntries(edition({ hasFaq: false })))).not.toContain("faq");
+  });
+
   it("shows a null edition as replays and blog only, never crashing", () => {
     expect(keys(getPublicNavEntries(null))).toEqual(["replays", "blog"]);
   });

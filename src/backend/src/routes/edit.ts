@@ -17,6 +17,7 @@ import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
 import { cleanSocial } from "../lib/sponsor-write.js";
 import { setActor } from "../lib/request-context.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { resultsForTalks } from "../lib/talk-feedback-results.js";
 
 // This is the only unauthenticated endpoint that writes to the database and
 // whose content is rendered on public pages, so everything below is an
@@ -292,6 +293,42 @@ export default async function editRoutes(app: FastifyInstance) {
       // server-side on every write, so exposing it opens no door the token
       // didn't already open.
       talks: entity.talks,
+    };
+  });
+
+  // GET /api/edit/:token/feedback — the audience's opinion of the speaker's
+  // sessions (#565), read-only. The link stands in for a speaker back-office
+  // until speakers get accounts (#363). Unlike the edit form it ignores the
+  // 48h freeze (RG-246): the feedback arrives on the day and after, exactly
+  // when the form is frozen. The lock and the expiry still apply — they guard
+  // a bearer secret, not the editing calendar.
+  app.get<{ Params: { token: string } }>("/edit/:token/feedback", {
+    config: { rateLimit: { max: 30, timeWindow: "1 minute" } },
+    schema: { params: { type: "object", required: ["token"], properties: { token: { type: "string" } } } },
+  }, async (request, reply) => {
+    const resolved = await resolveToken(request.params.token);
+    if (!resolved) return reply.code(404).send({ error: "invalid_token" });
+    const { entity } = resolved;
+    if (entity.editLinkLocked) return reply.code(403).send({ error: "locked" });
+    if (isEditTokenExpired(entity.editTokenSentAt)) return reply.code(403).send({ error: "expired" });
+
+    const results = await resultsForTalks(entity.talks.map((talk) => talk.id));
+    return {
+      talks: entity.talks
+        .map((talk) => {
+          const result = results.get(talk.id)!;
+          return {
+            id: talk.id,
+            title: talk.title,
+            year: talk.edition.year,
+            votes: result.votes,
+            testVotes: result.testVotes,
+            items: result.items,
+            // A message the team hid (#565) never reaches the speaker.
+            messages: result.messages.filter((m) => !m.hidden).map(({ text, at, isTest }) => ({ text, at, isTest })),
+          };
+        })
+        .filter((talk) => talk.votes > 0),
     };
   });
 

@@ -1,11 +1,22 @@
 export type SponsorPageStatus = "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
 
+// The phase that shapes the home page, in the order an edition goes through it.
+// TICKETING is the last month before the event (#576), PROGRAMME the last week
+// and EVENT_DAY the day itself (#577).
+export type EditionStatus =
+  | "PREPARATION"
+  | "ANNOUNCEMENT"
+  | "TICKETING"
+  | "PROGRAMME"
+  | "EVENT_DAY"
+  | "SEE_YOU_NEXT_YEAR";
+
 export interface Edition {
   id: number;
   year: number;
   startDate: string | null;
   endDate: string | null;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   venueName: string | null;
   venueAddress: string | null;
   // Venue & practical-info page (#109). Coordinates drive the map; transports/
@@ -30,6 +41,8 @@ export interface Edition {
   sponsorTemporaryFormUrl: string | null;
   isProgramPublished: boolean;
   isScheduleReady: boolean;
+  /** At least one published FAQ question (#111), site-wide. */
+  hasFaq?: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
   // At least one partner job offer is published and still within its
@@ -40,10 +53,11 @@ export interface Edition {
 export interface EditionSummary {
   id: number;
   year: number;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   archivedSiteUrl: string | null;
   startDate: string | null;
   updatedAt: string;
+  venueName: string | null;
 }
 
 export interface SocialLinks {
@@ -413,6 +427,8 @@ export interface ScheduleEntry {
   endsAt: string;
   roomId: number | null;
   room: string | null;
+  /** Set on the entries the Sessionize import created and keeps in line (#546). Admin only. */
+  sessionizeId?: string | null;
 }
 
 // The whole grid of one edition, as /api/editions/:year/schedule serves it.
@@ -598,13 +614,15 @@ export interface EditionDetail {
   year: number;
   startDate: string | null;
   endDate: string | null;
-  status: "PREPARATION" | "ANNOUNCEMENT" | "SEE_YOU_NEXT_YEAR";
+  status: EditionStatus;
   venueName: string | null;
   venueAddress: string | null;
   heroImageUrl: string | null;
   aftermovieUrl: string | null;
   galleryUrl: string | null;
   archivedSiteUrl: string | null;
+  /** The curated gallery (#112), in the team's order. */
+  photos: { url: string; alt: string | null }[];
   keyFigures: KeyFigure[];
   articles: Article[];
 }
@@ -640,4 +658,16 @@ export interface PaginatedArticles {
   total: number;
   page: number;
   totalPages: number;
+}
+
+// One published FAQ question (#111), in both languages.
+export type FaqTheme = "VENUE" | "TICKETS" | "PROGRAMME" | "PRACTICAL" | "OTHER";
+
+export interface FaqItem {
+  id: number;
+  theme: FaqTheme;
+  questionFr: string;
+  questionEn: string;
+  answerFr: string;
+  answerEn: string;
 }

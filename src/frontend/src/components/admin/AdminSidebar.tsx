@@ -22,6 +22,7 @@ import {
   faTrashCan,
   faLocationDot,
   faClockRotateLeft,
+  faCircleQuestion,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
@@ -63,6 +64,7 @@ const iconMap: Record<string, IconDefinition> = {
   trash: faTrashCan,
   "map-pin": faLocationDot,
   clock: faClockRotateLeft,
+  question: faCircleQuestion,
 };
 
 interface HealthInfo {

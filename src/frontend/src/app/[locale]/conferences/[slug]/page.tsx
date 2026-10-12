@@ -9,6 +9,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { buildTalkEventJsonLd, canonicalLocaleFor, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
+import TalkFeedback from "@/components/conferences/TalkFeedback";
 import { Link } from "@/i18n/navigation";
 
 // Absolute, because the event body ends up on someone else's calendar: a
@@ -111,6 +112,11 @@ export default async function TalkDetailPage({
         </div>
 
         <h1 className="mt-4 text-3xl lg:text-5xl font-bold text-noir">{title}</h1>
+
+        {/* Right under the title: the speaker's QR code lands here on a phone,
+            and the form has to be on screen without scrolling (#564). Renders
+            nothing before the event day. */}
+        <TalkFeedback slug={talk.slug} />
 
         {description && (
           <p className="mt-6 whitespace-pre-line text-lg leading-relaxed text-noir">{description}</p>

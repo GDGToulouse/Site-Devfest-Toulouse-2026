@@ -1,4 +1,4 @@
-import type {
+import type { FaqItem,
   Edition,
   EditionDetail,
   EditionSummary,
@@ -163,6 +163,11 @@ export async function getTags(): Promise<Tag[]> {
 
 export async function getContentPage(slug: string): Promise<ContentPage | null> {
   return fetchAPI<ContentPage>(`/api/pages/${encodeURIComponent(slug)}`);
+}
+
+// The published FAQ (#111), theme by theme in the page's order.
+export async function getFaq(): Promise<FaqItem[]> {
+  return (await fetchAPI<FaqItem[]>("/api/faq")) || [];
 }
 
 export async function getPublishedPages(): Promise<ContentPageSummary[]> {

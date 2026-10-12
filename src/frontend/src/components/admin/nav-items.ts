@@ -38,6 +38,7 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
       { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
+      { label: "FAQ", path: "/admin/faq", icon: "question", roles: ["ADMIN", "EDITOR"] },
       { label: "Fichiers", path: "/admin/files", icon: "image", roles: ["ADMIN", "EDITOR"] },
     ],
   },

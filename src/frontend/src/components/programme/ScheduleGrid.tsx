@@ -66,6 +66,10 @@ const STICKY_BACKDROP =
 // the real row peek out underneath (#460).
 const CELL_GAP = 8;
 
+// Where "next slot" lands (#575): under the site header and the room row
+// pinned beneath it (#460), not behind them.
+const SLOT_TARGET = "scroll-mt-[120px] outline-none";
+
 export default function ScheduleGrid({
   rows,
   rooms,
@@ -227,7 +231,7 @@ export default function ScheduleGrid({
           <tbody>
             {rows.map((row) =>
               row.type === "band" ? (
-                <tr key={row.key}>
+                <tr key={row.key} data-slot={row.key} tabIndex={-1} className={SLOT_TARGET}>
                   <td
                     colSpan={rooms.length + 1}
                     className="rounded-2xl bg-blanc-casse text-sm font-bold text-noir"
@@ -245,7 +249,7 @@ export default function ScheduleGrid({
                   </td>
                 </tr>
               ) : (
-                <tr key={row.key}>
+                <tr key={row.key} data-slot={row.key} tabIndex={-1} className={SLOT_TARGET}>
                   <th
                     scope="row"
                     className={`sticky left-0 z-10 w-24 min-w-24 bg-blanc align-top text-left text-sm font-bold tabular-nums text-noir transition-shadow ${

@@ -1,17 +1,27 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
-import type { Talk, TalkFormat } from "@/lib/types";
-import DataTable from "@/components/admin/DataTable";
+import type { AdminVenue, Category, Talk, TalkFormat } from "@/lib/types";
+import { formatEventTime } from "@/lib/datetime";
+import { useListParams } from "@/lib/use-list-params";
+import DataTable, { type SortState } from "@/components/admin/DataTable";
+import ListPagination from "@/components/admin/ListPagination";
 import BulkActionBar from "@/components/admin/BulkActionBar";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 interface TalkRow extends Talk {
   edition?: { id: number; year: number };
+}
+
+interface TalkPage {
+  page: number;
+  limit: number;
+  total: number;
+  items: TalkRow[];
 }
 
 const FORMAT_LABELS: Record<TalkFormat, string> = {
@@ -21,36 +31,120 @@ const FORMAT_LABELS: Record<TalkFormat, string> = {
   WORKSHOP: "Workshop",
 };
 
+const PAGE_SIZE = 50;
+// Long enough not to query on every key, short enough to feel immediate.
+const SEARCH_DELAY_MS = 300;
+
+const LIST_KEYS = [
+  "year",
+  "search",
+  "format",
+  "status",
+  "category",
+  "scheduled",
+  "room",
+  "speakers",
+  "video",
+  "editable",
+  "sort",
+  "order",
+] as const;
+
+const SELECT_CLASS =
+  "rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-50";
+
+// The list asks the API for one page, filtered and sorted (#573), like the
+// speakers' (#572): which sessions are still drafts, which have no slot or no
+// room, which have no speaker, and after the event which wait for their replay.
 export default function TalksDataPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [talks, setTalks] = useState<TalkRow[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [year, setYear] = useState<string>(searchParams.get("year") ?? "");
-  const [format, setFormat] = useState<string>("");
-  const [search, setSearch] = useState("");
+  const { params, page, update } = useListParams(LIST_KEYS);
+  const [editions, setEditions] = useState<{ id: number; year: number }[] | null>(null);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rooms, setRooms] = useState<{ id: number; name: string }[]>([]);
+  const [list, setList] = useState<TalkPage | null>(null);
+  const [searchInput, setSearchInput] = useState(params.search);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<TalkRow | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    adminFetch<TalkRow[]>("/talks").then(({ data }) => {
-      if (data) setTalks(data);
-      setIsLoading(false);
+    adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
+      setEditions([...(data ?? [])].sort((a, b) => b.year - a.year));
     });
   }, []);
 
+  const editionId = editions?.find((e) => String(e.year) === params.year)?.id ?? null;
+  const hasEdition = editionId !== null;
+
+  // Categories and rooms belong to an edition: they are offered once one is chosen.
+  useEffect(() => {
+    if (!editionId) {
+      setCategories([]);
+      setRooms([]);
+      return;
+    }
+    adminFetch<Category[]>(`/categories?editionId=${editionId}`).then(({ data }) => setCategories(data ?? []));
+    adminFetch<{ venueId: number | null }>(`/editions/${editionId}`).then(({ data }) => {
+      if (!data?.venueId) {
+        setRooms([]);
+        return;
+      }
+      adminFetch<AdminVenue>(`/venues/${data.venueId}`).then(({ data: venue }) =>
+        setRooms(venue?.rooms.map((r) => ({ id: r.id, name: r.name })) ?? []),
+      );
+    });
+  }, [editionId]);
+
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  if (editionId) query.set("editionId", String(editionId));
+  if (params.search) query.set("search", params.search);
+  if (params.format) query.set("format", params.format);
+  if (params.status) query.set("status", params.status);
+  if (params.category) query.set("categoryId", params.category);
+  // A slot and a room are an edition's: the API refuses them without one.
+  if (hasEdition && params.scheduled) query.set("scheduled", params.scheduled);
+  if (hasEdition && params.room) query.set("roomId", params.room);
+  if (params.speakers) query.set("speakers", params.speakers);
+  if (params.video) query.set("video", params.video);
+  if (params.editable) query.set("speakerEditable", params.editable);
+  if (params.sort) {
+    query.set("sort", params.sort);
+    query.set("order", params.order || "asc");
+  }
+  const queryString = query.toString();
+
+  const load = useCallback(async () => {
+    const { data } = await adminFetch<TalkPage>(`/talks?${queryString}`);
+    setList(data ?? { page: 1, limit: PAGE_SIZE, total: 0, items: [] });
+  }, [queryString]);
+
+  useEffect(() => {
+    // Wait for the editions: the year in the URL means nothing until it maps to an id.
+    if (editions === null) return;
+    load();
+  }, [editions, load]);
+
+  // Another page, filter or order shows other rows: a selection carried over
+  // would act on sessions no longer on screen.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [queryString]);
+
+  useEffect(() => {
+    if (searchInput === params.search) return;
+    const timer = setTimeout(() => update({ search: searchInput.trim() }), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, params.search, update]);
+
   async function applyBulk(value: "DRAFT" | "PUBLISHED") {
-    const ids = [...selectedIds];
     const { status } = await adminFetch("/talks/bulk", {
       method: "POST",
-      body: JSON.stringify({ ids, action: "setStatus", value }),
+      body: JSON.stringify({ ids: [...selectedIds], action: "setStatus", value }),
     });
     if (status !== 200) return;
-    setTalks((prev) =>
-      prev.map((t) => (selectedIds.has(t.id) ? { ...t, publicationStatus: value } : t)),
-    );
     setSelectedIds(new Set());
+    await load();
   }
 
   async function handleDelete() {
@@ -60,38 +154,28 @@ export default function TalksDataPage() {
     const { status, error: apiError } = await adminFetch(`/talks/${deleteTarget.id}`, {
       method: "DELETE",
     });
-    const deletedId = deleteTarget.id;
     setDeleteTarget(null);
-
-    if (status === 204) {
-      setTalks((prev) => prev.filter((t) => t.id !== deletedId));
+    if (status !== 204) {
+      setError(apiError ?? "Suppression impossible.");
       return;
     }
-    setError(apiError ?? "Suppression impossible.");
+    // The last row of a page gone: step back rather than show an empty page.
+    if (list && list.items.length === 1 && page > 1) update({ page: String(page - 1) });
+    else await load();
   }
 
-  const years = useMemo(
-    () => [...new Set(talks.map((t) => t.edition?.year).filter((y): y is number => y != null))].sort((a, b) => b - a),
-    [talks],
-  );
-
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return talks.filter((t) => {
-      if (year && String(t.edition?.year) !== year) return false;
-      if (format && t.format !== format) return false;
-      if (q && !t.title.toLowerCase().includes(q) && !t.speakers.some((s) => s.name.toLowerCase().includes(q))) return false;
-      return true;
-    });
-  }, [talks, year, format, search]);
-
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [year, format, search]);
+  const sort: SortState = params.sort
+    ? { key: params.sort, direction: params.order === "desc" ? "descending" : "ascending" }
+    : null;
 
   const columns = [
-    { key: "title", label: "Titre", render: (t: TalkRow) => <span className="font-medium text-noir">{t.title}</span> },
-    { key: "format", label: "Format", render: (t: TalkRow) => FORMAT_LABELS[t.format] },
+    {
+      key: "title",
+      label: "Titre",
+      sortable: true,
+      render: (t: TalkRow) => <span className="font-medium text-noir">{t.title}</span>,
+    },
+    { key: "format", label: "Format", sortable: true, render: (t: TalkRow) => FORMAT_LABELS[t.format] },
     {
       key: "category",
       label: "Catégorie",
@@ -110,9 +194,29 @@ export default function TalksDataPage() {
       label: "Speakers",
       render: (t: TalkRow) => (t.speakers.length ? t.speakers.map((s) => s.name).join(", ") : "—"),
     },
+    // The slot, once an edition is chosen: across editions it reads as noise.
+    ...(hasEdition
+      ? [
+          {
+            key: "startsAt",
+            label: "Horaire",
+            sortable: true,
+            render: (t: TalkRow) =>
+              t.startsAt ? (
+                <span className="tabular-nums">
+                  {formatEventTime(t.startsAt)}
+                  {t.room?.name && <span className="block text-xs text-gris">{t.room.name}</span>}
+                </span>
+              ) : (
+                <span className="text-gris">Non planifiée</span>
+              ),
+          },
+        ]
+      : []),
     {
       key: "status",
       label: "Statut",
+      sortable: true,
       render: (t: TalkRow) => (
         <StatusBadge
           status={t.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
@@ -120,8 +224,10 @@ export default function TalksDataPage() {
         />
       ),
     },
-    { key: "edition", label: "Édition", render: (t: TalkRow) => t.edition?.year ?? "—" },
+    { key: "edition", label: "Édition", sortable: true, render: (t: TalkRow) => t.edition?.year ?? "—" },
   ];
+
+  const hasFilters = LIST_KEYS.some((key) => key !== "sort" && key !== "order" && params[key]);
 
   return (
     <div>
@@ -138,65 +244,152 @@ export default function TalksDataPage() {
         </button>
       </div>
 
-      {isLoading ? (
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          aria-label="Rechercher"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Rechercher un titre, un speaker…"
+          className="w-64 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        />
+        <select
+          aria-label="Édition"
+          value={params.year}
+          // Categories and rooms are the edition's: they go with it.
+          onChange={(e) => update({ year: e.target.value, category: "", room: "" })}
+          className={SELECT_CLASS}
+        >
+          <option value="">Toutes les éditions</option>
+          {(editions ?? []).map((e) => (
+            <option key={e.id} value={e.year}>{e.year}</option>
+          ))}
+        </select>
+        <select aria-label="Format" value={params.format} onChange={(e) => update({ format: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Tous les formats</option>
+          {(Object.keys(FORMAT_LABELS) as TalkFormat[]).map((f) => (
+            <option key={f} value={f}>{FORMAT_LABELS[f]}</option>
+          ))}
+        </select>
+        <select aria-label="Statut" value={params.status} onChange={(e) => update({ status: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Tous les statuts</option>
+          <option value="PUBLISHED">Publié</option>
+          <option value="DRAFT">Brouillon</option>
+        </select>
+        <select
+          aria-label="Catégorie"
+          value={params.category}
+          onChange={(e) => update({ category: e.target.value })}
+          disabled={!hasEdition}
+          title={hasEdition ? undefined : "Choisissez une édition"}
+          className={SELECT_CLASS}
+        >
+          <option value="">Toutes les catégories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.nameFr}</option>
+          ))}
+        </select>
+        <select
+          aria-label="Programmation"
+          value={hasEdition ? params.scheduled : ""}
+          onChange={(e) => update({ scheduled: e.target.value })}
+          disabled={!hasEdition}
+          title={hasEdition ? undefined : "Choisissez une édition"}
+          className={SELECT_CLASS}
+        >
+          <option value="">Planifiées ou non</option>
+          <option value="yes">Planifiées</option>
+          <option value="no">Non planifiées</option>
+        </select>
+        <select
+          aria-label="Salle"
+          value={hasEdition ? params.room : ""}
+          onChange={(e) => update({ room: e.target.value })}
+          disabled={!hasEdition}
+          title={hasEdition ? undefined : "Choisissez une édition"}
+          className={SELECT_CLASS}
+        >
+          <option value="">Toutes les salles</option>
+          {rooms.map((r) => (
+            <option key={r.id} value={r.id}>{r.name}</option>
+          ))}
+        </select>
+        <select aria-label="Speakers" value={params.speakers} onChange={(e) => update({ speakers: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Avec ou sans speaker</option>
+          <option value="none">Sans speaker</option>
+        </select>
+        <select aria-label="Replay" value={params.video} onChange={(e) => update({ video: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Replay : tous</option>
+          <option value="with">Avec replay</option>
+          <option value="without">Sans replay</option>
+        </select>
+        <select
+          aria-label="Modifiable par le speaker"
+          value={params.editable}
+          onChange={(e) => update({ editable: e.target.value })}
+          className={SELECT_CLASS}
+        >
+          <option value="">Modifiable par le speaker : tous</option>
+          <option value="yes">Modifiable par le speaker</option>
+          <option value="no">Non modifiable</option>
+        </select>
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearchInput("");
+              update(Object.fromEntries(LIST_KEYS.map((key) => [key, ""])));
+            }}
+            className="text-sm text-bleu underline"
+          >
+            Réinitialiser
+          </button>
+        )}
+        {list && (
+          <span className="text-sm text-gris" aria-live="polite">
+            {list.total} conférence{list.total > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {selectedIds.size > 0 && (
+        <BulkActionBar
+          count={selectedIds.size}
+          entitySingular="conférence"
+          entityPlural="conférences"
+          onSetStatus={applyBulk}
+          onClear={() => setSelectedIds(new Set())}
+        />
+      )}
+
+      {error && (
+        <div role="alert" className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite">
+          {error}
+        </div>
+      )}
+
+      {list === null ? (
         <p className="text-gris">Chargement...</p>
       ) : (
         <>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <input
-              type="search"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un titre, un speaker…"
-              className="w-64 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
-            />
-            <select
-              value={year}
-              onChange={(e) => setYear(e.target.value)}
-              className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
-            >
-              <option value="">Toutes les éditions</option>
-              {years.map((y) => (
-                <option key={y} value={y}>{y}</option>
-              ))}
-            </select>
-            <select
-              value={format}
-              onChange={(e) => setFormat(e.target.value)}
-              className="rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
-            >
-              <option value="">Tous les formats</option>
-              {(Object.keys(FORMAT_LABELS) as TalkFormat[]).map((f) => (
-                <option key={f} value={f}>{FORMAT_LABELS[f]}</option>
-              ))}
-            </select>
-            <span className="text-sm text-gris">{filtered.length} conférence{filtered.length > 1 ? "s" : ""}</span>
-          </div>
-
-          {selectedIds.size > 0 && (
-            <BulkActionBar
-              count={selectedIds.size}
-              entitySingular="conférence"
-              entityPlural="conférences"
-              onSetStatus={applyBulk}
-              onClear={() => setSelectedIds(new Set())}
-            />
-          )}
-
-          {error && (
-            <div role="alert" className="mb-4 rounded-lg bg-terre-cuite/10 px-4 py-3 text-sm text-terre-cuite">
-              {error}
-            </div>
-          )}
-
           <DataTable<TalkRow>
             columns={columns}
-            data={filtered}
-            emptyMessage="Aucune conférence"
+            data={list.items}
+            emptyMessage={hasFilters ? "Aucune conférence ne correspond à ces filtres" : "Aucune conférence"}
             onEdit={(t) => router.push(`/admin/talks/${t.id}`)}
             onDelete={(t) => setDeleteTarget(t)}
             selectedIds={selectedIds}
             onSelectionChange={setSelectedIds}
+            sort={sort}
+            onSortChange={(next) =>
+              update({ sort: next?.key ?? "", order: next?.direction === "descending" ? "desc" : "asc" })
+            }
+          />
+          <ListPagination
+            page={list.page}
+            limit={list.limit}
+            total={list.total}
+            onPageChange={(next) => update({ page: String(next) })}
           />
         </>
       )}

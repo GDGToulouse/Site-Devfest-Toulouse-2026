@@ -18,17 +18,20 @@
     "sponsors": "Sponsors",
     "jobOffers": "Job offers",
     "venue": "Venue",
-    "blog": "News"
+    "blog": "News",
+    "faq": "FAQ"
   },
   "cta": {
     "becomeSponsor": "Become a sponsor",
     "submitTalk": "Submit a talk",
-    "contactUs": "Contact us"
+    "contactUs": "Contact us",
+    "tickets": "Tickets",
+    "programme": "Programme"
   },
   "home": {
     "title": "DevFest Toulouse",
-    "pageTitle": "DevFest Toulouse 2026 — tech conference in southern France",
-    "description": "DevFest Toulouse 2026 is a full day of tech talks run by GDG Toulouse: web, cloud, AI, mobile and security, with speakers from across the community.",
+    "pageTitle": "DevFest Toulouse 2026 — the developer conference",
+    "description": "DevFest Toulouse 2026 is a full day of talks for developers, run by GDG Toulouse: web, cloud, AI, mobile and security, with speakers from across the community.",
     "hero": {
       "subtitleLine1": "The Toulouse conference by",
       "subtitleLine2devs": "devs",
@@ -36,7 +39,16 @@
       "subtitleLine2devs2": "devs.",
       "ctaSponsor": "Become a sponsor",
       "ctaTalk": "Submit a talk",
-      "cfpBadge": "CFP open"
+      "cfpBadge": "CFP open",
+      "ctaTickets": "Get my ticket",
+      "ctaSoldOut": "Sold out",
+      "countdown": {
+        "days": "In {count} days",
+        "tomorrow": "Tomorrow",
+        "today": "Today"
+      },
+      "ctaProgramme": "Plan my day",
+      "ctaProgrammeToday": "Today’s programme"
     },
     "stats": {
       "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
@@ -76,6 +88,23 @@
       "titleFallback": "Relive the last edition in 2 minutes!",
       "viewGallery": "View the photo gallery",
       "viewEdition": "View the {year} edition"
+    },
+    "dayPlan": {
+      "title": "Plan your day",
+      "titleToday": "It’s today!",
+      "programme": {
+        "title": "Your programme",
+        "titleToday": "Today’s programme",
+        "text": "Spot the sessions you want to see and add them to your favourites."
+      },
+      "agenda": {
+        "title": "In your calendar",
+        "text": "Download the programme to add it to your calendar."
+      },
+      "venue": {
+        "title": "Getting there",
+        "text": "Address, public transport and parking to reach the venue."
+      }
     }
   },
   "footer": {
@@ -225,13 +254,24 @@
     "sessions": "Talks ({count})",
     "sponsors": "Partners ({count})",
     "replay": "Watch",
-    "allNews": "See all news"
+    "allNews": "See all news",
+    "photoAlt": "DevFest Toulouse {year} photo ({n})",
+    "photoOpen": "Enlarge: {alt}",
+    "photoCount": "{n} of {total}",
+    "photoPrevious": "Previous",
+    "photoNext": "Next",
+    "photoClose": "Close",
+    "galleryAlbum": "See the full album"
   },
   "editionsList": {
     "home": "Home",
     "pageTitle": "Previous editions",
     "description": "Relive past DevFest Toulouse editions: speakers, talks and replays.",
-    "empty": "No previous edition yet."
+    "empty": "No previous edition yet.",
+    "upcoming": "Next edition",
+    "first": "First edition",
+    "gap": "{from}–{to}: no edition",
+    "gapYear": "{year}: no edition"
   },
   "sponsor": {
     "pageTitle": "Become a sponsor",
@@ -278,7 +318,7 @@
     "home": "Home"
   },
   "conferences": {
-    "title": "Schedule",
+    "title": "Talks",
     "description": "Discover the conference schedule for DevFest Toulouse 2026: web, cloud, AI, mobile and more.",
     "heading": "DevFest Toulouse {year} schedule",
     "comingSoonTitle": "Schedule coming soon",
@@ -359,7 +399,13 @@
     "empty": "No job offers yet. Check back soon!",
     "home": "Home",
     "cta": "View offer",
-    "offersAt": "Offers at {name}"
+    "offersAt": "Offers at {name}",
+    "careersLink": "See all their openings",
+    "careersHint": "On {name}'s careers site",
+    "backToList": "All job offers",
+    "offerTitle": "{title} — {name}",
+    "postedBy": "An offer from {name}",
+    "readOffer": "Read the offer"
   },
   "calendar": {
     "heading": "Add to my calendar",
@@ -383,7 +429,7 @@
   },
   "programme": {
     "title": "Schedule",
-    "pageTitle": "Schedule — the full grid",
+    "pageTitle": "Schedule",
     "description": "The DevFest Toulouse {year} schedule: every session, room by room.",
     "heading": "DevFest Toulouse {year} schedule",
     "home": "Home",
@@ -414,7 +460,8 @@
     "comingSoonBody": "The DevFest Toulouse {year} sessions are still being placed. The grid will be published here as soon as it is final.",
     "printSource": "Session details: {url}",
     "printSelection": "Personal selection — this document is not the whole schedule.",
-    "printCommon": "Shared moments"
+    "printCommon": "Shared moments",
+    "nextSlot": "Next slot · {time}"
   },
   "venue": {
     "pageTitle": "Venue & practical info",
@@ -459,6 +506,48 @@
       "QUICKIE": "Quickie",
       "KEYNOTE": "Keynote",
       "WORKSHOP": "Workshop"
+    }
+  },
+  "feedback": {
+    "title": "Your feedback on this session",
+    "intro": "Tick whatever applies, as many as you like. It's anonymous.",
+    "send": "Send my feedback",
+    "sending": "Sending…",
+    "thanks": "Thanks for your feedback!",
+    "messageLabel": "A word for the speaker?",
+    "messageHint": "Optional. Only the speaker and the team will read it; it won't be published.",
+    "sendMessage": "Send the message",
+    "messageSent": "Your message has been passed on.",
+    "trendTitle": "What the audience thought",
+    "trendPending": "The trend will show from 5 votes.",
+    "voteError": "Your feedback could not be sent. Please try again in a moment.",
+    "messageError": "Your message could not be sent. Please try again in a moment.",
+    "closedError": "Feedback is closed for this session.",
+    "credit": "Inspired by <openfeedback>OpenFeedback</openfeedback> by Hugo Gresse (also available as a hosted version on <openplanner>OpenPlanner</openplanner>).",
+    "items": {
+      "fun": "Fun 😃",
+      "learned": "I've learned a lot 🤓",
+      "interesting": "Very interesting 👍",
+      "speaker": "Good speaker 👏",
+      "notClear": "Not clear 🧐",
+      "tooTechnical": "Too technical 🤖",
+      "lackOfDemo": "Lack of demo/example 🤔",
+      "tooComplex": "Too complex 🤯"
+    },
+    "testBanner": "Test mode: this feedback is for checking the site and will be deleted before the event."
+  },
+  "faq": {
+    "home": "Home",
+    "pageTitle": "Frequently asked questions",
+    "description": "Answers to the common questions about DevFest Toulouse: venue and access, tickets, session formats, talk languages and life on site during the conference.",
+    "intro": "Venue, tickets, schedule, life on site: answers to the questions we hear most. Yours isn’t here? <contact>Write to us</contact>.",
+    "empty": "No questions yet.",
+    "themes": {
+      "VENUE": "Venue and access",
+      "TICKETS": "Tickets",
+      "PROGRAMME": "Schedule and sessions",
+      "PRACTICAL": "On site",
+      "OTHER": "Other questions"
     }
   }
 }

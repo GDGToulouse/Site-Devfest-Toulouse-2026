@@ -14,6 +14,7 @@ import EditionSpeakersGrid from "@/components/editions/EditionSpeakersGrid";
 import EditionTalksList from "@/components/editions/EditionTalksList";
 import SponsorWall from "@/components/sponsors/SponsorWall";
 import { Link } from "@/i18n/navigation";
+import EditionGallery from "@/components/editions/EditionGallery";
 
 interface PageProps {
   params: Promise<{ year: string }>;
@@ -225,20 +226,25 @@ export default async function BilanPage({ params }: PageProps) {
             </section>
           )}
 
-          {/* Gallery link */}
-          {edition.galleryUrl && (
+          {/* The curated photos (#112), then the full album when there is one. */}
+          {(edition.photos.length > 0 || edition.galleryUrl) && (
             <section className="mt-16">
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-6">
                 {t("gallery")}
               </h2>
-              <a
-                href={edition.galleryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-block px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors"
-              >
-                {t("galleryLink")}
-              </a>
+              {edition.photos.length > 0 && <EditionGallery photos={edition.photos} year={edition.year} />}
+              {edition.galleryUrl && (
+                <a
+                  href={edition.galleryUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`inline-block px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors ${
+                    edition.photos.length > 0 ? "mt-6" : ""
+                  }`}
+                >
+                  {edition.photos.length > 0 ? t("galleryAlbum") : t("galleryLink")}
+                </a>
+              )}
             </section>
           )}
 

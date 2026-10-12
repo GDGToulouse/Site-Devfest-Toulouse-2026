@@ -50,6 +50,10 @@ work, is the console clean, does the layout hold at the target viewport? Tests p
 is wired to nothing — several bugs on this project (a silent security fallback, a 404 in the
 sitemap) were invisible to the suites and obvious in the browser.
 
+A layout change is checked in Firefox and WebKit too, through the `playwright-firefox` and
+`playwright-webkit` MCP servers: the programme grid shipped collapsed in Firefox because only
+Chrome had looked at it (#550).
+
 If the environment misbehaves rather than the code, say which and why. Every route 404ing means
 a stale `.next` volume, not a broken feature.
 

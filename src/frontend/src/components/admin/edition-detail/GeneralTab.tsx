@@ -5,6 +5,8 @@ import { adminFetch } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import { EDITION_STATUSES, editionStatusInfo } from "@/lib/edition-status-labels";
+import { formatEventDate } from "@/lib/datetime";
 
 interface EditionData {
   id: number;
@@ -19,11 +21,33 @@ interface EditionData {
   archivedSiteUrl: string | null;
 }
 
-const STATUS_OPTIONS = [
-  { value: "PREPARATION", label: "Préparation" },
-  { value: "ANNOUNCEMENT", label: "Annonce" },
-  { value: "SEE_YOU_NEXT_YEAR", label: "À l'année prochaine" },
-];
+// The last-stretch statuses switch on by themselves at midnight on these days
+// (#585), counted back from the first day — the same rule as the backend's
+// edition-status-schedule: a month before (the last day of a shorter month
+// when the date does not exist), a week before, the day itself.
+const AUTO_SWITCHES = [
+  { status: "TICKETING", monthsBefore: 1, daysBefore: 0 },
+  { status: "PROGRAMME", monthsBefore: 0, daysBefore: 7 },
+  { status: "EVENT_DAY", monthsBefore: 0, daysBefore: 0 },
+] as const;
+
+// Only these move on by themselves: an edition in preparation is not ready.
+const SWITCHABLE = ["ANNOUNCEMENT", "TICKETING", "PROGRAMME"];
+
+function switchDates(startDate: string): { status: string; day: string; label: string }[] | null {
+  const start = new Date(`${startDate}T00:00:00Z`);
+  if (Number.isNaN(start.getTime())) return null;
+  return AUTO_SWITCHES.map(({ status, monthsBefore, daysBefore }) => {
+    const y = start.getUTCFullYear();
+    const m = start.getUTCMonth() - monthsBefore;
+    const lastDay = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    const date = new Date(Date.UTC(y, m, Math.min(start.getUTCDate(), lastDay) - daysBefore, 12));
+    return { status, day: date.toISOString().slice(0, 10), label: formatEventDate(date.toISOString(), "fr") };
+  });
+}
+
+const parisToday = () =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Paris", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 
 interface GeneralTabProps {
   edition: EditionData;
@@ -46,8 +70,13 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
   const [isImagePickerOpen, setIsImagePickerOpen] = useState(false);
   const [isStatusConfirmOpen, setIsStatusConfirmOpen] = useState(false);
 
-  const statusLabel = (value: string) =>
-    STATUS_OPTIONS.find((o) => o.value === value)?.label ?? value;
+  const statusLabel = (value: string) => editionStatusInfo(value).label;
+  const switches = form.startDate ? switchDates(form.startDate) : null;
+  const order = EDITION_STATUSES.map((s) => s.value as string);
+  const nextSwitch =
+    switches && SWITCHABLE.includes(edition.status)
+      ? switches.find((s) => s.day >= parisToday() && order.indexOf(s.status) > order.indexOf(edition.status))
+      : undefined;
 
   async function persist() {
     setIsSaving(true);
@@ -95,10 +124,31 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
           onChange={(e) => setForm({ ...form, status: e.target.value })}
           className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
         >
-          {STATUS_OPTIONS.map((opt) => (
+          {EDITION_STATUSES.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
         </select>
+        {switches && (
+          <ul className="mt-1 space-y-0.5 text-sm text-gris">
+            <li>
+              « Dernier mois » : met la billetterie en avant et retire les appels à devenir sponsor. Automatique le{" "}
+              {switches[0].label}.
+            </li>
+            <li>« Dernière semaine » : met le programme en avant pour préparer la journée. Automatique le {switches[1].label}.</li>
+            <li>« Jour J » : l’accueil suit la journée. Automatique le {switches[2].label}.</li>
+            <li>
+              Chaque passage se fait à minuit, ce jour-là seulement, et jamais depuis « Préparation » : un statut remis à la
+              main ensuite reste tel quel.
+            </li>
+          </ul>
+        )}
+        {/* What the next midnight switch will do (#585), from the saved status,
+            so nobody stays up to do it by hand. */}
+        {nextSwitch && (
+          <p role="status" className="mt-2 text-sm font-medium text-malachite">
+            Passera automatiquement en « {statusLabel(nextSwitch.status)} » le {nextSwitch.label} à minuit.
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

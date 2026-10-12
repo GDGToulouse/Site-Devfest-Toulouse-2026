@@ -17,7 +17,7 @@ Chaque fait a **une seule maison**. Avant d'en écrire un, chercher s'il existe 
 ## Règles impératives
 
 - Étager les fichiers un par un — jamais `git add .` ni `git add -A`
-- Une commande git par appel Bash — jamais de `&&`, jamais `cd`, jamais `git -C`
+- Une commande git par appel Bash — jamais de `&&`, jamais `cd`
 - Jamais de force-push sur `main`, jamais de `--no-verify`
 - Jamais de connexion SSH au VPS, même en lecture seule : préparer la commande et la donner à Julien, qui l'exécute
 - Utiliser Context7 MCP pour la doc des bibliothèques avant de les employer

@@ -4,6 +4,7 @@ import { findRoomClash } from "./room-clash.js";
 import { slugify, uniqueSlug } from "./slug.js";
 import { validateWebhookUrl } from "./webhook-url.js";
 import { parseWallTime } from "./zoned-time.js";
+import { syncServiceSlots, type ServiceSlotsReport, type SzServiceSlot } from "./sessionize-service-slots.js";
 
 // --- Sessionize "All data" JSON shapes (only the fields we consume) ---
 
@@ -66,6 +67,9 @@ interface SessionizeData {
 export interface ImportReport {
   speakers: { created: number; updated: number };
   talks: { created: number; updated: number; scheduled: number };
+  // Breaks, lunch, keynotes without a speaker (#546). Null when the import had
+  // no GridSmart view to read them from: nothing was touched then.
+  scheduleEntries: ServiceSlotsReport | null;
   categories: { created: number; reused: number };
   links: number;
   // Sessionize rooms with no venue room paired yet: their sessions came in
@@ -227,10 +231,12 @@ export { isLocalUpload, resolveSpeakerPhoto } from "./speaker-photo.js";
 export async function importSessionize(
   editionId: number,
   data: SessionizeData,
+  serviceSlots: SzServiceSlot[] | null = null,
 ): Promise<ImportReport> {
   const report: ImportReport = {
     speakers: { created: 0, updated: 0 },
     talks: { created: 0, updated: 0, scheduled: 0 },
+    scheduleEntries: null,
     categories: { created: 0, reused: 0 },
     links: 0,
     unmappedRooms: [],
@@ -492,6 +498,15 @@ export async function importSessionize(
     const name = szRooms.find((room) => room.id === sessionizeId)?.name ?? `salle Sessionize ${sessionizeId}`;
     report.unmappedRooms.push({ sessionizeId, name, sessions });
     report.warnings.push(`Salle Sessionize « ${name} » sans salle du lieu associée : ${sessions} session(s) importée(s) sans salle.`);
+  }
+
+  if (serviceSlots) {
+    report.scheduleEntries = await syncServiceSlots(
+      editionId,
+      serviceSlots,
+      (sessionizeRoomId) => roomBySzId.get(sessionizeRoomId)?.id ?? null,
+      report.warnings,
+    );
   }
 
   await warnOnRoomClash(editionId, report);

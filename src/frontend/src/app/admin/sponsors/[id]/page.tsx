@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
+import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import Tabs from "@/components/admin/Tabs";
 import SponsorContacts from "@/components/admin/sponsors/SponsorContacts";
@@ -291,6 +292,14 @@ export default function SponsorEditorPage() {
         <h1 className="text-3xl font-bold text-noir">
           {isNew ? "Nouveau sponsor" : current?.name || "Modifier le sponsor"}
         </h1>
+        {sponsorId !== null && (
+          <TrashButton
+            path={`/sponsors/${sponsorId}`}
+            listHref="/admin/sponsors"
+            title="Supprimer le sponsor"
+            message="Il disparaîtra des pages publiques. Vous pourrez le restaurer depuis la corbeille."
+          />
+        )}
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6">

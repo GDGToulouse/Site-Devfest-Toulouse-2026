@@ -4,11 +4,19 @@ import cron from "node-cron";
 import { rotateFeaturedSpeakers } from "./featured-speakers.js";
 import { runInContext, systemContext } from "./request-context.js";
 import { AUDIT_RETENTION_MONTHS, purgeExpiredAuditLog } from "./audit-purge.js";
+import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
+import { applyScheduledStatus } from "./edition-status-schedule.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
 const FEATURED_ROTATION_CRON = "0 1 * * *";
 const AUDIT_PURGE_CRON = "0 3 * * *";
+// Midnight Paris time, when the event day starts and real votes open (#566).
+const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
+// Every quarter of an hour past midnight, Paris time (#585): a redeploy at
+// midnight would otherwise skip the day's switch. Not all day long, so a team
+// that moves the status back by hand on a trigger day is not overruled.
+const STATUS_SCHEDULE_CRON = "0,15,30,45 0 * * *";
 const TIMEZONE = "Europe/Paris";
 
 /**
@@ -62,8 +70,43 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "audit-log-purge", timezone: TIMEZONE, noOverlap: true },
   );
 
+  // A feedback test mode left on is switched off when real voting opens, and
+  // the votes of the trial go with it (#566). Every night, not only on the
+  // day: a run missed at midnight (a redeploy) is caught by the next. Votes
+  // cast meanwhile are real whatever the flag, so a late run harms nothing.
+  cron.schedule(
+    FEEDBACK_TEST_MODE_CRON,
+    async () => {
+      try {
+        const switchedOff = await runInContext(
+          systemContext("Fin du mode test des avis"),
+          () => disableExpiredTestModes(),
+        );
+        if (switchedOff.length > 0) log.info({ switchedOff }, "Feedback test mode switched off");
+      } catch (err) {
+        log.error({ err }, "Feedback test mode switch-off failed");
+      }
+    },
+    { name: "feedback-test-mode-off", timezone: TIMEZONE, noOverlap: true },
+  );
+
+  // The last stretch moves on by itself (#585): a month before, a week
+  // before, and on the day.
+  cron.schedule(
+    STATUS_SCHEDULE_CRON,
+    async () => {
+      try {
+        const switched = await runInContext(systemContext("Changement de statut programmé"), () => applyScheduledStatus());
+        if (switched.length > 0) log.info({ switched }, "Edition status switched on schedule");
+      } catch (err) {
+        log.error({ err }, "Scheduled status switch failed");
+      }
+    },
+    { name: "edition-status-schedule", timezone: TIMEZONE, noOverlap: true },
+  );
+
   log.info(
-    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON], timezone: TIMEZONE },
+    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, FEEDBACK_TEST_MODE_CRON, STATUS_SCHEDULE_CRON], timezone: TIMEZONE },
     "Scheduled tasks started",
   );
 }

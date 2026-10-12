@@ -10,13 +10,35 @@
         "--viewport=1280x860"
       ]
     },
-    "playwright": {
+    "playwright-chrome": {
       "command": "npx",
       "args": [
         "-y",
         "--prefer-offline",
         "@playwright/mcp@0.0.83",
         "--browser=chrome",
+        "--isolated",
+        "--viewport-size=1280x860"
+      ]
+    },
+    "playwright-firefox": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--prefer-offline",
+        "@playwright/mcp@0.0.83",
+        "--browser=firefox",
+        "--isolated",
+        "--viewport-size=1280x860"
+      ]
+    },
+    "playwright-webkit": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "--prefer-offline",
+        "@playwright/mcp@0.0.83",
+        "--browser=webkit",
         "--isolated",
         "--viewport-size=1280x860"
       ]

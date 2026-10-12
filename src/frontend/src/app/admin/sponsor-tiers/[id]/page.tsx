@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 
+import TrashButton from "@/components/admin/TrashButton";
 import { adminFetch } from "@/lib/admin-api";
 import type { AdminSponsorTier } from "@/lib/types";
 import SponsorTierForm, { emptySponsorTierForm, type SponsorTierFormValue } from "@/components/admin/sponsor-tiers/SponsorTierForm";
@@ -109,6 +110,15 @@ export default function SponsorTierEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouvelle offre" : "Modifier l'offre"}</h1>
+        {tierId !== null && (
+          <TrashButton
+            adminOnly
+            path={`/sponsor-tiers/${tierId}`}
+            listHref="/admin/sponsor-tiers"
+            title="Supprimer l'offre"
+            message="Elle sortira du catalogue. Vous pourrez la restaurer depuis la corbeille."
+          />
+        )}
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">

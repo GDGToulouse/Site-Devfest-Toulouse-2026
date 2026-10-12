@@ -3,6 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import BilingualTabs from "@/components/admin/BilingualTabs";
+import SpeakerFeedback from "@/components/edit/SpeakerFeedback";
 
 type Locale = "fr" | "en";
 
@@ -41,6 +42,8 @@ const T = {
   fr: {
     loading: "Chargement…",
     unavailable: "Lien indisponible",
+    // Frozen is not unavailable: the link still opens the feedback (#565).
+    closed: "Modifications clôturées",
     title: "Modifier ma fiche",
     intro:
       "Complétez ou mettez à jour les informations de votre fiche. Elles seront visibles publiquement sur le site du DevFest Toulouse.",
@@ -86,10 +89,21 @@ const T = {
       locked: "Les modifications de votre fiche ont été suspendues. Contactez l'organisation.",
       blocked: "Les modifications sont actuellement clôturées. Contactez l'organisation si nécessaire.",
     },
+    // Audience feedback on the speaker's sessions (#565).
+    feedback: {
+      heading: "Retours du public",
+      intro:
+        "Ce que le public a coché sur vos sessions, points à améliorer compris, et les messages qu'il vous a laissés. Ce détail n'est pas publié : la page de la conférence n'affiche qu'une tendance.",
+      votes: (n: number) => `${n} avis`,
+      messages: "Messages",
+      noMessage: "Aucun message pour l'instant.",
+      test: "mode test, sera effacé",
+    },
   },
   en: {
     loading: "Loading…",
     unavailable: "Link unavailable",
+    closed: "Editing closed",
     title: "Edit my profile",
     intro:
       "Complete or update your profile information. It will be shown publicly on the DevFest Toulouse website.",
@@ -134,6 +148,15 @@ const T = {
         "Editing is closed as the event approaches. Contact the organisers if a change is essential.",
       locked: "Editing of your profile has been suspended. Please contact the organisers.",
       blocked: "Editing is currently closed. Please contact the organisers if needed.",
+    },
+    feedback: {
+      heading: "Audience feedback",
+      intro:
+        "What the audience ticked about your sessions, areas to improve included, and the messages they left you. This detail is not published: the talk page only shows a trend.",
+      votes: (n: number) => `${n} vote${n > 1 ? "s" : ""}`,
+      messages: "Messages",
+      noMessage: "No message yet.",
+      test: "test mode, will be deleted",
     },
   },
 } as const;
@@ -245,7 +268,7 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
     return (
       <PageShell>
         <div className="py-16 text-center">
-          <h1 className="text-2xl font-bold text-noir">{t.unavailable}</h1>
+          <h1 className="text-2xl font-bold text-noir">{errorKind === "frozen" ? t.closed : t.unavailable}</h1>
           <p className="mt-4 text-gris">{t.errors[errorKind]}</p>
           <a
             href="mailto:contact@devfesttoulouse.fr"
@@ -254,6 +277,9 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             contact@devfesttoulouse.fr
           </a>
         </div>
+        {/* Frozen is when the feedback comes in (#565): the form closes 48 hours
+            before the event, the results stay readable. */}
+        {errorKind === "frozen" && <SpeakerFeedback token={token} locale={locale} labels={t.feedback} />}
       </PageShell>
     );
   }
@@ -349,6 +375,9 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
             </p>
           )}
         </div>
+      </div>
+      <div className="mt-8">
+        <SpeakerFeedback token={token} locale={locale} labels={t.feedback} />
       </div>
     </PageShell>
   );

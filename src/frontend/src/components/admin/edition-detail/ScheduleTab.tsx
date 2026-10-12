@@ -118,6 +118,16 @@ export default function ScheduleTab({ editionId, venueId }: ScheduleTabProps) {
                 </span>{" "}
                 {entry.labelFr}
                 <span className="text-gris"> · {KIND_LABELS[entry.kind]}</span>
+                {/* Imported entries follow Sessionize (#546): an edit made here
+                    is undone by the next import, so say where they come from. */}
+                {entry.sessionizeId && (
+                  <span
+                    title="Repris de Sessionize : horaires et libellé suivent le prochain import"
+                    className="ml-2 rounded-full bg-bleu/10 px-2 py-0.5 text-xs text-bleu"
+                  >
+                    Sessionize
+                  </span>
+                )}
               </span>
               <button type="button" onClick={() => setPendingDelete(entry)} className="text-sm text-rouge underline">
                 Supprimer
