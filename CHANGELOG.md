@@ -12,6 +12,45 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.11.0] - 2026-10-12
+
+Le site se prépare pour le jour J. La page d'accueil **suit le calendrier de l'événement** : « Dernier mois » pousse la billetterie avec un compte à rebours, « Dernière semaine » invite à préparer son programme, « Jour J » met en avant le programme du jour, et ces bascules se font **toutes seules à minuit** le jour venu. Le public peut **donner son avis sur chaque session**, et les speakers retrouvent les résultats dans leur espace.
+
+Côté contenu, le site gagne une **FAQ**, une **galerie photos par édition** et une **frise des éditions** ; côté back-office, les listes de speakers, conférences et sponsors deviennent **paginées, filtrables et triables**.
+
+> Huit migrations, **toutes additives** : trois tables (`TalkFeedback`, `FaqItem`, `EditionPhoto`), trois colonnes (`Edition.feedbackTestMode`, `Edition.feedbackRecapSentAt`, `ScheduleEntry.sessionizeId`) et trois valeurs du statut d'édition (`TICKETING`, `PROGRAMME`, `EVENT_DAY`). Une valeur de statut ne se retire pas : un retour à 1.10.1 après une bascule automatique exige de restaurer la sauvegarde. **Sauvegarde de la base obligatoire avant déploiement.**
+
+### Ajouté
+
+- **Statut « Dernier mois »** : l'accueil met la billetterie en avant (« Prendre mon billet », ou « Complet »), avec un compte à rebours, et retire l'appel aux sponsors (#576).
+- **Statuts « Dernière semaine » et « Jour J »** : l'accueil invite à préparer son programme, puis montre le programme du jour ; l'en-tête propose « Programme » (#577).
+- **Bascule automatique du statut** à minuit (heure de Paris) un mois, une semaine puis le jour même de l'événement, uniquement le jour du déclenchement : un retour à la main reste possible (#585).
+- **Bouton « Prochain créneau »** sur le programme le jour de l'événement, qui fait défiler jusqu'au créneau suivant (#575).
+- **Avis du public sur les sessions** : vote sur la page de la conférence, tendance affichée, message privé au speaker (#564).
+- **Résultats des avis** dans l'espace speaker et dans l'admin (#565), **mode test** activable avant le jour J et effacé ensuite (#566), **récapitulatif envoyé aux speakers** par un administrateur (#567).
+- **FAQ** éditable dans l'admin, classée par thème, publiée sur `/faq` en français et en anglais (#111).
+- **Galerie photos par édition**, choisie dans la médiathèque et ordonnée à la main, avec une visionneuse (#112).
+- **Frise des éditions** sur `/editions`, avec le lieu de chaque année et les années sans édition (#104).
+- **Import Sessionize** : pauses, repas, keynotes et after sont repris dans le planning, et un créneau saisi à la main est reconnu plutôt que dupliqué (#546).
+- **Listes admin paginées, filtrées et triées par l'API** : speakers (photo, bio ou e-mail manquant, état du lien de modification), conférences, sponsors (état des contacts, offres d'emploi) (#572, #573, #574).
+- **Mettre à la corbeille depuis la fiche** d'une conférence, d'un speaker, d'un sponsor, d'un article ou d'une offre (#599).
+- **Une image peut porter un lien** dans l'éditeur riche : logos de partenaires cliquables (#490).
+- **Offres d'emploi partenaires** : une liste compacte et une page par annonce (#556).
+
+### Corrigé
+
+- **Les visuels des speakers se génèrent de nouveau** : le visuel à partager et l'aperçu de chaque fiche speaker sur les réseaux répondaient en erreur pour tous les speakers (#600).
+- **Les titres des pages de contenu** (H2, H3), du code de conduite et des mentions légales s'affichent en titres et non plus en texte courant (#490).
+- **Admin lieux** : une salle se modifie après sa création (#554).
+- **Admin** : la page défile, plus le menu, ce qui rend captures et impression possibles (#547).
+- **Accueil** : le séparateur « • » ne reste plus seul en fin de ligne (#558) ; **page Lieu** : transports et parking retrouvent puces et espacements (#559).
+
+### Modifié
+
+- **Titres de pages** revus pour le référencement, d'après une table de mots-clés cibles documentée (#383).
+- **Back-office et espace partenaire en français**, par décision documentée (#342).
+- La liste des speakers de l'admin ne transmet plus le jeton du lien de modification, ni celle des sponsors le jeton d'invitation.
+
 ## [1.10.1] - 2026-10-07
 
 Correctif de la grille du programme sous Firefox. Aucune migration.
