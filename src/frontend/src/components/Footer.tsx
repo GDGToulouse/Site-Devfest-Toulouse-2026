@@ -14,6 +14,10 @@ import { getLogoUrl } from "@/lib/identity";
 import { getFooterPageEntries, getPublicNavEntries } from "@/lib/nav";
 import SocialIcons from "./SocialIcons";
 
+// The site is open source (MIT, #607). The repository does not move from one
+// edition to the next, so no setting for it.
+const SOURCE_CODE_URL = "https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026";
+
 export default async function Footer() {
   const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages] =
     await Promise.all([
@@ -205,6 +209,14 @@ export default async function Footer() {
           </Link>
           <a href="/sitemap.xml" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
+          </a>
+          <a
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blanc/85 text-sm hover:text-blanc transition-colors"
+          >
+            {tFooter("sourceCode")}
           </a>
         </div>
       </div>
