@@ -7,6 +7,7 @@ import { adminFetch } from "@/lib/admin-api";
 import type { AdminVenue, Category, Talk, TalkFormat } from "@/lib/types";
 import { formatEventTime } from "@/lib/datetime";
 import { useListParams } from "@/lib/use-list-params";
+import TalkDetails from "@/components/admin/record-details/TalkDetails";
 import DataTable, { type SortState } from "@/components/admin/DataTable";
 import ListPagination from "@/components/admin/ListPagination";
 import BulkActionBar from "@/components/admin/BulkActionBar";
@@ -59,6 +60,8 @@ const SELECT_CLASS =
 export default function TalksDataPage() {
   const router = useRouter();
   const { params, page, update } = useListParams(LIST_KEYS);
+  // The read-only panel opened from a row (#484).
+  const [viewedId, setViewedId] = useState<number | null>(null);
   const [editions, setEditions] = useState<{ id: number; year: number }[] | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [rooms, setRooms] = useState<{ id: number; name: string }[]>([]);
@@ -376,6 +379,7 @@ export default function TalksDataPage() {
             columns={columns}
             data={list.items}
             emptyMessage={hasFilters ? "Aucune conférence ne correspond à ces filtres" : "Aucune conférence"}
+            onView={(t) => setViewedId(t.id)}
             onEdit={(t) => router.push(`/admin/talks/${t.id}`)}
             onDelete={(t) => setDeleteTarget(t)}
             selectedIds={selectedIds}
@@ -393,6 +397,8 @@ export default function TalksDataPage() {
           />
         </>
       )}
+
+      <TalkDetails talkId={viewedId} onClose={() => setViewedId(null)} />
 
       <ConfirmDialog
         isOpen={!!deleteTarget}

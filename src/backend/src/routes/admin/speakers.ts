@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { rotateFeaturedSpeakers } from "../../lib/featured-speakers.js";
 import { prisma } from "../../lib/prisma.js";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { revalidateSpeakers, revalidateSpeaker } from "../../lib/revalidate.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
@@ -80,6 +81,23 @@ const withEditions = {
   },
 } as const;
 
+// The sheet also shows who the speaker is linked to (#484): the employer of
+// each year by name, and every talk. Kept to the detail route: the list reads
+// none of it.
+const speakerDetailInclude = {
+  editions: {
+    select: {
+      ...withEditions.editions.select,
+      sponsor: { select: { id: true, name: true } },
+    },
+  },
+  talks: {
+    where: notDeleted,
+    select: { id: true, slug: true, title: true, publicationStatus: true, edition: { select: { year: true } } },
+    orderBy: [{ edition: { year: "desc" } }, { title: "asc" }],
+  },
+} satisfies Prisma.SpeakerInclude;
+
 interface SerializableSpeaker {
   socialLinks: string | null;
   editions?: {
@@ -87,6 +105,7 @@ interface SerializableSpeaker {
     isFeatured: boolean;
     publicationStatus: "DRAFT" | "PUBLISHED";
     sponsorId: number | null;
+    sponsor?: { id: number; name: string } | null;
     edition: { id: number; year: number };
   }[];
   [k: string]: unknown;
@@ -111,6 +130,7 @@ function serialize(s: SerializableSpeaker) {
               isFeatured: e.isFeatured,
               publicationStatus: e.publicationStatus,
               sponsorId: e.sponsorId,
+              ...(e.sponsor !== undefined && { sponsor: e.sponsor }),
             })),
         }
       : {}),
@@ -200,7 +220,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     // top-level where, so it cannot carry the `deletedAt` filter (#147).
     const speaker = await prisma.speaker.findFirst({
       where: { id: Number(request.params.id), ...notDeleted },
-      include: withEditions,
+      include: speakerDetailInclude,
     });
     if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
     return serialize(speaker);
