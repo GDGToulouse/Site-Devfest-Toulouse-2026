@@ -1,5 +1,5 @@
 import { prisma } from "./prisma.js";
-import { revalidateJobOffers, revalidateSponsors } from "./revalidate.js";
+import { revalidateJobOfferPages } from "./revalidate.js";
 
 /**
  * What the trash knows about each soft-deletable entity (#148).
@@ -25,7 +25,7 @@ export interface TrashEntity {
   /** ADMIN-only entities; the rest follow the ADMIN+EDITOR rule. */
   adminOnly: boolean;
   /** Public pages to purge once a row is back, when the default hour is too long. */
-  onRestore?: () => void;
+  onRestore?: (id: number | string) => Promise<void>;
 }
 
 export const TRASH_ENTITIES: readonly TrashEntity[] = [
@@ -153,9 +153,12 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: [],
     fileFields: [],
     adminOnly: false,
-    onRestore: () => {
-      revalidateSponsors();
-      revalidateJobOffers();
+    onRestore: async (id) => {
+      const offer = await prisma.sponsorJobOffer.findUnique({
+        where: { id: Number(id) },
+        select: { editionSponsor: { select: { sponsor: { select: { slug: true } } } } },
+      });
+      if (offer) await revalidateJobOfferPages(offer.editionSponsor.sponsor.slug);
     },
   },
   {

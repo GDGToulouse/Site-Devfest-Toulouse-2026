@@ -20,7 +20,7 @@ import {
 } from "../lib/job-offers.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { originalNamesByUrl, rememberOriginalName } from "../lib/file-metadata.js";
-import { revalidateJobOffers, revalidateSponsors } from "../lib/revalidate.js";
+import { revalidateJobOfferPages } from "../lib/revalidate.js";
 import { getFeaturedEdition } from "./editions.js";
 
 // Same bounds as the edit link (#223): this endpoint writes fields rendered on
@@ -561,8 +561,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     const offer = await prisma.sponsorJobOffer.create({
       data: { editionSponsorId: participation.id, ...newJobOfferData(request.body) },
     });
-    revalidateSponsors();
-    revalidateJobOffers();
+    revalidateJobOfferPages(participation.sponsor.slug);
     return reply.code(201).send(serializeJobOffer(offer));
   });
 
@@ -594,8 +593,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       if (invalid) return reply.code(400).send(invalid);
 
       const updated = await prisma.sponsorJobOffer.update({ where: { id: offer.id }, data: jobOfferData(body) });
-      revalidateSponsors();
-      revalidateJobOffers();
+      revalidateJobOfferPages(participation.sponsor.slug);
       return serializeJobOffer(updated);
     },
   );
@@ -622,8 +620,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
 
       // To the trash, where the team can restore it (#609).
       await prisma.sponsorJobOffer.update({ where: { id: offer.id }, data: softDeleteData() });
-      revalidateSponsors();
-      revalidateJobOffers();
+      revalidateJobOfferPages(participation.sponsor.slug);
       return reply.code(204).send();
     },
   );
@@ -674,6 +671,7 @@ async function loadCurrentParticipation(sponsorId: number) {
     where: { sponsorId, editionId: edition.id, edition: notDeleted },
     select: {
       id: true,
+      sponsor: { select: { slug: true } },
       tier: { select: { jobOfferQuota: true } },
       // Trashed offers neither show nor count against the quota (#609).
       jobOffers: {

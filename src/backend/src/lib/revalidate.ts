@@ -171,6 +171,16 @@ export function revalidateSponsor(slug: string): Promise<void> {
   return revalidatePaths([...bilingualPaths(`/sponsors/${slug}`)]);
 }
 
+/**
+ * Every page a job offer shows on: the sponsor's own page, the recap page, and
+ * the lists whose menu depends on there being offers. Purging the lists alone
+ * left a created, edited or restored offer missing from the sponsor's page for
+ * an hour (#609).
+ */
+export async function revalidateJobOfferPages(sponsorSlug: string): Promise<void> {
+  await Promise.all([revalidateSponsors(), revalidateSponsor(sponsorSlug), revalidateJobOffers()]);
+}
+
 export function revalidateCfp(): Promise<void> {
   return revalidatePaths([
     ...bilingualPaths(""),

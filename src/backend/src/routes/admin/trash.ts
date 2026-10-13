@@ -163,7 +163,7 @@ export default async function adminTrashRoutes(app: FastifyInstance) {
     }
 
     await delegate.update({ where: { id }, data: restored });
-    entity.onRestore?.();
+    await entity.onRestore?.(id);
     return { restored: true, id };
   });
 

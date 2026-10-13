@@ -3,7 +3,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import type { Prisma } from "../../generated/prisma/client.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
-import { revalidateJobOffers, revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateJobOfferPages } from "../../lib/revalidate.js";
 import {
   jobOfferBodyError,
   jobOfferBodySchema,
@@ -178,8 +178,7 @@ export default async function adminJobOfferRoutes(app: FastifyInstance) {
       data: { editionSponsorId: participation.id, ...newJobOfferData(request.body) },
       select: OFFER_SELECT,
     });
-    revalidateSponsors();
-    revalidateJobOffers();
+    revalidateJobOfferPages(participation.sponsor.slug);
     return reply.code(201).send(offer);
   });
 
@@ -189,7 +188,7 @@ export default async function adminJobOfferRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const existing = await prisma.sponsorJobOffer.findFirst({
       where: { id: Number(request.params.id), ...liveOffer },
-      select: { id: true },
+      select: { id: true, editionSponsor: { select: { sponsor: { select: { slug: true } } } } },
     });
     if (!existing) return reply.code(404).send({ error: "offer_not_found" });
 
@@ -202,8 +201,7 @@ export default async function adminJobOfferRoutes(app: FastifyInstance) {
       data: jobOfferData(body),
       select: OFFER_SELECT,
     });
-    revalidateSponsors();
-    revalidateJobOffers();
+    revalidateJobOfferPages(existing.editionSponsor.sponsor.slug);
     return offer;
   });
 
@@ -215,13 +213,12 @@ export default async function adminJobOfferRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const existing = await prisma.sponsorJobOffer.findFirst({
       where: { id: Number(request.params.id), ...liveOffer },
-      select: { id: true },
+      select: { id: true, editionSponsor: { select: { sponsor: { select: { slug: true } } } } },
     });
     if (!existing) return reply.code(404).send({ error: "offer_not_found" });
 
     await prisma.sponsorJobOffer.update({ where: { id: existing.id }, data: softDeleteData() });
-    revalidateSponsors();
-    revalidateJobOffers();
+    revalidateJobOfferPages(existing.editionSponsor.sponsor.slug);
     return reply.code(204).send();
   });
 }
@@ -229,6 +226,6 @@ export default async function adminJobOfferRoutes(app: FastifyInstance) {
 async function findParticipation(sponsorId: number, editionId: number) {
   return prisma.editionSponsor.findFirst({
     where: { sponsorId, editionId, sponsor: notDeleted, edition: notDeleted },
-    select: { id: true, tier: { select: { jobOfferQuota: true } } },
+    select: { id: true, sponsor: { select: { slug: true } }, tier: { select: { jobOfferQuota: true } } },
   });
 }
