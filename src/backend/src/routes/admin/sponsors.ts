@@ -322,10 +322,20 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           },
           orderBy: { edition: { year: "desc" } },
         },
+        // The speakers who came on its behalf, year by year (#484).
+        speakers: {
+          where: { speaker: notDeleted },
+          select: { edition: { select: { year: true } }, speaker: { select: { id: true, name: true } } },
+          orderBy: [{ edition: { year: "desc" } }, { speaker: { name: "asc" } }],
+        },
       },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
-    return serialize(sponsor);
+    const { speakers, ...rest } = sponsor;
+    return {
+      ...serialize(rest),
+      speakers: speakers.map((s) => ({ id: s.speaker.id, name: s.speaker.name, year: s.edition.year })),
+    };
   });
 
   // POST /api/admin/sponsors
