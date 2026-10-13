@@ -134,3 +134,29 @@ describe("POST /api/admin/users — role (#500)", () => {
     expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
   });
 });
+
+// #416 — every sponsor contact has an account (#362): the list grows with the
+// partners, so the screen asks for one page at a time.
+describe("GET /api/admin/users — pagination (#416)", () => {
+  it("returns one page with its total, filtered by role and search", async () => {
+    const tag = `paged-${stamp()}`;
+    for (const n of [1, 2, 3]) {
+      const user = await prisma.user.create({
+        data: { email: `${tag}-${n}@example.org`, name: `${tag} ${n}`, role: "SPONSOR", emailVerified: true },
+      });
+      created.userIds.push(user.id);
+    }
+
+    const res = await app.inject({ method: "GET", url: `/api/admin/users?page=2&limit=2&role=SPONSOR&search=${tag}` });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toMatchObject({ page: 2, limit: 2, total: 3 });
+    expect(res.json().items).toHaveLength(1);
+  });
+
+  it("keeps the full array for callers that send no page", async () => {
+    const res = await app.inject({ method: "GET", url: "/api/admin/users" });
+
+    expect(Array.isArray(res.json())).toBe(true);
+  });
+});

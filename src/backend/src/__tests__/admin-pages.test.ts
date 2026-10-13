@@ -89,3 +89,26 @@ describe("Admin Pages API", () => {
     await app.close();
   });
 });
+
+// #416 — the pages list is asked one page at a time; the menu settings still
+// read the full array.
+describe("Admin Pages API — pagination (#416)", () => {
+  it("returns one page with its total, searched by slug or title", async () => {
+    const app = await buildAdminApp();
+    const tag = `paged-${Date.now()}`;
+    const ids: number[] = [];
+    for (const n of [1, 2, 3]) {
+      const page = await prisma.contentPage.create({
+        data: { slug: `${tag}-${n}`, titleFr: `Page ${n}`, titleEn: `Page ${n}`, contentFr: "", contentEn: "" },
+      });
+      ids.push(page.id);
+    }
+
+    const res = await app.inject({ method: "GET", url: `/api/admin/pages?page=1&limit=2&search=${tag}` });
+    await prisma.contentPage.deleteMany({ where: { id: { in: ids } } });
+    await app.close();
+
+    expect(res.json()).toMatchObject({ page: 1, limit: 2, total: 3 });
+    expect(res.json().items.map((p: { slug: string }) => p.slug)).toEqual([`${tag}-1`, `${tag}-2`]);
+  });
+});

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { adminFetch, humanError } from "@/lib/admin-api";
+import { useListParams } from "@/lib/use-list-params";
+import ListPagination from "@/components/admin/ListPagination";
 import FormField from "@/components/admin/FormField";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
@@ -29,9 +31,27 @@ const ROLE_BADGES: Record<UserRole, { label: string; variant: "green" | "blue" |
   SPONSOR: { label: "Sponsor", variant: "gray" },
 };
 
+interface UserPage {
+  page: number;
+  limit: number;
+  total: number;
+  items: AdminUser[];
+}
+
+const PAGE_SIZE = 50;
+// Long enough not to query on every key, short enough to feel immediate.
+const SEARCH_DELAY_MS = 300;
+const LIST_KEYS = ["search", "role"] as const;
+
+const SELECT_CLASS =
+  "rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
+
 export default function UsersAdminPage() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  // A page at a time (#416): every sponsor contact has an account (#362), so
+  // the list grows with the partners, not with the team.
+  const { params, page, update } = useListParams(LIST_KEYS);
+  const [list, setList] = useState<UserPage | null>(null);
+  const [searchInput, setSearchInput] = useState(params.search);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ email: "", name: "", role: "EDITOR" });
   const [isSaving, setIsSaving] = useState(false);
@@ -39,16 +59,25 @@ export default function UsersAdminPage() {
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [editingRôle, setEditingRôle] = useState<{ id: string; role: string } | null>(null);
 
-  async function loadUsers() {
-    setIsLoading(true);
-    const { data } = await adminFetch<AdminUser[]>("/users");
-    if (data) setUsers(data);
-    setIsLoading(false);
-  }
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  if (params.search) query.set("search", params.search);
+  if (params.role) query.set("role", params.role);
+  const queryString = query.toString();
+
+  const loadUsers = useCallback(async () => {
+    const { data } = await adminFetch<UserPage>(`/users?${queryString}`);
+    setList(data ?? { page: 1, limit: PAGE_SIZE, total: 0, items: [] });
+  }, [queryString]);
 
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
+
+  useEffect(() => {
+    if (searchInput === params.search) return;
+    const timer = setTimeout(() => update({ search: searchInput.trim() }), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, params.search, update]);
 
   async function handleCreate() {
     if (!form.email || !form.name) {
@@ -100,10 +129,13 @@ export default function UsersAdminPage() {
       setError(apiError || "Impossible de supprimer cet utilisateur");
     }
     setDeleteTarget(null);
-    loadUsers();
+    // The last row of a page gone: step back rather than show an empty page.
+    if (status === 200 && list && list.items.length === 1 && page > 1) update({ page: String(page - 1) });
+    else loadUsers();
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (!list) return <p className="text-gris">Chargement...</p>;
+  const users = list.items;
 
   return (
     <div>
@@ -151,6 +183,26 @@ export default function UsersAdminPage() {
           </div>
         </div>
       )}
+
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          aria-label="Rechercher"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Rechercher un nom ou un email…"
+          className="w-72 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        />
+        <select aria-label="Rôle" value={params.role} onChange={(e) => update({ role: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Tous les rôles</option>
+          <option value="ADMIN">Administrateurs</option>
+          <option value="EDITOR">Éditeurs</option>
+          <option value="SPONSOR">Sponsors</option>
+        </select>
+        <span className="text-sm text-gris" aria-live="polite">
+          {list.total} utilisateur{list.total > 1 ? "s" : ""}
+        </span>
+      </div>
 
       <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
         <table className="w-full text-sm">
@@ -239,7 +291,10 @@ export default function UsersAdminPage() {
             ))}
           </tbody>
         </table>
+        {users.length === 0 && <p className="px-4 py-6 text-center text-sm text-gris">Aucun utilisateur ne correspond.</p>}
       </div>
+
+      <ListPagination page={list.page} limit={list.limit} total={list.total} onPageChange={(next) => update({ page: String(next) })} />
 
       <ConfirmDialog
         isOpen={!!deleteTarget}

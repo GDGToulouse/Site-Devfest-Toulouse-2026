@@ -36,15 +36,49 @@ function readNavLocation(value: unknown, fallback: NavLocation): NavLocation {
   return NAV_LOCATIONS.includes(value as NavLocation) ? (value as NavLocation) : fallback;
 }
 
+const PAGE_LIST_SIZE = 50;
+const PAGE_LIST_SIZE_MAX = 100;
+
 export default async function adminPageRoutes(app: FastifyInstance) {
   // GET /api/admin/pages — list all content pages
-  app.get("/pages", async () => {
-    const pages = await prisma.contentPage.findMany({
-      where: notDeleted,
-      orderBy: { slug: "asc" },
-    });
+  // GET /api/admin/pages — by slug. With `page`, one page and its total
+  // (#416); without, the full array, which the menu settings still read.
+  app.get<{ Querystring: { page?: string; limit?: string; search?: string } }>("/pages", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          search: { type: "string", maxLength: 200 },
+        },
+      },
+    },
+  }, async (request) => {
+    const q = request.query;
+    const search = q.search?.trim();
+    const where = {
+      ...notDeleted,
+      ...(search && {
+        OR: [
+          { slug: { contains: search, mode: "insensitive" as const } },
+          { titleFr: { contains: search, mode: "insensitive" as const } },
+          { titleEn: { contains: search, mode: "insensitive" as const } },
+        ],
+      }),
+    };
+    const page = Math.max(1, Number(q.page) || 1);
+    const limit = Math.min(PAGE_LIST_SIZE_MAX, Math.max(1, Number(q.limit) || PAGE_LIST_SIZE));
+    const [total, pages] = await Promise.all([
+      q.page ? prisma.contentPage.count({ where }) : Promise.resolve(0),
+      prisma.contentPage.findMany({
+        where,
+        orderBy: { slug: "asc" },
+        ...(q.page && { skip: (page - 1) * limit, take: limit }),
+      }),
+    ]);
 
-    return pages.map((p: (typeof pages)[number]) => ({
+    const rows = pages.map((p: (typeof pages)[number]) => ({
       id: p.id,
       slug: p.slug,
       titleFr: p.titleFr,
@@ -54,6 +88,7 @@ export default async function adminPageRoutes(app: FastifyInstance) {
       navOrder: p.navOrder,
       updatedAt: p.updatedAt,
     }));
+    return q.page ? { page, limit, total, items: rows } : rows;
   });
 
   // GET /api/admin/pages/:id

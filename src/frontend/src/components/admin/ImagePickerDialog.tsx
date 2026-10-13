@@ -7,6 +7,8 @@ import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
 
+const PICKER_PAGE_SIZE = 24;
+
 interface ImageInfo {
   filename: string;
   url: string;
@@ -55,7 +57,9 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   const dialogRef = useDialog({ open, onClose });
   const [tab, setTab] = useState<"library" | "upload">("library");
   const [images, setImages] = useState<ImageInfo[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,6 +87,9 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
       setPendingAlt("");
       setPendingUploadedFilename(null);
     }
+    // Reload on opening only: loadImages reads the images already shown, to
+    // append the next page, and must not re-run each time one is added.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   // Revoke the preview URL on unmount / when it changes — otherwise the
@@ -93,11 +100,22 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
     };
   }, [pendingPreview]);
 
-  async function loadImages() {
-    setIsLoading(true);
-    const { data } = await adminFetch<ImageInfo[]>("/files");
-    if (data) setImages(data);
+  // A page at a time, newest first (#416): the picker used to load the whole
+  // library, documents included, and render every image. `reset` reloads from
+  // the first page, where a fresh upload lands.
+  async function loadImages(reset = true) {
+    const nextPage = reset ? 1 : Math.floor(images.length / PICKER_PAGE_SIZE) + 1;
+    if (reset) setIsLoading(true);
+    else setIsLoadingMore(true);
+    const { data } = await adminFetch<{ total: number; items: ImageInfo[] }>(
+      `/files?type=images&page=${nextPage}&limit=${PICKER_PAGE_SIZE}`,
+    );
+    if (data) {
+      setImages((prev) => (reset ? data.items : [...prev, ...data.items]));
+      setTotal(data.total);
+    }
     setIsLoading(false);
+    setIsLoadingMore(false);
   }
 
   function handleFileSelected(file: File) {
@@ -330,10 +348,24 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                       <img
                         src={img.url}
                         alt={img.filename}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover"
                       />
                     </button>
                   ))}
+                </div>
+              )}
+              {images.length < total && (
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => loadImages(false)}
+                    disabled={isLoadingMore}
+                    className="rounded-lg border border-gris/30 bg-blanc px-4 py-2 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+                  >
+                    {isLoadingMore ? "Chargement…" : `Charger plus (${images.length} sur ${total})`}
+                  </button>
                 </div>
               )}
             </>

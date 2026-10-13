@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { useListParams } from "@/lib/use-list-params";
+import ListPagination from "@/components/admin/ListPagination";
 import BilingualInput from "@/components/admin/BilingualInput";
 import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -32,35 +34,57 @@ interface PageSummary {
   updatedAt: string;
 }
 
+interface PageList {
+  page: number;
+  limit: number;
+  total: number;
+  items: PageSummary[];
+}
+
+const PAGE_SIZE = 50;
+// Long enough not to query on every key, short enough to feel immediate.
+const SEARCH_DELAY_MS = 300;
+const LIST_KEYS = ["search"] as const;
+
 interface PageDetail extends PageSummary {
   contentFr: string;
   contentEn: string;
 }
 
 export default function PagesAdminPage() {
-  const [pages, setPages] = useState<PageSummary[]>([]);
+  // A page of the list at a time, as the other admin lists (#416).
+  const { params, page, update } = useListParams(LIST_KEYS);
+  const [list, setList] = useState<PageList | null>(null);
+  const [searchInput, setSearchInput] = useState(params.search);
   const [editing, setEditing] = useState<PageDetail | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [newSlug, setNewSlug] = useState("");
   const [newTitleFr, setNewTitleFr] = useState("");
   const [newTitleEn, setNewTitleEn] = useState("");
   const [createError, setCreateError] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(null);
   const [deleteTarget, setDeleteTarget] = useState<PageSummary | null>(null);
   const [listState, setListState] = useState<SaveState>(null);
 
-  async function loadPages() {
-    setIsLoading(true);
-    const { data } = await adminFetch<PageSummary[]>("/pages");
-    if (data) setPages(data);
-    setIsLoading(false);
-  }
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  if (params.search) query.set("search", params.search);
+  const queryString = query.toString();
+
+  const loadPages = useCallback(async () => {
+    const { data } = await adminFetch<PageList>(`/pages?${queryString}`);
+    setList(data ?? { page: 1, limit: PAGE_SIZE, total: 0, items: [] });
+  }, [queryString]);
 
   useEffect(() => {
     loadPages();
-  }, []);
+  }, [loadPages]);
+
+  useEffect(() => {
+    if (searchInput === params.search) return;
+    const timer = setTimeout(() => update({ search: searchInput.trim() }), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, params.search, update]);
 
   async function handleCreate() {
     if (!newSlug.trim() || !newTitleFr.trim() || !newTitleEn.trim()) {
@@ -144,10 +168,13 @@ export default function PagesAdminPage() {
       return;
     }
     setListState({ kind: "ok", text: `« ${target.titleFr} » est dans la corbeille.` });
-    loadPages();
+    // The last row of a page gone: step back rather than show an empty page.
+    if (list && list.items.length === 1 && page > 1) update({ page: String(page - 1) });
+    else loadPages();
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (!list) return <p className="text-gris">Chargement...</p>;
+  const pages = list.items;
 
   return (
     <div>
@@ -318,8 +345,21 @@ export default function PagesAdminPage() {
         </div>
       ) : (
         <>
-          <div className="mb-4 flex justify-end">
-            <SaveFeedback state={listState} onDismiss={() => setListState(null)} />
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <input
+              type="search"
+              aria-label="Rechercher"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="Rechercher un slug ou un titre…"
+              className="w-72 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+            />
+            <span className="text-sm text-gris" aria-live="polite">
+              {list.total} page{list.total > 1 ? "s" : ""}
+            </span>
+            <div className="ml-auto">
+              <SaveFeedback state={listState} onDismiss={() => setListState(null)} />
+            </div>
           </div>
           <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
             <table className="w-full text-sm">
@@ -364,7 +404,9 @@ export default function PagesAdminPage() {
                 ))}
               </tbody>
             </table>
+            {pages.length === 0 && <p className="px-4 py-6 text-center text-sm text-gris">Aucune page ne correspond.</p>}
           </div>
+          <ListPagination page={list.page} limit={list.limit} total={list.total} onPageChange={(next) => update({ page: String(next) })} />
         </>
       )}
 
