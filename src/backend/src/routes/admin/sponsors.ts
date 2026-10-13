@@ -12,7 +12,7 @@ import {
   type SponsorListFilters,
   type SponsorMissing,
 } from "../../lib/sponsor-list.js";
-import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
@@ -241,7 +241,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
             editionId: true,
             edition: { select: { id: true, year: true } },
             tier: { select: TIER_SELECT },
-            _count: { select: { jobOffers: true } },
+            // Trashed offers are not the year's offers (#609).
+            _count: { select: { jobOffers: { where: notDeleted } } },
           },
           orderBy: { edition: { year: "desc" } },
         },
@@ -317,7 +318,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
             tier: { select: TIER_SELECT },
             // Job offers for admin consultation/moderation (#251), now per
             // participation since they are dated by the year's tier quota.
-            jobOffers: { orderBy: { createdAt: "asc" } },
+            jobOffers: { where: notDeleted, orderBy: { createdAt: "asc" } },
           },
           orderBy: { edition: { year: "desc" } },
         },
@@ -880,27 +881,6 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Contact not found" });
       }
       await prisma.sponsorContact.delete({ where: { id: contact.id } });
-      return reply.code(204).send();
-    },
-  );
-
-  // DELETE /api/admin/sponsors/:id/job-offers/:offerId — moderate an offer (#251).
-  // Job offers hang off the participation now (#129), not the identity
-  // directly, so ownership is checked through `editionSponsor.sponsorId`.
-  app.delete<{ Params: SponsorIdParams & { offerId: string } }>(
-    "/sponsors/:id/job-offers/:offerId",
-    { schema: { params: { type: "object", required: ["id", "offerId"], properties: { id: { type: "string" }, offerId: { type: "string" } } } } },
-    async (request, reply) => {
-      const offer = await prisma.sponsorJobOffer.findUnique({
-        where: { id: Number(request.params.offerId) },
-        include: { editionSponsor: { select: { sponsorId: true } } },
-      });
-      if (!offer || offer.editionSponsor.sponsorId !== Number(request.params.id)) {
-        return reply.code(404).send({ error: "Offer not found" });
-      }
-      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
-      revalidateSponsors();
-      revalidateJobOffers();
       return reply.code(204).send();
     },
   );

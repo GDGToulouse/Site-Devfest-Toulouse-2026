@@ -12,6 +12,7 @@ vi.mock("../lib/revalidate.js", () => ({
   revalidateConferences: vi.fn(),
   revalidateTalk: vi.fn(),
   revalidateJobOffers: vi.fn(),
+  revalidateJobOfferPages: vi.fn(),
 }));
 
 const { revalidateSponsor, revalidateTalk } = await import("../lib/revalidate.js");
@@ -122,5 +123,39 @@ describe("talk mutations purge both of the talk's URLs (#360)", () => {
     expect(revalidateTalk).toHaveBeenCalledWith(slug, edition.year);
 
     await app.close();
+  });
+});
+
+// #609 — a job offer shows on its sponsor's own page. Purging only the lists
+// left a created, edited or restored offer missing there for an hour.
+describe("job offer mutations purge the sponsor's own page (#609)", () => {
+  it("purges on create, update, delete and restore", async () => {
+    const { revalidateJobOfferPages } = await import("../lib/revalidate.js");
+    const adminJobOfferRoutes = (await import("../routes/admin/job-offers.js")).default;
+    const adminTrashRoutes = (await import("../routes/admin/trash.js")).default;
+    const { createSponsorFixture } = await import("./sponsor-test-helpers.js");
+    const edition = await getSeededEdition();
+    const tier = await prisma.sponsorTier.findFirstOrThrow();
+    const sponsor = await createSponsorFixture({ name: `Purge Offer ${uniq()}`, slug: `purge-offer-${uniq()}`, editionId: edition.id, tierId: tier.id });
+    createdSponsorIds.push(sponsor.id);
+    const app = await buildApp(async (a) => {
+      await a.register(adminJobOfferRoutes, { prefix: "/api/admin" });
+      await a.register(adminTrashRoutes, { prefix: "/api/admin" });
+    });
+    const purges = () => vi.mocked(revalidateJobOfferPages).mock.calls.map(([slug]) => slug);
+    vi.mocked(revalidateJobOfferPages).mockClear();
+
+    const created = await app.inject({
+      method: "POST",
+      url: `/api/admin/sponsors/${sponsor.id}/editions/${edition.id}/job-offers`,
+      payload: { title: "Purge", url: "https://example.org/jobs/1" },
+    });
+    const offerId = created.json().id;
+    await app.inject({ method: "PUT", url: `/api/admin/job-offers/${offerId}`, payload: { title: "Purge 2" } });
+    await app.inject({ method: "DELETE", url: `/api/admin/job-offers/${offerId}` });
+    const restored = await app.inject({ method: "POST", url: `/api/admin/trash/job-offers/${offerId}/restore` });
+
+    expect(restored.statusCode).toBe(200);
+    expect(purges()).toEqual([sponsor.slug, sponsor.slug, sponsor.slug, sponsor.slug]);
   });
 });

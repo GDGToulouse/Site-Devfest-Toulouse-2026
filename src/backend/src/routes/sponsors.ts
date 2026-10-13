@@ -103,6 +103,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
             tierColor: true,
             tierLogoScale: true,
             jobOffers: {
+              where: notDeleted,
               select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
               orderBy: { createdAt: "asc" },
             },
@@ -161,7 +162,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     const sponsors = await prisma.sponsor.findMany({
       where: {
         ...notDeleted,
-        editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED", jobOffers: { some: {} } } },
+        editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED", jobOffers: { some: notDeleted } } },
       },
       select: {
         slug: true,
@@ -172,6 +173,7 @@ export default async function sponsorRoutes(app: FastifyInstance) {
           select: {
             logoUrl: true,
             jobOffers: {
+              where: notDeleted,
               select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
               orderBy: { createdAt: "asc" },
             },

@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (146)
+### Back-office (150)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -144,6 +144,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/import/sessionize/:editionId/rooms/:sessionizeId` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/import/sessionize/:editionId/source` | ADMIN |
 | GET | `/api/admin/import/sessionize/:editionId/source` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/job-offers` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/job-offers/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/job-offers/:id` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/pages` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/pages` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/pages/:id` | Équipe (ADMIN, EDITOR) |
@@ -192,7 +195,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/sponsors/:id/contacts/:contactId/invite` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/:id/editions` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/sponsors/:id/editions/:editionId` | Équipe (ADMIN, EDITOR) |
-| DELETE | `/api/admin/sponsors/:id/job-offers/:offerId` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/sponsors/:id/editions/:editionId/job-offers` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsors/:id/editions/:editionId/job-offers` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/bulk` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/tags` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/tags` | Équipe (ADMIN, EDITOR) |

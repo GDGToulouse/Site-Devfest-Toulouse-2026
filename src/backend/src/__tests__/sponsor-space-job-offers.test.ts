@@ -225,9 +225,20 @@ describe("Sponsor space job offers (#251 via #362)", () => {
       headers,
     });
     const after = await app.inject({ method: "GET", url, headers });
+    const again = await app.inject({
+      method: "POST",
+      url,
+      headers,
+      payload: { title: "Replacement", url: "https://example.org/jobs/2" },
+    });
+    const trashed = await prisma.sponsorJobOffer.findUnique({ where: { id: created.json().id } });
 
     expect(del.statusCode).toBe(204);
     expect(after.json().offers).toEqual([]);
+    // The trashed offer no longer counts against the quota (#609)…
+    expect(again.statusCode).toBe(201);
+    // …and waits in the trash rather than being gone for good.
+    expect(trashed?.deletedAt).toBeInstanceOf(Date);
   });
 
   it("answers 422 when the company does not sponsor the featured edition", async () => {

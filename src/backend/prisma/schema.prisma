@@ -1256,13 +1256,16 @@ model SponsorJobOffer {
   descriptionEn String @default("")
   url           String
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  // Soft delete (#609): offers go through the trash like every other record.
+  deletedAt DateTime?
 
   editionSponsorId Int
   editionSponsor   EditionSponsor @relation(fields: [editionSponsorId], references: [id], onDelete: Cascade)
 
   @@index([editionSponsorId])
+  @@index([deletedAt])
 }
 
 // --- Categories / Tracks (RG-213, US-246) ---
