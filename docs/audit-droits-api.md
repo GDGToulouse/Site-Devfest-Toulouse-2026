@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (150)
+### Back-office (152)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -201,6 +201,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/tags` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/tags` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/tags/:id` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/tags/:id` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/tags/:id/merge` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/talks` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/talks` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/talks/:id` | Équipe (ADMIN, EDITOR) |
