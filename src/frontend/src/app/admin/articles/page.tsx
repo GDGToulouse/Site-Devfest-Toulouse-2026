@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { adminFetch } from "@/lib/admin-api";
+import { useListParams } from "@/lib/use-list-params";
+import ListPagination from "@/components/admin/ListPagination";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
@@ -25,28 +27,32 @@ interface ArticlesResponse {
   totalPages: number;
 }
 
+const PAGE_SIZE = 20;
+const LIST_KEYS = [] as const;
+
 export default function ArticlesListPage() {
+  // The page lives in the URL, like the other admin lists (#416): coming back
+  // from an article lands on the page it was opened from.
+  const { page, update } = useListParams(LIST_KEYS);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<ArticleSummary | null>(null);
   const [error, setError] = useState("");
 
-  async function loadArticles(p = 1) {
+  const loadArticles = useCallback(async () => {
     setIsLoading(true);
-    const { data } = await adminFetch<ArticlesResponse>(`/articles?page=${p}&limit=20`);
+    const { data } = await adminFetch<ArticlesResponse>(`/articles?page=${page}&limit=${PAGE_SIZE}`);
     if (data) {
       setArticles(data.articles);
-      setTotalPages(data.totalPages);
-      setPage(data.page);
+      setTotal(data.total);
     }
     setIsLoading(false);
-  }
+  }, [page]);
 
   useEffect(() => {
     loadArticles();
-  }, []);
+  }, [loadArticles]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -59,7 +65,10 @@ export default function ArticlesListPage() {
       setError("La suppression a échoué. Réessayez.");
       return;
     }
-    loadArticles(page);
+    // The last article of a page gone: step back, or the list read "Aucun
+    // article" while earlier pages still held some (#416).
+    if (articles.length === 1 && page > 1) update({ page: String(page - 1) });
+    else loadArticles();
   }
 
   return (
@@ -147,21 +156,7 @@ export default function ArticlesListPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => loadArticles(p)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    p === page ? "bg-malachite text-blanc" : "bg-blanc text-gris hover:bg-blanc-casse"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
+          <ListPagination page={page} limit={PAGE_SIZE} total={total} onPageChange={(next) => update({ page: String(next) })} />
         </>
       )}
 
