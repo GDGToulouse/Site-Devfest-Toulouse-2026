@@ -150,7 +150,7 @@ export default function ContactMessagesPage() {
 
   const categories = [...new Set(messages.map((m) => m.categoryLabel).filter(Boolean))] as string[];
 
-  if (isLoading && activeTab === "messages") return <p className="text-gris">Chargement...</p>;
+  if (isLoading && activeTab === "messages") return <p className="text-gris">Chargement…</p>;
 
   return (
     <div>
@@ -386,7 +386,7 @@ export default function ContactMessagesPage() {
                       disabled={isForwarding || !forwardEmails.trim()}
                       className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
                     >
-                      {isForwarding ? "Envoi..." : "Envoyer"}
+                      {isForwarding ? "Envoi…" : "Envoyer"}
                     </button>
                   </div>
                 </div>

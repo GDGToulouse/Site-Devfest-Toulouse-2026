@@ -108,7 +108,7 @@ export default function ProfilePage() {
   }
 
   if (isLoading) {
-    return <div className="text-gris py-20 text-center">Chargement...</div>;
+    return <div className="text-gris py-20 text-center">Chargement…</div>;
   }
 
   if (!user) {
@@ -166,9 +166,9 @@ export default function ProfilePage() {
               disabled={isSavingProfile}
               className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSavingProfile ? "Enregistrement..." : "Enregistrer"}
+              {isSavingProfile ? "Enregistrement…" : "Enregistrer"}
             </button>
-            {profileSaved && <span className="text-sm text-malachite">Enregistré !</span>}
+            {profileSaved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
           </div>
         </div>
       </form>
@@ -233,7 +233,7 @@ export default function ProfilePage() {
               disabled={isSavingPassword}
               className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSavingPassword ? "Modification..." : "Modifier le mot de passe"}
+              {isSavingPassword ? "Modification…" : "Modifier le mot de passe"}
             </button>
             {passwordSaved && <span className="text-sm text-malachite">Mot de passe modifié !</span>}
           </div>

@@ -312,7 +312,7 @@ export default function SponsorsDataPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<SponsorRow>

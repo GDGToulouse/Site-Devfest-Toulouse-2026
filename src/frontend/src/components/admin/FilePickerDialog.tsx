@@ -214,7 +214,7 @@ export default function FilePickerDialog({
           {tab === "library" && (
             <>
               {isLoading ? (
-                <p className="text-gris text-center py-8">Chargement...</p>
+                <p className="text-gris text-center py-8">Chargement…</p>
               ) : files.length === 0 ? (
                 <p className="text-gris text-center py-8">Aucun fichier. Uploadez-en un !</p>
               ) : (

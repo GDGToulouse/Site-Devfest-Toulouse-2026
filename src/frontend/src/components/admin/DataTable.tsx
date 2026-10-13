@@ -66,7 +66,7 @@ export default function DataTable<T extends { id: number }>({
   onView,
   onEdit,
   onDelete,
-  emptyMessage = "Aucun element",
+  emptyMessage = "Aucun élément",
   selectedIds,
   onSelectionChange,
   rowLabel = defaultRowLabel,

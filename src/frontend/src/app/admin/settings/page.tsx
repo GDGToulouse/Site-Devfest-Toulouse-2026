@@ -129,7 +129,7 @@ function CacheTab() {
             disabled={isPurging}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isPurging ? "Purge en cours..." : "Purger la sélection"}
+            {isPurging ? "Purge en cours…" : "Purger la sélection"}
           </button>
           <button
             onClick={() => setConfirmScope("all")}
@@ -370,7 +370,7 @@ function ContactsTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -567,7 +567,7 @@ function IdentityTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -779,7 +779,7 @@ function EcosystemTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -960,7 +960,7 @@ function CarouselTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -1115,7 +1115,7 @@ function SeoTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -1152,7 +1152,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gris">Chargement...</div>
+        <div className="text-gris">Chargement…</div>
       </div>
     );
   }

@@ -43,7 +43,7 @@ export default function CfpTab() {
     setTimeout(() => setSaved(false), 3000);
   }
 
-  if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
+  if (isLoading) return <p className="text-gris text-sm">Chargement…</p>;
 
   return (
     <div className="space-y-6">
@@ -85,7 +85,7 @@ export default function CfpTab() {
 
       <div className="flex items-center gap-4">
         <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
-          {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>

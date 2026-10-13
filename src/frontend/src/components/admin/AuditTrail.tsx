@@ -206,7 +206,7 @@ export default function AuditTrail({
       <h2 id="audit-trail-title" className="text-lg font-semibold text-noir mb-3">
         Historique
       </h2>
-      {state.kind === "loading" && <p className="text-sm text-gris">Chargement...</p>}
+      {state.kind === "loading" && <p className="text-sm text-gris">Chargement…</p>}
       {state.kind === "error" && (
         <p role="alert" className="text-sm text-terre-cuite">
           Impossible de charger l&apos;historique. Rechargez la page pour réessayer.

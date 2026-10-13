@@ -206,12 +206,12 @@ export default function FaqAdminPage() {
               disabled={isSaving}
               className="rounded-lg bg-malachite px-4 py-2 text-sm font-medium text-blanc hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSaving ? "Sauvegarde..." : "Enregistrer"}
+              {isSaving ? "Enregistrement…" : "Enregistrer"}
             </button>
           </div>
         </div>
       ) : items === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <div className="mb-4 flex justify-end">

@@ -173,7 +173,7 @@ export default function PagesAdminPage() {
     else loadPages();
   }
 
-  if (!list) return <p className="text-gris">Chargement...</p>;
+  if (!list) return <p className="text-gris">Chargement…</p>;
   const pages = list.items;
 
   return (
@@ -238,7 +238,7 @@ export default function PagesAdminPage() {
               disabled={isSaving}
               className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSaving ? "Création..." : "Créer"}
+              {isSaving ? "Création…" : "Créer"}
             </button>
             <button
               onClick={() => { setIsCreating(false); setCreateError(""); }}
@@ -339,7 +339,7 @@ export default function PagesAdminPage() {
           <div className="flex items-center justify-end gap-3">
             <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+              {isSaving ? "Enregistrement…" : "Enregistrer"}
             </button>
           </div>
         </div>

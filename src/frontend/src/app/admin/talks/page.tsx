@@ -372,7 +372,7 @@ export default function TalksDataPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<TalkRow>
