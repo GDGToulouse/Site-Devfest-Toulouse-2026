@@ -189,7 +189,7 @@ export default function SpeakerEditorPage() {
     setCurrent(data);
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   // 1152 px rather than 768 (#410): a contact row or a bilingual field had
   // two thirds of the screen empty beside it; a cap still keeps text lines

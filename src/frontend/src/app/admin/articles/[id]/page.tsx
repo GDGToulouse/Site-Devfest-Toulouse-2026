@@ -284,7 +284,7 @@ export default function ArticleEditorPage() {
   }
 
   if (isLoading) {
-    return <p className="text-gris">Chargement...</p>;
+    return <p className="text-gris">Chargement…</p>;
   }
 
   return (
@@ -314,7 +314,7 @@ export default function ArticleEditorPage() {
             disabled={isSaving}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+            {isSaving ? "Enregistrement…" : "Enregistrer"}
           </button>
         </div>
       </div>

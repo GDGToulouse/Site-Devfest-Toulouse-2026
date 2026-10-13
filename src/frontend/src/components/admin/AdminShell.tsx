@@ -82,7 +82,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   if (isLoading) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-blanc">
-        <p className="text-gris text-lg">Chargement...</p>
+        <p className="text-gris text-lg">Chargement…</p>
       </div>
     );
   }

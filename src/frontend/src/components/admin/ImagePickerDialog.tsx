@@ -330,7 +330,7 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
           {tab === "library" && (
             <>
               {isLoading ? (
-                <p className="text-gris text-center py-8">Chargement...</p>
+                <p className="text-gris text-center py-8">Chargement…</p>
               ) : images.length === 0 ? (
                 <p className="text-gris text-center py-8">Aucune image. Uploadez-en une !</p>
               ) : (

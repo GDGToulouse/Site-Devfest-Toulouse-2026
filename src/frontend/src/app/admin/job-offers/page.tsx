@@ -198,7 +198,7 @@ export default function JobOffersPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<JobOfferRow>

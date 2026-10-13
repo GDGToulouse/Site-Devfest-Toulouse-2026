@@ -279,7 +279,7 @@ export default function SponsorEditorPage() {
     }
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   // The year is part of the label rather than a line of grey text above the
   // form: it scopes everything in the panel, so it has to stay on screen.

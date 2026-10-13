@@ -169,7 +169,7 @@ export default function FilesAdminPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   }
 
-  if (!list) return <p className="text-gris">Chargement...</p>;
+  if (!list) return <p className="text-gris">Chargement…</p>;
 
   const filtered = list.items;
   const { counts } = list;
@@ -183,7 +183,7 @@ export default function FilesAdminPage() {
           disabled={isUploading}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isUploading ? "Upload..." : "Uploader"}
+          {isUploading ? "Upload…" : "Uploader"}
         </button>
         <input
           ref={fileInputRef}

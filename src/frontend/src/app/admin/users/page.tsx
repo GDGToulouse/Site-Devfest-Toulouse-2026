@@ -134,7 +134,7 @@ export default function UsersAdminPage() {
     else loadUsers();
   }
 
-  if (!list) return <p className="text-gris">Chargement...</p>;
+  if (!list) return <p className="text-gris">Chargement…</p>;
   const users = list.items;
 
   return (
@@ -178,7 +178,7 @@ export default function UsersAdminPage() {
               disabled={isSaving}
               className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSaving ? "Envoi..." : "Envoyer l'invitation"}
+              {isSaving ? "Envoi…" : "Envoyer l'invitation"}
             </button>
           </div>
         </div>

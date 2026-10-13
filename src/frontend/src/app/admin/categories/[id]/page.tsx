@@ -5,6 +5,7 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
 import CategoryForm, { emptyCategoryForm, type CategoryFormValue } from "@/components/admin/categories/CategoryForm";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 
 interface CategoryData {
   id: number;
@@ -27,6 +28,7 @@ export default function CategoryEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>(null);
 
   useEffect(() => {
     // The edition list drives the selector in both modes now that a track can
@@ -60,6 +62,7 @@ export default function CategoryEditorPage() {
     if (!form.nameFr.trim() || !form.nameEn.trim()) return;
     setIsSaving(true);
     setError(null);
+    setSaveState(null);
     const payload = {
       nameFr: form.nameFr.trim(),
       nameEn: form.nameEn.trim(),
@@ -84,10 +87,16 @@ export default function CategoryEditorPage() {
       setError(apiError ?? (isNew ? "Échec de la création." : "Échec de l'enregistrement."));
       return;
     }
-    router.push(isNew && data ? `/admin/categories/${data.id}` : "/admin/categories");
+    if (isNew && data) {
+      router.push(`/admin/categories/${data.id}`);
+      return;
+    }
+    // Staying on the sheet, like talks, speakers and sponsors (#394, #415):
+    // saving used to throw the editor back to the list.
+    setSaveState({ kind: "ok", text: "Modifications enregistrées." });
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   // 1152 px rather than 768 (#410): a contact row or a bilingual field had
   // two thirds of the screen empty beside it; a cap still keeps text lines
@@ -105,6 +114,7 @@ export default function CategoryEditorPage() {
         <CategoryForm value={form} onChange={setForm} editions={editions} />
 
         {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button

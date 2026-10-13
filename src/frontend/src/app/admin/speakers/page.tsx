@@ -323,7 +323,7 @@ export default function SpeakersDataPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<SpeakerRow>

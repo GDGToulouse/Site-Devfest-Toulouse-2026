@@ -119,7 +119,7 @@ export default function AdminLogin() {
             disabled={isLoading}
             className="w-full px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors disabled:opacity-50"
           >
-            {isLoading ? "Chargement..." : mode === "login" ? "Se connecter" : "Envoyer le lien"}
+            {isLoading ? "Chargement…" : mode === "login" ? "Se connecter" : "Envoyer le lien"}
           </button>
         </form>
 

@@ -79,7 +79,7 @@ export default function PhotosTab({ editionId }: { editionId: number }) {
     await load();
   }
 
-  if (photos === null) return <p className="text-gris">Chargement...</p>;
+  if (photos === null) return <p className="text-gris">Chargement…</p>;
 
   return (
     <div className="space-y-4">
