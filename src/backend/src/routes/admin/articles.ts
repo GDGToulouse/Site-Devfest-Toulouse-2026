@@ -52,15 +52,26 @@ interface ArticleBody {
 export default async function adminArticleRoutes(app: FastifyInstance) {
   // GET /api/admin/articles — list all articles (including drafts), with pagination
   app.get<{
-    Querystring: { page?: string; limit?: string; status?: string };
+    Querystring: { page?: string; limit?: string; status?: string; search?: string };
   }>("/articles", async (request) => {
     const page = Math.max(Number(request.query.page) || 1, 1);
     const limit = Math.min(Number(request.query.limit) || 20, 100);
     const status = request.query.status;
+    // Title in either language or author (#415): the list had no way to find
+    // an article but paging through it.
+    const search = request.query.search?.trim().slice(0, 200);
 
-    const where = status
-      ? { publicationStatus: status as "DRAFT" | "PUBLISHED", ...notDeleted }
-      : { ...notDeleted };
+    const where = {
+      ...notDeleted,
+      ...(status && { publicationStatus: status as "DRAFT" | "PUBLISHED" }),
+      ...(search && {
+        OR: [
+          { titleFr: { contains: search, mode: "insensitive" as const } },
+          { titleEn: { contains: search, mode: "insensitive" as const } },
+          { author: { contains: search, mode: "insensitive" as const } },
+        ],
+      }),
+    };
 
     const [articles, total] = await Promise.all([
       prisma.article.findMany({

@@ -304,3 +304,25 @@ describe("Admin Articles API", () => {
     await app.close();
   });
 });
+
+// #415 — the articles list had no way to find an article but paging through it.
+describe("GET /api/admin/articles — search (#415)", () => {
+  it("finds an article by its title in either language or by its author", async () => {
+    const app = await buildAdminApp();
+    const tag = `search-${Date.now()}`;
+    const article = await prisma.article.create({
+      data: { slug: tag, titleFr: `Titre ${tag}`, titleEn: "English title", author: "Grace Hopper", contentFr: "", contentEn: "" },
+    });
+
+    const byEnglishTitle = await app.inject({ method: "GET", url: `/api/admin/articles?search=english title` });
+    const byAuthor = await app.inject({ method: "GET", url: `/api/admin/articles?search=grace hopper` });
+    const byFrenchTitle = await app.inject({ method: "GET", url: `/api/admin/articles?search=${tag}` });
+    await prisma.article.delete({ where: { id: article.id } });
+    await app.close();
+
+    const ids = (res: { json: () => { articles: { id: number }[] } }) => res.json().articles.map((a) => a.id);
+    expect(ids(byEnglishTitle)).toContain(article.id);
+    expect(ids(byAuthor)).toContain(article.id);
+    expect(ids(byFrenchTitle)).toEqual([article.id]);
+  });
+});
