@@ -1,5 +1,5 @@
 import { config } from "@fortawesome/fontawesome-svg-core";
-import "@fortawesome/fontawesome-svg-core/styles.css";
+// Its stylesheet is bundled into globals.css (#479).
 config.autoAddCss = false;
 
 import type { Metadata, Viewport } from "next";

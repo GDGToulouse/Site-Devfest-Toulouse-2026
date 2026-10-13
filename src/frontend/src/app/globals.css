@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Font Awesome's stylesheet, bundled here rather than imported by the locale
+ * layout (#479). Imported from a layout, it became a second render-blocking
+ * file: 3 kB, yet 456 ms on slow 4G, since it is one more round trip. */
+@import "@fortawesome/fontawesome-svg-core/styles.css";
 
 /* Safelist for utility classes emitted by the WordPress import normalizer
  * (scripts/lib/normalize-wordpress-html.ts in the backend). Article content is
