@@ -2,14 +2,22 @@ import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../lib/prisma.js";
 import { getAuthContext } from "../lib/auth-context.js";
-import { notDeleted } from "../lib/admin-helpers.js";
+import { notDeleted, softDeleteData } from "../lib/admin-helpers.js";
 import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
 import { generateInvitationToken } from "../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { teamInviteRateLimit } from "../lib/rate-limit-options.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
 import { applySponsorEdit, writesYearField, type SponsorEditBody } from "../lib/sponsor-write.js";
-import { isSafeUrl, sanitizeRichHtml } from "../lib/sanitize.js";
+import { isSafeUrl } from "../lib/sanitize.js";
+import {
+  jobOfferBodyError,
+  jobOfferBodySchema,
+  jobOfferData,
+  jobOfferPatchSchema,
+  newJobOfferData,
+  type JobOfferBody,
+} from "../lib/job-offers.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { originalNamesByUrl, rememberOriginalName } from "../lib/file-metadata.js";
 import { revalidateJobOffers, revalidateSponsors } from "../lib/revalidate.js";
@@ -41,25 +49,6 @@ const UPLOAD_MIMES = new Set([
   "image/svg+xml",
   "application/pdf",
 ]);
-
-interface JobOfferBody {
-  title: string;
-  descriptionFr?: string;
-  descriptionEn?: string;
-  url: string;
-}
-
-const jobOfferBodySchema = {
-  type: "object",
-  additionalProperties: false,
-  required: ["title", "url"],
-  properties: {
-    title: { type: "string", maxLength: SHORT_MAX },
-    descriptionFr: { type: "string", maxLength: TEXT_MAX },
-    descriptionEn: { type: "string", maxLength: TEXT_MAX },
-    url: { type: "string", maxLength: URL_MAX },
-  },
-} as const;
 
 // What a sponsor may write about itself. `name`, `slug` and the tier are the
 // organisers' business: renaming the company here would break its slug and its
@@ -559,9 +548,8 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     const participation = await loadCurrentParticipation(request.sponsorAccess!.sponsorId);
     if (!participation) return reply.code(422).send({ error: "no_current_participation" });
 
-    const { title, url } = request.body;
-    if (!title.trim()) return reply.code(400).send({ error: "empty_title" });
-    if (!isSafeUrl(url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+    const invalid = jobOfferBodyError(request.body);
+    if (invalid) return reply.code(400).send(invalid);
 
     // A lowered tier keeps the offers already published but blocks new ones
     // beyond the new cap (#251).
@@ -571,13 +559,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
     }
 
     const offer = await prisma.sponsorJobOffer.create({
-      data: {
-        editionSponsorId: participation.id,
-        title: title.trim(),
-        descriptionFr: sanitizeRichHtml(request.body.descriptionFr),
-        descriptionEn: sanitizeRichHtml(request.body.descriptionEn),
-        url: url.trim(),
-      },
+      data: { editionSponsorId: participation.id, ...newJobOfferData(request.body) },
     });
     revalidateSponsors();
     revalidateJobOffers();
@@ -594,7 +576,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
           required: ["sponsorId", "offerId"],
           properties: { sponsorId: { type: "string" }, offerId: { type: "string", pattern: "^[0-9]+$" } },
         },
-        body: { type: "object", additionalProperties: false, properties: jobOfferBodySchema.properties },
+        body: jobOfferPatchSchema,
       },
       preHandler: requireSponsorAccess("EDITEUR"),
     },
@@ -608,18 +590,10 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       if (!offer) return reply.code(404).send({ error: "offer_not_found" });
 
       const body = request.body ?? {};
-      if (body.title !== undefined && !body.title.trim()) return reply.code(400).send({ error: "empty_title" });
-      if (body.url !== undefined && !isSafeUrl(body.url)) return reply.code(400).send({ error: "invalid_url", field: "url" });
+      const invalid = jobOfferBodyError(body);
+      if (invalid) return reply.code(400).send(invalid);
 
-      const updated = await prisma.sponsorJobOffer.update({
-        where: { id: offer.id },
-        data: {
-          ...(body.title !== undefined && { title: body.title.trim() }),
-          ...(body.descriptionFr !== undefined && { descriptionFr: sanitizeRichHtml(body.descriptionFr) }),
-          ...(body.descriptionEn !== undefined && { descriptionEn: sanitizeRichHtml(body.descriptionEn) }),
-          ...(body.url !== undefined && { url: body.url.trim() }),
-        },
-      });
+      const updated = await prisma.sponsorJobOffer.update({ where: { id: offer.id }, data: jobOfferData(body) });
       revalidateSponsors();
       revalidateJobOffers();
       return serializeJobOffer(updated);
@@ -646,7 +620,8 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       const offer = participation.jobOffers.find((o) => o.id === Number(request.params.offerId));
       if (!offer) return reply.code(404).send({ error: "offer_not_found" });
 
-      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
+      // To the trash, where the team can restore it (#609).
+      await prisma.sponsorJobOffer.update({ where: { id: offer.id }, data: softDeleteData() });
       revalidateSponsors();
       revalidateJobOffers();
       return reply.code(204).send();
@@ -700,7 +675,9 @@ async function loadCurrentParticipation(sponsorId: number) {
     select: {
       id: true,
       tier: { select: { jobOfferQuota: true } },
+      // Trashed offers neither show nor count against the quota (#609).
       jobOffers: {
+        where: notDeleted,
         select: { id: true, title: true, descriptionFr: true, descriptionEn: true, url: true },
         orderBy: { id: "asc" },
       },

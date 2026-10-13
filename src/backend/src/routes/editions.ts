@@ -464,6 +464,7 @@ export default async function editionRoutes(app: FastifyInstance) {
         // itself carries no deletedAt.
         prisma.sponsorJobOffer.count({
           where: {
+            ...notDeleted,
             editionSponsor: { editionId: edition.id, publicationStatus: "PUBLISHED", sponsor: notDeleted },
           },
         }),
