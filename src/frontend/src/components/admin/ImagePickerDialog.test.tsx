@@ -13,7 +13,8 @@ const { default: ImagePickerDialog } = await import("./ImagePickerDialog");
 
 beforeEach(() => {
   adminFetch.mockReset();
-  adminFetch.mockResolvedValue({ data: [], status: 200 });
+  // The library answers one page at a time since #416.
+  adminFetch.mockResolvedValue({ data: { total: 0, items: [] }, status: 200 });
   URL.createObjectURL = vi.fn(() => "blob:preview");
   URL.revokeObjectURL = vi.fn();
 });
