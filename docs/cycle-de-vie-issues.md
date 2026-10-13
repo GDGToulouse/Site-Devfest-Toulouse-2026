@@ -10,7 +10,7 @@ Trois outils, trois questions distinctes — ne pas les mélanger.
 
 | Outil | Répond à | Se ferme quand |
 |-------|----------|----------------|
-| **Milestone « Lot N »** | Le périmètre initial est-il couvert ? | Toutes ses issues sont faites |
+| **Milestone** (`asap`, `next`, `next-year`) | Quand la livrer, par rapport à la prochaine édition ? | `asap` : à l'édition ; les deux autres restent ouverts |
 | **Release `vX.Y.Z`** | Qu'est-ce qui est parti en prod, et quand ? | Le tag est poussé |
 | **Label** (`bug`, `enhancement`…) | De quoi s'agit-il ? | — (filtre, pas compteur) |
 
@@ -67,12 +67,24 @@ environnement. À la release, l'issue se ferme via `Closes` et le label reste vr
 
 ### Rattachement au milestone
 
-- Une issue va dans un milestone **seulement si elle appartient au périmètre du Lot** —
-  y compris un bug qui empêche de déclarer le Lot terminé.
-- Un **bug ou une amélioration découverts après la livraison du Lot** n'ont **pas**
-  de milestone : ils portent un label (`bug`, `enhancement`) et apparaissent dans les
-  notes de la release qui les embarque.
-- Test : « peut-on déclarer le Lot terminé en laissant cette issue ouverte ? »
-  Oui → pas de milestone. Non → milestone.
-- Ne **jamais** créer de milestone fourre-tout permanent (`Backlog`, `v1.x`,
-  `Maintenance`) : sans fin, la barre de progression ne veut rien dire. Utiliser un label.
+Le développement se fait au fil de l'eau, sans planning daté. Une seule date compte : celle
+de la prochaine édition. Les milestones rangent les issues par rapport à elle.
+
+| Milestone | Sens | Ordre |
+|---|---|---|
+| `asap` | Doit être en prod **avant** la prochaine édition. C'est le contenu des prochaines versions | Traité en premier ; échéance = date de l'édition |
+| `next` | À livrer dans une version prochaine, sans lien avec la date de l'édition | Ensuite, dans l'ordre des labels de priorité |
+| `next-year` | À livrer **après** la prochaine édition : trop lourd, trop risqué juste avant, ou inutile avant | Ne pas y toucher avant l'édition |
+| *(aucun)* | Pas encore planifiée | À ranger lors de la qualification |
+
+- Test : « faut-il que ce soit en prod le jour de l'édition ? » Oui → `asap`. Non, mais
+  bientôt → `next`. Non, et pas avant → `next-year`. Ne sait pas encore → aucun.
+- Le milestone dit **quand**, le label de priorité (`priorité haute`, `priorité très faible`)
+  dit **dans quel ordre** à l'intérieur de `next` et `next-year`.
+- Un bug suit la même règle : il va dans `asap` s'il gêne l'édition.
+- Ces trois milestones sont les seuls. Pas de milestone par version (les releases et le
+  CHANGELOG le disent déjà), pas de fourre-tout (`Backlog`, `Maintenance`).
+- Après l'édition, `asap` et `next-year` changent de sens : le classement est repris à ce
+  moment-là.
+- Les milestones `Lot 1` à `Lot 5` décrivent le découpage du périmètre initial de 2026
+  (`docs/priorisation-developpement.md`) ; on n'y range plus de nouvelle issue.

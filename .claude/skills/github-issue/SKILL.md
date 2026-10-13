@@ -1,6 +1,6 @@
 ---
 name: github-issue
-description: Rédige une issue GitHub cohérente pour le repo GDGToulouse/Site-Devfest-Toulouse-2026 — création d'une nouvelle issue OU enrichissement d'une issue existante via commentaire (sans écraser le body). Interview l'utilisateur sur les détails manquants, applique les conventions du repo (labels bug/enhancement/documentation/question, milestone « Lot N » uniquement si l'issue relève du périmètre du lot), cite de vrais fichiers/lignes du repo et des specs docs/. Trigger phrases — création « crée une issue pour… », « ouvre un ticket… », « ajoute une issue sur… », « ouvre une issue GitHub pour… ». Refine « rédige l'issue #X », « clean up issue #X », « commente l'issue #X », « enrichis l'issue #X », « transforme cette issue ».
+description: Rédige une issue GitHub cohérente pour le repo GDGToulouse/Site-Devfest-Toulouse-2026 — création d'une nouvelle issue OU enrichissement d'une issue existante via commentaire (sans écraser le body). Interview l'utilisateur sur les détails manquants, applique les conventions du repo (labels bug/enhancement/documentation/question, milestone asap/next/next-year selon l'horizon par rapport à la prochaine édition), cite de vrais fichiers/lignes du repo et des specs docs/. Trigger phrases — création « crée une issue pour… », « ouvre un ticket… », « ajoute une issue sur… », « ouvre une issue GitHub pour… ». Refine « rédige l'issue #X », « clean up issue #X », « commente l'issue #X », « enrichis l'issue #X », « transforme cette issue ».
 ---
 
 # Rédaction d'issue GitHub — site DevFest Toulouse
@@ -13,7 +13,7 @@ Repo cible : `GDGToulouse/Site-Devfest-Toulouse-2026` sur `github.com`. CLI : `g
 
 > **Contexte projet** : site Next.js (`src/frontend/`) + API Fastify/Prisma (`src/backend/`), bilingue FR/EN. Voir [CLAUDE.md](../../../CLAUDE.md) et les specs `docs/`.
 >
-> **Milestones « Lot 1 → Lot 5 »** : ils mesurent la couverture du **périmètre initial**, pas les versions. Une issue n'y est rattachée que si elle appartient à ce périmètre. Un **bug ou une amélioration découverts après la livraison du Lot n'ont pas de milestone** — juste un label. Règle complète : [`.claude/rules/git-workflow.md`](../../rules/git-workflow.md) § « Issues, milestones et versions ».
+> **Milestones `asap` / `next` / `next-year`** : ils disent **quand** livrer par rapport à la prochaine édition — avant (`asap`, le contenu des prochaines versions), bientôt sans lien avec elle (`next`), après (`next-year`). Aucun milestone = pas encore planifiée. Les `Lot 1` à `Lot 5` ne reçoivent plus de nouvelle issue. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
 
 ## Pre-flight — éviter le travail dupliqué
 
@@ -36,8 +36,8 @@ Saute les étapes déjà couvertes dans un tour précédent.
 ```bash
 # Recherche plein-texte sur titres + bodies, ouvertes ET fermées
 gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --state all --search "<2-4 mots-clés du brief>" --limit 20
-# Complément par milestone si le Lot est connu
-gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --state all --milestone "Lot 3 — Programme" --limit 30
+# Complément : ce qui est déjà planifié avant l'édition
+gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --state open --milestone asap --limit 30
 ```
 
 Lancer **plusieurs** recherches avec des synonymes (ex. « replay », « vidéo », « youtube », « historique »). Inspecter les candidats sérieux avec `gh issue view <n>`.
@@ -53,9 +53,9 @@ Ne jamais lancer `gh issue create` sans avoir fait cette recherche.
 À partir du brief utilisateur :
 - Identifier la **nature** → label de type (`bug`, `enhancement`, `documentation`, `question`)
 - Déterminer si c'est une **User Story** → la structurer comme telle dans le body (le repo n'a pas de label `user-story` ; le format suffit)
-- Décider s'il y a un **milestone**. Test : *« peut-on déclarer le Lot terminé en laissant cette issue ouverte ? »*
-  - **Non** (l'issue fait partie du périmètre du Lot, y compris un bug qui l'empêche d'être « done ») → rattacher au Lot → voir [references/milestones.md](references/milestones.md). Demander si ambigu.
-  - **Oui** (bug / amélioration découverts **après** la livraison du Lot) → **pas de milestone**, le label suffit.
+- Proposer un **milestone**. Test : *« faut-il que ce soit en prod le jour de l'édition ? »*
+  - **Oui** → `asap` · **Non, mais bientôt** → `next` · **Non, et pas avant** → `next-year` · **Ne sait pas** → aucun
+  - Le choix revient à l'utilisateur : le mettre dans l'interview (Step 3) — voir [references/milestones.md](references/milestones.md)
 - Identifier les **specs concernées** dans `docs/` → à citer dans le body (`docs/fonctionnalites-2026.md`, `docs/modele-donnees-metier.md`, etc.)
 
 Voir [references/labels.md](references/labels.md) pour les labels disponibles.
@@ -73,7 +73,8 @@ Si le périmètre est flou, **demander** avant de générer le body.
 2 à 4 questions seulement. Options mutuellement exclusives. **Toujours un « (Recommandé) » par défaut**. Cibles d'interview selon la nature :
 
 - **bug** : étapes de repro, comportement attendu vs observé, environnement (navigateur / URL : local, dev-j, beta, prod), criticité
-- **enhancement / user-story** : scope (in/out), critères de « done » observables, impact i18n (FR/EN), SEO, dépendances, milestone
+- **enhancement / user-story** : scope (in/out), critères de « done » observables, impact i18n (FR/EN), SEO, dépendances
+- **toujours** : le milestone (`asap` / `next` / `next-year` / aucun), avec le « (Recommandé) » issu du test de Step 1
 - **documentation** : audience (utilisateur / dev / orga), emplacement (`docs/`, README), langue
 - **question** : la décision précise à trancher, indicateurs de réponse
 
@@ -83,7 +84,6 @@ Titre : phrase descriptive en français, claire, sous ~80 chars. Conventions obs
 - Bug : décrit le symptôme — `OAuth : le clic Google renvoie "null" au lieu de rediriger`
 - Feature : décrit le résultat — `Hall of replays — toutes les conférences vidéo, toutes éditions`
 - Préfixe `Domaine — ` toléré quand il clarifie — `Admin — gestion des images du carrousel`
-- Préfixe `Lot N — ` toléré pour aligner sur le découpage (fréquent dans ce repo)
 
 Body selon [templates/create.md](templates/create.md).
 
@@ -106,7 +106,7 @@ gh issue create \
   --repo GDGToulouse/Site-Devfest-Toulouse-2026 \
   --title "Titre descriptif en français" \
   --label "enhancement" \
-  --milestone "Lot 4 — Contenu complémentaire" \
+  --milestone "next" \
   --body-file - <<'EOF'
 ... body markdown ...
 EOF
@@ -155,7 +155,7 @@ gh issue edit <number> \
   --repo GDGToulouse/Site-Devfest-Toulouse-2026 \
   --title "Titre descriptif corrigé" \
   --add-label "enhancement" \
-  --milestone "Lot 3 — Programme"
+  --milestone "asap"
 ```
 
 Confirmer avec :
@@ -166,10 +166,10 @@ gh issue view <number> --json title,labels,milestone,state
 
 ### Step 6 — Surface couplings
 
-Si l'issue touche les mêmes fichiers / specs / Lot qu'une autre issue ouverte, le **dire** dans le récap final. Suggérer un bundling éventuel.
+Si l'issue touche les mêmes fichiers / specs qu'une autre issue ouverte, ou tombe dans le même milestone sur le même domaine, le **dire** dans le récap final. Suggérer un bundling éventuel.
 
 ```bash
-gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone "Lot 3 — Programme" --state open
+gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone asap --state open
 ```
 
 ---
@@ -178,9 +178,9 @@ gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone "Lot 3 �
 
 - **Langue** : français (issues, titres). Code/commits/branches en anglais (cf. CLAUDE.md).
 - **Pas de secrets** : pas de tokens, mots de passe, clés, `DATABASE_URL`, secrets OAuth/SMTP. Hostnames publics (`*.site.devfesttoulouse.fr`), noms de modèles, versions OK.
-- **Liens** : `[AboutSection.tsx](src/frontend/src/components/home/AboutSection.tsx)` ou `[editions.ts:36](src/backend/src/routes/editions.ts#L36)` (relatif au repo) ; `#NN` pour issues liées ; specs `docs/fonctionnalites-2026.md` ; URL pleine pour ressources externes.
+- **Liens** : un chemin relatif (`src/...`) **ne fait pas de lien** dans le body d'une issue. Utiliser un permalien figé sur un commit poussé : `https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/blob/<sha>/src/backend/src/routes/editions.ts#L36` (`git ls-remote origin <branche>` donne le SHA ; vérifier que les fichiers cités n'y diffèrent pas du local). Encoder les crochets d'un chemin Next (`[id]` → `%5Bid%5D`). `#NN` pour issues liées ; URL pleine pour ressources externes.
 - **Label obligatoire min.** : 1 label de type (`bug` / `enhancement` / `documentation` / `question`).
-- **Milestone** : optionnel, et réservé au **périmètre d'un Lot**. Un bug ou une amélioration post-livraison n'en ont pas. Jamais de milestone fourre-tout (`Backlog`, `v1.x`, `Maintenance`).
+- **Milestone** : `asap`, `next`, `next-year` ou aucun — rien d'autre. Jamais de milestone par version ni de fourre-tout (`Backlog`, `Maintenance`).
 - **Validation utilisateur** : toujours afficher l'issue / commentaire complet AVANT exécution.
 
 ## What NOT to do
@@ -191,8 +191,9 @@ gh issue list --repo GDGToulouse/Site-Devfest-Toulouse-2026 --milestone "Lot 3 �
 - **Ne pas inventer de fichiers / lignes** — vérifier avec `Read`/`Grep` d'abord
 - **Ne pas assumer la nature (bug vs feature)** — demander si flou
 - **Ne pas chaîner les `gh issue edit`** : un seul call pour titre + labels + milestone
-- **Ne pas inventer un milestone** — utiliser un Lot existant, ou aucun
-- **Ne pas rattacher un bug post-livraison à un Lot** juste pour lui donner un milestone (ça fausse la mesure du périmètre) — le label suffit
+- **Ne pas inventer un milestone** — `asap`, `next`, `next-year`, ou aucun
+- **Ne pas ranger une nouvelle issue dans un `Lot N`** : ces milestones décrivent le périmètre initial 2026
+- **Ne pas choisir le milestone seul** — le proposer dans l'interview
 - **Ne pas ajouter d'assignee / project** tant que l'utilisateur n'en a pas convenu
 - **Ne pas inclure de signature « Generated with Claude Code »** ou équivalent dans le body / commentaire
 
@@ -209,6 +210,6 @@ Trigger sur l'une des phrases :
 ## Référence
 
 - Labels du repo : [references/labels.md](references/labels.md)
-- Milestones / Lots : [references/milestones.md](references/milestones.md)
+- Milestones : [references/milestones.md](references/milestones.md)
 - Exemples : [references/examples.md](references/examples.md)
 - Templates : [templates/create.md](templates/create.md), [templates/comment.md](templates/comment.md)
