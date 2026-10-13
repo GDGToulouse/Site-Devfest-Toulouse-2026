@@ -70,5 +70,6 @@ describe("JobOffersTab — description length (#610)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Publier" }));
 
     await waitFor(() => expect(createSponsorJobOffer).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText("Offre publiée.")).toBeInTheDocument();
   });
 });

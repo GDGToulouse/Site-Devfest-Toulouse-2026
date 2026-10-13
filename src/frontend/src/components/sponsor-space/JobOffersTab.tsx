@@ -97,8 +97,11 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
     setIsBusy(false);
 
     if (status === 201 || status === 200) {
+      // Not cancelEdit(): it clears the message, and in the same render the
+      // confirmation never showed up.
+      setEditingId(null);
+      setDraft(EMPTY);
       setMessage({ isOk: true, text: editingId === null ? "Offre publiée." : "Offre mise à jour." });
-      cancelEdit();
       void load();
       return;
     }
