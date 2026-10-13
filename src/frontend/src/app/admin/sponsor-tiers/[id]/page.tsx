@@ -7,6 +7,7 @@ import TrashButton from "@/components/admin/TrashButton";
 import { adminFetch } from "@/lib/admin-api";
 import type { AdminSponsorTier } from "@/lib/types";
 import SponsorTierForm, { emptySponsorTierForm, type SponsorTierFormValue } from "@/components/admin/sponsor-tiers/SponsorTierForm";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 
 export default function SponsorTierEditorPage() {
   const params = useParams();
@@ -18,6 +19,7 @@ export default function SponsorTierEditorPage() {
   const [isLoading, setIsLoading] = useState(!isNew);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>(null);
 
   useEffect(() => {
     if (isNew || !tierId) return;
@@ -51,6 +53,7 @@ export default function SponsorTierEditorPage() {
     if (!form.nameFr.trim() || !form.nameEn.trim() || (isNew && !form.key.trim())) return;
     setIsSaving(true);
     setError(null);
+    setSaveState(null);
 
     // Numeric fields are coerced from their string form state. `key` is only
     // sent on create — it is a locked technical identifier afterwards.
@@ -82,7 +85,8 @@ export default function SponsorTierEditorPage() {
         setError("Échec de la création.");
         return;
       }
-      router.push("/admin/sponsor-tiers");
+      // Onto the new offer's sheet, as every other create (#415).
+      router.push(`/admin/sponsor-tiers/${data.id}`);
     } else {
       const { status } = await adminFetch(`/sponsor-tiers/${tierId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
@@ -92,11 +96,12 @@ export default function SponsorTierEditorPage() {
         setError("Échec de l'enregistrement.");
         return;
       }
-      router.push("/admin/sponsor-tiers");
+      // Staying on the sheet, like the other editors (#394, #415).
+      setSaveState({ kind: "ok", text: "Modifications enregistrées." });
     }
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   const canSave = form.nameFr.trim() && form.nameEn.trim() && (!isNew || form.key.trim());
 
@@ -125,6 +130,7 @@ export default function SponsorTierEditorPage() {
         <SponsorTierForm value={form} onChange={setForm} isNew={isNew} />
 
         {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}
+        <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 
         <div className="flex items-center gap-3 pt-2">
           <button
