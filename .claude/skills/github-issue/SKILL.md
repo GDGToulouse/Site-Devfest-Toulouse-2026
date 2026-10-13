@@ -13,7 +13,7 @@ Repo cible : `GDGToulouse/Site-Devfest-Toulouse-2026` sur `github.com`. CLI : `g
 
 > **Contexte projet** : site Next.js (`src/frontend/`) + API Fastify/Prisma (`src/backend/`), bilingue FR/EN. Voir [CLAUDE.md](../../../CLAUDE.md) et les specs `docs/`.
 >
-> **Milestones `asap` / `next` / `next-year`** : ils disent **quand** livrer par rapport à la prochaine édition — avant (`asap`, le contenu des prochaines versions), bientôt sans lien avec elle (`next`), après (`next-year`). Aucun milestone = pas encore planifiée. Les `Lot 1` à `Lot 5` ne reçoivent plus de nouvelle issue. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
+> **Milestones `asap` / `next` / `next-year`** : ils disent si l'issue est pour la prochaine édition — engagée (`asap`, le contenu des prochaines versions), si possible sans garantie (`next`), non (`next-year`). Aucun milestone = pas encore planifiée. Les `Lot 1` à `Lot 5` ne reçoivent plus de nouvelle issue. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
 
 ## Pre-flight — éviter le travail dupliqué
 
@@ -53,8 +53,8 @@ Ne jamais lancer `gh issue create` sans avoir fait cette recherche.
 À partir du brief utilisateur :
 - Identifier la **nature** → label de type (`bug`, `enhancement`, `documentation`, `question`)
 - Déterminer si c'est une **User Story** → la structurer comme telle dans le body (le repo n'a pas de label `user-story` ; le format suffit)
-- Proposer un **milestone**. Test : *« faut-il que ce soit en prod le jour de l'édition ? »*
-  - **Oui** → `asap` · **Non, mais bientôt** → `next` · **Non, et pas avant** → `next-year` · **Ne sait pas** → aucun
+- Proposer un **milestone**. Test : *« est-ce pour cette édition ? »*
+  - **Oui, on s'y engage** → `asap` · **Si possible, sans garantie** → `next` · **Non** → `next-year` · **Ne sait pas** → aucun
   - Le choix revient à l'utilisateur : le mettre dans l'interview (Step 3) — voir [references/milestones.md](references/milestones.md)
 - Identifier les **specs concernées** dans `docs/` → à citer dans le body (`docs/fonctionnalites-2026.md`, `docs/modele-donnees-metier.md`, etc.)
 

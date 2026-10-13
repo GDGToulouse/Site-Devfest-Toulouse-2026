@@ -70,7 +70,7 @@ Livrable de cette étape : une **cause racine confirmée**, avec `fichier:ligne`
 
 Si un label domaine pertinent n'existe pas encore, **proposer de le créer** (Step 5) plutôt que d'en coller un approximatif.
 
-**Milestone** (à proposer, pas obligatoire) : l'horizon de livraison par rapport à la prochaine édition. Test : *« faut-il que ce soit en prod le jour de l'édition ? »* Oui → `asap` · Non, mais bientôt → `next` · Non, et pas avant → `next-year` · Ne sait pas → aucun. Le choix revient au propriétaire du projet : le poser en question (Step 3 a), avec le « (Recommandé) » issu du test. Jamais de `Lot N` ni d'autre milestone. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
+**Milestone** (à proposer, pas obligatoire) : est-ce pour la prochaine édition ? Oui, on s'y engage → `asap` · Si possible, sans garantie → `next` · Non → `next-year` · Ne sait pas → aucun. Le choix revient au propriétaire du projet : le poser en question (Step 3 a), avec le « (Recommandé) » issu du test. Jamais de `Lot N` ni d'autre milestone. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
 
 ## Step 3 — (si nécessaire) Interviewer sur les choix ouverts
 

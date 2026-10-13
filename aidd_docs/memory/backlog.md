@@ -26,7 +26,7 @@
 
 ## Planning
 
-- Milestone: horizon par rapport à la prochaine édition, seule date de planning. `asap` = en prod avant l'édition (le contenu des prochaines versions), `next` = bientôt sans lien avec l'édition, `next-year` = après l'édition ; aucun = pas encore planifiée. Ni milestone par version, ni fourre-tout
+- Milestone: horizon par rapport à la prochaine édition, seule date de planning. `asap` = engagé pour l'édition (le contenu des prochaines versions), `next` = si possible pour l'édition, sinon plus tard, `next-year` = pas pour cette édition ; aucun = pas encore planifiée. Ni milestone par version, ni fourre-tout
 - Priority: labels `priorité haute` / `priorité très faible`, pour l'ordre à l'intérieur d'un milestone
 - Les milestones `Lot 1`-`Lot 5` sont le découpage du périmètre initial 2026 (`docs/priorisation-developpement.md`) : plus de nouvelle issue dedans
 

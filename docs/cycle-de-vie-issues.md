@@ -10,7 +10,7 @@ Trois outils, trois questions distinctes — ne pas les mélanger.
 
 | Outil | Répond à | Se ferme quand |
 |-------|----------|----------------|
-| **Milestone** (`asap`, `next`, `next-year`) | Quand la livrer, par rapport à la prochaine édition ? | `asap` : à l'édition ; les deux autres restent ouverts |
+| **Milestone** (`asap`, `next`, `next-year`) | Est-elle pour la prochaine édition ? | `asap` : à l'édition ; les deux autres restent ouverts |
 | **Release `vX.Y.Z`** | Qu'est-ce qui est parti en prod, et quand ? | Le tag est poussé |
 | **Label** (`bug`, `enhancement`…) | De quoi s'agit-il ? | — (filtre, pas compteur) |
 
@@ -72,13 +72,16 @@ de la prochaine édition. Les milestones rangent les issues par rapport à elle.
 
 | Milestone | Sens | Ordre |
 |---|---|---|
-| `asap` | Doit être en prod **avant** la prochaine édition. C'est le contenu des prochaines versions | Traité en premier ; échéance = date de l'édition |
-| `next` | À livrer dans une version prochaine, sans lien avec la date de l'édition | Ensuite, dans l'ordre des labels de priorité |
-| `next-year` | À livrer **après** la prochaine édition : trop lourd, trop risqué juste avant, ou inutile avant | Ne pas y toucher avant l'édition |
+| `asap` | **Engagé** pour la prochaine édition : le contenu des prochaines versions, en prod avant l'édition | Traité en premier ; échéance = date de l'édition |
+| `next` | **Si possible** pour la prochaine édition, sinon tant pis, ce sera plus tard | Une fois `asap` vidé, dans l'ordre des labels de priorité |
+| `next-year` | **Pas pour la prochaine édition** : trop lourd, trop risqué juste avant, ou inutile avant | Ne pas y toucher avant l'édition |
 | *(aucun)* | Pas encore planifiée | À ranger lors de la qualification |
 
-- Test : « faut-il que ce soit en prod le jour de l'édition ? » Oui → `asap`. Non, mais
-  bientôt → `next`. Non, et pas avant → `next-year`. Ne sait pas encore → aucun.
+- Test : « est-ce pour cette édition ? » Oui, on s'y engage → `asap`. Si possible, sans
+  garantie → `next`. Non → `next-year`. Ne sait pas encore → aucun.
+- `asap` n'est pas réservé à ce qui sert le jour J : une amélioration d'admin y a sa place si
+  on s'engage à la livrer avant l'édition. Une issue dont on ne sait pas encore si elle sera
+  faite cette année va dans `next`, pas dans `asap`.
 - Le milestone dit **quand**, le label de priorité (`priorité haute`, `priorité très faible`)
   dit **dans quel ordre** à l'intérieur de `next` et `next-year`.
 - Un bug suit la même règle : il va dans `asap` s'il gêne l'édition.
