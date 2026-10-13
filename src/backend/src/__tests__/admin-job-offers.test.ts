@@ -28,7 +28,10 @@ const createdSponsorIds: number[] = [];
 
 const OFFER = { title: "Architecte Cloud (F/H/NB)", url: "https://jobs.example.org/1" };
 
-// discovery = 1 offer, so a second one is already past the quota.
+// discovery = 1 offer, so a second one is already past the quota. DRAFT, as in
+// the other offer tests: a published sponsor with an offer on the featured
+// edition flips its hasJobOffers flag, which editions.test.ts asserts false
+// while the suites run in parallel.
 async function createSponsor(name: string) {
   const suffix = `${Date.now()}-${Math.round(performance.now())}`;
   const sponsor = await createSponsorFixture({
@@ -36,7 +39,6 @@ async function createSponsor(name: string) {
     slug: `${name.toLowerCase().replace(/\W+/g, "-")}-${suffix}`,
     editionId,
     tierId: await tierIdByKey("discovery"),
-    publicationStatus: "PUBLISHED",
   });
   createdSponsorIds.push(sponsor.id);
   return sponsor;
@@ -125,18 +127,20 @@ describe("Admin job offers (#609)", () => {
     expect(res.statusCode).toBe(404);
   });
 
-  it("should send a deleted offer to the trash, off the public page, and bring it back on restore", async () => {
+  it("should send a deleted offer to the trash, off the sponsor's offers, and bring it back on restore", async () => {
     const sponsor = await createSponsor("Trash Offer Co");
     const created = (await createOffer(sponsor.id)).json();
-    const publicOffers = async () =>
-      (await app.inject({ method: "GET", url: `/api/sponsors/${sponsor.slug}` })).json().jobOffers.map((o: { id: number }) => o.id);
+    const listedOffers = async () =>
+      (await app.inject({ method: "GET", url: `/api/admin/sponsors/${sponsor.id}/editions/${editionId}/job-offers` }))
+        .json()
+        .offers.map((o: { id: number }) => o.id);
 
-    const before = await publicOffers();
+    const before = await listedOffers();
     const del = await app.inject({ method: "DELETE", url: `/api/admin/job-offers/${created.id}` });
-    const afterDelete = await publicOffers();
+    const afterDelete = await listedOffers();
     const trash = await app.inject({ method: "GET", url: "/api/admin/trash/job-offers" });
     const restore = await app.inject({ method: "POST", url: `/api/admin/trash/job-offers/${created.id}/restore` });
-    const afterRestore = await publicOffers();
+    const afterRestore = await listedOffers();
 
     expect(before).toEqual([created.id]);
     expect(del.statusCode).toBe(204);
