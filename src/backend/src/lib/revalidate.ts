@@ -52,6 +52,12 @@ export function revalidateArticle(slug: string): Promise<void> {
   ]);
 }
 
+// One tag's article listing (#376): renaming, merging or trashing a tag
+// changes what it lists, or takes the page away.
+export function revalidateTagPage(slug: string): Promise<void> {
+  return revalidatePaths([...bilingualPaths(`/actualites/tag/${slug}`)]);
+}
+
 /**
  * A content page was saved, published, unpublished or trashed (#419).
  *

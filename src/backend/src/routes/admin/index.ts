@@ -27,6 +27,7 @@ import adminAuditRoutes from "./audit.js";
 import adminFeedbackRoutes from "./feedback.js";
 import adminEditionPhotoRoutes from "./edition-photos.js";
 import adminFaqRoutes from "./faq.js";
+import adminTagRoutes from "./tags.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -36,6 +37,7 @@ export default async function adminRoutes(app: FastifyInstance) {
   await app.register(async (editorApp) => {
     editorApp.addHook("preHandler", requireAdmin);
     await editorApp.register(adminArticleRoutes);
+    await editorApp.register(adminTagRoutes);
     await editorApp.register(adminPageRoutes);
     await editorApp.register(adminEditionPhotoRoutes);
     await editorApp.register(adminFaqRoutes);
