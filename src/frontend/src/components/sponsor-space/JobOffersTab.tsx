@@ -12,6 +12,8 @@ import {
   type SponsorJobOffer,
 } from "@/lib/sponsor-api";
 import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
+import RichTextLimitMeter from "@/components/sponsor-space/RichTextLimitMeter";
+import { richTextUsage, tooLongMessage, validationErrorMessage } from "@/lib/sponsor-text-limit";
 
 // The company's job offers for the current edition (#251), moved to the
 // account-based space (#362). How many may be published depends on the tier
@@ -78,10 +80,17 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
       setMessage({ isOk: false, text: "Renseignez le lien vers l'offre." });
       return;
     }
+    const tooLong = (["descriptionFr", "descriptionEn"] as const).find(
+      (field) => richTextUsage(draft[field]).state === "over",
+    );
+    if (tooLong) {
+      setMessage({ isOk: false, text: tooLongMessage(tooLong) });
+      return;
+    }
 
     setIsBusy(true);
     setMessage(null);
-    const { status, error } =
+    const { status, error, code, message: detail } =
       editingId === null
         ? await createSponsorJobOffer(sponsorId, draft)
         : await updateSponsorJobOffer(sponsorId, editingId, draft);
@@ -93,7 +102,7 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
       void load();
       return;
     }
-    setMessage({ isOk: false, text: submitError(error) });
+    setMessage({ isOk: false, text: validationErrorMessage(code, detail) ?? submitError(error) });
   }
 
   async function remove(offer: SponsorJobOffer) {
@@ -210,14 +219,17 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
                 label="Description"
                 isEmpty={(lang) => !(lang === "fr" ? draft.descriptionFr : draft.descriptionEn).trim()}
                 renderPanel={(lang) => (
-                  <RichTextEditor
-                    label={lang === "fr" ? "Description (français)" : "Description (English)"}
-                    name={`job-offer-description-${lang}`}
-                    value={lang === "fr" ? draft.descriptionFr : draft.descriptionEn}
-                    onChange={(v) =>
-                      setDraft({ ...draft, [lang === "fr" ? "descriptionFr" : "descriptionEn"]: v })
-                    }
-                  />
+                  <>
+                    <RichTextEditor
+                      label={lang === "fr" ? "Description (français)" : "Description (English)"}
+                      name={`job-offer-description-${lang}`}
+                      value={lang === "fr" ? draft.descriptionFr : draft.descriptionEn}
+                      onChange={(v) =>
+                        setDraft({ ...draft, [lang === "fr" ? "descriptionFr" : "descriptionEn"]: v })
+                      }
+                    />
+                    <RichTextLimitMeter html={lang === "fr" ? draft.descriptionFr : draft.descriptionEn} />
+                  </>
                 )}
               />
 

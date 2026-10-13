@@ -128,6 +128,36 @@ describe("Sponsor space job offers (#251 via #362)", () => {
     expect(second.json().error).toBe("quota_reached");
   });
 
+  // The frontend names the field from this response (#610): the limit counts
+  // the editor's HTML, and a bullet list pasted from Lever went over with
+  // 4 594 visible characters.
+  it("names the description in the 400 when its HTML exceeds the limit, and accepts it once shortened", async () => {
+    const { sponsor, headers } = await createSpace("Long Offer Co", "gold", "EDITEUR");
+    const url = `/api/sponsor-space/${sponsor.id}/job-offers`;
+    const bullet = "<li><p>Concevoir des architectures cloud robustes.</p></li>";
+    const payload = { title: "Architecte Cloud (F/H/NB)", url: "https://jobs.lever.co/example/1" };
+
+    const tooLong = await app.inject({
+      method: "POST",
+      url,
+      headers,
+      payload: { ...payload, descriptionFr: `<ul>${bullet.repeat(100)}</ul>` },
+    });
+    const shortened = await app.inject({
+      method: "POST",
+      url,
+      headers,
+      payload: { ...payload, descriptionFr: `<ul>${bullet.repeat(50)}</ul>` },
+    });
+
+    expect(tooLong.statusCode).toBe(400);
+    expect(tooLong.json()).toMatchObject({
+      code: "FST_ERR_VALIDATION",
+      message: expect.stringMatching(/^body\/descriptionFr must NOT have more than 5000 characters/),
+    });
+    expect(shortened.statusCode).toBe(201);
+  });
+
   it("refuses a write from a STAND member", async () => {
     const { sponsor, headers } = await createSpace("Read Only Co", "gold", "STAND");
 
