@@ -7,6 +7,7 @@ import {
   getEcosystemPartners,
   getEditions,
   getIdentitySettings,
+  getNavOrder,
   getPublishedPages,
   getSocialLinks,
 } from "@/lib/api";
@@ -19,7 +20,7 @@ import SocialIcons from "./SocialIcons";
 const SOURCE_CODE_URL = "https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026";
 
 export default async function Footer() {
-  const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages] =
+  const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages, navOrder] =
     await Promise.all([
       getTranslations("nav"),
       getTranslations("footer"),
@@ -31,6 +32,7 @@ export default async function Footer() {
       getIdentitySettings(),
       getEcosystemPartners(),
       getPublishedPages(),
+      getNavOrder(),
     ]);
 
   const footerPages = getFooterPageEntries(pages, locale);
@@ -81,7 +83,7 @@ export default async function Footer() {
             {(() => {
               // Flatten parent + children into one list (the footer has no
               // dropdowns); children render indented under their parent (#203).
-              const footerEntries = getPublicNavEntries(edition, pages, locale)
+              const footerEntries = getPublicNavEntries(edition, pages, locale, navOrder)
                 .flatMap((entry) => [
                   { ...entry, indented: false },
                   ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),

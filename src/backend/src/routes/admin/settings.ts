@@ -2,7 +2,8 @@ import type { FastifyInstance } from "fastify";
 import { buildAlertPayload, sendAlert } from "../../lib/alert-webhook.js";
 import { prisma } from "../../lib/prisma.js";
 import { DEFAULT_CFP_NOTIFICATION_EMAIL } from "../../lib/cfp-settings.js";
-import { revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
+import { revalidateAll, revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
+import { NAV_ORDER_KEY, navOrderSchema, parseNavOrder } from "../../lib/nav-order.js";
 import { validateWebhookUrl } from "../../lib/webhook-url.js";
 
 interface CfpBody {
@@ -56,6 +57,25 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
 
     return { success: true };
   });
+  // GET /api/admin/settings/menu — the menu's top-level order (#606).
+  app.get("/settings/menu", async () => {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: NAV_ORDER_KEY } });
+    return { order: parseNavOrder(setting?.value) };
+  });
+
+  // PUT /api/admin/settings/menu — reorder it. The header sits on every page,
+  // so the whole site is purged.
+  app.put<{ Body: { order: string[] } }>("/settings/menu", {
+    schema: {
+      body: { type: "object", required: ["order"], additionalProperties: false, properties: { order: navOrderSchema } },
+    },
+  }, async (request) => {
+    const value = JSON.stringify(request.body.order);
+    await prisma.siteSetting.upsert({ where: { key: NAV_ORDER_KEY }, update: { value }, create: { key: NAV_ORDER_KEY, value } });
+    await revalidateAll();
+    return { order: request.body.order };
+  });
+
   // GET /api/admin/settings/cfp
   app.get("/settings/cfp", async () => {
     const settings = await prisma.siteSetting.findMany({

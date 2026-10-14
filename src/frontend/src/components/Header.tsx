@@ -6,7 +6,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import SocialIcons from "./SocialIcons";
 import LanguageSwitcher from "./LanguageSwitcher";
-import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useSocialLinks } from "@/contexts/EditionContext";
+import { useCfpSettings, useEdition, useIdentitySettings, useNavPages, useNavOrder, useSocialLinks } from "@/contexts/EditionContext";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { headerCall, invitesSponsors } from "@/lib/edition-phase";
 import { getLogoUrl } from "@/lib/identity";
@@ -34,7 +34,8 @@ export default function Header() {
   const callLabel = call === "tickets" ? tCta("tickets") : tCta("programme");
   const cfpUrl = getCfpCtaUrl(cfp);
 
-  const navEntries = getPublicNavEntries(edition, pages, locale);
+  const navOrder = useNavOrder();
+  const navEntries = getPublicNavEntries(edition, pages, locale, navOrder);
 
   // next/link prefetches a target without noticing the visitor is already on
   // it: standing on the home page, the logo link had the server re-render /fr
