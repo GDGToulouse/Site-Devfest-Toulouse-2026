@@ -6,12 +6,27 @@ import { prisma } from "../lib/prisma.js";
 // moves the row to the trash, so every run used to leave its fixtures behind —
 // they piled up run after run, and their parked slugs kept holding the unique
 // index. Purge them for real once the file is done.
+//
+// Only this file's own rows: a parked slug reads `__trash_<id>__<slug>`, and
+// purging every trashed article removed the one trash-endpoints.test.ts had
+// just put in the trash while it was being listed, failing the CI at random.
+const ARTICLE_PREFIXES = [
+  "test-article-",
+  "dated-article-",
+  "now-article-",
+  "dup-test-",
+  "fr-only-",
+  "publish-gate-",
+  "direct-publish-",
+  "draft-permissive-",
+];
+
 afterAll(async () => {
   await prisma.article.deleteMany({
-    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+    where: { deletedAt: { not: null }, OR: ARTICLE_PREFIXES.map((p) => ({ slug: { contains: `__${p}` } })) },
   });
   await prisma.tag.deleteMany({
-    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+    where: { deletedAt: { not: null }, slug: { contains: "__test-tag-" } },
   });
 });
 
