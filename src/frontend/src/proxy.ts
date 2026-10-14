@@ -4,6 +4,8 @@ import { routing } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
+const SOCIAL_CARD_PATH = /^\/(speakers|sponsors|conferences)\/[^/]+\/social-card$/;
+
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -29,9 +31,10 @@ export default function proxy(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // Locale-agnostic image route handlers (e.g. speaker social cards, US-250):
-  // these render a PNG and must not be rewritten through i18n routing.
-  if (pathname.startsWith("/speakers/") && pathname.endsWith("/social-card")) {
+  // Locale-agnostic image route handlers, the social cards of speakers
+  // (US-250), sponsors and talks (#116): they render a PNG and must not be
+  // rewritten through i18n routing.
+  if (SOCIAL_CARD_PATH.test(pathname)) {
     return NextResponse.next();
   }
 
