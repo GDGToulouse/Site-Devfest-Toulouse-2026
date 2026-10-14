@@ -97,6 +97,9 @@ export default function PublicTab({
           canEdit ? (
             <>
               <RichTextEditor
+                // The picker and the paste upload go through the admin file
+                // routes, which refuse a sponsor (#377).
+                showImageButton={false}
                 label={lang === "fr" ? "Description (français)" : "Description (English)"}
                 name={`description-${lang}`}
                 value={lang === "fr" ? descriptionFr : descriptionEn}
