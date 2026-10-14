@@ -224,6 +224,9 @@ export default function JobOffersTab({ sponsorId, canEdit }: { sponsorId: number
                 renderPanel={(lang) => (
                   <>
                     <RichTextEditor
+                      // The picker and the paste upload go through the admin
+                      // file routes, which refuse a sponsor (#377).
+                      showImageButton={false}
                       label={lang === "fr" ? "Description (français)" : "Description (English)"}
                       name={`job-offer-description-${lang}`}
                       value={lang === "fr" ? draft.descriptionFr : draft.descriptionEn}
