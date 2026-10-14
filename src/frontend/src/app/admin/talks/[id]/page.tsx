@@ -28,6 +28,8 @@ export default function TalkEditorPage() {
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [editionId, setEditionId] = useState<number | null>(null);
   const [editionYear, setEditionYear] = useState<number | null>(null);
+  // The talk as last saved: its visual (#116) exists only once it is published.
+  const [saved, setSaved] = useState<{ slug: string; isPublished: boolean } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   // The rooms of the edition's venue (#105). Empty until an edition is known.
@@ -73,6 +75,7 @@ export default function TalkEditorPage() {
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
+        setSaved({ slug: data.slug, isPublished: data.publicationStatus === "PUBLISHED" });
         setIsLoading(false);
       });
     }
@@ -151,6 +154,7 @@ export default function TalkEditorPage() {
       // the editor on the talk, saving then threw them back to the list, and
       // the SaveFeedback below never got the chance to say anything (#412).
       setSaveState({ kind: "ok", text: "Modifications enregistrées." });
+      setSaved((s) => s && { ...s, isPublished: form.publicationStatus === "PUBLISHED" });
     }
   }
 
@@ -166,8 +170,21 @@ export default function TalkEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouvelle conférence" : "Modifier la conférence"}</h1>
+        {saved?.isPublished && editionYear && (
+          // The social-media visual (#116), as on the speaker sheet.
+          <a
+            href={`/conferences/${saved.slug}/social-card?year=${editionYear}`}
+            target="_blank"
+            rel="noopener"
+            className="ml-auto text-sm text-malachite hover:underline"
+          >
+            Voir le visuel
+          </a>
+        )}
         {talkId !== null && (
           <TrashButton
+            // "Voir le visuel" already pushes the header's right side out.
+            className={saved?.isPublished && editionYear ? "" : undefined}
             path={`/talks/${talkId}`}
             listHref="/admin/talks"
             title="Supprimer la conférence"

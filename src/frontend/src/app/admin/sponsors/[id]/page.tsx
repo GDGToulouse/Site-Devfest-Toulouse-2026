@@ -281,6 +281,9 @@ export default function SponsorEditorPage() {
 
   if (isLoading) return <p className="text-gris">Chargement…</p>;
 
+  // A published participation has a public page, hence a visual (#116).
+  const hasVisual = Boolean(current?.editions?.some((e) => e.publicationStatus === "PUBLISHED"));
+
   // The year is part of the label rather than a line of grey text above the
   // form: it scopes everything in the panel, so it has to stay on screen.
   const tabs = [
@@ -305,6 +308,17 @@ export default function SponsorEditorPage() {
         <h1 className="text-3xl font-bold text-noir">
           {isNew ? "Nouveau sponsor" : current?.name || "Modifier le sponsor"}
         </h1>
+        {hasVisual && current && (
+          // The social-media visual (#116), as on the speaker sheet.
+          <a
+            href={`/sponsors/${current.slug}/social-card`}
+            target="_blank"
+            rel="noopener"
+            className="ml-auto text-sm text-malachite hover:underline"
+          >
+            Voir le visuel
+          </a>
+        )}
         {sponsorId !== null && isAdmin && (
           // What the sponsor sees, for support (#609). A new tab: the admin
           // keeps the sheet they were on.
@@ -312,7 +326,7 @@ export default function SponsorEditorPage() {
             href={`/sponsor/${sponsorId}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="ml-auto text-sm text-bleu hover:underline"
+            className={`${hasVisual ? "" : "ml-auto "}text-sm text-bleu hover:underline`}
           >
             Ouvrir l&apos;espace partenaire
           </a>
@@ -320,7 +334,7 @@ export default function SponsorEditorPage() {
         {sponsorId !== null && (
           <TrashButton
             // The link above already pushes both to the right.
-            className={isAdmin ? "" : undefined}
+            className={hasVisual || isAdmin ? "" : undefined}
             path={`/sponsors/${sponsorId}`}
             listHref="/admin/sponsors"
             title="Supprimer le sponsor"
