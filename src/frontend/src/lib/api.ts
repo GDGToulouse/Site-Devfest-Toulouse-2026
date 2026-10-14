@@ -193,6 +193,11 @@ export async function getContactCategories(): Promise<ContactCategory[]> {
   return (await fetchAPI<ContactCategory[]>("/api/contact/categories")) || [];
 }
 
+// The menu's top-level order set in the admin (#606). Empty: the code's order.
+export async function getNavOrder(): Promise<string[]> {
+  return (await fetchAPI<{ order: string[] }>("/api/settings/nav-order"))?.order ?? [];
+}
+
 export async function getSocialLinks(): Promise<SocialLinks> {
   return (await fetchAPI<SocialLinks>("/api/settings/social")) || {};
 }

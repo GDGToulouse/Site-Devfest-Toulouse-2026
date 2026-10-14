@@ -284,3 +284,37 @@ describe("getSubmenuEntries (#506)", () => {
     expect(getSubmenuEntries(program, 2026)[0].key).not.toBe(program.key);
   });
 });
+
+// #606 — the top-level order is set from the admin; which entries show is
+// still the edition's call.
+describe("getPublicNavEntries with a menu order (#606)", () => {
+  const edition = {
+    isScheduleReady: true,
+    hasSpeakers: true,
+    hasSponsors: true,
+    hasVenueInfo: true,
+    hasFaq: false,
+  } as unknown as Parameters<typeof getPublicNavEntries>[0];
+  const pages = [
+    { slug: "accessibilite", titleFr: "Accessibilité", titleEn: "Accessibility", navLocation: "HEADER", navOrder: 0 },
+  ] as unknown as Parameters<typeof getPublicNavEntries>[1];
+
+  it("places a page among the site's entries, and the programme slot whatever its shape", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr", ["blog", "page-accessibilite", "programme"]).map((e) => e.key);
+
+    expect(keys).toEqual(["blog", "page-accessibilite", "program", "speakers", "sponsors", "venue"]);
+  });
+
+  it("keeps the code's order when no order is set", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr").map((e) => e.key);
+
+    expect(keys).toEqual(["program", "speakers", "sponsors", "venue", "blog", "page-accessibilite"]);
+  });
+
+  it("ignores an entry the edition hides, even if the order names it", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr", ["faq", "venue"]).map((e) => e.key);
+
+    expect(keys).not.toContain("faq");
+    expect(keys[0]).toBe("venue");
+  });
+});

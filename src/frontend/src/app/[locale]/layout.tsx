@@ -18,6 +18,7 @@ import {
   getCurrentEdition,
   getIdentitySettings,
   getPublishedPages,
+  getNavOrder,
   getSocialLinks,
 } from "@/lib/api";
 import { buildFaviconMetadata, getLogoUrl } from "@/lib/identity";
@@ -85,12 +86,13 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, cfp, identity, socialLinks, pages] = await Promise.all([
+  const [edition, cfp, identity, socialLinks, pages, navOrder] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
     getIdentitySettings(),
     getSocialLinks(),
     getPublishedPages(),
+    getNavOrder(),
   ]);
 
   const logoPath = getLogoUrl(identity, "square");
@@ -143,6 +145,7 @@ export default async function LocaleLayout({
           identity={identity}
           socialLinks={socialLinks}
           pages={pages}
+          navOrder={navOrder}
         >
           <Header />
           <main id="main-content" role="main" className="flex-1">

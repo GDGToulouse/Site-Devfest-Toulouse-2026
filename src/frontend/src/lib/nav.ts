@@ -88,10 +88,33 @@ export function getFooterPageEntries(
 // "Conférences" nested underneath (#203). The replays are the exception: they
 // span past editions, so they sit under whichever of the two exists and stand
 // top-level when the edition has no talks yet (#489).
+// The slot an entry fills in the menu order set from the admin (#606). The
+// first entry changes shape with the edition (Programme, Conférences, or the
+// replays alone), but it is one place in the menu: one slot, `programme`.
+const PROGRAMME_SLOT_KEYS = new Set(["program", "conferences", "replays"]);
+
+export function navSlotKey(entry: NavEntry): string {
+  return PROGRAMME_SLOT_KEYS.has(entry.key) ? "programme" : entry.key;
+}
+
+// Sorted by the order set in the admin (#606). An entry the order does not
+// name keeps its default place relative to the others, after the named ones:
+// an entry added to the code later, or a page newly placed in the menu,
+// appears without anyone touching the setting.
+export function applyNavOrder(entries: NavEntry[], order: string[]): NavEntry[] {
+  if (order.length === 0) return entries;
+  const rank = new Map(order.map((key, i) => [key, i]));
+  return entries
+    .map((entry, i) => ({ entry, i, at: rank.get(navSlotKey(entry)) ?? order.length + i }))
+    .sort((a, b) => a.at - b.at)
+    .map(({ entry }) => entry);
+}
+
 export function getPublicNavEntries(
   edition: Edition | null,
   pages: ContentPageSummary[] = [],
   locale = "fr",
+  order: string[] = [],
 ): NavEntry[] {
   const entries: NavEntry[] = [];
 
@@ -119,11 +142,12 @@ export function getPublicNavEntries(
   if (edition?.hasFaq) entries.push(FAQ_ENTRY);
   entries.push(BLOG_ENTRY);
 
-  // Free pages come after the system entries, never between them: the order of
-  // those is driven by the edition's status and is not the editor's to change.
+  // By default, free pages come after the site's entries; the menu order set
+  // in the admin can place them anywhere (#606). Which entries show stays the
+  // edition's call; only their order is the editor's.
   entries.push(...pagesAt(pages, "HEADER", locale));
 
-  return entries;
+  return applyNavOrder(entries, order);
 }
 
 // The items of a desktop dropdown (#506). Hovering a menu opens its dropdown at

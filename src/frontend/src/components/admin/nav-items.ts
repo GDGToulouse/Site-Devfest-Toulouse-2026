@@ -65,6 +65,8 @@ export const adminNavGroups: AdminNavGroup[] = [
       // Who changed what, from which address: personal data, ADMIN only like
       // its API (#513).
       { label: "Historique", path: "/admin/history", icon: "clock", roles: ["ADMIN"] },
+      // The header is on every page: its order is an admin's call (#606).
+      { label: "Menu", path: "/admin/menu", icon: "bars", roles: ["ADMIN"] },
       { label: "Paramètres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
     ],
   },

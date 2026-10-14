@@ -77,7 +77,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (152)
+### Back-office (154)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -164,6 +164,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/settings/cfp` | ADMIN |
 | GET | `/api/admin/settings/general` | ADMIN |
 | PUT | `/api/admin/settings/general` | ADMIN |
+| GET | `/api/admin/settings/menu` | ADMIN |
+| PUT | `/api/admin/settings/menu` | ADMIN |
 | POST | `/api/admin/settings/test-alert-webhook` | ADMIN |
 | POST | `/api/admin/settings/test-webhook` | ADMIN |
 | GET | `/api/admin/speakers` | Équipe (ADMIN, EDITOR) |
@@ -282,7 +284,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (60)
+### Public et divers (61)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -330,6 +332,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/settings/featured-edition` | Public |
 | GET | `/api/settings/identity` | Public |
 | GET | `/api/settings/key-figures` | Public |
+| GET | `/api/settings/nav-order` | Public |
 | GET | `/api/settings/seo` | Public |
 | GET | `/api/settings/social` | Public |
 | GET | `/api/speakers` | Public |
