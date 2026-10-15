@@ -54,6 +54,7 @@ export default function SpeakerDetails({ speakerId, onClose }: { speakerId: numb
       onClose={onClose}
       editHref={`/admin/speakers/${speakerId}`}
       publicHref={speaker && isPublic ? `/fr/speakers/${speaker.slug}` : null}
+      previewHref={speaker ? `/api/preview?type=speaker&slug=${encodeURIComponent(speaker.slug)}` : null}
     >
       {!speaker ? (
         <DetailLoading error={hasError} />

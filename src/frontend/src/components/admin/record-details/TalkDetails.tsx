@@ -66,6 +66,7 @@ export default function TalkDetails({ talkId, onClose }: { talkId: number | null
       onClose={onClose}
       editHref={`/admin/talks/${talkId}`}
       publicHref={publicHref}
+      previewHref={talk ? `/api/preview?type=talk&year=${talk.edition.year}&slug=${encodeURIComponent(talk.slug)}` : null}
     >
       {!talk ? (
         <DetailLoading error={hasError} />

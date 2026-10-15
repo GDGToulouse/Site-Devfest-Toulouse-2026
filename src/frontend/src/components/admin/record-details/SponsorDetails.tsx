@@ -102,6 +102,7 @@ export default function SponsorDetails({ sponsorId, onClose }: { sponsorId: numb
       onClose={onClose}
       editHref={`/admin/sponsors/${sponsorId}`}
       publicHref={sponsor && isPublic ? `/fr/sponsors/${sponsor.slug}` : null}
+      previewHref={sponsor ? `/api/preview?type=sponsor&slug=${encodeURIComponent(sponsor.slug)}` : null}
     >
       {!sponsor ? (
         <DetailLoading error={hasError} />

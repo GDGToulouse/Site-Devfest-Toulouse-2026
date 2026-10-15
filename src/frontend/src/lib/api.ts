@@ -32,7 +32,7 @@ import type { FaqItem, TeamMember,
   CarouselSlide,
 } from "./types";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 /**
  * Raised when the backend could not answer at all — 5xx, network failure,

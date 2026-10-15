@@ -14,15 +14,17 @@ export default function RecordDetailsDialog({
   onClose,
   editHref,
   publicHref,
+  previewHref,
   children,
 }: {
   title: string;
   isOpen: boolean;
   onClose: () => void;
   editHref: string;
-  // The public page, when there is one: a draft has none (#484). Previewing a
-  // draft on the site is a separate piece of work.
+  // The public page, when there is one: a draft has none (#484)…
   publicHref?: string | null;
+  // …but the team can preview it on the site (#618), through /api/preview.
+  previewHref?: string | null;
   children: React.ReactNode;
 }) {
   const titleId = useId();
@@ -55,6 +57,10 @@ export default function RecordDetailsDialog({
           {publicHref ? (
             <a href={publicHref} target="_blank" rel="noopener noreferrer" className="text-sm text-bleu hover:underline">
               Voir sur le site
+            </a>
+          ) : previewHref ? (
+            <a href={previewHref} target="_blank" rel="noopener noreferrer" className="text-sm text-bleu hover:underline">
+              Prévisualiser sur le site
             </a>
           ) : (
             <span className="text-sm text-gris">Pas de page publique : non publié</span>
