@@ -19,7 +19,8 @@
     "jobOffers": "Offres d'emploi",
     "venue": "Lieu",
     "blog": "Actus",
-    "faq": "FAQ"
+    "faq": "FAQ",
+    "team": "Équipe"
   },
   "cta": {
     "becomeSponsor": "Devenir sponsor",
@@ -550,5 +551,20 @@
       "PRACTICAL": "Sur place",
       "OTHER": "Autres questions"
     }
+  },
+  "team": {
+    "home": "Accueil",
+    "pageTitle": "L'équipe",
+    "metaTitle": "Équipe",
+    "description": "Les bénévoles du GDG Toulouse qui organisent le DevFest Toulouse.",
+    "intro": "Le DevFest Toulouse est organisé par des bénévoles du GDG Toulouse.",
+    "introYear": "Le DevFest Toulouse {year} est organisé par des bénévoles du GDG Toulouse.",
+    "empty": "L'équipe sera présentée prochainement.",
+    "website": "Site web",
+    "linkedin": "LinkedIn",
+    "twitter": "X (Twitter)",
+    "github": "GitHub",
+    "bluesky": "Bluesky",
+    "linkOf": "{network} de {name}"
   }
 }

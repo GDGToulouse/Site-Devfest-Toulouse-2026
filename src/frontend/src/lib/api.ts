@@ -1,4 +1,4 @@
-import type { FaqItem,
+import type { FaqItem, TeamMember,
   Edition,
   EditionDetail,
   EditionSummary,
@@ -166,6 +166,11 @@ export async function getContentPage(slug: string): Promise<ContentPage | null> 
 }
 
 // The published FAQ (#111), theme by theme in the page's order.
+// The featured edition's organisers, alphabetical (#110).
+export async function getTeam(): Promise<{ year: number | null; members: TeamMember[] }> {
+  return (await fetchAPI<{ year: number | null; members: TeamMember[] }>("/api/team")) ?? { year: null, members: [] };
+}
+
 export async function getFaq(): Promise<FaqItem[]> {
   return (await fetchAPI<FaqItem[]>("/api/faq")) || [];
 }

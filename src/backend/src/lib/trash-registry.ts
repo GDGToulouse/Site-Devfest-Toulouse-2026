@@ -1,5 +1,5 @@
 import { prisma } from "./prisma.js";
-import { revalidateJobOfferPages } from "./revalidate.js";
+import { revalidateAll, revalidateJobOfferPages } from "./revalidate.js";
 
 /**
  * What the trash knows about each soft-deletable entity (#148).
@@ -159,6 +159,19 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
         select: { editionSponsor: { select: { sponsor: { select: { slug: true } } } } },
       });
       if (offer) await revalidateJobOfferPages(offer.editionSponsor.sponsor.slug);
+    },
+  },
+  {
+    // An organiser (#110). The photo is an upload, checked before a purge.
+    key: "team",
+    model: "teamMember",
+    labelField: "lastName",
+    parkedFields: [],
+    fileFields: ["photoUrl"],
+    adminOnly: false,
+    // The "Équipe" menu entry depends on it, on every page.
+    onRestore: async () => {
+      await revalidateAll();
     },
   },
   {

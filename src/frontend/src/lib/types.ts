@@ -43,6 +43,8 @@ export interface Edition {
   isScheduleReady: boolean;
   /** At least one published FAQ question (#111), site-wide. */
   hasFaq?: boolean;
+  /** At least one organiser ticked for the edition (#110). */
+  hasTeam?: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
   // At least one partner job offer is published and still within its
@@ -670,4 +672,17 @@ export interface FaqItem {
   questionEn: string;
   answerFr: string;
   answerEn: string;
+}
+
+// An organiser of the DevFest (#110), as the public team page reads it.
+export interface TeamMember {
+  id: number;
+  firstName: string;
+  lastName: string;
+  photoUrl: string | null;
+  websiteUrl: string | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  githubUrl: string | null;
+  blueskyUrl: string | null;
 }
