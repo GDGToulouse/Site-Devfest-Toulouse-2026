@@ -566,5 +566,9 @@
     "github": "GitHub",
     "bluesky": "Bluesky",
     "linkOf": "{network} de {name}"
+  },
+  "preview": {
+    "label": "Aperçu — contenu non publié",
+    "exit": "Quitter l'aperçu"
   }
 }

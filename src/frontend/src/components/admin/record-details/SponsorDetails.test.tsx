@@ -74,11 +74,15 @@ describe("SponsorDetails (#484)", () => {
     expect(screen.getByRole("link", { name: "Voir sur le site" })).toHaveAttribute("href", "/fr/sponsors/aeronova");
   });
 
-  it("offers no public link while the company is only in draft", async () => {
+  // #618: a draft has no public page, but the team previews it on the site.
+  it("offers a preview instead of the public link while the company is only in draft", async () => {
     mockSponsor("DRAFT");
     render(<SponsorDetails sponsorId={3} onClose={() => {}} />);
 
-    expect(await screen.findByText("Pas de page publique : non publié")).toBeInTheDocument();
+    expect(await screen.findByRole("link", { name: "Prévisualiser sur le site" })).toHaveAttribute(
+      "href",
+      "/api/preview?type=sponsor&slug=aeronova",
+    );
     expect(screen.queryByRole("link", { name: "Voir sur le site" })).not.toBeInTheDocument();
   });
 });

@@ -37,3 +37,20 @@ export async function requireAdminRole(request: FastifyRequest, reply: FastifyRe
   }
   request.adminUser = ctx.user;
 }
+
+/**
+ * Requires ADMIN or EDITOR signed in through the browser: an API key or an AI
+ * agent's token is refused even for a team member. Guards the draft preview
+ * (#618), a human gesture from the back-office that no integration needs —
+ * keeping drafts off every non-browser credential narrows what a leaked key or
+ * an agent can read.
+ */
+export async function requireTeamBrowserSession(request: FastifyRequest, reply: FastifyReply) {
+  const ctx = await getAuthContext(request);
+  if (!ctx || ctx.source !== "session" || (ctx.user.role !== "ADMIN" && ctx.user.role !== "EDITOR")) {
+    request.log.debug({ authPhase: "requireTeamBrowserSession.deny", source: ctx?.source ?? null, role: ctx?.user.role ?? null });
+    reply.status(403).send({ error: "Forbidden" });
+    return;
+  }
+  request.adminUser = ctx.user;
+}

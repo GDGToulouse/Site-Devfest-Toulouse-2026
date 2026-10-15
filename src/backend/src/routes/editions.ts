@@ -49,6 +49,58 @@ export async function getFeaturedEdition() {
   });
 }
 
+// One talk of a given year, shared by the public route and the team's draft
+// preview (#618): `includeDrafts` lifts the publication filters on the talk and
+// its speakers, never the trash ones.
+export async function findEditionTalkPage(
+  edition: { id: number; year: number },
+  slug: string,
+  { includeDrafts = false } = {},
+) {
+  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  const talk = await prisma.talk.findFirst({
+    where: {
+      editionId: edition.id,
+      slug,
+      ...published,
+      ...notDeleted,
+    },
+    include: {
+      // Nested reads carry their own filter: a trashed speaker would keep
+      // showing up under a live talk otherwise (#147).
+      speakers: {
+        // Published *for this edition* (#351), same reasoning as the talk list.
+        where: {
+          ...notDeleted,
+          editions: { some: { editionId: edition.id, ...published } },
+        },
+        select: { slug: true, name: true, photoUrl: true, company: true },
+        orderBy: { name: "asc" },
+      },
+      category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
+    },
+  });
+
+  if (!talk) return null;
+
+  return {
+    slug: talk.slug,
+    title: talk.title,
+    description: talk.description,
+    format: talk.format,
+    level: talk.level,
+    language: talk.language,
+    videoUrl: talk.videoUrl,
+    year: edition.year,
+    // When and where (#443), same as the current-edition detail route.
+    room: talk.roomLabel,
+    startsAt: talk.startsAt,
+    endsAt: talk.endsAt,
+    category: visibleCategory(talk.category),
+    speakers: talk.speakers,
+  };
+}
+
 export default async function editionRoutes(app: FastifyInstance) {
   // GET /api/editions — returns all editions (summary)
   app.get("/editions", async () => {
@@ -360,47 +412,9 @@ export default async function editionRoutes(app: FastifyInstance) {
     });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
 
-    const talk = await prisma.talk.findFirst({
-      where: {
-        editionId: edition.id,
-        slug: request.params.slug,
-        publicationStatus: "PUBLISHED",
-        ...notDeleted,
-      },
-      include: {
-        // Nested reads carry their own filter: a trashed speaker would keep
-        // showing up under a live talk otherwise (#147).
-        speakers: {
-          // Published *for this edition* (#351), same reasoning as the list above.
-          where: {
-            ...notDeleted,
-            editions: { some: { editionId: edition.id, publicationStatus: "PUBLISHED" } },
-          },
-          select: { slug: true, name: true, photoUrl: true, company: true },
-          orderBy: { name: "asc" },
-        },
-        category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
-      },
-    });
-
-    if (!talk) return reply.status(404).send({ error: "Talk not found" });
-
-    return {
-      slug: talk.slug,
-      title: talk.title,
-      description: talk.description,
-      format: talk.format,
-      level: talk.level,
-      language: talk.language,
-      videoUrl: talk.videoUrl,
-      year: edition.year,
-      // When and where (#443), same as the current-edition detail route.
-      room: talk.roomLabel,
-      startsAt: talk.startsAt,
-      endsAt: talk.endsAt,
-      category: visibleCategory(talk.category),
-      speakers: talk.speakers,
-    };
+    const page = await findEditionTalkPage(edition, request.params.slug);
+    if (!page) return reply.status(404).send({ error: "Talk not found" });
+    return page;
   });
 
   // GET /api/editions/current — returns the featured edition

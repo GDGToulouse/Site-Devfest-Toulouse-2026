@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 251 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 254 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -66,6 +66,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 - **Paramètres publics** : lus par préfixe, sans l'adresse de notification CFP ni les URL de webhook.
 - **Jetons d'agent** : émetteur, audience `/api/mcp`, signature, consentement revérifié à chaque appel, compte banni ou à la corbeille refusé.
 - **Agents d'un compte banni ou supprimé** : coupés, et le restent si le bannissement est levé.
+- **Aperçu des brouillons (#618)** : `/api/admin/preview/*` lève les filtres de publication, pas ceux de la corbeille ; réservé à une session navigateur ADMIN ou EDITOR, refusé aux clés d'API et aux agents même pour un membre de l'équipe (test `admin-preview.test.ts`).
 
 ## Non couvert
 
@@ -77,7 +78,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (159)
+### Back-office (162)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -152,6 +153,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/pages/:id` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/pages/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/pages/:id` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/preview/editions/:year/talks/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
+| GET | `/api/admin/preview/speakers/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
+| GET | `/api/admin/preview/sponsors/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
 | PUT | `/api/admin/profile` | Contrôlé dans la route : renomme l'appelant ; vérifie la session elle-même |
 | DELETE | `/api/admin/rooms/:id` | ADMIN |
 | PUT | `/api/admin/rooms/:id` | ADMIN |

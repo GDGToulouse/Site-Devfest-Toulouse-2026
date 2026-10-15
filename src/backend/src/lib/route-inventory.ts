@@ -18,6 +18,7 @@ export const KNOWN_GUARDS: Record<string, string> = {
   requireAdminRole: "ADMIN",
   requireAnyAuthenticated: "Équipe (ADMIN, EDITOR)",
   requireBrowserSession: "Tout compte, depuis le navigateur",
+  requireTeamBrowserSession: "Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA",
   requireSponsorAccess_STAND: "Contact du sponsor (STAND et plus) ou ADMIN",
   requireSponsorAccess_EDITEUR: "Contact du sponsor (EDITEUR et plus) ou ADMIN",
   requireSponsorAccess_RESPONSABLE: "Contact du sponsor (RESPONSABLE) ou ADMIN",

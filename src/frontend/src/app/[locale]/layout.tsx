@@ -6,12 +6,14 @@ import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { draftMode } from "next/headers";
 import { routing } from "@/i18n/routing";
 import PlausibleProvider from "next-plausible";
 import WebVitals from "@/components/WebVitals";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
+import PreviewBanner from "@/components/preview/PreviewBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
 import {
   getCfpSettings,
@@ -86,13 +88,14 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, cfp, identity, socialLinks, pages, navOrder] = await Promise.all([
+  const [edition, cfp, identity, socialLinks, pages, navOrder, draft] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
     getIdentitySettings(),
     getSocialLinks(),
     getPublishedPages(),
     getNavOrder(),
+    draftMode(),
   ]);
 
   const logoPath = getLogoUrl(identity, "square");
@@ -138,6 +141,7 @@ export default async function LocaleLayout({
         {locale === "fr" ? "Aller au contenu" : "Skip to content"}
       </a>
       <NextIntlClientProvider>
+        {draft.isEnabled && <PreviewBanner />}
         <LanguageSuggestionBanner />
         <EditionProvider
           edition={edition}

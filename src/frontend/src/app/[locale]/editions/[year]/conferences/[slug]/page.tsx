@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getEditionByYear, getEditionTalkBySlug } from "@/lib/api";
+import { getEditionByYear } from "@/lib/api";
+import { getEditionTalkPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
 import { buildVideoJsonLd, canonicalLocaleFor, jsonLdScript } from "@/lib/seo";
@@ -27,7 +28,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { year, slug } = await params;
   const locale = await getLocale();
-  const talk = await getEditionTalkBySlug(Number(year), slug);
+  const talk = await getEditionTalkPage(Number(year), slug);
 
   if (!talk) return { title: "Session not found" };
 
@@ -54,7 +55,7 @@ export default async function EditionTalkDetailPage({
   const yearNum = Number(year);
   if (!Number.isInteger(yearNum)) notFound();
 
-  const talk = await getEditionTalkBySlug(yearNum, slug);
+  const talk = await getEditionTalkPage(yearNum, slug);
   if (!talk) notFound();
 
   // A replay as a VideoObject (#382). Its upload date is the edition's: a

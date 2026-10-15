@@ -187,8 +187,13 @@ const nextConfig: NextConfig = {
         ],
       },
       // Cache-Control: homepage — short cache (5 min)
+      // Both public rules stand aside in draft preview (#618): Next sends that
+      // page `private, no-store`, which these rules would otherwise overwrite
+      // with an s-maxage — a shared cache could then serve a draft to anyone.
+      // The cookie is Next's own draft-mode marker.
       {
         source: "/:locale(fr|en)",
+        missing: [{ type: "cookie", key: "__prerender_bypass" }],
         headers: [
           { key: "Cache-Control", value: "s-maxage=300, stale-while-revalidate=60" },
         ],
@@ -206,6 +211,7 @@ const nextConfig: NextConfig = {
       // cached for an hour. Serve 5xx with `no-store` at that layer.
       {
         source: "/:locale(fr|en)/:path+",
+        missing: [{ type: "cookie", key: "__prerender_bypass" }],
         headers: [
           { key: "Cache-Control", value: "s-maxage=3600, stale-while-revalidate=60" },
         ],
