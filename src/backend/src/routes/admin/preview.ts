@@ -3,7 +3,8 @@ import { prisma } from "../../lib/prisma.js";
 import { notDeleted } from "../../lib/admin-helpers.js";
 import { findSpeakerPage } from "../speakers.js";
 import { findSponsorPage } from "../sponsors.js";
-import { findEditionTalkPage } from "../editions.js";
+import { findEditionTalkPage, getFeaturedEdition } from "../editions.js";
+import { findFeaturedTalkPage } from "../talks.js";
 
 // Draft preview (#618): the public page payloads, publication filters lifted.
 // Same shape as the public routes, so the site renders a draft with its own
@@ -25,6 +26,15 @@ export default async function adminPreviewRoutes(app: FastifyInstance) {
   app.get<{ Params: { slug: string } }>("/preview/sponsors/:slug", { schema: { params: slugParams } }, async (request, reply) => {
     const page = await findSponsorPage(request.params.slug, { includeDrafts: true });
     if (!page) return reply.status(404).send({ error: "Sponsor not found" });
+    return page;
+  });
+
+  // The featured edition's talk, as /conferences/<slug> shows it (#633).
+  app.get<{ Params: { slug: string } }>("/preview/talks/:slug", { schema: { params: slugParams } }, async (request, reply) => {
+    const edition = await getFeaturedEdition();
+    if (!edition) return reply.status(404).send({ error: "No edition found" });
+    const page = await findFeaturedTalkPage(edition, request.params.slug, { includeDrafts: true });
+    if (!page) return reply.status(404).send({ error: "Talk not found" });
     return page;
   });
 

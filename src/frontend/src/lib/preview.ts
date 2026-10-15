@@ -6,8 +6,9 @@ import {
   getEditionTalkBySlug,
   getSpeakerBySlug,
   getSponsorBySlug,
+  getTalkBySlug,
 } from "./api";
-import type { EditionTalkDetail, SpeakerDetail, SponsorDetail } from "./types";
+import type { EditionTalkDetail, SpeakerDetail, SponsorDetail, TalkDetail } from "./types";
 
 // Draft preview (#618). In Next's draft mode, the speaker, talk and sponsor
 // pages read their record through the back-office preview routes, which lift
@@ -56,6 +57,8 @@ export const previewPaths = {
   speaker: (slug: string) => `/speakers/${encodeURIComponent(slug)}`,
   sponsor: (slug: string) => `/sponsors/${encodeURIComponent(slug)}`,
   talk: (year: number, slug: string) => `/editions/${year}/talks/${encodeURIComponent(slug)}`,
+  // A talk of the featured edition, as /conferences/<slug> shows it (#633).
+  featuredTalk: (slug: string) => `/talks/${encodeURIComponent(slug)}`,
 };
 
 export function getSpeakerPage(slug: string): Promise<SpeakerDetail | null> {
@@ -64,6 +67,10 @@ export function getSpeakerPage(slug: string): Promise<SpeakerDetail | null> {
 
 export function getSponsorPage(slug: string): Promise<SponsorDetail | null> {
   return previewOr(previewPaths.sponsor(slug), () => getSponsorBySlug(slug));
+}
+
+export function getTalkPage(slug: string): Promise<TalkDetail | null> {
+  return previewOr(previewPaths.featuredTalk(slug), () => getTalkBySlug(slug));
 }
 
 export function getEditionTalkPage(year: number, slug: string): Promise<EditionTalkDetail | null> {

@@ -2,6 +2,7 @@ import type { Replay } from "@/lib/types";
 import { localizedField } from "@/lib/i18n-helpers";
 import { Link } from "@/i18n/navigation";
 import SpeakerAvatars from "@/components/speakers/SpeakerAvatars";
+import { talkPath } from "@/lib/talk-path";
 
 interface ReplayCardProps {
   replay: Replay;
@@ -9,6 +10,8 @@ interface ReplayCardProps {
   // The filters currently applied, so a tag can narrow the view instead of
   // resetting it: clicking "2019" on a Conference-filtered list keeps the format.
   current: { q: string; year: string; format: string; category: string };
+  // The featured edition's talks live at /conferences/<slug> (#633).
+  featuredYear: number | null;
   labels: {
     watch: string;
     filterBy: string;
@@ -31,10 +34,10 @@ function filterHref(
   return `/replays?${params.toString()}`;
 }
 
-export default function ReplayCard({ replay, locale, current, labels }: ReplayCardProps) {
+export default function ReplayCard({ replay, locale, current, featuredYear, labels }: ReplayCardProps) {
   const category = replay.category ? localizedField(replay.category, "name", locale) : null;
   const languageLabel = labels.languageLabels[replay.language] ?? replay.language.toUpperCase();
-  const talkHref = `/editions/${replay.year}/conferences/${replay.slug}`;
+  const talkHref = talkPath(replay.slug, replay.year, featuredYear);
 
   // Tags share one muted style so the reading order stays title → speakers →
   // tags. Only the category keeps its own colour, which carries meaning.

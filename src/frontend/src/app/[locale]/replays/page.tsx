@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getReplays, getReplayFilters } from "@/lib/api";
+import { getCurrentEdition, getReplays, getReplayFilters } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ReplayCard from "@/components/replays/ReplayCard";
 import ReplayFiltersBar from "@/components/replays/ReplayFiltersBar";
@@ -39,7 +39,7 @@ export default async function ReplaysPage({
     category: first(sp.category),
   };
 
-  const [replays, filters] = await Promise.all([getReplays(current), getReplayFilters()]);
+  const [replays, filters, featured] = await Promise.all([getReplays(current), getReplayFilters(), getCurrentEdition()]);
 
   const formatLabels = Object.fromEntries(
     TALK_FORMATS.map((format) => [format, t(`format.${format}`)]),
@@ -91,6 +91,7 @@ export default async function ReplaysPage({
                   replay={replay}
                   locale={locale}
                   current={current}
+                  featuredYear={featured?.year ?? null}
                   labels={{
                     watch: t("watch"),
                     filterBy: t("filterBy", { value: "{value}" }),

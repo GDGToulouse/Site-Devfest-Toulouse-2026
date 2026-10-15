@@ -1,15 +1,17 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getCurrentEdition, getTalkBySlug } from "@/lib/api";
+import { getCurrentEdition } from "@/lib/api";
+import { getTalkPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
-import { buildTalkEventJsonLd, canonicalLocaleFor, isCompleteEvent, jsonLdScript } from "@/lib/seo";
+import { buildTalkEventJsonLd, buildVideoJsonLd, canonicalLocaleFor, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
 import TalkFeedback from "@/components/conferences/TalkFeedback";
+import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
+import YouTubeFacade from "@/components/YouTubeFacade";
 import { Link } from "@/i18n/navigation";
 
 // Absolute, because the event body ends up on someone else's calendar: a
@@ -23,7 +25,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
-  const talk = await getTalkBySlug(slug);
+  const talk = await getTalkPage(slug);
 
   if (!talk) return { title: "Session not found" };
 
@@ -58,13 +60,15 @@ export default async function TalkDetailPage({
   const locale = await getLocale();
   const t = await getTranslations("conferences");
   const tcal = await getTranslations("calendar");
-  const talk = await getTalkBySlug(slug);
+  // Language labels live under `replays`, the namespace that owns them.
+  const treplays = await getTranslations("replays");
+  const talk = await getTalkPage(slug);
 
   if (!talk) notFound();
 
-  // Only for the venue printed on the calendar event; the page itself does not
-  // otherwise need the edition.
-  const edition = talk.startsAt ? await getCurrentEdition() : null;
+  // For the venue printed on the calendar event, and the replay's upload date;
+  // the page itself does not otherwise need the edition.
+  const edition = talk.startsAt || talk.videoUrl ? await getCurrentEdition() : null;
 
   const title = talk.title;
   const description = talk.description;
@@ -78,6 +82,12 @@ export default async function TalkDetailPage({
 
   // The session as an Event (#382), once it has an hour and the edition a venue.
   const eventJsonLd = buildTalkEventJsonLd(talk, edition, `/${locale}/conferences/${slug}`);
+  // The replay as a VideoObject (#382), as the dated page did before it started
+  // redirecting here (#633). A recording cannot precede the edition.
+  const videoJsonLd = talk.videoUrl
+    ? buildVideoJsonLd({ ...talk, videoUrl: talk.videoUrl }, edition?.startDate?.split("T")[0] ?? null)
+    : null;
+  const languageLabel = talk.language === "en" ? treplays("language.en") : treplays("language.fr");
 
   return (
     <div className="px-6 py-8 lg:py-12">
@@ -86,6 +96,12 @@ export default async function TalkDetailPage({
           <script
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: jsonLdScript(eventJsonLd) }}
+          />
+        )}
+        {videoJsonLd && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(videoJsonLd) }}
           />
         )}
         <Breadcrumb items={breadcrumbItems} />
@@ -108,7 +124,7 @@ export default async function TalkDetailPage({
               {categoryName}
             </span>
           )}
-          <span className="text-sm uppercase text-gris">{talk.language}</span>
+          <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">{languageLabel}</span>
         </div>
 
         <h1 className="mt-4 text-3xl lg:text-5xl font-bold text-noir">{title}</h1>
@@ -117,6 +133,14 @@ export default async function TalkDetailPage({
             and the form has to be on screen without scrolling (#564). Renders
             nothing before the event day. */}
         <TalkFeedback slug={talk.slug} />
+
+        {/* The replay once filmed. The facade keeps YouTube out of the page
+            until the visitor asks for it (#348). */}
+        {talk.videoUrl && (
+          <div className="mt-6">
+            <YouTubeFacade videoUrl={talk.videoUrl} title={talk.title} />
+          </div>
+        )}
 
         {description && (
           <p className="mt-6 whitespace-pre-line text-lg leading-relaxed text-noir">{description}</p>
@@ -157,13 +181,7 @@ export default async function TalkDetailPage({
                   className="group flex flex-col items-center gap-3 text-center"
                 >
                   <div className="relative h-24 w-24 overflow-hidden rounded-full bg-blanc-casse">
-                    {sp.photoUrl ? (
-                      <Image src={sp.photoUrl} alt={sp.name} fill className="object-cover" sizes="96px" />
-                    ) : (
-                      <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-gris">
-                        {sp.name.charAt(0)}
-                      </span>
-                    )}
+                    <SpeakerPhoto photoUrl={sp.photoUrl} name={sp.name} size={96} />
                   </div>
                   <span className="font-bold text-noir group-hover:text-bleu">{sp.name}</span>
                   {sp.company && <span className="text-sm text-gris">{sp.company}</span>}
