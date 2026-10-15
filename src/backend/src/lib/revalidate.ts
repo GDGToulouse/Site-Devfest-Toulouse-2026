@@ -132,23 +132,36 @@ export function revalidateSpeakers(): Promise<void> {
 // ~240 of these: purging them all on every edit would be absurd, and never
 // purging them means a speaker who fixes their bio from their magic link sees
 // nothing change for an hour.
-export function revalidateSpeaker(slug: string): Promise<void> {
-  return revalidatePaths([
+export function speakerPagePaths(slug: string): string[] {
+  return [
     ...bilingualPaths(`/speakers/${slug}`),
     // The OG image is its own route — same reason as the home page (#183).
     ...bilingualPaths(`/speakers/${slug}/opengraph-image`),
-  ]);
+  ];
 }
 
-export function revalidateConferences(): Promise<void> {
-  return revalidatePaths([
+export function revalidateSpeaker(slug: string): Promise<void> {
+  return revalidatePaths(speakerPagePaths(slug));
+}
+
+export function conferenceListPaths(): string[] {
+  return [
     ...bilingualPaths(""),
     ...bilingualPaths("/conferences"),
     // The grid (#106) reads the same talks, plus the off-session entries the
     // schedule screens write. Placing a session must show there immediately —
     // the organisers publish the planning right up to the day before.
     ...bilingualPaths("/programme"),
-  ]);
+  ];
+}
+
+export function revalidateConferences(): Promise<void> {
+  return revalidatePaths(conferenceListPaths());
+}
+
+/** One year's archive page, which lists its talks and speakers (#63). */
+export function editionPagePaths(year: number): string[] {
+  return bilingualPaths(`/editions/${year}`);
 }
 
 /**
@@ -161,20 +174,28 @@ export function revalidateConferences(): Promise<void> {
  * Only the undated route carries an OG image — `editions/[year]/conferences`
  * has none.
  */
-export function revalidateTalk(slug: string, year: number): Promise<void> {
-  return revalidatePaths([
+export function talkPagePaths(slug: string, year: number): string[] {
+  return [
     ...bilingualPaths(`/conferences/${slug}`),
     ...bilingualPaths(`/conferences/${slug}/opengraph-image`),
     ...bilingualPaths(`/editions/${year}/conferences/${slug}`),
-  ]);
+  ];
+}
+
+export function revalidateTalk(slug: string, year: number): Promise<void> {
+  return revalidatePaths(talkPagePaths(slug, year));
 }
 
 /**
  * One sponsor's own page (#360). No OG image on this route, unlike speakers and
  * talks — nothing else to purge.
  */
+export function sponsorPagePaths(slug: string): string[] {
+  return bilingualPaths(`/sponsors/${slug}`);
+}
+
 export function revalidateSponsor(slug: string): Promise<void> {
-  return revalidatePaths([...bilingualPaths(`/sponsors/${slug}`)]);
+  return revalidatePaths(sponsorPagePaths(slug));
 }
 
 /**

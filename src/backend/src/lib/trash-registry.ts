@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
-import { revalidateAll, revalidateJobOfferPages } from "./revalidate.js";
+import { revalidateAll, revalidateJobOfferPages, revalidateSpeakers } from "./revalidate.js";
+import { revalidateSpeakerFootprint, revalidateTalkFootprint } from "./page-footprint.js";
 
 /**
  * What the trash knows about each soft-deletable entity (#148).
@@ -61,6 +62,11 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["slug"],
     fileFields: ["photoUrl"],
     adminOnly: false,
+    // Back on every page that showed them, under the slug they got back (#633).
+    onRestore: async (id) => {
+      await revalidateSpeakers();
+      await revalidateSpeakerFootprint([], [Number(id)]);
+    },
   },
   {
     key: "talks",
@@ -69,6 +75,10 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["slug"],
     fileFields: [],
     adminOnly: false,
+    // Back on its pages and its speakers' (#633).
+    onRestore: async (id) => {
+      await revalidateTalkFootprint([], [Number(id)]);
+    },
   },
   {
     key: "sponsors",

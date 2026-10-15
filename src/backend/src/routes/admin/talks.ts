@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { TALK_FORMATS, TALK_PAGE_SIZE, TALK_PAGE_SIZE_MAX, TALK_SORTS, talkOrderBy, talkWhere, type TalkListFilters, type TalkSort } from "../../lib/talk-list.js";
-import { revalidateConferences, revalidateTalk } from "../../lib/revalidate.js";
+import { revalidateTalkFootprint, talkFootprint } from "../../lib/page-footprint.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -310,8 +310,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateConferences();
-    revalidateTalk(talk.slug, talk.edition.year);
+    await revalidateTalkFootprint([], [talk.id]);
     return reply.code(201).send(serialize(talk));
   });
 
@@ -321,6 +320,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params;
     const body = request.body;
+    const before = await talkFootprint([Number(id)]);
 
     if (body.format !== undefined && !FORMATS.includes(body.format)) {
       return reply.code(422).send({ error: `Invalid format. Allowed: ${FORMATS.join(", ")}` });
@@ -399,10 +399,10 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateConferences();
-    // No second slug to purge, unlike speakers (#351): a talk's slug is computed
-    // once at creation and never recomputed on update.
-    revalidateTalk(talk.slug, talk.edition.year);
+    // Its pages and its speakers', before and after: a speaker taken off the
+    // talk must lose it from their page (#633). No second slug, unlike speakers
+    // (#351): a talk's slug is computed once at creation.
+    await revalidateTalkFootprint(before, [talk.id]);
     return serialize(talk);
   });
 
@@ -420,7 +420,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       where: { id: { in: ids }, ...notDeleted },
       data: { publicationStatus: value },
     });
-    revalidateConferences();
+    // A status flip shows or hides the talk on its pages and its speakers' (#633).
+    await revalidateTalkFootprint([], ids);
     return { count };
   });
 
@@ -435,6 +436,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       include: { edition: { select: { year: true } } },
     });
     if (!talk) return notFound(reply, "Talk");
+    // Read while live: the slug is parked below.
+    const before = await talkFootprint([talkId]);
 
     // The slug is unique per edition and a trashed row keeps its slot, so park
     // it out of the live namespace — otherwise re-creating a talk under the
@@ -443,9 +446,9 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       where: { id: talkId },
       data: { ...softDeleteData(), slug: parkUniqueValue(talk.slug, talkId) },
     });
-    revalidateConferences();
-    // The slug it had while public — its pages must stop answering from cache.
-    revalidateTalk(talk.slug, talk.edition.year);
+    // The slug it had while public — its pages must stop answering from cache —
+    // and its speakers' pages, which listed it (#633).
+    await revalidateTalkFootprint(before, [talkId]);
     return reply.code(204).send();
   });
 }
