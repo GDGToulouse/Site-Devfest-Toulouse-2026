@@ -31,6 +31,7 @@ flowchart LR
 
 ## Gotchas
 
+- Une page qui affiche une fiche à travers un lien (un speaker sur ses conférences, son sponsor, son édition) ne se purge pas avec la fiche : les écritures de speakers et de conférences passent par `lib/page-footprint.ts`, lu avant **et** après l'écriture (#633). Une conférence de l'édition en avant n'a qu'une page, `/conferences/<slug>` : l'adresse datée redirige en 307, pas en 308, car l'édition en avant change chaque année
 - Aperçu des brouillons (#618) : en draft mode de Next, les pages speaker, conférence et sponsor lisent `/api/admin/preview/*` par `lib/preview.ts`, cookies transmis, sans cache. Les images OG et social cards gardent les getters publics : un brouillon ne doit jamais entrer dans une image en cache. Les règles `s-maxage` de `next.config.ts` s'effacent devant le cookie `__prerender_bypass`, sinon elles écraseraient le `no-store` de Next
 - Next **remplace** le bloc `openGraph` d'un layout au lieu de le fusionner : une page qui en déclare un perd `og:site_name`, `og:locale` et `og:type`. Un test interdit `openGraph:` dans les pages (#384)
 - Les heures du programme passent par `formatEventTime` (`src/frontend/src/lib/datetime.ts`), en `Europe/Paris` explicite : le conteneur tourne en UTC. La saisie admin (`isoToLocalInput`) lit encore l'heure du navigateur

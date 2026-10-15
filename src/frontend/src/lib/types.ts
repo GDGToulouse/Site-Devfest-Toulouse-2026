@@ -492,6 +492,8 @@ export interface TalkDetail {
   startsAt: string | null;
   endsAt: string | null;
   year: number;
+  // The replay once filmed (#633): this page stands in for the dated one.
+  videoUrl: string | null;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }

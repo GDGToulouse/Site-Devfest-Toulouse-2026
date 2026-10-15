@@ -16,6 +16,12 @@ const redirect = vi.fn((url: string) => {
 });
 vi.mock("next/navigation", () => ({ redirect: (url: string) => redirect(url) }));
 
+// 2026 is the featured edition: its talks have one page, /conferences (#633).
+vi.mock("@/lib/api", async (importActual) => ({
+  ...(await importActual<typeof import("@/lib/api")>()),
+  getCurrentEdition: async () => ({ year: 2026 }),
+}));
+
 const fetchMock = vi.fn();
 vi.stubGlobal("fetch", fetchMock);
 
@@ -42,14 +48,23 @@ describe("GET /api/preview (#618)", () => {
   it("should check the draft with the caller's cookie, then open the page in draft mode", async () => {
     fetchMock.mockResolvedValue(new Response(JSON.stringify({ slug: "ada" }), { status: 200 }));
 
-    const url = await redirectedTo(open("type=talk&year=2026&slug=un%20talk&locale=en"));
+    const url = await redirectedTo(open("type=talk&year=2019&slug=un%20talk&locale=en"));
 
     expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringMatching(/\/api\/admin\/preview\/editions\/2026\/talks\/un%20talk$/),
+      expect.stringMatching(/\/api\/admin\/preview\/editions\/2019\/talks\/un%20talk$/),
       expect.objectContaining({ cache: "no-store", headers: { cookie: "better-auth.session_token=abc" } }),
     );
     expect(enable).toHaveBeenCalled();
-    expect(url).toBe("/en/editions/2026/conferences/un%20talk");
+    expect(url).toBe("/en/editions/2019/conferences/un%20talk");
+  });
+
+  it("should open a talk of the featured edition on its one page, /conferences (#633)", async () => {
+    fetchMock.mockResolvedValue(new Response(JSON.stringify({ slug: "ia" }), { status: 200 }));
+
+    const url = await redirectedTo(open("type=talk&year=2026&slug=ia"));
+
+    expect(fetchMock).toHaveBeenCalledWith(expect.stringMatching(/\/api\/admin\/preview\/talks\/ia$/), expect.anything());
+    expect(url).toBe("/fr/conferences/ia");
   });
 
   it("should leave draft mode off when the backend refuses the caller", async () => {

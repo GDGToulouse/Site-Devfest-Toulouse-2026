@@ -3,7 +3,14 @@ import Image from "next/image";
 import { getLocale, getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { getEditionByYear, getEditions, getEditionSpeakers, getEditionSponsors, getEditionTalks } from "@/lib/api";
+import {
+  getCurrentEdition,
+  getEditionByYear,
+  getEditions,
+  getEditionSpeakers,
+  getEditionSponsors,
+  getEditionTalks,
+} from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -97,12 +104,13 @@ export default async function BilanPage({ params }: PageProps) {
   const locale = await getLocale();
   const t = await getTranslations("bilan");
 
-  const [edition, allEditions, speakers, talks, sponsors] = await Promise.all([
+  const [edition, allEditions, speakers, talks, sponsors, featured] = await Promise.all([
     getEditionByYear(Number(year)),
     getEditions(),
     getEditionSpeakers(Number(year)),
     getEditionTalks(Number(year)),
     getEditionSponsors(Number(year)),
+    getCurrentEdition(),
   ]);
   if (!edition) notFound();
 
@@ -315,7 +323,7 @@ export default async function BilanPage({ params }: PageProps) {
               <h2 className="text-2xl lg:text-4xl font-bold text-noir mb-8">
                 {t("sessions", { count: talks.length })}
               </h2>
-              <EditionTalksList talks={talks} replayLabel={t("replay")} year={edition.year} />
+              <EditionTalksList talks={talks} replayLabel={t("replay")} year={edition.year} featuredYear={featured?.year ?? null} />
             </section>
           )}
 

@@ -2,6 +2,7 @@ import { draftMode } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { routing } from "@/i18n/routing";
+import { getCurrentEdition } from "@/lib/api";
 import { fetchPreview, previewPaths } from "@/lib/preview";
 
 // Opens the draft preview of a speaker, talk or sponsor (#618), from the
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_SLUG_LENGTH = 200;
 
-function target(params: URLSearchParams): { backend: string; page: string } | null {
+async function target(params: URLSearchParams): Promise<{ backend: string; page: string } | null> {
   const type = params.get("type");
   const slug = params.get("slug") ?? "";
   const locale = params.get("locale") ?? routing.defaultLocale;
@@ -28,6 +29,11 @@ function target(params: URLSearchParams): { backend: string; page: string } | nu
   if (type === "talk") {
     const year = Number(params.get("year"));
     if (!Number.isInteger(year) || year < 1900 || year > 3000) return null;
+    // The featured edition's talks have one page, /conferences/<slug>; the
+    // dated one redirects there (#633).
+    if (year === (await getCurrentEdition())?.year) {
+      return { backend: previewPaths.featuredTalk(slug), page: `/${locale}/conferences/${encoded}` };
+    }
     return { backend: previewPaths.talk(year, slug), page: `/${locale}/editions/${year}/conferences/${encoded}` };
   }
   return null;
@@ -41,7 +47,7 @@ function message(status: number, text: string) {
 }
 
 export async function GET(request: Request) {
-  const record = target(new URL(request.url).searchParams);
+  const record = await target(new URL(request.url).searchParams);
   if (!record) return message(400, "Lien d'aperçu invalide.");
 
   const draft = await fetchPreview(record.backend);
