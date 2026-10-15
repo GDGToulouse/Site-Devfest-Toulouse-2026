@@ -131,6 +131,11 @@ const nextConfig: NextConfig = {
         source: "/api/faq",
         destination: `${backendUrl}/api/faq`,
       },
+      // The organisers' team (#110).
+      {
+        source: "/api/team",
+        destination: `${backendUrl}/api/team`,
+      },
       {
         source: "/api/categories",
         destination: `${backendUrl}/api/categories`,

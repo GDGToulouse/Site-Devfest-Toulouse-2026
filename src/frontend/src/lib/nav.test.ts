@@ -44,6 +44,12 @@ describe("getPublicNavEntries", () => {
     expect(keys(getPublicNavEntries(edition({ hasFaq: false })))).not.toContain("faq");
   });
 
+  // #110: the team page waits for an organiser ticked for the edition.
+  it("offers the team once an organiser is ticked, after the FAQ", () => {
+    expect(keys(getPublicNavEntries(edition({ hasFaq: true, hasTeam: true })))).toEqual(["replays", "faq", "team", "blog"]);
+    expect(keys(getPublicNavEntries(edition({ hasTeam: false })))).not.toContain("team");
+  });
+
   it("shows a null edition as replays and blog only, never crashing", () => {
     expect(keys(getPublicNavEntries(null))).toEqual(["replays", "blog"]);
   });
@@ -154,6 +160,8 @@ describe("getPublicNavEntries", () => {
         hasSponsors: true,
         hasJobOffers: true,
         hasVenueInfo: true,
+        hasFaq: true,
+        hasTeam: true,
       }),
     );
     const labelKeys = entries.flatMap((e) => [

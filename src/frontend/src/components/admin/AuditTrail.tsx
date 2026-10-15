@@ -34,6 +34,8 @@ export const ENTITY_LABELS: Record<string, string> = {
   KeyFigure: "Chiffre clé",
   Tag: "Tag",
   ApiKey: "Clé API",
+  TeamMember: "Organisateur",
+  TeamMemberEdition: "Participation organisateur",
 };
 
 export const CHANNEL_LABELS: Record<AuditChannel, string> = {
@@ -66,6 +68,7 @@ const ENTITY_PATHS: Record<string, string> = {
   Edition: "editions",
   SponsorTier: "sponsor-tiers",
   Venue: "venues",
+  TeamMember: "team",
 };
 
 // A bio or an article body can run to pages; the row is for spotting what

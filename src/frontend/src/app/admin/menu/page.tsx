@@ -55,6 +55,7 @@ const SITE_SLOTS: Slot[] = [
   { key: "sponsors", label: "Sponsors", hint: "Dès que des sponsors sont publiés" },
   { key: "venue", label: "Lieu", hint: "Dès que l'édition a un lieu renseigné" },
   { key: "faq", label: "FAQ", hint: "Dès qu'une question est publiée" },
+  { key: "team", label: "Équipe", hint: "Dès qu'un organisateur est coché pour l'édition" },
   { key: "blog", label: "Actualités" },
 ];
 

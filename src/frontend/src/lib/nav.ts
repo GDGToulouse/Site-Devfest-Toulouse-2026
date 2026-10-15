@@ -54,6 +54,8 @@ const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites
 const VENUE_ENTRY: NavEntry = { key: "venue", labelKey: "venue", href: "/lieu" };
 // The FAQ (#111), site-wide, once it has a published question.
 const FAQ_ENTRY: NavEntry = { key: "faq", labelKey: "faq", href: "/faq" };
+// The organisers (#110), once someone is ticked for the edition.
+const TEAM_ENTRY: NavEntry = { key: "team", labelKey: "team", href: "/equipe" };
 
 // An admin-authored page as a navigation entry (#420). Only published pages
 // reach here — the API filters drafts out — so no status check is needed.
@@ -140,6 +142,7 @@ export function getPublicNavEntries(
   }
   if (edition?.hasVenueInfo) entries.push(VENUE_ENTRY);
   if (edition?.hasFaq) entries.push(FAQ_ENTRY);
+  if (edition?.hasTeam) entries.push(TEAM_ENTRY);
   entries.push(BLOG_ENTRY);
 
   // By default, free pages come after the site's entries; the menu order set
