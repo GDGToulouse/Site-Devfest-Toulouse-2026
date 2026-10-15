@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateSpeakers, revalidateConferences } from "../../lib/revalidate.js";
+import { revalidateAll } from "../../lib/revalidate.js";
 import { importSessionize, loadSessionizeData } from "../../lib/sessionize-import.js";
 import { loadServiceSlots, type SzServiceSlot } from "../../lib/sessionize-service-slots.js";
 import { setChannel } from "../../lib/request-context.js";
@@ -93,8 +93,16 @@ export default async function adminImportRoutes(app: FastifyInstance) {
       await prisma.edition.update({ where: { id: editionId }, data: { sessionizeApiUrl: givenUrl } });
     }
 
-    revalidateSpeakers();
-    revalidateConferences();
+    // Every page of the site (#627): an import rewrites dozens of speakers and
+    // talks, and purging only the lists left each speaker's and each talk's
+    // own page stale for an hour. Same choice as the history import (#358):
+    // listing paths one by one always forgets one, and an import is rare.
+    const purge = await revalidateAll();
+    if (!purge.ok) {
+      report.warnings.push(
+        `Le cache du site n'a pas pu être vidé (${purge.reason}) : des pages peuvent rester anciennes jusqu'à une heure. Videz-le depuis Paramètres, onglet Cache.`,
+      );
+    }
     return report;
   });
 
