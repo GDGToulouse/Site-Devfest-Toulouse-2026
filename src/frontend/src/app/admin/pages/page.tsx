@@ -9,6 +9,7 @@ import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
 
 // Served by their own route and linked from every footer: the backend refuses
 // to unpublish or trash them, and the UI hides the actions rather than letting
@@ -57,6 +58,8 @@ export default function PagesAdminPage() {
   const [list, setList] = useState<PageList | null>(null);
   const [searchInput, setSearchInput] = useState(params.search);
   const [editing, setEditing] = useState<PageDetail | null>(null);
+  // Whether the page being edited is live: unpublishing it asks first (#632).
+  const [isSavedPublished, setIsSavedPublished] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newSlug, setNewSlug] = useState("");
   const [newTitleFr, setNewTitleFr] = useState("");
@@ -122,7 +125,10 @@ export default function PagesAdminPage() {
 
   async function startEdit(page: PageSummary) {
     const { data } = await adminFetch<PageDetail>(`/pages/${page.id}`);
-    if (data) setEditing(data);
+    if (data) {
+      setEditing(data);
+      setIsSavedPublished(data.isPublished);
+    }
   }
 
   async function handleSave() {
@@ -278,20 +284,20 @@ export default function PagesAdminPage() {
             </p>
           ) : (
             <div className="rounded-lg border border-gris/20 p-4">
-              <label className="flex items-center gap-3 text-sm text-noir">
-                <input
-                  type="checkbox"
-                  checked={editing.isPublished}
-                  onChange={(e) => setEditing({ ...editing, isPublished: e.target.checked })}
-                  className="size-4 accent-malachite"
-                />
-                <span className="font-medium">Page publiée</span>
-              </label>
-              <p className="mt-2 text-xs text-gris">
-                {editing.isPublished
-                  ? `Visible de tous à l'adresse /${editing.slug}.`
-                  : "Brouillon : la page répond 404 pour les visiteurs et n'apparaît pas au plan du site."}
-              </p>
+              <span className="mb-1 block text-sm font-medium text-noir">Statut</span>
+              <PublicationSwitch
+                label="Statut de la page"
+                isFeminine
+                value={editing.isPublished ? "PUBLISHED" : "DRAFT"}
+                savedValue={isSavedPublished ? "PUBLISHED" : "DRAFT"}
+                unpublishMessage={`Retirer la page /${editing.slug} du site ? Elle répondra 404 après l'enregistrement.`}
+                hint={
+                  editing.isPublished
+                    ? `Visible de tous à l'adresse /${editing.slug}.`
+                    : "Brouillon : la page répond 404 pour les visiteurs et n'apparaît pas au plan du site."
+                }
+                onChange={(status) => setEditing({ ...editing, isPublished: status === "PUBLISHED" })}
+              />
 
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
                 <div>

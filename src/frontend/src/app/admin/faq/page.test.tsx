@@ -65,4 +65,17 @@ describe("FaqAdminPage (#111)", () => {
     expect(await screen.findByText("La question en français est obligatoire.")).toBeInTheDocument();
     expect(adminFetch).not.toHaveBeenCalledWith("/faq", expect.objectContaining({ method: "POST" }));
   });
+
+  // #632: unpublishing a live question asks first, then the save carries it.
+  it("should take a published question off the FAQ only once confirmed", async () => {
+    render(<FaqAdminPage />);
+    await userEvent.click((await screen.findAllByRole("button", { name: "Modifier" }))[0]);
+
+    await userEvent.click(screen.getByRole("radio", { name: "Brouillon" }));
+    await userEvent.click(screen.getByRole("button", { name: "Retirer du site" }));
+    await userEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    const put = adminFetch.mock.calls.find(([, options]) => options?.method === "PUT");
+    expect(JSON.parse(put![1].body)).toMatchObject({ publicationStatus: "DRAFT" });
+  });
 });

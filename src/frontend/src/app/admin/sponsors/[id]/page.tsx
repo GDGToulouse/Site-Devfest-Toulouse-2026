@@ -415,7 +415,14 @@ export default function SponsorEditorPage() {
                     editionId={editionId}
                     onChange={requestYear}
                   />
-                  <SponsorParticipationFields value={form} onChange={setForm} tiers={tiers} year={editionYear} />
+                  <SponsorParticipationFields
+                    value={form}
+                    onChange={setForm}
+                    tiers={tiers}
+                    year={editionYear}
+                    savedStatus={editedParticipation?.publicationStatus}
+                    sponsorSlug={current?.slug}
+                  />
 
                   {current && (
                     <div className="mt-8 border-t border-gris/20 pt-6">

@@ -211,7 +211,18 @@ export default function TalkEditorPage() {
           <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
         )}
 
-        <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} rooms={rooms} />
+        <TalkForm
+          value={form}
+          onChange={setForm}
+          categories={categories}
+          speakers={speakers}
+          rooms={rooms}
+          saved={
+            saved && editionYear
+              ? { slug: saved.slug, year: editionYear, publicationStatus: saved.isPublished ? "PUBLISHED" : "DRAFT" }
+              : null
+          }
+        />
 
         {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
 
