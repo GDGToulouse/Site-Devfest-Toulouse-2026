@@ -67,6 +67,7 @@ Si un administrateur rétrograde un utilisateur à `EDITOR`, **tous ses jetons p
 curl https://devfesttoulouse.fr/api/editions
 curl https://devfesttoulouse.fr/api/editions/current
 curl https://devfesttoulouse.fr/api/faq
+curl https://devfesttoulouse.fr/api/team?year=2026
 curl https://devfesttoulouse.fr/api/articles/latest?limit=4
 ```
 
