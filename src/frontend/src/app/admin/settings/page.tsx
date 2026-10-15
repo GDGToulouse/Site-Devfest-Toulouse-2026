@@ -79,18 +79,22 @@ function CacheTab() {
     setIsPurging(true);
     setResult(null);
 
-    const allPaths = PREDEFINED_PATHS.map((p) => p.path);
-    const { data, status } = await adminFetch<{ revalidated: boolean }>("/cache/purge", {
+    // The whole site, every page in both languages (#627), not the seven
+    // pages listed above.
+    const { data, status, errorBody } = await adminFetch<{ revalidated: boolean }>("/cache/purge", {
       method: "POST",
-      body: JSON.stringify({ paths: allPaths }),
+      body: JSON.stringify({ all: true }),
     });
 
     setIsPurging(false);
 
     if (status === 200 && data?.revalidated) {
-      setResult({ success: true, message: "Cache complet purgé" });
+      setResult({ success: true, message: "Tout le cache du site a été vidé." });
     } else {
-      setResult({ success: false, message: "Erreur lors du purge" });
+      setResult({
+        success: false,
+        message: typeof errorBody?.message === "string" ? errorBody.message : "Le cache n'a pas pu être vidé. Réessayez.",
+      });
     }
   }
 
