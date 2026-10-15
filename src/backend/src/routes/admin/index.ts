@@ -1,5 +1,5 @@
 import type { FastifyInstance } from "fastify";
-import { requireAdmin, requireAdminRole } from "../../lib/admin-guard.js";
+import { requireAdmin, requireAdminRole, requireTeamBrowserSession } from "../../lib/admin-guard.js";
 import { refuseAgents } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
@@ -29,6 +29,7 @@ import adminEditionPhotoRoutes from "./edition-photos.js";
 import adminFaqRoutes from "./faq.js";
 import adminTagRoutes from "./tags.js";
 import adminTeamRoutes from "./team.js";
+import adminPreviewRoutes from "./preview.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -64,6 +65,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     // its own requireAdminRole (#530), pinned by route-guards.test.ts.
     await editorApp.register(adminEditionRoutes);
     await editorApp.register(adminVenueRoutes);
+  });
+
+  // Draft preview (#618): the team, from the browser only. Not under editorApp,
+  // whose requireAdmin also lets API keys and agent tokens through.
+  await app.register(async (previewApp) => {
+    previewApp.addHook("preHandler", requireTeamBrowserSession);
+    await previewApp.register(adminPreviewRoutes);
   });
 
   // Routes restricted to ADMIN only
