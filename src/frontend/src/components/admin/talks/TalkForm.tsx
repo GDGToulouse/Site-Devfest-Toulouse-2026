@@ -2,6 +2,7 @@
 
 import type { TalkFormat, TalkLevel, Category, Speaker } from "@/lib/types";
 import SpeakerPicker from "./SpeakerPicker";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
 
 const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
@@ -60,9 +61,12 @@ interface TalkFormProps {
   // The rooms of the edition's venue (#105). Empty when no venue is attached,
   // which the form says out loud rather than showing an empty dropdown.
   rooms: { id: number; name: string }[];
+  // The talk as stored (#632): taking a live talk off the site asks first, and
+  // a draft offers its preview. Absent for a talk not created yet.
+  saved?: { slug: string; year: number; publicationStatus: "DRAFT" | "PUBLISHED" } | null;
 }
 
-export default function TalkForm({ value, onChange, categories, speakers, rooms }: TalkFormProps) {
+export default function TalkForm({ value, onChange, categories, speakers, rooms, saved }: TalkFormProps) {
 
   return (
     <div className="space-y-4">
@@ -188,15 +192,19 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms 
         />
       )}
 
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={value.publicationStatus === "PUBLISHED"}
-          onChange={(e) => onChange({ ...value, publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT" })}
-          className="rounded border-gris/30 text-malachite focus:ring-malachite"
+      <div>
+        <span className="block text-sm font-medium text-noir mb-1">Statut</span>
+        <PublicationSwitch
+          label="Statut de la conférence"
+          value={value.publicationStatus}
+          savedValue={saved?.publicationStatus}
+          unpublishMessage={`Retirer « ${value.title || "cette conférence"} » du site ? Elle n'y sera plus visible après l'enregistrement.`}
+          previewHref={
+            saved ? `/api/preview?type=talk&year=${saved.year}&slug=${encodeURIComponent(saved.slug)}` : null
+          }
+          onChange={(publicationStatus) => onChange({ ...value, publicationStatus })}
         />
-        <span className="text-sm text-noir">Publié (visible sur le site)</span>
-      </label>
+      </div>
 
       {/* #289 — read-only by default; the flag has an effect the admin cannot
           see from here (it unlocks a form on the speaker's magic link page),

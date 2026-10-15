@@ -7,6 +7,7 @@ import BilingualTabs from "@/components/admin/BilingualTabs";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
 
 // The FAQ in the back-office (#111): questions grouped by theme as the public
 // page shows them, reordered with the arrows, written in both languages.
@@ -189,15 +190,18 @@ export default function FaqAdminPage() {
             Sans traduction anglaise, la page anglaise affiche la question et la réponse en français.
           </p>
 
-          <label className="flex items-center gap-3 text-sm text-noir">
-            <input
-              type="checkbox"
-              checked={editing.publicationStatus === "PUBLISHED"}
-              onChange={(e) => setEditing({ ...editing, publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT" })}
-              className="size-4 accent-malachite"
+          <div>
+            <span className="mb-1 block text-sm font-medium text-noir">Statut</span>
+            <PublicationSwitch
+              label="Statut de la question"
+              isFeminine
+              value={editing.publicationStatus}
+              // The question as stored: unpublishing a live one asks first (#632).
+              savedValue={items?.find((item) => item.id === editing.id)?.publicationStatus}
+              unpublishMessage={`Retirer « ${editing.questionFr || "cette question"} » de la FAQ ? Elle n'y sera plus visible après l'enregistrement.`}
+              onChange={(publicationStatus) => setEditing({ ...editing, publicationStatus })}
             />
-            <span className="font-medium">Question publiée</span>
-          </label>
+          </div>
 
           <div className="flex items-center justify-end gap-3">
             <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />

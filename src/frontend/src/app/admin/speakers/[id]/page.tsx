@@ -182,11 +182,10 @@ export default function SpeakerEditorPage() {
       method: "POST",
       body: JSON.stringify({ editionId: targetEditionId, ...patch }),
     });
-    if (status >= 400 || !data) {
-      setError("Impossible de mettre à jour cette édition.");
-      return;
-    }
+    // Reported by the panel itself, next to the control (#632).
+    if (status !== 200 || !data) return false;
     setCurrent(data);
+    return true;
   }
 
   if (isLoading) return <p className="text-gris">Chargement…</p>;
@@ -240,6 +239,8 @@ export default function SpeakerEditorPage() {
         ) : (
           current && (
             <SpeakerEditionsPanel
+              speakerName={current.name}
+              speakerSlug={current.slug}
               editions={current.editions}
               allEditions={editions}
               onAttach={attachEdition}
