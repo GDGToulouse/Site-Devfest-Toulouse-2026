@@ -433,6 +433,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       publishedSponsorCount,
       jobOfferCount,
       publishedFaqCount,
+      teamMemberCount,
     ] = await Promise.all([
         // These counts decide whether the nav links show at all, so the trash
         // has to be excluded: an edition whose talks are all trashed must not
@@ -470,6 +471,8 @@ export default async function editionRoutes(app: FastifyInstance) {
         }),
         // The FAQ is site-wide (#111), but its nav entry rides on the same flags.
         prisma.faqItem.count({ where: { ...notDeleted, publicationStatus: "PUBLISHED" } }),
+        // The organisers ticked for this edition (#110).
+        prisma.teamMember.count({ where: { ...notDeleted, editions: { some: { editionId: edition.id } } } }),
       ]);
 
     return {
@@ -517,6 +520,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       // offer is published AND the post-event visibility window is still open.
       hasJobOffers: jobOfferCount > 0 && areOffersVisible(edition),
       hasFaq: publishedFaqCount > 0,
+      hasTeam: teamMemberCount > 0,
     };
   });
 

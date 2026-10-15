@@ -1,5 +1,5 @@
 // The order of the public menu's top-level entries (#606), as a list of slot
-// keys: `programme`, `speakers`, `sponsors`, `venue`, `faq`, `blog`, and
+// keys: `programme`, `speakers`, `sponsors`, `venue`, `faq`, `team`, `blog`, and
 // `page-<slug>` for a page placed in the menu. Which entries show still
 // depends on the edition (src/frontend/src/lib/nav.ts); this only orders them.
 // A key missing from the list goes last, so an entry added to the code later,
@@ -9,7 +9,7 @@ export const NAV_ORDER_KEY = "nav_order";
 
 // Generous guard: the menu holds a handful of entries.
 const NAV_ORDER_MAX = 50;
-const SLOT_PATTERN = /^(programme|speakers|sponsors|venue|faq|blog|page-[a-z0-9-]+)$/;
+const SLOT_PATTERN = /^(programme|speakers|sponsors|venue|faq|team|blog|page-[a-z0-9-]+)$/;
 
 export const navOrderSchema = {
   type: "array",
