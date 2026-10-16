@@ -936,6 +936,20 @@ model FileMetadata {
   originalName String?
   updatedAt    DateTime @updatedAt
   createdAt    DateTime @default(now())
+  // How the media library is sorted by subject (#373): logos, edition photos…
+  tags         FileTag[]
+}
+
+// A tag of the media library (#373). Kept apart from Tag on purpose: article
+// tags are public (they filter /actualites), these are an internal filing aid —
+// "logos sponsors" must never reach the public tag cloud. Created on the fly
+// from a file's sheet, like article tags.
+model FileTag {
+  id        Int            @id @default(autoincrement())
+  name      String         @unique
+  slug      String         @unique
+  createdAt DateTime       @default(now())
+  files     FileMetadata[]
 }
 
 // ============================================
