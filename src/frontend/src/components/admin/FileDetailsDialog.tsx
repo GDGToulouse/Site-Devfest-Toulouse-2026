@@ -4,6 +4,7 @@ import { useEffect, useId, useState } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
+import TagInput from "./TagInput";
 import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileForDetails {
@@ -18,12 +19,20 @@ interface FileForDetails {
   originalName: string | null;
   /** Who uses it (#483). */
   usages: FileUsage[];
+  /** Media library tags (#373). */
+  tags: FileTag[];
+}
+
+export interface FileTag {
+  id: number;
+  name: string;
+  slug: string;
 }
 
 interface FileDetailsDialogProps {
   file: FileForDetails | null;
   onClose: () => void;
-  onSaved: (updated: { filename: string; alt: string | null }) => void;
+  onSaved: (updated: { filename: string; alt: string | null; tags: FileTag[] }) => void;
 }
 
 function formatSize(bytes: number): string {
@@ -45,32 +54,59 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
   const containerRef = useDialog({ open: isOpen, onClose });
 
   const [alt, setAlt] = useState("");
+  const [tagIds, setTagIds] = useState<number[]>([]);
+  const [allTags, setAllTags] = useState<FileTag[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saved" | "error">("idle");
 
   // Re-init the form whenever the open file changes.
   useEffect(() => {
     setAlt(file?.alt ?? "");
+    setTagIds(file?.tags.map((t) => t.id) ?? []);
     setSaveStatus("idle");
   }, [file]);
 
+  // The media library's own tags (#373), for the autocomplete.
+  useEffect(() => {
+    if (!isOpen) return;
+    adminFetch<FileTag[]>("/file-tags").then(({ data }) => setAllTags(data ?? []));
+  }, [isOpen]);
+
   if (!file) return null;
 
-  const isDirty = (alt.trim() || null) !== (file.alt || null);
+  const isAltDirty = file.isImage && (alt.trim() || null) !== (file.alt || null);
+  const savedTagIds = file.tags.map((t) => t.id);
+  const isTagsDirty = tagIds.length !== savedTagIds.length || tagIds.some((id) => !savedTagIds.includes(id));
+  const isDirty = isAltDirty || isTagsDirty;
 
   async function handleSave() {
     if (!file) return;
     setIsSaving(true);
     setSaveStatus("idle");
-    const trimmed = alt.trim();
-    const { data, status } = await adminFetch<{ filename: string; alt: string | null }>(
-      `/files/${encodeURIComponent(file.filename)}/metadata`,
-      { method: "PUT", body: JSON.stringify({ alt: trimmed || null }) },
-    );
+    const encoded = encodeURIComponent(file.filename);
+    let savedAlt = file.alt;
+    let savedTags = file.tags;
+    let isOk = true;
+    if (isAltDirty) {
+      const { data, status } = await adminFetch<{ filename: string; alt: string | null }>(`/files/${encoded}/metadata`, {
+        method: "PUT",
+        body: JSON.stringify({ alt: alt.trim() || null }),
+      });
+      if (status === 200 && data) savedAlt = data.alt;
+      else isOk = false;
+    }
+    if (isOk && isTagsDirty) {
+      const { data, status } = await adminFetch<{ tags: FileTag[] }>(`/files/${encoded}/tags`, {
+        method: "PUT",
+        body: JSON.stringify({ tagIds }),
+      });
+      if (status === 200 && data) savedTags = data.tags;
+      else isOk = false;
+    }
     setIsSaving(false);
-    if (status === 200 && data) {
+    if (isOk) {
       setSaveStatus("saved");
-      onSaved({ filename: data.filename, alt: data.alt });
+      onSaved({ filename: file.filename, alt: savedAlt, tags: savedTags });
       setTimeout(() => setSaveStatus("idle"), 2500);
     } else {
       setSaveStatus("error");
@@ -187,12 +223,29 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
           )}
         </div>
 
+        {/* Tags, for images and documents alike (#373). */}
+        <div className="px-4 pb-4">
+          <span className="mb-1 block text-sm font-medium text-noir">Tags</span>
+          <TagInput
+            label="Tags du fichier"
+            createPath="/file-tags"
+            allTags={allTags}
+            selectedTagIds={tagIds}
+            onChange={(ids) => {
+              setTagIds(ids);
+              setSaveStatus("idle");
+            }}
+            onTagCreated={(tag) => setAllTags((prev) => [...prev, tag].sort((a, b) => a.name.localeCompare(b.name, "fr")))}
+          />
+          <p className="mt-1 text-xs text-gris">Pour retrouver le fichier par sujet dans la médiathèque : logos, photos d&apos;édition…</p>
+        </div>
+
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-4 border-t border-gris/20">
           <div className="text-sm">
             {saveStatus === "saved" && <span role="status" aria-live="polite" className="text-malachite">Modifications enregistrées.</span>}
             {saveStatus === "error" && (
-              <span className="text-terre-cuite">Erreur lors de l&apos;enregistrement</span>
+              <span role="alert" className="text-terre-cuite">L&apos;enregistrement a échoué. Réessayez.</span>
             )}
           </div>
           <div className="flex gap-2">
@@ -202,15 +255,13 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
             >
               Fermer
             </button>
-            {file.isImage && (
-              <button
-                onClick={handleSave}
-                disabled={isSaving || !isDirty}
-                className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
-              >
-                {isSaving ? "Enregistrement…" : "Enregistrer"}
-              </button>
-            )}
+            <button
+              onClick={handleSave}
+              disabled={isSaving || !isDirty}
+              className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
+            >
+              {isSaving ? "Enregistrement…" : "Enregistrer"}
+            </button>
           </div>
         </div>
       </div>

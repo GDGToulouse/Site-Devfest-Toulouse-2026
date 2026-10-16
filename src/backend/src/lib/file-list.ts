@@ -15,6 +15,7 @@ export interface ListedFile {
   ext: string;
   isImage: boolean;
   usages: unknown[];
+  tags: { slug: string }[];
 }
 
 interface FilePageOptions {
@@ -23,6 +24,14 @@ interface FilePageOptions {
   type?: FileListType;
   // Lower-case extensions with their dot, e.g. [".pdf"].
   extensions?: string[];
+  // A tag's slug, or "none" for the files without any (#373).
+  tag?: string;
+}
+
+function matchesTag(file: ListedFile, tag: string | undefined): boolean {
+  if (!tag) return true;
+  if (tag === "none") return file.tags.length === 0;
+  return file.tags.some((t) => t.slug === tag);
 }
 
 function matchesType(file: ListedFile, type: FileListType | undefined): boolean {
@@ -34,8 +43,11 @@ function matchesType(file: ListedFile, type: FileListType | undefined): boolean 
 
 export function pageFiles<T extends ListedFile>(files: T[], options: FilePageOptions) {
   const allowed = options.extensions && new Set(options.extensions.map((e) => e.toLowerCase()));
-  // The tab counts are over what the caller may see at all, before the tab.
-  const visible = allowed ? files.filter((f) => allowed.has(f.ext.toLowerCase())) : files;
+  // The tab counts are over what the caller may see at all, before the tab: the
+  // allowed extensions and the chosen tag narrow the library itself.
+  const visible = files.filter(
+    (f) => (!allowed || allowed.has(f.ext.toLowerCase())) && matchesTag(f, options.tag),
+  );
   const matching = visible.filter((f) => matchesType(f, options.type));
 
   const page = Math.max(1, options.page);

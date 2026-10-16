@@ -53,6 +53,8 @@ interface FileListQuery {
   limit?: string;
   type?: FileListType;
   ext?: string;
+  // A file tag's slug, or "none" for the untagged files (#373).
+  tag?: string;
 }
 
 // What each model is called in the refusal shown to the admin (#486). The
@@ -239,6 +241,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           type: { type: "string", enum: ["images", "documents", "unused"] },
           // Comma-separated, e.g. `.pdf` for a picker that only takes PDFs.
           ext: { type: "string", pattern: "^\\.[a-z0-9]+(,\\.[a-z0-9]+)*$" },
+          tag: { type: "string", maxLength: 80 },
         },
       },
     },
@@ -254,6 +257,8 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     // the listing O(N) on the filesystem and O(1) on the database.
     const metaRows = await prisma.fileMetadata.findMany({
       where: { filename: { in: filenames } },
+      // The tags ride on the same query (#373), never one per file.
+      include: { tags: { select: { id: true, name: true, slug: true }, orderBy: { name: "asc" } } },
     });
     const metaByFilename = new Map(metaRows.map((m) => [m.filename, m]));
     // Who uses each file, by name (#483): a handful of queries for the whole
@@ -276,6 +281,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           // Null for anything uploaded before #378 — there is nothing to
           // recover, and the library falls back to the stored name.
           originalName: metaByFilename.get(filename)?.originalName ?? null,
+          tags: metaByFilename.get(filename)?.tags ?? [],
           usages: usagesByUrl.get(`/uploads/${filename}`) ?? [],
         };
       }),
@@ -290,6 +296,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       limit: Number(q.limit) || FILE_PAGE_SIZE,
       type: q.type,
       extensions: q.ext?.split(","),
+      tag: q.tag,
     });
   });
 

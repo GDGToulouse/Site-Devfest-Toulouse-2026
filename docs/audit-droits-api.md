@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 257 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 260 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -79,7 +79,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (164)
+### Back-office (167)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -136,11 +136,14 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/faq/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/faq/order` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/feedback/:id/message` | ADMIN |
+| GET | `/api/admin/file-tags` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/file-tags` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/files/:filename` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files/:filename/generate-alt` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/files/:filename/metadata` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/files/:filename/tags` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files/import-url` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/import/sessionize` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/import/sessionize/:editionId/rooms` | Équipe (ADMIN, EDITOR) |

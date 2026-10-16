@@ -2,11 +2,17 @@ import { describe, it, expect } from "vitest";
 
 import { pageFiles } from "./file-list.js";
 
-const file = (name: string, ext: string, isImage: boolean, usages: unknown[] = []) => ({ name, ext, isImage, usages });
+const file = (name: string, ext: string, isImage: boolean, usages: unknown[] = [], tags: string[] = []) => ({
+  name,
+  ext,
+  isImage,
+  usages,
+  tags: tags.map((slug) => ({ slug })),
+});
 
 const LIBRARY = [
-  file("a", ".png", true, [{ model: "Speaker" }]),
-  file("b", ".jpg", true),
+  file("a", ".png", true, [{ model: "Speaker" }], ["logos"]),
+  file("b", ".jpg", true, [], ["logos", "photos-2024"]),
   file("c", ".pdf", false),
   file("d", ".PDF", false, [{ model: "EditionSponsor" }]),
   file("e", ".webp", true),
@@ -32,6 +38,17 @@ describe("pageFiles (#416)", () => {
 
     expect(res.items.map((f) => f.name)).toEqual(["c", "d"]);
     expect(res.counts.all).toBe(2);
+  });
+
+  // #373: a tag narrows the library itself, counts included; "none" finds the
+  // files still to sort.
+  it("narrows to a tag, or to the untagged files", () => {
+    const tagged = pageFiles(LIBRARY, { page: 1, limit: 10, tag: "logos" });
+    const untagged = pageFiles(LIBRARY, { page: 1, limit: 10, tag: "none" });
+
+    expect(tagged.items.map((f) => f.name)).toEqual(["a", "b"]);
+    expect(tagged.counts).toEqual({ all: 2, images: 2, documents: 0, unused: 1 });
+    expect(untagged.items.map((f) => f.name)).toEqual(["c", "d", "e"]);
   });
 
   it("caps the page size so a page cannot be the whole library", () => {
