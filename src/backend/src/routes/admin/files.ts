@@ -1,19 +1,14 @@
 import type { FastifyInstance } from "fastify";
 import fs from "node:fs";
 import path from "node:path";
-import crypto from "node:crypto";
 import sharp from "sharp";
 import { prisma } from "../../lib/prisma.js";
 import { originalNamesByUrl, rememberOriginalName } from "../../lib/file-metadata.js";
 import { generateAltText } from "../../lib/alt-text.js";
-import {
-  COMPRESSIBLE_MIMES,
-  COMPRESS_MAX_WIDTH,
-  COMPRESS_QUALITY,
-  SVG_MIME,
-  UPLOADS_DIR,
-} from "../../lib/image-store.js";
-import { sanitizeSvg } from "../../lib/svg-sanitize.js";
+import { UPLOADS_DIR, UnsafeSvgError } from "../../lib/image-store.js";
+import { storeUpload, type StoredUpload } from "../../lib/upload-store.js";
+import { fetchRemoteFile, RemoteFetchError } from "../../lib/safe-fetch.js";
+import { EXTENSION_BY_MIME, sniffMime } from "../../lib/file-sniff.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
 import { FILE_PAGE_SIZE, pageFiles, type FileListType } from "../../lib/file-list.js";
@@ -38,11 +33,28 @@ const ALLOWED_MIMES = [
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
 
+// Why an import by URL was refused (#617), in the editor's words: what happened
+// and what to do, not the code (#394).
+const IMPORT_REFUSALS: Record<RemoteFetchError["code"], { status: number; message: string }> = {
+  invalid_url: { status: 400, message: "Cette adresse n'est pas une URL valide." },
+  invalid_protocol: { status: 400, message: "Seules les adresses http:// et https:// sont acceptées." },
+  internal_hostname: { status: 400, message: "Cette adresse pointe vers le réseau interne : elle est refusée." },
+  private_ip: { status: 400, message: "Cette adresse pointe vers un réseau privé : elle est refusée." },
+  too_many_redirects: { status: 400, message: "Cette adresse redirige trop de fois. Donnez l'adresse finale du fichier." },
+  http_error: { status: 502, message: "Le site distant n'a pas fourni le fichier. Vérifiez l'adresse." },
+  too_large: { status: 413, message: "Le fichier dépasse 20 Mo." },
+  timeout: { status: 504, message: "Le site distant n'a pas répondu à temps. Réessayez plus tard." },
+  empty: { status: 502, message: "Le site distant a renvoyé un fichier vide." },
+  network: { status: 502, message: "Le site distant est injoignable. Vérifiez l'adresse." },
+};
+
 interface FileListQuery {
   page?: string;
   limit?: string;
   type?: FileListType;
   ext?: string;
+  // A file tag's slug, or "none" for the untagged files (#373).
+  tag?: string;
 }
 
 // What each model is called in the refusal shown to the admin (#486). The
@@ -89,81 +101,24 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       });
     }
 
-    // Generate unique filename: timestamp-random.ext
-    const safeExt = ext || ".jpg";
-    const uniqueName = `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${safeExt}`;
-    const destPath = path.join(UPLOADS_DIR, uniqueName);
-
-    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
-
-    // Buffer the upload first so we can either write it as-is, or send it
-    // through sharp for compression. We already cap the stream at 20 MB via
-    // limits, so memory usage is bounded.
-    let buffer = await data.toBuffer();
+    // Buffer the upload first so it can be written as-is or recompressed. The
+    // stream is already capped at 20 MB via limits, so memory stays bounded.
+    const buffer = await data.toBuffer();
 
     if (data.file.truncated) {
       return reply.code(413).send({ error: "File too large (max 20 MB)" });
     }
 
-    // This route writes to disk itself rather than going through
-    // storeImageBuffer, so the SVG guard has to be repeated here — an admin
-    // account is not a reason to store executable markup under /uploads/ (#346).
-    if (data.mimetype === SVG_MIME) {
-      const safe = sanitizeSvg(buffer.toString("utf8"));
-      if (!safe) {
-        return reply.code(400).send({
-          error: "Invalid SVG: nothing renderable left once scripts were removed",
-        });
+    let stored: StoredUpload;
+    try {
+      stored = await storeUpload(buffer, data.mimetype, ext || ".jpg", request.log);
+    } catch (err) {
+      if (err instanceof UnsafeSvgError) {
+        return reply.code(400).send({ error: "Invalid SVG: nothing renderable left once scripts were removed" });
       }
-      buffer = Buffer.from(safe, "utf8");
+      throw err;
     }
-
-    let finalBuffer = buffer;
-    let originalSize = buffer.length;
-    let originalDimensions: { width: number; height: number } | null = null;
-    let finalDimensions: { width: number; height: number } | null = null;
-    let wasCompressed = false;
-
-    if (COMPRESSIBLE_MIMES.has(data.mimetype)) {
-      try {
-        const pipeline = sharp(buffer, { failOn: "none" }).rotate(); // honor EXIF orientation
-        const meta = await pipeline.metadata();
-        if (meta.width && meta.height) {
-          originalDimensions = { width: meta.width, height: meta.height };
-        }
-
-        const needsResize = (meta.width ?? 0) > COMPRESS_MAX_WIDTH;
-        if (needsResize) {
-          pipeline.resize({ width: COMPRESS_MAX_WIDTH, withoutEnlargement: true });
-        }
-
-        // Re-encode to the same format with our quality target. PNG keeps PNG
-        // (lossless, palette-friendly); JPEG/WebP get the quality knob.
-        if (data.mimetype === "image/jpeg") {
-          pipeline.jpeg({ quality: COMPRESS_QUALITY, mozjpeg: true });
-        } else if (data.mimetype === "image/webp") {
-          pipeline.webp({ quality: COMPRESS_QUALITY });
-        } else {
-          pipeline.png({ compressionLevel: 9 });
-        }
-
-        const processed = await pipeline.toBuffer({ resolveWithObject: true });
-        // Only swap the buffer if compression actually saved bytes — otherwise
-        // we'd inflate small already-optimized images.
-        if (needsResize || processed.data.length < buffer.length) {
-          finalBuffer = processed.data;
-          finalDimensions = { width: processed.info.width, height: processed.info.height };
-          wasCompressed = true;
-        }
-      } catch (err) {
-        // Sharp may fail on edge-case files (corrupt, unsupported variant).
-        // Fall back to storing the original and log for ops visibility.
-        request.log.warn({ err, filename: data.filename }, "Image compression failed, storing original");
-      }
-    }
-
-    await fs.promises.writeFile(destPath, finalBuffer);
-    const stat = await fs.promises.stat(destPath);
+    const uniqueName = stored.filename;
 
     // Optional alt text passed in the same multipart payload (FormData
     // .append("alt", "...")). Stored on FileMetadata for accessibility —
@@ -188,26 +143,88 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       filename: uniqueName,
       originalName: data.filename,
       url: `/uploads/${uniqueName}`,
-      size: stat.size,
+      size: stored.size,
       mimetype: data.mimetype,
       alt,
-      // Compression telemetry — UI uses this to inform the user when their
-      // image was downscaled or recompressed.
-      compression: wasCompressed
-        ? {
-            originalSize,
-            finalSize: stat.size,
-            originalWidth: originalDimensions?.width ?? null,
-            originalHeight: originalDimensions?.height ?? null,
-            finalWidth: finalDimensions?.width ?? null,
-            finalHeight: finalDimensions?.height ?? null,
-            resized:
-              originalDimensions && finalDimensions
-                ? originalDimensions.width !== finalDimensions.width
-                : false,
-          }
-        : null,
+      // Compression telemetry — the UI tells the editor when the image was
+      // downscaled or recompressed.
+      compression: stored.compression,
     };
+  });
+
+  // POST /api/admin/files/import-url — the same as an upload, from a URL
+  // (#617): an editor pastes a logo's address, an AI agent imports a batch of
+  // logos through call_route, which only sends JSON. The server downloads the
+  // file through fetchRemoteFile (SSRF guarded hop by hop, capped while it
+  // reads) and stores it by the upload's own path.
+  app.post<{ Body: { url: string; alt?: string | null } }>("/files/import-url", {
+    schema: {
+      body: {
+        type: "object",
+        required: ["url"],
+        additionalProperties: false,
+        properties: {
+          url: { type: "string", minLength: 1, maxLength: 2048 },
+          alt: { type: ["string", "null"], maxLength: 500 },
+        },
+      },
+    },
+  }, async (request, reply) => {
+    let downloaded: { buffer: Buffer; url: URL };
+    try {
+      downloaded = await fetchRemoteFile(request.body.url.trim(), { maxBytes: MAX_FILE_SIZE });
+    } catch (err) {
+      if (err instanceof RemoteFetchError) {
+        const { status, message } = IMPORT_REFUSALS[err.code];
+        return reply.code(status).send({ error: err.code, message });
+      }
+      throw err;
+    }
+
+    // The bytes say what the file is, not the server's header nor the URL.
+    const mimetype = sniffMime(downloaded.buffer);
+    if (!mimetype || !ALLOWED_MIMES.includes(mimetype)) {
+      return reply.code(400).send({
+        error: "unsupported_type",
+        message: "Ce fichier n'est pas une image (JPEG, PNG, WebP, GIF, SVG, ICO) ni un PDF.",
+      });
+    }
+
+    let stored: StoredUpload;
+    try {
+      stored = await storeUpload(downloaded.buffer, mimetype, EXTENSION_BY_MIME[mimetype], request.log);
+    } catch (err) {
+      if (err instanceof UnsafeSvgError) {
+        return reply.code(400).send({
+          error: "unsafe_svg",
+          message: "Ce SVG ne contient rien d'affichable une fois les scripts retirés.",
+        });
+      }
+      throw err;
+    }
+
+    const alt = request.body.alt?.trim() || null;
+    if (alt) {
+      await prisma.fileMetadata.upsert({
+        where: { filename: stored.filename },
+        update: { alt },
+        create: { filename: stored.filename, alt },
+      });
+    }
+    // The name the file had at its source (#378): the last segment of the path
+    // it was finally served from.
+    const originalName = decodeURIComponent(downloaded.url.pathname.split("/").filter(Boolean).pop() ?? "") || undefined;
+    await rememberOriginalName(`/uploads/${stored.filename}`, originalName);
+
+    return reply.code(201).send({
+      filename: stored.filename,
+      originalName: originalName ?? null,
+      url: `/uploads/${stored.filename}`,
+      size: stored.size,
+      mimetype,
+      alt,
+      compression: stored.compression,
+    });
   });
 
   // GET /api/admin/files — the uploaded files, newest first. With `page`, one
@@ -224,6 +241,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           type: { type: "string", enum: ["images", "documents", "unused"] },
           // Comma-separated, e.g. `.pdf` for a picker that only takes PDFs.
           ext: { type: "string", pattern: "^\\.[a-z0-9]+(,\\.[a-z0-9]+)*$" },
+          tag: { type: "string", maxLength: 80 },
         },
       },
     },
@@ -239,6 +257,8 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     // the listing O(N) on the filesystem and O(1) on the database.
     const metaRows = await prisma.fileMetadata.findMany({
       where: { filename: { in: filenames } },
+      // The tags ride on the same query (#373), never one per file.
+      include: { tags: { select: { id: true, name: true, slug: true }, orderBy: { name: "asc" } } },
     });
     const metaByFilename = new Map(metaRows.map((m) => [m.filename, m]));
     // Who uses each file, by name (#483): a handful of queries for the whole
@@ -261,6 +281,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           // Null for anything uploaded before #378 — there is nothing to
           // recover, and the library falls back to the stored name.
           originalName: metaByFilename.get(filename)?.originalName ?? null,
+          tags: metaByFilename.get(filename)?.tags ?? [],
           usages: usagesByUrl.get(`/uploads/${filename}`) ?? [],
         };
       }),
@@ -275,6 +296,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       limit: Number(q.limit) || FILE_PAGE_SIZE,
       type: q.type,
       extensions: q.ext?.split(","),
+      tag: q.tag,
     });
   });
 

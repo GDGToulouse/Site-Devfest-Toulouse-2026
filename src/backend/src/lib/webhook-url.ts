@@ -58,7 +58,7 @@ export async function validateWebhookUrl(raw: string): Promise<URL> {
   return parsed;
 }
 
-function isPrivateAddress(address: string, family: number): boolean {
+export function isPrivateAddress(address: string, family: number): boolean {
   if (family === 4) {
     const parts = address.split(".").map(Number);
     const [a, b] = parts;

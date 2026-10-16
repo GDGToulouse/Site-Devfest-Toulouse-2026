@@ -5,7 +5,8 @@ import { adminFetch } from "@/lib/admin-api";
 import { useListParams } from "@/lib/use-list-params";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ListPagination from "@/components/admin/ListPagination";
-import FileDetailsDialog from "@/components/admin/FileDetailsDialog";
+import FileDetailsDialog, { type FileTag } from "@/components/admin/FileDetailsDialog";
+import ImportFromUrl from "@/components/admin/ImportFromUrl";
 import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileInfo {
@@ -21,6 +22,8 @@ interface FileInfo {
   originalName: string | null;
   // Who uses it, derived from the columns pointing at it (#483).
   usages: FileUsage[];
+  // Media library tags (#373).
+  tags: FileTag[];
 }
 
 type FileTab = "all" | "images" | "documents" | "unused";
@@ -36,7 +39,7 @@ interface FilePage {
 }
 
 const PAGE_SIZE = 48;
-const LIST_KEYS = ["type"] as const;
+const LIST_KEYS = ["type", "tag"] as const;
 const EMPTY_PAGE: FilePage = { page: 1, limit: PAGE_SIZE, total: 0, counts: { all: 0, images: 0, documents: 0, unused: 0 }, items: [] };
 
 function formatSize(bytes: number): string {
@@ -80,15 +83,27 @@ export default function FilesAdminPage() {
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [detailsTarget, setDetailsTarget] = useState<FileInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The media library's tags (#373), for the filter; with their file counts.
+  const [fileTags, setFileTags] = useState<(FileTag & { fileCount: number })[]>([]);
 
   const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (filter !== "all") query.set("type", filter);
+  if (params.tag) query.set("tag", params.tag);
   const queryString = query.toString();
 
   const loadFiles = useCallback(async () => {
     const { data } = await adminFetch<FilePage>(`/files?${queryString}`);
     setList(data ?? EMPTY_PAGE);
   }, [queryString, setList]);
+
+  const loadFileTags = useCallback(async () => {
+    const { data } = await adminFetch<(FileTag & { fileCount: number })[]>("/file-tags");
+    setFileTags(data ?? []);
+  }, [setFileTags]);
+
+  useEffect(() => {
+    void loadFileTags();
+  }, [loadFileTags]);
 
   useEffect(() => {
     loadFiles();
@@ -193,6 +208,38 @@ export default function FilesAdminPage() {
           onChange={handleFileChange}
           className="hidden"
         />
+      </div>
+
+      {/* By its address (#617): the server downloads the file. */}
+      <div className="mb-6 max-w-xl">
+        <ImportFromUrl
+          onImported={() => {
+            // The newest file opens the first page: go there to see it.
+            if (page > 1) update({ page: "" });
+            else void loadFiles();
+          }}
+        />
+      </div>
+
+      {/* By subject (#373): the tag narrows every tab below, counts included. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label htmlFor="file-tag-filter" className="text-sm font-medium text-noir">
+          Tag
+        </label>
+        <select
+          id="file-tag-filter"
+          value={params.tag}
+          onChange={(e) => update({ tag: e.target.value })}
+          className="rounded-lg border border-gris/30 bg-blanc px-3 py-1.5 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        >
+          <option value="">Tous les tags</option>
+          <option value="none">Sans tag</option>
+          {fileTags.map((t) => (
+            <option key={t.id} value={t.slug}>
+              {t.name} ({t.fileCount})
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Filter tabs — see #233: confine overflow so the bar scrolls, not the page. */}
@@ -357,8 +404,13 @@ export default function FilesAdminPage() {
           // Patch the file in the list so the missing-alt badge disappears
           // immediately without a full refetch.
           setList((prev) =>
-            prev && { ...prev, items: prev.items.map((f) => (f.filename === updated.filename ? { ...f, alt: updated.alt } : f)) },
+            prev && {
+              ...prev,
+              items: prev.items.map((f) => (f.filename === updated.filename ? { ...f, alt: updated.alt, tags: updated.tags } : f)),
+            },
           );
+          // A new tag, or a count that moved, shows in the filter.
+          void loadFileTags();
         }}
       />
     </div>
