@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { TALK_FORMATS, TALK_PAGE_SIZE, TALK_PAGE_SIZE_MAX, TALK_SORTS, talkOrderBy, talkWhere, type TalkListFilters, type TalkSort } from "../../lib/talk-list.js";
 import { revalidateTalkFootprint, talkFootprint } from "../../lib/page-footprint.js";
+import { canonicalYouTubeUrl } from "../../lib/youtube.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -29,9 +30,27 @@ interface TalkCreateBody {
   endsAt?: string | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
   isSpeakerEditable?: boolean;
+  // The replay (#636): a YouTube URL, stored in its canonical form; null or ""
+  // clears it.
+  videoUrl?: string | null;
 }
 
 type TalkUpdateBody = Partial<Omit<TalkCreateBody, "editionId">>;
+
+const INVALID_REPLAY = Symbol("invalid replay");
+const INVALID_REPLAY_ERROR = {
+  error: "invalid_video_url",
+  field: "videoUrl",
+  message: "Le replay doit être l'adresse d'une vidéo YouTube (youtube.com/watch?v=… ou youtu.be/…).",
+};
+
+/** undefined: untouched; null: cleared; else the canonical URL (#636). */
+function replayUrl(value: unknown): string | null | undefined | typeof INVALID_REPLAY {
+  if (value === undefined) return undefined;
+  if (value === null || (typeof value === "string" && !value.trim())) return null;
+  if (typeof value !== "string") return INVALID_REPLAY;
+  return canonicalYouTubeUrl(value) ?? INVALID_REPLAY;
+}
 
 interface TalkIdParams {
   id: string;
@@ -256,6 +275,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     if (!body.language?.trim()) {
       return reply.code(400).send({ error: "language is required" });
     }
+    const video = replayUrl(body.videoUrl);
+    if (video === INVALID_REPLAY) return reply.code(400).send(INVALID_REPLAY_ERROR);
 
     // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
     // constraint, so a trashed talk still owns its slug until purged. Parking
@@ -296,6 +317,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
         isSpeakerEditable: body.isSpeakerEditable === true,
+        videoUrl: video ?? null,
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
@@ -328,6 +350,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     if (body.level && !LEVELS.includes(body.level)) {
       return reply.code(422).send({ error: `Invalid level. Allowed: ${LEVELS.join(", ")}` });
     }
+    const video = replayUrl(body.videoUrl);
+    if (video === INVALID_REPLAY) return reply.code(400).send(INVALID_REPLAY_ERROR);
 
     // The room is validated against the talk's own edition, so the edition has
     // to be read before the update rather than trusted from the request.
@@ -383,6 +407,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
         ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),
+        ...(video !== undefined && { videoUrl: video }),
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),

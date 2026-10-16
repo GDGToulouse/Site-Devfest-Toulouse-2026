@@ -32,6 +32,8 @@ export interface TalkFormValue {
   speakerIds: number[];
   publicationStatus: "DRAFT" | "PUBLISHED";
   isSpeakerEditable: boolean;
+  // The replay (#636): a YouTube URL, empty when there is none.
+  videoUrl: string;
 }
 
 export const emptyTalkForm: TalkFormValue = {
@@ -48,6 +50,7 @@ export const emptyTalkForm: TalkFormValue = {
   speakerIds: [],
   publicationStatus: "DRAFT",
   isSpeakerEditable: false,
+  videoUrl: "",
 };
 
 const inputClass =
@@ -191,6 +194,20 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms,
           onChange={(speakerIds) => onChange({ ...value, speakerIds })}
         />
       )}
+
+      <label className="block">
+        <span className="block text-sm font-medium text-noir mb-1">Replay (YouTube)</span>
+        <input
+          type="url"
+          value={value.videoUrl}
+          onChange={(e) => onChange({ ...value, videoUrl: e.target.value })}
+          placeholder="https://www.youtube.com/watch?v=…"
+          className={inputClass}
+        />
+        <span className="block text-xs text-gris mt-1">
+          Après l&apos;événement : la vidéo s&apos;affiche sur la page de la conférence et dans les Replays.
+        </span>
+      </label>
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Statut</span>

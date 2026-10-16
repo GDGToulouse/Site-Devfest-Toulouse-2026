@@ -540,6 +540,8 @@ export interface Talk {
   publicationStatus: "DRAFT" | "PUBLISHED";
   // Whether the speaker may edit the wording from their magic link (#289).
   isSpeakerEditable: boolean;
+  // The replay, a YouTube URL (#636).
+  videoUrl: string | null;
   editionId: number;
 }
 
