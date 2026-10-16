@@ -152,6 +152,9 @@ export function conferenceListPaths(): string[] {
     // schedule screens write. Placing a session must show there immediately —
     // the organisers publish the planning right up to the day before.
     ...bilingualPaths("/programme"),
+    // Replays list talks with a video and their speakers (#102): a replay added,
+    // a talk unpublished or a speaker renamed shows there too (#636).
+    ...bilingualPaths("/replays"),
   ];
 }
 
