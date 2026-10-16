@@ -68,6 +68,7 @@ curl https://devfesttoulouse.fr/api/editions
 curl https://devfesttoulouse.fr/api/editions/current
 curl https://devfesttoulouse.fr/api/faq
 curl https://devfesttoulouse.fr/api/team?year=2026
+curl https://devfesttoulouse.fr/api/sponsors/hall-of-fame
 curl https://devfesttoulouse.fr/api/articles/latest?limit=4
 ```
 

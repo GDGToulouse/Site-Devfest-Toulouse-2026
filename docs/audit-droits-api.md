@@ -4,7 +4,7 @@ Audit du 4 octobre 2026, préalable à l'ouverture du connecteur MCP en producti
 
 ## Méthode
 
-1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 254 routes).
+1. **Inventaire automatique.** `scripts/route-inventory.ts` lit toutes les routes du vrai serveur avec les gardes qu'elles exécutent, gardes héritées comprises (tableau en fin de document : 256 routes).
 2. **Garde-fou permanent.** `src/backend/src/__tests__/route-guards.test.ts` échoue si :
    - une route qui écrit, ou qui vit sous `/api/admin`, `/api/me` ou `/api/sponsor-space`, n'a aucune garde connue. Les exceptions sont listées avec leur raison (`SELF_GUARDED` dans `lib/route-inventory.ts`), et le test vérifie qu'un appel anonyme y est bien refusé ;
    - une route de gestion des comptes ou des clés (`/api/me/api-keys`, `/api/admin/users`, `/api/admin/api-keys`) accepte un jeton d'agent ;
@@ -78,7 +78,7 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
 
-### Back-office (162)
+### Back-office (163)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -156,6 +156,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/preview/editions/:year/talks/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
 | GET | `/api/admin/preview/speakers/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
 | GET | `/api/admin/preview/sponsors/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
+| GET | `/api/admin/preview/talks/:slug` | Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA |
 | PUT | `/api/admin/profile` | Contrôlé dans la route : renomme l'appelant ; vérifie la session elle-même |
 | DELETE | `/api/admin/rooms/:id` | ADMIN |
 | PUT | `/api/admin/rooms/:id` | ADMIN |
@@ -293,7 +294,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (62)
+### Public et divers (63)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
@@ -352,6 +353,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
 | GET | `/api/sponsors` | Public |
 | GET | `/api/sponsors/:slug` | Public |
+| GET | `/api/sponsors/hall-of-fame` | Public |
 | GET | `/api/sponsors/indexable` | Public |
 | GET | `/api/tags` | Public |
 | GET | `/api/talks/:slug` | Public |

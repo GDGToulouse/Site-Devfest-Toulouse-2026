@@ -20,7 +20,8 @@
     "venue": "Lieu",
     "blog": "Actus",
     "faq": "FAQ",
-    "team": "Équipe"
+    "team": "Équipe",
+    "sponsorsHallOfFame": "Hall of fame"
   },
   "cta": {
     "becomeSponsor": "Devenir sponsor",
@@ -119,7 +120,8 @@
     "sitemap": "Plan du site",
     "sourceCode": "Code source",
     "replays": "Replays",
-    "hallOfFame": "Hall of fame"
+    "hallOfFame": "Hall of fame",
+    "sponsorsHallOfFame": "Hall of fame des sponsors"
   },
   "notFound": {
     "title": "Page introuvable",
@@ -570,5 +572,21 @@
   "preview": {
     "label": "Aperçu — contenu non publié",
     "exit": "Quitter l'aperçu"
+  },
+  "sponsorsHallOfFame": {
+    "title": "Hall of fame des sponsors",
+    "heading": "Hall of fame des sponsors",
+    "description": "Toutes les entreprises qui ont soutenu le DevFest Toulouse depuis 2016 : {count} partenaires, toutes éditions confondues.",
+    "intro": "{count} entreprises ont soutenu le DevFest Toulouse depuis 2016.",
+    "home": "Accueil",
+    "sponsors": "Sponsors",
+    "empty": "Aucun sponsor pour cette édition.",
+    "allYears": "Toutes les éditions",
+    "filterLabel": "Filtrer par édition",
+    "countLabel": "{count, plural, one {# entreprise} other {# entreprises}}",
+    "sortLabel": "Trier",
+    "sortByName": "Par nom",
+    "sortByParticipations": "Par participations",
+    "editions": "{count, plural, one {# édition} other {# éditions}}"
   }
 }

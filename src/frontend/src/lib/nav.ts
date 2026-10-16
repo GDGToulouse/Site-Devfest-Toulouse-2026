@@ -48,6 +48,13 @@ const HALL_OF_FAME_CHILD: NavEntry = {
   labelKey: "hallOfFame",
   href: "/hall-of-fame",
 };
+// The sponsors' hall of fame (#611), under Sponsors as the speakers' one hangs
+// under Speakers: every company across the editions, on the parent's condition.
+const SPONSORS_HALL_OF_FAME_CHILD: NavEntry = {
+  key: "sponsors-hall-of-fame",
+  labelKey: "sponsorsHallOfFame",
+  href: "/sponsors/hall-of-fame",
+};
 const BLOG_ENTRY: NavEntry = { key: "blog", labelKey: "blog", href: "/actualites" };
 // Venue & practical-info page (#109). Shown only once the edition has map
 // coordinates or a written transports/parking section (hasVenueInfo).
@@ -136,9 +143,10 @@ export function getPublicNavEntries(
 
   if (edition?.hasSpeakers) entries.push({ ...SPEAKERS_ENTRY, children: [HALL_OF_FAME_CHILD] });
   if (edition?.hasSponsors) {
-    entries.push(
-      edition.hasJobOffers ? { ...SPONSORS_ENTRY, children: [JOB_OFFERS_CHILD] } : SPONSORS_ENTRY,
-    );
+    entries.push({
+      ...SPONSORS_ENTRY,
+      children: edition.hasJobOffers ? [JOB_OFFERS_CHILD, SPONSORS_HALL_OF_FAME_CHILD] : [SPONSORS_HALL_OF_FAME_CHILD],
+    });
   }
   if (edition?.hasVenueInfo) entries.push(VENUE_ENTRY);
   if (edition?.hasFaq) entries.push(FAQ_ENTRY);

@@ -100,6 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/speakers",
     "/hall-of-fame",
     "/sponsors",
+    "/sponsors/hall-of-fame",
     "/proposer-un-talk",
     "/contact",
     "/devenir-sponsor",
