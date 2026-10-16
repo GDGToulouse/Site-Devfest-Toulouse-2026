@@ -21,6 +21,7 @@ import type { FaqItem, TeamMember,
   SpeakerPublic,
   SpeakerDetail,
   HallOfFameEntry,
+  SponsorHallOfFameEntry,
   TalkDetail,
   EditionSpeaker,
   EditionTalk,
@@ -267,6 +268,11 @@ export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | nu
 // exact same set by construction.
 export async function getHallOfFame(): Promise<HallOfFameEntry[]> {
   return (await fetchAPI<HallOfFameEntry[]>("/api/speakers/hall-of-fame")) || [];
+}
+
+// Every company that ever sponsored (#611). Also feeds the sitemap entry.
+export async function getSponsorsHallOfFame(): Promise<SponsorHallOfFameEntry[]> {
+  return (await fetchAPI<SponsorHallOfFameEntry[]>("/api/sponsors/hall-of-fame")) || [];
 }
 
 export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {

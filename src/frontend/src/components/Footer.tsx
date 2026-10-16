@@ -94,7 +94,10 @@ export default async function Footer() {
                 // and where they stay visible whatever the current edition has
                 // published. Flattening them here as well would put each twice
                 // in the same footer.
-                .filter((entry) => entry.key !== "hall-of-fame" && entry.key !== "replays");
+                .filter(
+                  (entry) =>
+                    entry.key !== "hall-of-fame" && entry.key !== "sponsors-hall-of-fame" && entry.key !== "replays",
+                );
               if (footerEntries.length === 0) return null;
               return (
                 <div>
@@ -177,6 +180,14 @@ export default async function Footer() {
                       className="text-blanc text-base hover:opacity-70 transition-opacity"
                     >
                       {tFooter("hallOfFame")}
+                    </Link>
+                  </li>
+                  <li>
+                    <Link
+                      href="/sponsors/hall-of-fame"
+                      className="text-blanc text-base hover:opacity-70 transition-opacity"
+                    >
+                      {tFooter("sponsorsHallOfFame")}
                     </Link>
                   </li>
                 </ul>
