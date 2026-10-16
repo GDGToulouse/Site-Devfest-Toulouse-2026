@@ -3,7 +3,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import sharp from "sharp";
 
-import { validateWebhookUrl } from "./webhook-url.js";
+import { fetchRemoteFile } from "./safe-fetch.js";
 import { sanitizeSvg } from "./svg-sanitize.js";
 
 // Single source of truth for where uploaded media lives. Served publicly at
@@ -112,29 +112,11 @@ async function writeBuffer(buffer: Buffer, ext: string): Promise<string> {
 // can decide whether to warn and carry on.
 export async function fetchAndStoreImage(url: string): Promise<string> {
   // The URL comes from an imported payload (Sessionize speaker photos), so it is
-  // attacker-influenced: guard against SSRF before fetching (#306). Less severe
-  // than the JSON endpoint — sharp rejects non-images and errors are swallowed
-  // by the caller — but it is still a blind internal-port probe otherwise.
-  await validateWebhookUrl(url);
+  // attacker-influenced. fetchRemoteFile guards each redirect hop and the address
+  // actually connected to, and stops reading at the cap (#306, #617).
+  const { buffer } = await fetchRemoteFile(url, { maxBytes: MAX_REMOTE_IMAGE_SIZE, timeoutMs: FETCH_TIMEOUT_MS });
 
-  const res = await fetch(url, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    headers: { accept: "image/*" },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-  const contentType = (res.headers.get("content-type") ?? "").split(";")[0].trim().toLowerCase();
-  if (!contentType.startsWith("image/")) {
-    throw new Error(`not an image (content-type: ${contentType || "none"})`);
-  }
-
-  const buffer = Buffer.from(await res.arrayBuffer());
-  if (buffer.length === 0) throw new Error("empty response");
-  if (buffer.length > MAX_REMOTE_IMAGE_SIZE) {
-    throw new Error(`too large (${buffer.length} bytes, max ${MAX_REMOTE_IMAGE_SIZE})`);
-  }
-
-  // Don't trust Content-Type alone: confirm the bytes really are an image and
+  // Don't trust Content-Type: confirm the bytes really are an image and
   // resolve the true format before storing.
   const format = (await sharp(buffer, { failOn: "none" }).metadata()).format;
   if (!format) throw new Error("unreadable image data");

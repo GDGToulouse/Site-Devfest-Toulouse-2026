@@ -95,6 +95,18 @@ curl -X POST https://devfesttoulouse.fr/api/admin/articles \
   }'
 ```
 
+### Importer un fichier depuis une URL (ADMIN ou EDITOR)
+
+Le serveur télécharge le fichier et le range dans la médiathèque, comme un téléversement (#617). Utile depuis le connecteur MCP, dont `call_route` n'envoie que du JSON. Images (JPEG, PNG, WebP, GIF, SVG, ICO) et PDF, 20 Mo au plus ; le type est lu dans le contenu, et les adresses privées sont refusées, redirections comprises.
+
+```bash
+curl -X POST https://devfesttoulouse.fr/api/admin/files/import-url \
+  -H "Authorization: Bearer dft_live_XXXXXXXX" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://exemple.org/logo.png", "alt": "Logo Exemple" }'
+# → 201 { "filename": "…png", "url": "/uploads/…png", "mimetype": "image/png", … }
+```
+
 ### Poster un message de contact (public)
 
 ```bash

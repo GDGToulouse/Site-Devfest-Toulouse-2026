@@ -6,6 +6,7 @@ import { useListParams } from "@/lib/use-list-params";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ListPagination from "@/components/admin/ListPagination";
 import FileDetailsDialog from "@/components/admin/FileDetailsDialog";
+import ImportFromUrl from "@/components/admin/ImportFromUrl";
 import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileInfo {
@@ -192,6 +193,17 @@ export default function FilesAdminPage() {
           multiple
           onChange={handleFileChange}
           className="hidden"
+        />
+      </div>
+
+      {/* By its address (#617): the server downloads the file. */}
+      <div className="mb-6 max-w-xl">
+        <ImportFromUrl
+          onImported={() => {
+            // The newest file opens the first page: go there to see it.
+            if (page > 1) update({ page: "" });
+            else void loadFiles();
+          }}
         />
       </div>
 
