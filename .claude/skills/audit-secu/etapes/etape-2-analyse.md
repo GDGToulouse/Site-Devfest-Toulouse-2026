@@ -3,7 +3,7 @@
 
 ## Garde-fou modèle
 
-Cette étape demande le raisonnement d'Opus 5.5. Si tu n'es pas Opus 5.5, **arrête-toi immédiatement** sans rien analyser et affiche : « Étape 2 interrompue : modèle <ton modèle> détecté, Opus 5.5 requis. Relance `/audit-secu 2` quand Opus 5.5 est disponible. » Les étapes 1 et 3 restent utilisables avec un autre modèle.
+Cette étape demande le raisonnement d'Opus 5.5. Si tu n'es pas Opus 5.5, **arrête-toi immédiatement** sans rien analyser et affiche : « Étape 2 interrompue : modèle <ton modèle> détecté, Opus 5.5 requis. Relance `/audit-secu 2` quand Opus 5.5 est disponible. » Les étapes 1 et 3 restent utilisables avec un autre modèle. Si la phase A a déjà tourné (les huit fichiers de `.security-audit/findings/` existent), propose plutôt `/audit-secu 2b`, qui reprend à la phase B avec n'importe quel modèle.
 
 ## Contexte et autorisation
 
