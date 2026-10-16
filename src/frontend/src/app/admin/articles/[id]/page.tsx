@@ -10,6 +10,7 @@ import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import TagInput from "@/components/admin/TagInput";
 import Tabs from "@/components/admin/Tabs";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import AuditTrail from "@/components/admin/AuditTrail";
 
@@ -86,6 +87,8 @@ export default function ArticleEditorPage() {
   const articleId = isNew ? null : Number(params.id);
 
   const [form, setForm] = useState<ArticleForm>(emptyForm);
+  // The status as stored: unpublishing a live article asks first (#632).
+  const [savedStatus, setSavedStatus] = useState<"DRAFT" | "PUBLISHED" | undefined>(undefined);
   const [tags, setTags] = useState<TagOption[]>([]);
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -121,6 +124,7 @@ export default function ArticleEditorPage() {
       router.push(`/admin/articles`);
       return;
     }
+    setSavedStatus(data.publicationStatus);
     setForm({
       slug: data.slug,
       titleFr: data.titleFr,
@@ -280,11 +284,12 @@ export default function ArticleEditorPage() {
       return;
     }
     // This screen already stayed put on save; it just never said so (#394).
+    setSavedStatus(form.publicationStatus);
     setSaveState({ kind: "ok", text: "Modifications enregistrées." });
   }
 
   if (isLoading) {
-    return <p className="text-gris">Chargement...</p>;
+    return <p className="text-gris">Chargement…</p>;
   }
 
   return (
@@ -314,7 +319,7 @@ export default function ArticleEditorPage() {
             disabled={isSaving}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+            {isSaving ? "Enregistrement…" : "Enregistrer"}
           </button>
         </div>
       </div>
@@ -465,15 +470,14 @@ export default function ArticleEditorPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-noir mb-1">Statut</label>
-              <select
+              <span className="block text-sm font-medium text-noir mb-1">Statut</span>
+              <PublicationSwitch
+                label="Statut de l'article"
                 value={form.publicationStatus}
-                onChange={(e) => updateForm("publicationStatus", e.target.value as "DRAFT" | "PUBLISHED")}
-                className="rounded-lg border border-gris/30 px-3 py-2 text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-              >
-                <option value="DRAFT">Brouillon</option>
-                <option value="PUBLISHED">Publié</option>
-              </select>
+                savedValue={savedStatus}
+                unpublishMessage={`Retirer « ${form.titleFr || "cet article"} » du site ? Il n'y sera plus visible après l'enregistrement.`}
+                onChange={(status) => updateForm("publicationStatus", status)}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-noir mb-1">Éditions</label>

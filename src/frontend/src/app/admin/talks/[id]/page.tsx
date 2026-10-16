@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import { isoToLocalInput, localInputToIso } from "@/lib/datetime";
 import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
@@ -28,6 +28,8 @@ export default function TalkEditorPage() {
   const [editions, setEditions] = useState<{ id: number; year: number }[]>([]);
   const [editionId, setEditionId] = useState<number | null>(null);
   const [editionYear, setEditionYear] = useState<number | null>(null);
+  // The talk as last saved: its visual (#116) exists only once it is published.
+  const [saved, setSaved] = useState<{ slug: string; isPublished: boolean } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   // The rooms of the edition's venue (#105). Empty until an edition is known.
@@ -64,6 +66,7 @@ export default function TalkEditorPage() {
           speakerIds: data.speakerIds,
           publicationStatus: data.publicationStatus,
           isSpeakerEditable: data.isSpeakerEditable,
+          videoUrl: data.videoUrl ?? "",
           roomId: data.roomId ? String(data.roomId) : "",
           simulcastRoomIds: data.simulcastRoomIds ?? [],
           // Through the helper, never by slicing: the input reads local time
@@ -73,6 +76,7 @@ export default function TalkEditorPage() {
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
+        setSaved({ slug: data.slug, isPublished: data.publicationStatus === "PUBLISHED" });
         setIsLoading(false);
       });
     }
@@ -121,6 +125,8 @@ export default function TalkEditorPage() {
       speakerIds: form.speakerIds,
       publicationStatus: form.publicationStatus,
       isSpeakerEditable: form.isSpeakerEditable,
+      // Empty clears the replay (#636); the backend keeps YouTube only.
+      videoUrl: form.videoUrl.trim() || null,
       // `null` unschedules; a blank date clears the slot (#105).
       roomId: form.roomId ? Number(form.roomId) : null,
       // Always sent, so clearing every relay reaches the API (#456): an omitted
@@ -131,30 +137,34 @@ export default function TalkEditorPage() {
     };
 
     if (isNew) {
-      const { data, status } = await adminFetch<{ id: number }>("/talks", { method: "POST", body: JSON.stringify(payload) });
+      const result = await adminFetch<{ id: number }>("/talks", { method: "POST", body: JSON.stringify(payload) });
+      const { data, status } = result;
       setIsSaving(false);
-      if (status >= 400 || !data) {
-        setError("Échec de la création.");
+      if (status !== 201 || !data) {
+        // The backend's own sentence when it has one: a refused replay URL says
+        // what it expects (#636).
+        setError(humanError(result, "Échec de la création."));
         return;
       }
       router.push(`/admin/talks/${data.id}`);
     } else {
-      const { status } = await adminFetch(`/talks/${talkId}`, { method: "PUT", body: JSON.stringify(payload) });
+      const result = await adminFetch(`/talks/${talkId}`, { method: "PUT", body: JSON.stringify(payload) });
       setIsSaving(false);
       // Anything but 200 failed, network included: a dropped connection comes
       // back as status 0, which `>= 400` announced as a save (#428).
-      if (status !== 200) {
-        setError("Échec de l'enregistrement.");
+      if (result.status !== 200) {
+        setError(humanError(result, "Échec de l'enregistrement."));
         return;
       }
       // Staying put, like the sponsor and speaker sheets (#394): creating left
       // the editor on the talk, saving then threw them back to the list, and
       // the SaveFeedback below never got the chance to say anything (#412).
       setSaveState({ kind: "ok", text: "Modifications enregistrées." });
+      setSaved((s) => s && { ...s, isPublished: form.publicationStatus === "PUBLISHED" });
     }
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   // 1152 px rather than 768 (#410): a contact row or a bilingual field had
   // two thirds of the screen empty beside it; a cap still keeps text lines
@@ -166,8 +176,21 @@ export default function TalkEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouvelle conférence" : "Modifier la conférence"}</h1>
+        {saved?.isPublished && editionYear && (
+          // The social-media visual (#116), as on the speaker sheet.
+          <a
+            href={`/conferences/${saved.slug}/social-card?year=${editionYear}`}
+            target="_blank"
+            rel="noopener"
+            className="ml-auto text-sm text-malachite hover:underline"
+          >
+            Voir le visuel
+          </a>
+        )}
         {talkId !== null && (
           <TrashButton
+            // "Voir le visuel" already pushes the header's right side out.
+            className={saved?.isPublished && editionYear ? "" : undefined}
             path={`/talks/${talkId}`}
             listHref="/admin/talks"
             title="Supprimer la conférence"
@@ -194,7 +217,18 @@ export default function TalkEditorPage() {
           <p className="text-sm text-gris">Édition : <span className="font-medium text-noir">{editionYear ?? "—"}</span></p>
         )}
 
-        <TalkForm value={form} onChange={setForm} categories={categories} speakers={speakers} rooms={rooms} />
+        <TalkForm
+          value={form}
+          onChange={setForm}
+          categories={categories}
+          speakers={speakers}
+          rooms={rooms}
+          saved={
+            saved && editionYear
+              ? { slug: saved.slug, year: editionYear, publicationStatus: saved.isPublished ? "PUBLISHED" : "DRAFT" }
+              : null
+          }
+        />
 
         {error && <p role="alert" className="text-sm text-terre-cuite">{error}</p>}
 

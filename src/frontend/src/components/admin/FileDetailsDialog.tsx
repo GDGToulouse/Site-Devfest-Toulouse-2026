@@ -190,7 +190,7 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
         {/* Footer */}
         <div className="flex items-center justify-between gap-3 p-4 border-t border-gris/20">
           <div className="text-sm">
-            {saveStatus === "saved" && <span className="text-malachite">Enregistré !</span>}
+            {saveStatus === "saved" && <span role="status" aria-live="polite" className="text-malachite">Modifications enregistrées.</span>}
             {saveStatus === "error" && (
               <span className="text-terre-cuite">Erreur lors de l&apos;enregistrement</span>
             )}
@@ -208,7 +208,7 @@ export default function FileDetailsDialog({ file, onClose, onSaved }: FileDetail
                 disabled={isSaving || !isDirty}
                 className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
               >
-                {isSaving ? "Enregistrement..." : "Enregistrer"}
+                {isSaving ? "Enregistrement…" : "Enregistrer"}
               </button>
             )}
           </div>

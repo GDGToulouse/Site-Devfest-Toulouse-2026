@@ -24,6 +24,8 @@ const collator = new Intl.Collator("fr", { sensitivity: "base", numeric: true })
 interface DataTableProps<T> {
   columns: Column<T>[];
   data: T[];
+  // Read-only look at the whole record, links included (#484).
+  onView?: (item: T) => void;
   onEdit?: (item: T) => void;
   onDelete?: (item: T) => void;
   emptyMessage?: string;
@@ -61,9 +63,10 @@ const ICON_PROPS = {
 export default function DataTable<T extends { id: number }>({
   columns,
   data,
+  onView,
   onEdit,
   onDelete,
-  emptyMessage = "Aucun element",
+  emptyMessage = "Aucun élément",
   selectedIds,
   onSelectionChange,
   rowLabel = defaultRowLabel,
@@ -161,7 +164,7 @@ export default function DataTable<T extends { id: number }>({
                 )}
               </th>
             ))}
-            {(onEdit || onDelete) && (
+            {(onView || onEdit || onDelete) && (
               <th className="text-right px-4 py-3 font-medium text-gris">Actions</th>
             )}
           </tr>
@@ -185,13 +188,24 @@ export default function DataTable<T extends { id: number }>({
                   {col.render ? col.render(item) : String((item as Record<string, unknown>)[col.key] ?? "")}
                 </td>
               ))}
-              {(onEdit || onDelete) && (
+              {(onView || onEdit || onDelete) && (
                 <td className="px-4 py-3 text-right">
                   {/* Icon buttons, like the users list (#499). The aria-label
                       names the row: a `title` alone is not read reliably, and
                       ten identical "Modifier" tell a screen reader nothing.
                       p-2 around a 16 px icon keeps the target above 24 px. */}
                   <div className="flex justify-end gap-1">
+                    {onView && (
+                      <button
+                        type="button"
+                        onClick={() => onView(item)}
+                        aria-label={`Consulter ${rowLabel(item)}`}
+                        title="Consulter"
+                        className="p-2 rounded-lg text-noir hover:bg-noir/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-noir transition-colors"
+                      >
+                        <svg {...ICON_PROPS}><path d="M2.06 12.35a1 1 0 0 1 0-.7 10.75 10.75 0 0 1 19.88 0 1 1 0 0 1 0 .7 10.75 10.75 0 0 1-19.88 0" /><circle cx="12" cy="12" r="3" /></svg>
+                      </button>
+                    )}
                     {onEdit && (
                       <button
                         type="button"

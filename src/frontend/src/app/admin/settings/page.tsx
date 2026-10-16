@@ -79,18 +79,22 @@ function CacheTab() {
     setIsPurging(true);
     setResult(null);
 
-    const allPaths = PREDEFINED_PATHS.map((p) => p.path);
-    const { data, status } = await adminFetch<{ revalidated: boolean }>("/cache/purge", {
+    // The whole site, every page in both languages (#627), not the seven
+    // pages listed above.
+    const { data, status, errorBody } = await adminFetch<{ revalidated: boolean }>("/cache/purge", {
       method: "POST",
-      body: JSON.stringify({ paths: allPaths }),
+      body: JSON.stringify({ all: true }),
     });
 
     setIsPurging(false);
 
     if (status === 200 && data?.revalidated) {
-      setResult({ success: true, message: "Cache complet purgé" });
+      setResult({ success: true, message: "Tout le cache du site a été vidé." });
     } else {
-      setResult({ success: false, message: "Erreur lors du purge" });
+      setResult({
+        success: false,
+        message: typeof errorBody?.message === "string" ? errorBody.message : "Le cache n'a pas pu être vidé. Réessayez.",
+      });
     }
   }
 
@@ -129,7 +133,7 @@ function CacheTab() {
             disabled={isPurging}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isPurging ? "Purge en cours..." : "Purger la sélection"}
+            {isPurging ? "Purge en cours…" : "Purger la sélection"}
           </button>
           <button
             onClick={() => setConfirmScope("all")}
@@ -370,7 +374,7 @@ function ContactsTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -567,7 +571,7 @@ function IdentityTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -779,7 +783,7 @@ function EcosystemTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -960,7 +964,7 @@ function CarouselTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -1115,7 +1119,7 @@ function SeoTab({
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Enregistrement..." : "Enregistrer"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>
@@ -1152,7 +1156,7 @@ export default function SettingsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <div className="text-gris">Chargement...</div>
+        <div className="text-gris">Chargement…</div>
       </div>
     );
   }

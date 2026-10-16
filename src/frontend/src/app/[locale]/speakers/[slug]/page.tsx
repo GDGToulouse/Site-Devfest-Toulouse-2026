@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getCurrentEdition, getSpeakerBySlug } from "@/lib/api";
+import { getCurrentEdition } from "@/lib/api";
+import { getSpeakerPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
@@ -17,7 +18,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
-  const speaker = await getSpeakerBySlug(slug);
+  const speaker = await getSpeakerPage(slug);
 
   if (!speaker) return { title: "Speaker not found" };
 
@@ -47,7 +48,7 @@ export default async function SpeakerDetailPage({
   const tLevel = await getTranslations("conferences");
   // The edition is only needed to name the current line-up in the footer link
   // (#357); fetched alongside the speaker so the two calls do not serialize.
-  const [speaker, edition] = await Promise.all([getSpeakerBySlug(slug), getCurrentEdition()]);
+  const [speaker, edition] = await Promise.all([getSpeakerPage(slug), getCurrentEdition()]);
 
   if (!speaker) notFound();
 

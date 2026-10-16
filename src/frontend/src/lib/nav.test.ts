@@ -44,6 +44,12 @@ describe("getPublicNavEntries", () => {
     expect(keys(getPublicNavEntries(edition({ hasFaq: false })))).not.toContain("faq");
   });
 
+  // #110: the team page waits for an organiser ticked for the edition.
+  it("offers the team once an organiser is ticked, after the FAQ", () => {
+    expect(keys(getPublicNavEntries(edition({ hasFaq: true, hasTeam: true })))).toEqual(["replays", "faq", "team", "blog"]);
+    expect(keys(getPublicNavEntries(edition({ hasTeam: false })))).not.toContain("team");
+  });
+
   it("shows a null edition as replays and blog only, never crashing", () => {
     expect(keys(getPublicNavEntries(null))).toEqual(["replays", "blog"]);
   });
@@ -154,6 +160,8 @@ describe("getPublicNavEntries", () => {
         hasSponsors: true,
         hasJobOffers: true,
         hasVenueInfo: true,
+        hasFaq: true,
+        hasTeam: true,
       }),
     );
     const labelKeys = entries.flatMap((e) => [
@@ -282,5 +290,39 @@ describe("getSubmenuEntries (#506)", () => {
     const [program] = getPublicNavEntries(edition({ isScheduleReady: true }));
 
     expect(getSubmenuEntries(program, 2026)[0].key).not.toBe(program.key);
+  });
+});
+
+// #606 — the top-level order is set from the admin; which entries show is
+// still the edition's call.
+describe("getPublicNavEntries with a menu order (#606)", () => {
+  const edition = {
+    isScheduleReady: true,
+    hasSpeakers: true,
+    hasSponsors: true,
+    hasVenueInfo: true,
+    hasFaq: false,
+  } as unknown as Parameters<typeof getPublicNavEntries>[0];
+  const pages = [
+    { slug: "accessibilite", titleFr: "Accessibilité", titleEn: "Accessibility", navLocation: "HEADER", navOrder: 0 },
+  ] as unknown as Parameters<typeof getPublicNavEntries>[1];
+
+  it("places a page among the site's entries, and the programme slot whatever its shape", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr", ["blog", "page-accessibilite", "programme"]).map((e) => e.key);
+
+    expect(keys).toEqual(["blog", "page-accessibilite", "program", "speakers", "sponsors", "venue"]);
+  });
+
+  it("keeps the code's order when no order is set", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr").map((e) => e.key);
+
+    expect(keys).toEqual(["program", "speakers", "sponsors", "venue", "blog", "page-accessibilite"]);
+  });
+
+  it("ignores an entry the edition hides, even if the order names it", () => {
+    const keys = getPublicNavEntries(edition, pages, "fr", ["faq", "venue"]).map((e) => e.key);
+
+    expect(keys).not.toContain("faq");
+    expect(keys[0]).toBe("venue");
   });
 });

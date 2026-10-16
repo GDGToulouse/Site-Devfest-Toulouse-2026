@@ -7,6 +7,7 @@ import {
   getEcosystemPartners,
   getEditions,
   getIdentitySettings,
+  getNavOrder,
   getPublishedPages,
   getSocialLinks,
 } from "@/lib/api";
@@ -14,8 +15,12 @@ import { getLogoUrl } from "@/lib/identity";
 import { getFooterPageEntries, getPublicNavEntries } from "@/lib/nav";
 import SocialIcons from "./SocialIcons";
 
+// The site is open source (MIT, #607). The repository does not move from one
+// edition to the next, so no setting for it.
+const SOURCE_CODE_URL = "https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026";
+
 export default async function Footer() {
-  const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages] =
+  const [tNav, tFooter, tCta, locale, edition, editions, socialLinks, identity, ecosystemPartners, pages, navOrder] =
     await Promise.all([
       getTranslations("nav"),
       getTranslations("footer"),
@@ -27,6 +32,7 @@ export default async function Footer() {
       getIdentitySettings(),
       getEcosystemPartners(),
       getPublishedPages(),
+      getNavOrder(),
     ]);
 
   const footerPages = getFooterPageEntries(pages, locale);
@@ -77,7 +83,7 @@ export default async function Footer() {
             {(() => {
               // Flatten parent + children into one list (the footer has no
               // dropdowns); children render indented under their parent (#203).
-              const footerEntries = getPublicNavEntries(edition, pages, locale)
+              const footerEntries = getPublicNavEntries(edition, pages, locale, navOrder)
                 .flatMap((entry) => [
                   { ...entry, indented: false },
                   ...(entry.children ?? []).map((child) => ({ ...child, indented: true })),
@@ -205,6 +211,14 @@ export default async function Footer() {
           </Link>
           <a href="/sitemap.xml" className="text-blanc/85 text-sm hover:text-blanc transition-colors">
             {tFooter("sitemap")}
+          </a>
+          <a
+            href={SOURCE_CODE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blanc/85 text-sm hover:text-blanc transition-colors"
+          >
+            {tFooter("sourceCode")}
           </a>
         </div>
       </div>

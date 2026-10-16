@@ -43,6 +43,8 @@ export interface Edition {
   isScheduleReady: boolean;
   /** At least one published FAQ question (#111), site-wide. */
   hasFaq?: boolean;
+  /** At least one organiser ticked for the edition (#110). */
+  hasTeam?: boolean;
   hasSpeakers: boolean;
   hasSponsors: boolean;
   // At least one partner job offer is published and still within its
@@ -490,6 +492,8 @@ export interface TalkDetail {
   startsAt: string | null;
   endsAt: string | null;
   year: number;
+  // The replay once filmed (#633): this page stands in for the dated one.
+  videoUrl: string | null;
   category: { nameFr: string; nameEn: string; color: string } | null;
   speakers: { slug: string; name: string; photoUrl: string | null; company: string | null }[];
 }
@@ -536,6 +540,8 @@ export interface Talk {
   publicationStatus: "DRAFT" | "PUBLISHED";
   // Whether the speaker may edit the wording from their magic link (#289).
   isSpeakerEditable: boolean;
+  // The replay, a YouTube URL (#636).
+  videoUrl: string | null;
   editionId: number;
 }
 
@@ -670,4 +676,17 @@ export interface FaqItem {
   questionEn: string;
   answerFr: string;
   answerEn: string;
+}
+
+// An organiser of the DevFest (#110), as the public team page reads it.
+export interface TeamMember {
+  id: number;
+  firstName: string;
+  lastName: string;
+  photoUrl: string | null;
+  websiteUrl: string | null;
+  linkedinUrl: string | null;
+  twitterUrl: string | null;
+  githubUrl: string | null;
+  blueskyUrl: string | null;
 }

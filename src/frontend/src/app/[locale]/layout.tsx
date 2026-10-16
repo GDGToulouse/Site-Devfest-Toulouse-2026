@@ -1,23 +1,26 @@
 import { config } from "@fortawesome/fontawesome-svg-core";
-import "@fortawesome/fontawesome-svg-core/styles.css";
+// Its stylesheet is bundled into globals.css (#479).
 config.autoAddCss = false;
 
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
+import { draftMode } from "next/headers";
 import { routing } from "@/i18n/routing";
 import PlausibleProvider from "next-plausible";
 import WebVitals from "@/components/WebVitals";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import LanguageSuggestionBanner from "@/components/LanguageSuggestionBanner";
+import PreviewBanner from "@/components/preview/PreviewBanner";
 import { EditionProvider } from "@/contexts/EditionContext";
 import {
   getCfpSettings,
   getCurrentEdition,
   getIdentitySettings,
   getPublishedPages,
+  getNavOrder,
   getSocialLinks,
 } from "@/lib/api";
 import { buildFaviconMetadata, getLogoUrl } from "@/lib/identity";
@@ -85,12 +88,14 @@ export default async function LocaleLayout({
     notFound();
   }
 
-  const [edition, cfp, identity, socialLinks, pages] = await Promise.all([
+  const [edition, cfp, identity, socialLinks, pages, navOrder, draft] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
     getIdentitySettings(),
     getSocialLinks(),
     getPublishedPages(),
+    getNavOrder(),
+    draftMode(),
   ]);
 
   const logoPath = getLogoUrl(identity, "square");
@@ -136,6 +141,7 @@ export default async function LocaleLayout({
         {locale === "fr" ? "Aller au contenu" : "Skip to content"}
       </a>
       <NextIntlClientProvider>
+        {draft.isEnabled && <PreviewBanner />}
         <LanguageSuggestionBanner />
         <EditionProvider
           edition={edition}
@@ -143,6 +149,7 @@ export default async function LocaleLayout({
           identity={identity}
           socialLinks={socialLinks}
           pages={pages}
+          navOrder={navOrder}
         >
           <Header />
           <main id="main-content" role="main" className="flex-1">

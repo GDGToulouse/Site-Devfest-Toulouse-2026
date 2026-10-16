@@ -163,7 +163,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
     setTimeout(() => setSettingsSaved(false), 3000);
   }
 
-  if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
+  if (isLoading) return <p className="text-gris text-sm">Chargement…</p>;
 
   const currentStatusOption = STATUS_OPTIONS.find((o) => o.value === settings.sponsorPageStatus);
   const showTempUrl = settings.sponsorPageStatus === "PRE_ANNOUNCEMENT" || settings.sponsorPageStatus === "TEMPORARY";
@@ -318,9 +318,9 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
             disabled={isSettingsSaving}
             className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
           >
-            {isSettingsSaving ? "Sauvegarde..." : "Enregistrer le statut"}
+            {isSettingsSaving ? "Enregistrement…" : "Enregistrer le statut"}
           </button>
-          {settingsSaved && <span className="text-sm text-malachite">Enregistré !</span>}
+          {settingsSaved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
         </div>
       </div>
 

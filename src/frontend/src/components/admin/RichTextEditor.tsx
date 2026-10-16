@@ -9,7 +9,17 @@ import Underline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import ImagePickerDialog from "./ImagePickerDialog";
+import PastedImageAltDialog from "./PastedImageAltDialog";
 import { LinkedImage } from "./linked-image";
+import { adminFetch } from "@/lib/admin-api";
+import { pastedFile } from "@/lib/clipboard-file";
+
+// What can be pasted or dropped straight into the text (#377): the images the
+// library takes, minus the icons a picker accepts for favicons.
+const PASTE_IMAGE_TYPES = {
+  mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"],
+  extensions: [".svg"],
+};
 
 // Prefix https:// when the user types a bare domain (e.g. "www.devfest.fr"),
 // otherwise the browser treats it as a relative link and it 404s (#167).
@@ -42,6 +52,13 @@ export default function RichTextEditor({
   showImageButton = true,
 }: RichTextEditorProps) {
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
+  // An image pasted or dropped into the text (#377): uploading, refused, or
+  // waiting for its alt text.
+  const [pasteStatus, setPasteStatus] = useState<{ kind: "uploading" } | { kind: "error"; text: string } | null>(null);
+  const [altTarget, setAltTarget] = useState<{ filename: string; url: string } | null>(null);
+  // The handlers below are registered once with the editor; this keeps them
+  // reading the current upload function rather than the first render's.
+  const insertFileRef = useRef<(file: File, pos: number) => void>(() => {});
   const editor = useEditor({
     immediatelyRender: false,
     extensions: [
@@ -78,8 +95,80 @@ export default function RichTextEditor({
       attributes: {
         class: "article-content tiptap-content",
       },
+      // A screenshot pasted into an article used to need the picker: open it,
+      // upload, insert (#377). Only a clipboard holding an image is taken; a
+      // text paste goes through untouched.
+      handlePaste(view, event) {
+        if (!showImageButton || !event.clipboardData) return false;
+        const pasted = pastedFile(event.clipboardData, PASTE_IMAGE_TYPES);
+        if (!pasted) return false;
+        if (pasted.kind === "refused") {
+          setPasteStatus({ kind: "error", text: "Seules les images (JPEG, PNG, WebP, GIF, SVG) se collent dans le texte." });
+          return true;
+        }
+        insertFileRef.current(pasted.file, view.state.selection.from);
+        return true;
+      },
+      // Dropping a file from the desktop: same path, at the drop point.
+      handleDrop(view, event, _slice, moved) {
+        if (moved || !showImageButton || !event.dataTransfer) return false;
+        const pasted = pastedFile(event.dataTransfer, PASTE_IMAGE_TYPES);
+        if (!pasted) return false;
+        event.preventDefault();
+        if (pasted.kind === "refused") {
+          setPasteStatus({ kind: "error", text: "Seules les images (JPEG, PNG, WebP, GIF, SVG) se déposent dans le texte." });
+          return true;
+        }
+        const pos = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos ?? view.state.selection.from;
+        insertFileRef.current(pasted.file, pos);
+        return true;
+      },
     },
   });
+
+  // Upload to the library, as the picker does, then insert where the paste
+  // happened. Nothing goes in until the upload succeeded: a failure must not
+  // leave a broken image in the text.
+  async function insertFile(file: File, pos: number) {
+    if (!editor) return;
+    setPasteStatus({ kind: "uploading" });
+    const form = new FormData();
+    form.append("file", file);
+    const { data, status } = await adminFetch<{ filename: string; url: string }>("/files", { method: "POST", body: form });
+    if (!data?.url) {
+      setPasteStatus({
+        kind: "error",
+        text: status === 413 ? "Image trop lourde (20 Mo au plus)." : "L'image n'a pas pu être envoyée. Réessayez.",
+      });
+      return;
+    }
+    const safePos = Math.min(pos, editor.state.doc.content.size);
+    // Followed by a paragraph that takes the cursor: left selected, the image
+    // was replaced by whatever came next, typed or pasted.
+    editor
+      .chain()
+      .focus()
+      .insertContentAt(safePos, [{ type: "image", attrs: { src: data.url, alt: "" } }, { type: "paragraph" }])
+      .run();
+    setPasteStatus(null);
+    setAltTarget({ filename: data.filename, url: data.url });
+  }
+
+  useEffect(() => {
+    insertFileRef.current = insertFile;
+  });
+
+  // Give the inserted image the description written in the prompt.
+  function setPastedImageAlt(url: string, alt: string) {
+    if (!editor) return;
+    const { tr } = editor.state;
+    editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === "image" && node.attrs.src === url) {
+        tr.setNodeMarkup(pos, undefined, { ...node.attrs, alt });
+      }
+    });
+    editor.view.dispatch(tr);
+  }
 
   // Sync external value changes (e.g. async API load)
   const prevValueRef = useRef(value);
@@ -117,6 +206,27 @@ export default function RichTextEditor({
           <EditorContent editor={editor} />
         </div>
       </div>
+      {pasteStatus?.kind === "uploading" && (
+        <p role="status" className="mt-1 text-xs text-gris">
+          Envoi de l&apos;image…
+        </p>
+      )}
+      {pasteStatus?.kind === "error" && (
+        <p role="alert" className="mt-1 text-xs text-terre-cuite">
+          {pasteStatus.text}{" "}
+          <button type="button" onClick={() => setPasteStatus(null)} className="underline">
+            Fermer
+          </button>
+        </p>
+      )}
+      <PastedImageAltDialog
+        image={altTarget}
+        onClose={() => setAltTarget(null)}
+        onSaved={(alt) => {
+          if (altTarget) setPastedImageAlt(altTarget.url, alt);
+          setAltTarget(null);
+        }}
+      />
       {showImageButton && (
         <ImagePickerDialog
           open={imagePickerOpen}

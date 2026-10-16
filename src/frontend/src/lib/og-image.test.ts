@@ -42,3 +42,22 @@ describe("imageDataUri (#600)", () => {
     expect(await imageDataUri("/uploads/photo.png")).toBeNull();
   });
 });
+
+// #116 — a sponsor's logo can be one of the site's own static files, which the
+// backend does not serve.
+describe("imageDataUri — static files (#116)", () => {
+  it("should read a file of public/ from disk rather than from the backend", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const uri = await imageDataUri("/images/sponsors/aeronova-systems.svg");
+
+    expect(uri).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should refuse a path that climbs out of public/", async () => {
+    expect(await imageDataUri("/../package.json")).toBeNull();
+    expect(await imageDataUri("/images/../../next.config.ts")).toBeNull();
+  });
+});

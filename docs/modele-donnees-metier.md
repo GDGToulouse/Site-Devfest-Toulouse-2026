@@ -22,7 +22,7 @@ Speaker ──── Lien social (1 à N)
 Sponsor ──┬── Lien social (1 à N)
           └── Speaker (employés du sponsor)
 
-Membre d'équipe ──── Lien social (1 à N)
+Membre d'équipe ──── Liens (5 champs)
 
 Article de blog ──── Étiquette (0 à N)
 
@@ -245,14 +245,16 @@ Les étiquettes sont libres : en plus des éditions, on peut créer des tags th�
 
 ## Membre d'équipe
 
-Organisateur du DevFest Toulouse.
+Organisateur du DevFest Toulouse (#110). Comme un speaker, c'est une personne partagée entre éditions : on la coche pour chaque année organisée (`TeamMemberEdition`), sans la ressaisir.
 
 | Information | Description | Exemple |
 |-------------|-------------|---------|
-| Nom | Nom complet | Pierre Martin |
-| Photo | Portrait | Image |
-| Rôle | Fonction dans l'organisation | Responsable sponsors |
-| Liens sociaux | Profils sur les réseaux | Twitter, LinkedIn, GitHub |
+| Prénom, nom | Obligatoires | Pierre Martin |
+| Photo | Portrait, facultatif (initiale à défaut) | Image |
+| Liens | Site web, LinkedIn, X, GitHub, Bluesky, tous facultatifs | `https://github.com/…` |
+| Éditions | Années organisées | 2025, 2026 |
+
+Pas de rôle dans l'organisation : choix assumé (#110). La page Équipe montre les organisateurs de l'édition en avant, par ordre alphabétique du nom ; son entrée de menu apparaît dès qu'un organisateur est coché pour l'édition.
 
 ---
 
@@ -318,7 +320,7 @@ Parcours ludique pour les participants visitant les stands des sponsors.
 
 ## Lien social
 
-Profil sur un réseau social ou site web, associé à un speaker, un sponsor ou un membre d'équipe.
+Profil sur un réseau social ou site web, associé à un speaker ou un sponsor (un membre d'équipe porte ses liens en champs propres).
 
 | Information | Description | Exemple |
 |-------------|-------------|---------|
@@ -337,7 +339,7 @@ Profil sur un réseau social ou site web, associé à un speaker, un sponsor ou 
 Édition ──── 1:N ──── Niveau de sponsoring (disponibles pour l'édition)
 Édition ──── 1:N ──── Créneau horaire
 Édition ──── 1:N ──── Palier billetterie
-Édition ──── 1:N ──── Membre d'équipe
+Édition ──── N:M ──── Membre d'équipe
 
 Lieu ─────── 1:N ──── Salle
 
@@ -352,7 +354,6 @@ Speaker ──── N:1 ──── Sponsor (via l'entreprise, si le sponsor e
 
 Sponsor ──── 1:N ──── Lien social
 
-Membre d'équipe ── 1:N ──── Lien social
 
 Utilisateur ── 0:1 ──── Speaker (si rôle speaker)
 Utilisateur ── 0:1 ──── Sponsor (si rôle sponsor)

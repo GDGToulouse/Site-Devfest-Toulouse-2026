@@ -112,7 +112,7 @@ export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreat
             onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={selectedTags.length === 0 ? "Ajouter un tag..." : ""}
+            placeholder={selectedTags.length === 0 ? "Ajouter un tag…" : ""}
             className="flex-1 min-w-[120px] outline-none text-sm text-noir bg-transparent"
           />
         </div>
@@ -136,7 +136,7 @@ export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreat
                 disabled={isCreating}
                 className="w-full text-left px-3 py-2 text-sm text-malachite hover:bg-malachite/5 transition-colors border-t border-gris/10"
               >
-                {isCreating ? "Creation..." : `Creer le tag "${query.trim()}"`}
+                {isCreating ? "Creation…" : `Creer le tag "${query.trim()}"`}
               </button>
             )}
           </div>

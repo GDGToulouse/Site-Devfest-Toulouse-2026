@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, getAdminSession } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
 import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
@@ -14,6 +14,7 @@ import SponsorIdentityFields from "@/components/admin/sponsors/SponsorIdentityFi
 import SponsorParticipationFields from "@/components/admin/sponsors/SponsorParticipationFields";
 import SponsorComKitFields from "@/components/admin/sponsors/SponsorComKitFields";
 import SponsorYearPicker from "@/components/admin/sponsors/SponsorYearPicker";
+import SponsorJobOffers from "@/components/admin/sponsors/SponsorJobOffers";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import AuditTrail from "@/components/admin/AuditTrail";
 import {
@@ -39,6 +40,9 @@ const IDENTITY_TAB = "identite";
 const PARTICIPATION_TAB = "participation";
 const COM_KIT_TAB = "kit-de-com";
 const CONTACTS_TAB = "contacts";
+const JOB_OFFERS_TAB = "offres";
+// Tabs that save on their own: the sheet's footer would promise a save it does not do.
+const SELF_SAVING_TABS = [CONTACTS_TAB, JOB_OFFERS_TAB];
 
 export default function SponsorEditorPage() {
   const params = useParams();
@@ -93,6 +97,14 @@ export default function SponsorEditorPage() {
 
   const tabFromUrl = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabFromUrl ?? IDENTITY_TAB);
+  // The cross-sponsor offers list links here with the offer to open (#609).
+  const focusOfferId = Number(searchParams.get("offer")) || undefined;
+  // The partner space opens to admins only (support access, sponsor-guard.ts).
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    getAdminSession().then((user) => setIsAdmin(user?.role === "ADMIN"));
+  }, []);
 
   // The tier catalogue drives the "Niveau" <select> and the promo-idea gating.
   useEffect(() => {
@@ -267,7 +279,10 @@ export default function SponsorEditorPage() {
     }
   }
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
+
+  // A published participation has a public page, hence a visual (#116).
+  const hasVisual = Boolean(current?.editions?.some((e) => e.publicationStatus === "PUBLISHED"));
 
   // The year is part of the label rather than a line of grey text above the
   // form: it scopes everything in the panel, so it has to stay on screen.
@@ -276,6 +291,7 @@ export default function SponsorEditorPage() {
     { key: PARTICIPATION_TAB, label: editionYear ? `Participation ${editionYear}` : "Participation" },
     { key: COM_KIT_TAB, label: "Kit de com" },
     { key: CONTACTS_TAB, label: "Contacts & accès" },
+    { key: JOB_OFFERS_TAB, label: editionYear ? `Offres d'emploi ${editionYear}` : "Offres d'emploi" },
   ];
 
   const isSaveBlocked = !form.name.trim() || !editionId || !form.tierId;
@@ -292,8 +308,33 @@ export default function SponsorEditorPage() {
         <h1 className="text-3xl font-bold text-noir">
           {isNew ? "Nouveau sponsor" : current?.name || "Modifier le sponsor"}
         </h1>
+        {hasVisual && current && (
+          // The social-media visual (#116), as on the speaker sheet.
+          <a
+            href={`/sponsors/${current.slug}/social-card`}
+            target="_blank"
+            rel="noopener"
+            className="ml-auto text-sm text-malachite hover:underline"
+          >
+            Voir le visuel
+          </a>
+        )}
+        {sponsorId !== null && isAdmin && (
+          // What the sponsor sees, for support (#609). A new tab: the admin
+          // keeps the sheet they were on.
+          <a
+            href={`/sponsor/${sponsorId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${hasVisual ? "" : "ml-auto "}text-sm text-bleu hover:underline`}
+          >
+            Ouvrir l&apos;espace partenaire
+          </a>
+        )}
         {sponsorId !== null && (
           <TrashButton
+            // The link above already pushes both to the right.
+            className={hasVisual || isAdmin ? "" : undefined}
             path={`/sponsors/${sponsorId}`}
             listHref="/admin/sponsors"
             title="Supprimer le sponsor"
@@ -374,7 +415,14 @@ export default function SponsorEditorPage() {
                     editionId={editionId}
                     onChange={requestYear}
                   />
-                  <SponsorParticipationFields value={form} onChange={setForm} tiers={tiers} year={editionYear} />
+                  <SponsorParticipationFields
+                    value={form}
+                    onChange={setForm}
+                    tiers={tiers}
+                    year={editionYear}
+                    savedStatus={editedParticipation?.publicationStatus}
+                    sponsorSlug={current?.slug}
+                  />
 
                   {current && (
                     <div className="mt-8 border-t border-gris/20 pt-6">
@@ -399,6 +447,31 @@ export default function SponsorEditorPage() {
                     onChange={requestYear}
                   />
                   <SponsorComKitFields value={form} onChange={setForm} tiers={tiers} year={editionYear} />
+                </section>
+              )}
+
+              {activeTab === JOB_OFFERS_TAB && current && (
+                <section>
+                  <h2 className="mb-1 text-lg font-semibold text-noir">
+                    Offres d&apos;emploi{editionYear ? ` ${editionYear}` : ""}
+                  </h2>
+                  <p className="mb-4 text-sm text-gris">
+                    Publiées sur la fiche du sponsor et la page des offres partenaires. Le sponsor
+                    les gère aussi depuis son espace.
+                  </p>
+                  <SponsorYearPicker
+                    participations={participations}
+                    editionId={editionId}
+                    onChange={requestYear}
+                  />
+                  {editionId && (
+                    <SponsorJobOffers
+                      sponsorId={current.id}
+                      editionId={editionId}
+                      year={editionYear}
+                      focusOfferId={focusOfferId}
+                    />
+                  )}
                 </section>
               )}
 
@@ -462,9 +535,7 @@ export default function SponsorEditorPage() {
 
         {error && <p role="alert" className="mt-4 text-sm text-terre-cuite">{error}</p>}
 
-        {/* Contacts save themselves on the spot, so the footer would promise
-            something it does not do on that tab. */}
-        {activeTab !== CONTACTS_TAB && (
+        {!SELF_SAVING_TABS.includes(activeTab) && (
           <div className="mt-6 border-t border-gris/20 pt-4">
             <SaveFeedback state={saveState} onDismiss={() => setSaveState(null)} />
 

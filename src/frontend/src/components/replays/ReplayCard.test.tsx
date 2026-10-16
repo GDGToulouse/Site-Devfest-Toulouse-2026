@@ -38,7 +38,7 @@ const labels = {
 const noFilter = { q: "", year: "", format: "", category: "" };
 
 function renderCard(current = noFilter) {
-  render(<ReplayCard replay={replay} locale="fr" current={current} labels={labels} />);
+  render(<ReplayCard replay={replay} locale="fr" current={current} featuredYear={null} labels={labels} />);
 }
 
 const hrefOf = (name: string | RegExp) =>
@@ -48,6 +48,12 @@ describe("ReplayCard", () => {
   it("should link the title to the year-scoped talk page", () => {
     renderCard();
     expect(hrefOf("Un talk mémorable")).toBe("/editions/2019/conferences/un-talk");
+  });
+
+  // #633: a talk of the featured edition has one page, /conferences.
+  it("should link a replay of the featured edition to its one page", () => {
+    render(<ReplayCard replay={replay} locale="fr" current={noFilter} featuredYear={2019} labels={labels} />);
+    expect(hrefOf("Un talk mémorable")).toBe("/conferences/un-talk");
   });
 
   it("should show the spoken language", () => {
@@ -99,7 +105,7 @@ describe("ReplayCard", () => {
 describe("ReplayCard — the whole card opens the talk", () => {
   it("should stretch the title link over the card", () => {
     const { container } = render(
-      <ReplayCard replay={replay} locale="fr" current={noFilter} labels={labels} />,
+      <ReplayCard replay={replay} locale="fr" current={noFilter} featuredYear={null} labels={labels} />,
     );
 
     const title = screen.getByRole("link", { name: "Un talk mémorable" });
@@ -125,7 +131,7 @@ describe("ReplayCard — the whole card opens the talk", () => {
   // structure apart, which would strand the inner links — keyboard included.
   it("should keep every link a sibling, never nested", () => {
     const { container } = render(
-      <ReplayCard replay={replay} locale="fr" current={noFilter} labels={labels} />,
+      <ReplayCard replay={replay} locale="fr" current={noFilter} featuredYear={null} labels={labels} />,
     );
 
     expect(container.querySelector("a a")).toBeNull();
@@ -136,7 +142,7 @@ describe("ReplayCard — the whole card opens the talk", () => {
   // nothing. Only elements that are themselves links may be positioned.
   it("should not lift any non-link container above the stretched area", () => {
     const { container } = render(
-      <ReplayCard replay={replay} locale="fr" current={noFilter} labels={labels} />,
+      <ReplayCard replay={replay} locale="fr" current={noFilter} featuredYear={null} labels={labels} />,
     );
 
     const lifted = [...container.querySelectorAll("div")].filter((el) =>

@@ -1,7 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { TALK_FORMATS, TALK_PAGE_SIZE, TALK_PAGE_SIZE_MAX, TALK_SORTS, talkOrderBy, talkWhere, type TalkListFilters, type TalkSort } from "../../lib/talk-list.js";
-import { revalidateConferences, revalidateTalk } from "../../lib/revalidate.js";
+import { revalidateTalkFootprint, talkFootprint } from "../../lib/page-footprint.js";
+import { canonicalYouTubeUrl } from "../../lib/youtube.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -29,9 +30,27 @@ interface TalkCreateBody {
   endsAt?: string | null;
   publicationStatus?: "DRAFT" | "PUBLISHED";
   isSpeakerEditable?: boolean;
+  // The replay (#636): a YouTube URL, stored in its canonical form; null or ""
+  // clears it.
+  videoUrl?: string | null;
 }
 
 type TalkUpdateBody = Partial<Omit<TalkCreateBody, "editionId">>;
+
+const INVALID_REPLAY = Symbol("invalid replay");
+const INVALID_REPLAY_ERROR = {
+  error: "invalid_video_url",
+  field: "videoUrl",
+  message: "Le replay doit être l'adresse d'une vidéo YouTube (youtube.com/watch?v=… ou youtu.be/…).",
+};
+
+/** undefined: untouched; null: cleared; else the canonical URL (#636). */
+function replayUrl(value: unknown): string | null | undefined | typeof INVALID_REPLAY {
+  if (value === undefined) return undefined;
+  if (value === null || (typeof value === "string" && !value.trim())) return null;
+  if (typeof value !== "string") return INVALID_REPLAY;
+  return canonicalYouTubeUrl(value) ?? INVALID_REPLAY;
+}
 
 interface TalkIdParams {
   id: string;
@@ -256,6 +275,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     if (!body.language?.trim()) {
       return reply.code(400).send({ error: "language is required" });
     }
+    const video = replayUrl(body.videoUrl);
+    if (video === INVALID_REPLAY) return reply.code(400).send(INVALID_REPLAY_ERROR);
 
     // Deliberately NOT filtered on deletedAt: uniqueness is a database-wide
     // constraint, so a trashed talk still owns its slug until purged. Parking
@@ -296,6 +317,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
         isSpeakerEditable: body.isSpeakerEditable === true,
+        videoUrl: video ?? null,
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
           : {}),
@@ -310,8 +332,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateConferences();
-    revalidateTalk(talk.slug, talk.edition.year);
+    await revalidateTalkFootprint([], [talk.id]);
     return reply.code(201).send(serialize(talk));
   });
 
@@ -321,6 +342,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const { id } = request.params;
     const body = request.body;
+    const before = await talkFootprint([Number(id)]);
 
     if (body.format !== undefined && !FORMATS.includes(body.format)) {
       return reply.code(422).send({ error: `Invalid format. Allowed: ${FORMATS.join(", ")}` });
@@ -328,6 +350,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     if (body.level && !LEVELS.includes(body.level)) {
       return reply.code(422).send({ error: `Invalid level. Allowed: ${LEVELS.join(", ")}` });
     }
+    const video = replayUrl(body.videoUrl);
+    if (video === INVALID_REPLAY) return reply.code(400).send(INVALID_REPLAY_ERROR);
 
     // The room is validated against the talk's own edition, so the edition has
     // to be read before the update rather than trusted from the request.
@@ -383,6 +407,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
         ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),
+        ...(video !== undefined && { videoUrl: video }),
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },
         }),
@@ -399,10 +424,10 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       },
     });
 
-    revalidateConferences();
-    // No second slug to purge, unlike speakers (#351): a talk's slug is computed
-    // once at creation and never recomputed on update.
-    revalidateTalk(talk.slug, talk.edition.year);
+    // Its pages and its speakers', before and after: a speaker taken off the
+    // talk must lose it from their page (#633). No second slug, unlike speakers
+    // (#351): a talk's slug is computed once at creation.
+    await revalidateTalkFootprint(before, [talk.id]);
     return serialize(talk);
   });
 
@@ -420,7 +445,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       where: { id: { in: ids }, ...notDeleted },
       data: { publicationStatus: value },
     });
-    revalidateConferences();
+    // A status flip shows or hides the talk on its pages and its speakers' (#633).
+    await revalidateTalkFootprint([], ids);
     return { count };
   });
 
@@ -435,6 +461,8 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       include: { edition: { select: { year: true } } },
     });
     if (!talk) return notFound(reply, "Talk");
+    // Read while live: the slug is parked below.
+    const before = await talkFootprint([talkId]);
 
     // The slug is unique per edition and a trashed row keeps its slot, so park
     // it out of the live namespace — otherwise re-creating a talk under the
@@ -443,9 +471,9 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       where: { id: talkId },
       data: { ...softDeleteData(), slug: parkUniqueValue(talk.slug, talkId) },
     });
-    revalidateConferences();
-    // The slug it had while public — its pages must stop answering from cache.
-    revalidateTalk(talk.slug, talk.edition.year);
+    // The slug it had while public — its pages must stop answering from cache —
+    // and its speakers' pages, which listed it (#633).
+    await revalidateTalkFootprint(before, [talkId]);
     return reply.code(204).send();
   });
 }

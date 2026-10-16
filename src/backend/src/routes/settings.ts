@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
+import { NAV_ORDER_KEY, parseNavOrder } from "../lib/nav-order.js";
 
 export default async function settingsRoutes(app: FastifyInstance) {
   // GET /api/settings/key-figures — returns key figures for the featured edition
@@ -28,6 +29,13 @@ export default async function settingsRoutes(app: FastifyInstance) {
     });
 
     return { editionId: setting ? Number(setting.value) : null };
+  });
+
+  // GET /api/settings/nav-order — the menu's top-level order (#606), read by
+  // the header and the footer.
+  app.get("/settings/nav-order", async () => {
+    const setting = await prisma.siteSetting.findUnique({ where: { key: NAV_ORDER_KEY } });
+    return { order: parseNavOrder(setting?.value) };
   });
 
   // GET /api/settings/social — returns social media links

@@ -15,6 +15,7 @@
 
 - Règles complètes : `.claude/rules/testing.md` (nommage, test rouge avant le correctif, un commit par correctif)
 - Un échec isolé qui ne se reproduit pas est d'abord une collision de fixtures : relancer avant d'enquêter, et le dire
+- « Tests N passed » ne veut pas dire vert : une exception non interceptée pendant un rendu sort en « Unhandled Errors / Errors 1 error » et fait échouer la CI. Lire le code de sortie de `vitest run` (ou la ligne `Errors`), jamais la seule ligne `Tests` (#416, mock de `/files` resté à l'ancienne forme)
 - Une base locale déjà pleine masque les échecs « données manquantes ». Reproduire la CI = `migrate deploy` + `seed-dev.ts` + tests sur une **base fraîche**
 - `BASE_URL` vaut `/` sous Vitest (injecté par Vite) : ne jamais asserter l'origine, asserter la distinction que fait la fonction. `console.log` ne s'affiche pas : pour lire une valeur, écrire une assertion volontairement fausse et lire le « Received »
 - La suite frontend est épinglée sur `TZ=Europe/Paris` : un test d'heure ne prouve rien s'il ne recharge pas le module sous `vi.stubEnv("TZ", "UTC")` après `vi.resetModules()`

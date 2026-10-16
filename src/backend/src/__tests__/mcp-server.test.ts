@@ -158,7 +158,11 @@ describe("POST /api/mcp — tools (#514)", () => {
 
 describe("credentials an agent must not manage (#514, API rights audit)", () => {
   it("should not let an agent mint an API key, which would outlive its consent", async () => {
-    const before = await prisma.apiKey.count();
+    // Only the keys this test could mint: other files create API keys while
+    // the suites run in parallel, so a count of the whole table drifted and
+    // failed the CI at random.
+    const agentMade = () => prisma.apiKey.count({ where: { name: "agent-made" } });
+    const before = await agentMade();
 
     const direct = await app.inject({
       method: "POST",
@@ -174,7 +178,7 @@ describe("credentials an agent must not manage (#514, API rights audit)", () => 
 
     expect(direct.statusCode).toBe(403);
     expect(viaTool.isError).toBe(true);
-    expect(await prisma.apiKey.count()).toBe(before);
+    expect(await agentMade()).toBe(before);
   });
 
   it("should not let an admin's agent change accounts", async () => {

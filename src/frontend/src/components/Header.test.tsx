@@ -25,6 +25,7 @@ vi.mock("@/contexts/EditionContext", () => ({
   useIdentitySettings: () => null,
   useSocialLinks: () => ({}),
   useNavPages: () => [],
+  useNavOrder: () => [],
 }));
 
 const { default: Header } = await import("./Header");

@@ -34,6 +34,8 @@ export const ENTITY_LABELS: Record<string, string> = {
   KeyFigure: "Chiffre clé",
   Tag: "Tag",
   ApiKey: "Clé API",
+  TeamMember: "Organisateur",
+  TeamMemberEdition: "Participation organisateur",
 };
 
 export const CHANNEL_LABELS: Record<AuditChannel, string> = {
@@ -66,6 +68,7 @@ const ENTITY_PATHS: Record<string, string> = {
   Edition: "editions",
   SponsorTier: "sponsor-tiers",
   Venue: "venues",
+  TeamMember: "team",
 };
 
 // A bio or an article body can run to pages; the row is for spotting what
@@ -206,7 +209,7 @@ export default function AuditTrail({
       <h2 id="audit-trail-title" className="text-lg font-semibold text-noir mb-3">
         Historique
       </h2>
-      {state.kind === "loading" && <p className="text-sm text-gris">Chargement...</p>}
+      {state.kind === "loading" && <p className="text-sm text-gris">Chargement…</p>}
       {state.kind === "error" && (
         <p role="alert" className="text-sm text-terre-cuite">
           Impossible de charger l&apos;historique. Rechargez la page pour réessayer.

@@ -205,7 +205,7 @@ export default function ApiKeysSection() {
               disabled={isSaving}
               className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
             >
-              {isSaving ? "Création..." : "Créer le jeton"}
+              {isSaving ? "Création…" : "Créer le jeton"}
             </button>
             <button
               type="button"
@@ -262,7 +262,7 @@ export default function ApiKeysSection() {
 
       {/* Keys list */}
       {isLoading ? (
-        <p className="text-sm text-gris py-6">Chargement...</p>
+        <p className="text-sm text-gris py-6">Chargement…</p>
       ) : !keys || keys.length === 0 ? (
         <p className="text-sm text-gris py-6">Aucun jeton pour le moment.</p>
       ) : (

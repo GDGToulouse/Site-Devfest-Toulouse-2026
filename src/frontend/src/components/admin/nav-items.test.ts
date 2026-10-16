@@ -15,6 +15,10 @@ describe("isAdminPathAllowed", () => {
     expect(isAdminPathAllowed("/admin/sponsors/3", "EDITOR")).toBe(true);
   });
 
+  it("should let an EDITOR manage sponsors' job offers, like any other record (#609)", () => {
+    expect(isAdminPathAllowed("/admin/job-offers", "EDITOR")).toBe(true);
+  });
+
   it("should let an ADMIN manage the sponsoring offers", () => {
     expect(isAdminPathAllowed("/admin/sponsor-tiers", "ADMIN")).toBe(true);
   });

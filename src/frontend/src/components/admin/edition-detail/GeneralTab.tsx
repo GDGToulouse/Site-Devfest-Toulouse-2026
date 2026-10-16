@@ -206,7 +206,7 @@ export default function GeneralTab({ edition, onSaved }: GeneralTabProps) {
           disabled={isSaving}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+          {isSaving ? "Enregistrement…" : "Enregistrer"}
         </button>
         {saved && <span role="status" aria-live="polite" className="text-sm text-malachite">Modifications enregistrées.</span>}
       </div>

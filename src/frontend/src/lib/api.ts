@@ -1,4 +1,4 @@
-import type { FaqItem,
+import type { FaqItem, TeamMember,
   Edition,
   EditionDetail,
   EditionSummary,
@@ -32,7 +32,7 @@ import type { FaqItem,
   CarouselSlide,
 } from "./types";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 /**
  * Raised when the backend could not answer at all — 5xx, network failure,
@@ -166,6 +166,11 @@ export async function getContentPage(slug: string): Promise<ContentPage | null> 
 }
 
 // The published FAQ (#111), theme by theme in the page's order.
+// The featured edition's organisers, alphabetical (#110).
+export async function getTeam(): Promise<{ year: number | null; members: TeamMember[] }> {
+  return (await fetchAPI<{ year: number | null; members: TeamMember[] }>("/api/team")) ?? { year: null, members: [] };
+}
+
 export async function getFaq(): Promise<FaqItem[]> {
   return (await fetchAPI<FaqItem[]>("/api/faq")) || [];
 }
@@ -191,6 +196,11 @@ export async function getCfpSettings(): Promise<CfpSettings> {
 
 export async function getContactCategories(): Promise<ContactCategory[]> {
   return (await fetchAPI<ContactCategory[]>("/api/contact/categories")) || [];
+}
+
+// The menu's top-level order set in the admin (#606). Empty: the code's order.
+export async function getNavOrder(): Promise<string[]> {
+  return (await fetchAPI<{ order: string[] }>("/api/settings/nav-order"))?.order ?? [];
 }
 
 export async function getSocialLinks(): Promise<SocialLinks> {

@@ -7,6 +7,16 @@ import { revokeAgents } from "../../lib/agent-grants.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
+const USER_PAGE_SIZE = 50;
+const USER_PAGE_SIZE_MAX = 100;
+
+interface UserListQuery {
+  page?: string;
+  limit?: string;
+  search?: string;
+  role?: "ADMIN" | "EDITOR" | "SPONSOR";
+}
+
 interface CreateUserBody {
   email: string;
   name: string;
@@ -48,35 +58,67 @@ const updateUserSchema = {
 } as const;
 
 export default async function adminUserRoutes(app: FastifyInstance) {
-  // GET /api/admin/users — list all admin users
-  app.get("/users", async () => {
-    const users = await prisma.user.findMany({
-      where: notDeleted,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-        banned: true,
-        emailVerified: true,
-        createdAt: true,
-        updatedAt: true,
-        sessions: {
-          orderBy: { expiresAt: "desc" },
-          take: 1,
-          select: { createdAt: true },
-        },
-        // The companies a sponsor contact acts for (#500), so the screen can
-        // tell them apart from the team. Trashed sponsors are left out.
-        sponsorContacts: {
-          where: { sponsor: notDeleted },
-          select: { accessRole: true, sponsor: { select: { id: true, name: true } } },
+  // GET /api/admin/users — newest first. With `page`, one page and its total
+  // (#416): sponsor contacts get an account each (#362), so this list grows
+  // with every partner, not with the team. Without, the full array.
+  app.get<{ Querystring: UserListQuery }>("/users", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          search: { type: "string", maxLength: 200 },
+          role: { type: "string", enum: ["ADMIN", "EDITOR", "SPONSOR"] },
         },
       },
-    });
+    },
+  }, async (request) => {
+    const q = request.query;
+    const search = q.search?.trim();
+    const where = {
+      ...notDeleted,
+      ...(q.role && { role: q.role }),
+      ...(search && {
+        OR: [
+          { email: { contains: search, mode: "insensitive" as const } },
+          { name: { contains: search, mode: "insensitive" as const } },
+        ],
+      }),
+    };
+    const page = Math.max(1, Number(q.page) || 1);
+    const limit = Math.min(USER_PAGE_SIZE_MAX, Math.max(1, Number(q.limit) || USER_PAGE_SIZE));
+    const [total, users] = await Promise.all([
+      q.page ? prisma.user.count({ where }) : Promise.resolve(0),
+      prisma.user.findMany({
+        where,
+        ...(q.page && { skip: (page - 1) * limit, take: limit }),
+        orderBy: [{ createdAt: "desc" }, { id: "asc" }],
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          role: true,
+          banned: true,
+          emailVerified: true,
+          createdAt: true,
+          updatedAt: true,
+          sessions: {
+            orderBy: { expiresAt: "desc" },
+            take: 1,
+            select: { createdAt: true },
+          },
+          // The companies a sponsor contact acts for (#500), so the screen can
+          // tell them apart from the team. Trashed sponsors are left out.
+          sponsorContacts: {
+            where: { sponsor: notDeleted },
+            select: { accessRole: true, sponsor: { select: { id: true, name: true } } },
+          },
+        },
+      }),
+    ]);
 
-    return users.map((u: (typeof users)[number]) => ({
+    const rows = users.map((u: (typeof users)[number]) => ({
       id: u.id,
       email: u.email,
       name: u.name,
@@ -87,6 +129,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       lastLogin: u.sessions[0]?.createdAt || null,
       sponsors: u.sponsorContacts.map((c) => ({ id: c.sponsor.id, name: c.sponsor.name, accessRole: c.accessRole })),
     }));
+    return q.page ? { page, limit, total, items: rows } : rows;
   });
 
   // POST /api/admin/users — invite a new user

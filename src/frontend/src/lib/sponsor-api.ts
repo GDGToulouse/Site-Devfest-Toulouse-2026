@@ -94,6 +94,10 @@ interface Result<T> {
   data: T | null;
   status: number;
   error?: string;
+  // Fastify's schema rejections carry error "Bad Request" only; the field at
+  // fault is in code + message (#610).
+  code?: string;
+  message?: string;
 }
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<Result<T>> {
@@ -111,7 +115,13 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<Result<
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      return { data: null, status: res.status, ...(body?.error ? { error: body.error } : {}) };
+      return {
+        data: null,
+        status: res.status,
+        ...(body?.error ? { error: body.error } : {}),
+        ...(body?.code ? { code: body.code } : {}),
+        ...(body?.message ? { message: body.message } : {}),
+      };
     }
 
     return { data: (await res.json()) as T, status: res.status };

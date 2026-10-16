@@ -4,7 +4,8 @@ import { useState } from "react";
 
 import type { SpeakerEdition } from "@/lib/types";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import StatusBadge from "@/components/admin/StatusBadge";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
+import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ParticipationSponsorSelect from "@/components/admin/speakers/ParticipationSponsorSelect";
 
 // #351 — a speaker is a person taking part in several editions. Each row here is
@@ -12,17 +13,24 @@ import ParticipationSponsorSelect from "@/components/admin/speakers/Participatio
 // publication status and the featured flag are per-year decisions — and so is
 // the sponsor they worked for since #353.
 interface SpeakerEditionsPanelProps {
+  // Named in the unpublish confirmation, and the preview of a draft (#632).
+  speakerName: string;
+  speakerSlug: string;
   editions: SpeakerEdition[];
   allEditions: { id: number; year: number }[];
   onAttach: (editionId: number) => Promise<void>;
   onDetach: (editionId: number) => Promise<void>;
+  // Resolves to whether the change was saved: each change here is written at
+  // once, so the panel reports it itself (#632).
   onUpdate: (
     editionId: number,
     patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
-  ) => Promise<void>;
+  ) => Promise<boolean>;
 }
 
 export default function SpeakerEditionsPanel({
+  speakerName,
+  speakerSlug,
   editions,
   allEditions,
   onAttach,
@@ -34,19 +42,36 @@ export default function SpeakerEditionsPanel({
   // Detaching a sponsor from an edition asks first; this did not, for the same
   // gesture on the other side of the model (#414).
   const [detachTarget, setDetachTarget] = useState<SpeakerEdition | null>(null);
+  const [statusFeedback, setStatusFeedback] = useState<SaveState>(null);
 
   const attachedIds = new Set(editions.map((e) => e.id));
   const available = allEditions.filter((e) => !attachedIds.has(e.id));
 
-  async function run(editionId: number, action: () => Promise<void>) {
+  async function run(editionId: number, action: () => Promise<unknown>) {
     setBusyId(editionId);
     await action();
     setBusyId(null);
   }
 
+  // Unlike a form, nothing else says the click was saved: say it (#632).
+  async function setStatus(participation: SpeakerEdition, status: "DRAFT" | "PUBLISHED") {
+    setStatusFeedback(null);
+    await run(participation.id, async () => {
+      const isSaved = await onUpdate(participation.id, { publicationStatus: status });
+      setStatusFeedback(
+        !isSaved
+          ? { kind: "error", text: `${participation.year} : le statut n'a pas pu être changé. Réessayez.` }
+          : status === "PUBLISHED"
+            ? { kind: "ok", text: `${participation.year} : publié, visible sur le site.` }
+            : { kind: "ok", text: `${participation.year} : repassé en brouillon, retiré du site.` },
+      );
+    });
+  }
+
   return (
     <section>
       <h2 className="text-sm font-medium text-noir mb-2">Éditions</h2>
+      <SaveFeedback state={statusFeedback} onDismiss={() => setStatusFeedback(null)} />
 
       {editions.length === 0 ? (
         <p className="text-sm text-gris mb-3">
@@ -69,25 +94,16 @@ export default function SpeakerEditionsPanel({
               <tr key={participation.id} className="border-t border-gris/15">
                 <td className="py-2 font-medium text-noir">{participation.year}</td>
                 <td className="py-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={participation.publicationStatus === "PUBLISHED"}
-                      disabled={busyId === participation.id}
-                      onChange={(e) =>
-                        run(participation.id, () =>
-                          onUpdate(participation.id, {
-                            publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT",
-                          }),
-                        )
-                      }
-                      className="rounded border-gris/30 text-malachite focus:ring-malachite"
-                    />
-                    <StatusBadge
-                      status={participation.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
-                      variant={participation.publicationStatus === "PUBLISHED" ? "green" : "gray"}
-                    />
-                  </label>
+                  <PublicationSwitch
+                    label={`Statut de la participation ${participation.year}`}
+                    value={participation.publicationStatus}
+                    // Saved on each click: what is shown is what is stored.
+                    savedValue={participation.publicationStatus}
+                    unpublishMessage={`Retirer ${speakerName} du site pour ${participation.year} ?`}
+                    previewHref={`/api/preview?type=speaker&slug=${encodeURIComponent(speakerSlug)}`}
+                    disabled={busyId === participation.id}
+                    onChange={(status) => setStatus(participation, status)}
+                  />
                 </td>
                 <td className="py-2">
                   <input

@@ -15,8 +15,10 @@ vi.mock("next/navigation", () => ({
 }));
 
 const adminFetch = vi.fn();
+let sessionRole: "ADMIN" | "EDITOR" = "EDITOR";
 vi.mock("@/lib/admin-api", () => ({
   adminFetch: (...args: unknown[]) => adminFetch(...args),
+  getAdminSession: async () => ({ role: sessionRole }),
 }));
 
 // The rich-text editor drags in a heavy tree that has nothing to do with the
@@ -53,6 +55,7 @@ const SPONSOR = {
 };
 
 beforeEach(() => {
+  sessionRole = "EDITOR";
   adminFetch.mockReset();
   replace.mockReset();
   adminFetch.mockImplementation((path: string) => {
@@ -261,5 +264,23 @@ describe("Sponsor sheet â reaching a past participation (#429)", () => {
     // option is furniture, and the year is already in the tab label.
     await user.click(await screen.findByRole("tab", { name: "Participation 2025" }));
     expect(screen.queryByLabelText(/Année éditée/)).not.toBeInTheDocument();
+  });
+});
+
+// #609 — what the sponsor sees, one click from the sheet. The partner space only
+// lets an ADMIN in for support (sponsor-guard.ts): an editor would land on a refusal.
+describe("Sponsor sheet — opening the partner space (#609)", () => {
+  it("offers the link to an ADMIN", async () => {
+    sessionRole = "ADMIN";
+    render(<SponsorEditorPage />);
+
+    expect(await screen.findByRole("link", { name: "Ouvrir l'espace partenaire" })).toHaveAttribute("href", "/sponsor/42");
+  });
+
+  it("hides it from an EDITOR", async () => {
+    render(<SponsorEditorPage />);
+
+    await screen.findByRole("tab", { name: "Participation 2025" });
+    expect(screen.queryByRole("link", { name: "Ouvrir l'espace partenaire" })).not.toBeInTheDocument();
   });
 });

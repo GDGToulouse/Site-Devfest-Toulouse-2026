@@ -16,6 +16,7 @@ import {
 import { sanitizeSvg } from "../../lib/svg-sanitize.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
+import { FILE_PAGE_SIZE, pageFiles, type FileListType } from "../../lib/file-list.js";
 
 const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
@@ -36,6 +37,13 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
+
+interface FileListQuery {
+  page?: string;
+  limit?: string;
+  type?: FileListType;
+  ext?: string;
+}
 
 // What each model is called in the refusal shown to the admin (#486). The
 // message has to name the place to go and fix it, not a Prisma delegate.
@@ -202,8 +210,24 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     };
   });
 
-  // GET /api/admin/files — list all uploaded files (images and documents)
-  app.get("/files", async () => {
+  // GET /api/admin/files — the uploaded files, newest first. With `page`, one
+  // page and the count of each tab (#416): the library rendered one <img> per
+  // file and both pickers reloaded the whole catalogue. Without, the full array,
+  // for the callers that still need everything.
+  app.get<{ Querystring: FileListQuery }>("/files", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          page: { type: "string", pattern: "^[0-9]+$" },
+          limit: { type: "string", pattern: "^[0-9]+$" },
+          type: { type: "string", enum: ["images", "documents", "unused"] },
+          // Comma-separated, e.g. `.pdf` for a picker that only takes PDFs.
+          ext: { type: "string", pattern: "^\\.[a-z0-9]+(,\\.[a-z0-9]+)*$" },
+        },
+      },
+    },
+  }, async (request) => {
     await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
 
     const IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico"];
@@ -244,7 +268,14 @@ export default async function adminFileRoutes(app: FastifyInstance) {
 
     items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 
-    return items;
+    const q = request.query;
+    if (!q.page) return items;
+    return pageFiles(items, {
+      page: Number(q.page),
+      limit: Number(q.limit) || FILE_PAGE_SIZE,
+      type: q.type,
+      extensions: q.ext?.split(","),
+    });
   });
 
   // PUT /api/admin/files/:filename/metadata — update metadata for an

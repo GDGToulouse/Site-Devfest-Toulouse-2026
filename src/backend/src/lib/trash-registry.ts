@@ -1,4 +1,6 @@
 import { prisma } from "./prisma.js";
+import { revalidateAll, revalidateJobOfferPages, revalidateSpeakers } from "./revalidate.js";
+import { revalidateSpeakerFootprint, revalidateTalkFootprint } from "./page-footprint.js";
 
 /**
  * What the trash knows about each soft-deletable entity (#148).
@@ -23,6 +25,8 @@ export interface TrashEntity {
   fileFields: readonly string[];
   /** ADMIN-only entities; the rest follow the ADMIN+EDITOR rule. */
   adminOnly: boolean;
+  /** Public pages to purge once a row is back, when the default hour is too long. */
+  onRestore?: (id: number | string) => Promise<void>;
 }
 
 export const TRASH_ENTITIES: readonly TrashEntity[] = [
@@ -58,6 +62,11 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["slug"],
     fileFields: ["photoUrl"],
     adminOnly: false,
+    // Back on every page that showed them, under the slug they got back (#633).
+    onRestore: async (id) => {
+      await revalidateSpeakers();
+      await revalidateSpeakerFootprint([], [Number(id)]);
+    },
   },
   {
     key: "talks",
@@ -66,6 +75,10 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["slug"],
     fileFields: [],
     adminOnly: false,
+    // Back on its pages and its speakers' (#633).
+    onRestore: async (id) => {
+      await revalidateTalkFootprint([], [Number(id)]);
+    },
   },
   {
     key: "sponsors",
@@ -139,6 +152,37 @@ export const TRASH_ENTITIES: readonly TrashEntity[] = [
     parkedFields: ["email"],
     fileFields: [],
     adminOnly: true,
+  },
+  {
+    // A sponsor's job offer (#609). Restored offers go straight back on the
+    // sponsor's page and the recap page: purge them rather than leave a
+    // restored offer missing for an hour.
+    key: "job-offers",
+    model: "sponsorJobOffer",
+    labelField: "title",
+    parkedFields: [],
+    fileFields: [],
+    adminOnly: false,
+    onRestore: async (id) => {
+      const offer = await prisma.sponsorJobOffer.findUnique({
+        where: { id: Number(id) },
+        select: { editionSponsor: { select: { sponsor: { select: { slug: true } } } } },
+      });
+      if (offer) await revalidateJobOfferPages(offer.editionSponsor.sponsor.slug);
+    },
+  },
+  {
+    // An organiser (#110). The photo is an upload, checked before a purge.
+    key: "team",
+    model: "teamMember",
+    labelField: "lastName",
+    parkedFields: [],
+    fileFields: ["photoUrl"],
+    adminOnly: false,
+    // The "Équipe" menu entry depends on it, on every page.
+    onRestore: async () => {
+      await revalidateAll();
+    },
   },
   {
     key: "pages",

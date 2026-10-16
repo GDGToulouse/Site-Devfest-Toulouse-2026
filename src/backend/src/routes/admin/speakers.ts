@@ -1,7 +1,9 @@
 import type { FastifyInstance } from "fastify";
 import { rotateFeaturedSpeakers } from "../../lib/featured-speakers.js";
 import { prisma } from "../../lib/prisma.js";
-import { revalidateSpeakers, revalidateSpeaker } from "../../lib/revalidate.js";
+import type { Prisma } from "../../generated/prisma/client.js";
+import { revalidateSpeakers } from "../../lib/revalidate.js";
+import { revalidateSpeakerFootprint, speakerFootprint } from "../../lib/page-footprint.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
@@ -80,6 +82,23 @@ const withEditions = {
   },
 } as const;
 
+// The sheet also shows who the speaker is linked to (#484): the employer of
+// each year by name, and every talk. Kept to the detail route: the list reads
+// none of it.
+const speakerDetailInclude = {
+  editions: {
+    select: {
+      ...withEditions.editions.select,
+      sponsor: { select: { id: true, name: true } },
+    },
+  },
+  talks: {
+    where: notDeleted,
+    select: { id: true, slug: true, title: true, publicationStatus: true, edition: { select: { year: true } } },
+    orderBy: [{ edition: { year: "desc" } }, { title: "asc" }],
+  },
+} satisfies Prisma.SpeakerInclude;
+
 interface SerializableSpeaker {
   socialLinks: string | null;
   editions?: {
@@ -87,6 +106,7 @@ interface SerializableSpeaker {
     isFeatured: boolean;
     publicationStatus: "DRAFT" | "PUBLISHED";
     sponsorId: number | null;
+    sponsor?: { id: number; name: string } | null;
     edition: { id: number; year: number };
   }[];
   [k: string]: unknown;
@@ -111,6 +131,7 @@ function serialize(s: SerializableSpeaker) {
               isFeatured: e.isFeatured,
               publicationStatus: e.publicationStatus,
               sponsorId: e.sponsorId,
+              ...(e.sponsor !== undefined && { sponsor: e.sponsor }),
             })),
         }
       : {}),
@@ -200,7 +221,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     // top-level where, so it cannot carry the `deletedAt` filter (#147).
     const speaker = await prisma.speaker.findFirst({
       where: { id: Number(request.params.id), ...notDeleted },
-      include: withEditions,
+      include: speakerDetailInclude,
     });
     if (!speaker) return reply.code(404).send({ error: "Speaker not found" });
     return serialize(speaker);
@@ -264,6 +285,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     });
 
     revalidateSpeakers();
+    await revalidateSpeakerFootprint([], [speaker.id]);
     return reply.code(201).send(serialize(speaker));
   });
 
@@ -289,6 +311,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       });
       if (!edition) return reply.code(422).send({ error: "Invalid editionId: no such edition" });
 
+      const before = await speakerFootprint([speakerId]);
       await prisma.speakerEdition.upsert({
         where: { speakerId_editionId: { speakerId, editionId } },
         create: {
@@ -306,6 +329,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       });
 
       revalidateSpeakers();
+      await revalidateSpeakerFootprint(before, [speakerId]);
       const updated = await prisma.speaker.findUniqueOrThrow({
         where: { id: speakerId },
         include: withEditions,
@@ -327,10 +351,14 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       },
     },
     async (request, reply) => {
+      const speakerId = Number(request.params.id);
+      // Read first: once detached, that year's pages are out of the footprint.
+      const before = await speakerFootprint([speakerId]);
       await prisma.speakerEdition.deleteMany({
-        where: { speakerId: Number(request.params.id), editionId: Number(request.params.editionId) },
+        where: { speakerId, editionId: Number(request.params.editionId) },
       });
       revalidateSpeakers();
+      await revalidateSpeakerFootprint(before, [speakerId]);
       return reply.code(204).send();
     },
   );
@@ -341,6 +369,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
   }, async (request) => {
     const { id } = request.params;
     const body = request.body;
+    const before = await speakerFootprint([Number(id)]);
 
     const speaker = await prisma.speaker.update({
       where: { id: Number(id) },
@@ -382,10 +411,9 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       where: { id: speaker.id },
       include: withEditions,
     });
-    // The person's own page (#352). Both slugs when a rename moved it, or the
-    // old URL would keep serving the previous name until its cache expired.
-    revalidateSpeaker(updated.slug);
-    if (speaker.slug !== updated.slug) revalidateSpeaker(speaker.slug);
+    // Every page showing the person (#352, #633), under the old slug and the new
+    // one: a rename would otherwise leave the previous name served for an hour.
+    await revalidateSpeakerFootprint(before, [speaker.id]);
     return serialize(updated);
   });
 
@@ -424,11 +452,13 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "unknown action" });
     }
 
+    const before = await speakerFootprint(ids);
     const { count } = await prisma.speakerEdition.updateMany({
       where: { speakerId: { in: ids }, editionId, speaker: notDeleted },
       data,
     });
     revalidateSpeakers();
+    await revalidateSpeakerFootprint(before, ids);
     return { count };
   });
 
@@ -440,6 +470,9 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     const speakerId = Number(request.params.id);
     const speaker = await prisma.speaker.findFirst({ where: { id: speakerId, ...notDeleted } });
     if (!speaker) return notFound(reply, "Speaker");
+    // Read while live: the slug is parked below, and the trashed person must
+    // leave every page that showed them (#633).
+    const before = await speakerFootprint([speakerId]);
 
     // The slug is unique per edition and a trashed row keeps its slot, so park
     // it out of the live namespace — otherwise re-creating a speaker under the
@@ -449,9 +482,8 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       data: { ...softDeleteData(), slug: parkUniqueValue(speaker.slug, speakerId) },
     });
     revalidateSpeakers();
-    // Purge the slug it had while live (#352) — the parked one was never served,
-    // and without this the trashed person's page stays up for an hour.
-    revalidateSpeaker(speaker.slug);
+    // Including the page under the slug it had while live (#352).
+    await revalidateSpeakerFootprint(before, [speakerId]);
     return reply.code(204).send();
   });
 

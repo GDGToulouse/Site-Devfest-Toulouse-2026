@@ -52,6 +52,12 @@ export function revalidateArticle(slug: string): Promise<void> {
   ]);
 }
 
+// One tag's article listing (#376): renaming, merging or trashing a tag
+// changes what it lists, or takes the page away.
+export function revalidateTagPage(slug: string): Promise<void> {
+  return revalidatePaths([...bilingualPaths(`/actualites/tag/${slug}`)]);
+}
+
 /**
  * A content page was saved, published, unpublished or trashed (#419).
  *
@@ -126,23 +132,39 @@ export function revalidateSpeakers(): Promise<void> {
 // ~240 of these: purging them all on every edit would be absurd, and never
 // purging them means a speaker who fixes their bio from their magic link sees
 // nothing change for an hour.
-export function revalidateSpeaker(slug: string): Promise<void> {
-  return revalidatePaths([
+export function speakerPagePaths(slug: string): string[] {
+  return [
     ...bilingualPaths(`/speakers/${slug}`),
     // The OG image is its own route — same reason as the home page (#183).
     ...bilingualPaths(`/speakers/${slug}/opengraph-image`),
-  ]);
+  ];
 }
 
-export function revalidateConferences(): Promise<void> {
-  return revalidatePaths([
+export function revalidateSpeaker(slug: string): Promise<void> {
+  return revalidatePaths(speakerPagePaths(slug));
+}
+
+export function conferenceListPaths(): string[] {
+  return [
     ...bilingualPaths(""),
     ...bilingualPaths("/conferences"),
     // The grid (#106) reads the same talks, plus the off-session entries the
     // schedule screens write. Placing a session must show there immediately —
     // the organisers publish the planning right up to the day before.
     ...bilingualPaths("/programme"),
-  ]);
+    // Replays list talks with a video and their speakers (#102): a replay added,
+    // a talk unpublished or a speaker renamed shows there too (#636).
+    ...bilingualPaths("/replays"),
+  ];
+}
+
+export function revalidateConferences(): Promise<void> {
+  return revalidatePaths(conferenceListPaths());
+}
+
+/** One year's archive page, which lists its talks and speakers (#63). */
+export function editionPagePaths(year: number): string[] {
+  return bilingualPaths(`/editions/${year}`);
 }
 
 /**
@@ -155,20 +177,38 @@ export function revalidateConferences(): Promise<void> {
  * Only the undated route carries an OG image — `editions/[year]/conferences`
  * has none.
  */
-export function revalidateTalk(slug: string, year: number): Promise<void> {
-  return revalidatePaths([
+export function talkPagePaths(slug: string, year: number): string[] {
+  return [
     ...bilingualPaths(`/conferences/${slug}`),
     ...bilingualPaths(`/conferences/${slug}/opengraph-image`),
     ...bilingualPaths(`/editions/${year}/conferences/${slug}`),
-  ]);
+  ];
+}
+
+export function revalidateTalk(slug: string, year: number): Promise<void> {
+  return revalidatePaths(talkPagePaths(slug, year));
 }
 
 /**
  * One sponsor's own page (#360). No OG image on this route, unlike speakers and
  * talks — nothing else to purge.
  */
+export function sponsorPagePaths(slug: string): string[] {
+  return bilingualPaths(`/sponsors/${slug}`);
+}
+
 export function revalidateSponsor(slug: string): Promise<void> {
-  return revalidatePaths([...bilingualPaths(`/sponsors/${slug}`)]);
+  return revalidatePaths(sponsorPagePaths(slug));
+}
+
+/**
+ * Every page a job offer shows on: the sponsor's own page, the recap page, and
+ * the lists whose menu depends on there being offers. Purging the lists alone
+ * left a created, edited or restored offer missing from the sponsor's page for
+ * an hour (#609).
+ */
+export async function revalidateJobOfferPages(sponsorSlug: string): Promise<void> {
+  await Promise.all([revalidateSponsors(), revalidateSponsor(sponsorSlug), revalidateJobOffers()]);
 }
 
 export function revalidateCfp(): Promise<void> {
