@@ -1,0 +1,7 @@
+{
+  "summary": "[<ID>] <titre_advisory>",
+  "description": "<description_advisory>\n\nFichiers : <fichiers>\nRecommandation : <recommandation>",
+  "severity": "<critical si critique, high si haute>",
+  "cwe_ids": ["<cwe>"],
+  "vulnerabilities": [{ "package": { "ecosystem": "other", "name": "Site-Devfest-Toulouse-2026" } }]
+}
