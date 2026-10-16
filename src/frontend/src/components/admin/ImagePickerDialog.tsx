@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { pastedFile } from "@/lib/clipboard-file";
+import ImportFromUrl from "@/components/admin/ImportFromUrl";
 import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
@@ -394,6 +395,18 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
                 className="hidden"
               />
               <p className="text-xs text-gris mt-3">JPEG, PNG, WebP, GIF, SVG, ICO — max 20 Mo</p>
+            </div>
+          )}
+          {/* Or by its address (#617): the server downloads it, and the image
+              is chosen straight away, as a picked one would be. */}
+          {tab === "upload" && !pendingFile && (
+            <div className="mt-4">
+              <ImportFromUrl
+                onImported={(file) => {
+                  onSelect(file.url);
+                  onClose();
+                }}
+              />
             </div>
           )}
 
