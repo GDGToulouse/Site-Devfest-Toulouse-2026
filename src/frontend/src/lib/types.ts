@@ -381,6 +381,19 @@ export interface HallOfFameEntry {
   years: number[];
 }
 
+// Every company that ever sponsored (#611), with each year as that year
+// displayed it (#375): its logo and tier then, newest year first.
+export interface SponsorHallOfFameEntry {
+  slug: string;
+  name: string;
+  logoUrl: string | null;
+  participations: {
+    year: number;
+    logoUrl: string | null;
+    tier: { key: string; rank: number; nameFr: string; nameEn: string; color: string };
+  }[];
+}
+
 export type TalkFormat = "CONFERENCE" | "QUICKIE" | "KEYNOTE" | "WORKSHOP";
 export type TalkLevel = "DEBUTANT" | "INTERMEDIAIRE" | "CONFIRME";
 

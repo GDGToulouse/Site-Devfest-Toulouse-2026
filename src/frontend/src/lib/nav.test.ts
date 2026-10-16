@@ -124,16 +124,18 @@ describe("getPublicNavEntries", () => {
     expect(keys(entries)).not.toContain("hall-of-fame");
   });
 
-  it("shows Sponsors without a submenu when there are no job offers", () => {
+  // #611: the sponsors' hall of fame hangs under Sponsors, offers or not.
+  it("puts only the sponsors' hall of fame under Sponsors when there are no job offers", () => {
     const entries = getPublicNavEntries(edition({ hasSponsors: true }));
     const sponsors = entries.find((e) => e.key === "sponsors");
-    expect(sponsors?.children).toBeUndefined();
+    expect(sponsors?.children?.map((c) => c.key)).toEqual(["sponsors-hall-of-fame"]);
+    expect(keys(entries)).not.toContain("sponsors-hall-of-fame");
   });
 
   it("adds the job-offers submenu only when offers are published (#276)", () => {
     const entries = getPublicNavEntries(edition({ hasSponsors: true, hasJobOffers: true }));
     const sponsors = entries.find((e) => e.key === "sponsors");
-    expect(sponsors?.children?.map((c) => c.key)).toEqual(["job-offers"]);
+    expect(sponsors?.children?.map((c) => c.key)).toEqual(["job-offers", "sponsors-hall-of-fame"]);
     // No duplicate top-level entry — the #276 bug was a doubled Sponsors link.
     expect(keys(entries).filter((k) => k === "sponsors")).toHaveLength(1);
   });

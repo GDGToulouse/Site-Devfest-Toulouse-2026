@@ -146,6 +146,48 @@ export default async function sponsorRoutes(app: FastifyInstance) {
     }));
   });
 
+  // GET /api/sponsors/hall-of-fame — every company that ever sponsored, with the
+  // years it did (#611). The sponsors' counterpart of /api/speakers/hall-of-fame.
+  //
+  // Static, so find-my-way serves it before "/sponsors/:slug": "hall-of-fame"
+  // can never be a company's slug, like "indexable" above.
+  app.get("/sponsors/hall-of-fame", async () => {
+    // Read through the participations, one row per (company, year), folded in
+    // memory: the same shape of query as the speakers' hall of fame. Published
+    // and out of the trash on both sides — a draft year must not surface here.
+    const links = await prisma.editionSponsor.findMany({
+      where: { publicationStatus: "PUBLISHED", sponsor: notDeleted, edition: notDeleted },
+      orderBy: [{ sponsor: { name: "asc" } }, { edition: { year: "desc" } }],
+      // A guard, not a real limit: ~180 participations today, ~30 more a year.
+      take: 3000,
+      select: {
+        logoUrl: true,
+        tierNameFr: true,
+        tierNameEn: true,
+        tierColor: true,
+        tierLogoScale: true,
+        tier: { select: { key: true, rank: true, nameFr: true, nameEn: true, logoScale: true, color: true } },
+        edition: { select: { year: true } },
+        sponsor: { select: { slug: true, name: true, logoUrl: true } },
+      },
+    });
+
+    type Participation = { year: number; logoUrl: string | null; tier: ReturnType<typeof archivedTier> };
+    const companies = new Map<string, { slug: string; name: string; logoUrl: string | null; participations: Participation[] }>();
+    for (const link of links) {
+      // As that year displayed it (#375): the page shows it under a year filter.
+      const participation = {
+        year: link.edition.year,
+        logoUrl: archivedLogoUrl(link, link.sponsor),
+        tier: archivedTier(link),
+      };
+      const entry = companies.get(link.sponsor.slug);
+      if (entry) entry.participations.push(participation);
+      else companies.set(link.sponsor.slug, { ...link.sponsor, participations: [participation] });
+    }
+    return [...companies.values()];
+  });
+
   // GET /api/sponsors/:slug — detail of a published sponsor + its speakers (RG-226).
   // Since #129 the company page exists independently of the featured edition:
   // any sponsor with at least one published participation resolves, and the
