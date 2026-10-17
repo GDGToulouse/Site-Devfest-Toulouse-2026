@@ -10,6 +10,7 @@ import myApiKeysRoutes from "../routes/me/api-keys.js";
 import myAgentsRoutes from "../routes/me/agents.js";
 import { registerAuthRoutes } from "../plugins/auth-routes.js";
 import { registerRequestContext } from "../lib/request-context.js";
+import { trustProxyHops } from "../lib/server-options.js";
 import { registerRouteCatalog } from "../lib/route-catalog.js";
 import { registerCommonSchemas } from "../schemas/common.js";
 import { registerApiKeySchemas } from "../schemas/api-key.js";
@@ -28,10 +29,11 @@ let sponsorUserId: string;
 let sponsorId: number;
 const created = { userIds: [] as string[] };
 
-async function rpc(token: string | null, method: string, params: Record<string, unknown> = {}) {
+async function rpc(token: string | null, method: string, params: Record<string, unknown> = {}, remoteAddress?: string) {
   return app.inject({
     method: "POST",
     url: "/api/mcp",
+    ...(remoteAddress && { remoteAddress }),
     headers: {
       "content-type": "application/json",
       accept: "application/json, text/event-stream",
@@ -41,8 +43,8 @@ async function rpc(token: string | null, method: string, params: Record<string, 
   });
 }
 
-async function callTool(token: string, name: string, args: Record<string, unknown>) {
-  const res = await rpc(token, "tools/call", { name, arguments: args });
+async function callTool(token: string, name: string, args: Record<string, unknown>, remoteAddress?: string) {
+  const res = await rpc(token, "tools/call", { name, arguments: args }, remoteAddress);
   const result = res.json().result;
   const text: string = result.content[0].text;
   // A refusal from the connector itself is a sentence, a route's answer is JSON.
@@ -51,7 +53,9 @@ async function callTool(token: string, name: string, args: Record<string, unknow
 }
 
 beforeAll(async () => {
-  app = Fastify({ logger: false, trustProxy: true });
+  // No trusted proxy, as locally: the agent's address must reach the replayed call
+  // whatever the deployment trusts (#663).
+  app = Fastify({ logger: false, trustProxy: trustProxyHops(undefined) });
   app.decorateRequest("adminUser");
   registerRequestContext(app);
   registerRouteCatalog(app);
@@ -146,6 +150,22 @@ describe("POST /api/mcp — tools (#514)", () => {
       orderBy: { id: "desc" },
     });
     expect(line).toMatchObject({ channel: "MCP", actorUserId: sponsorUserId });
+  });
+
+  it("should file the agent's own address in the history, not the loopback the call is replayed on", async () => {
+    const agentAddress = "203.0.113.50";
+
+    await callTool(sponsorToken, "call_route", {
+      method: "PUT",
+      path: `/api/sponsor-space/${sponsorId}`,
+      body: { websiteUrl: "https://agent-address.example.com" },
+    }, agentAddress);
+
+    const line = await prisma.auditLog.findFirst({
+      where: { entity: "Sponsor", entityId: String(sponsorId), action: "UPDATE" },
+      orderBy: { id: "desc" },
+    });
+    expect(line?.ip).toBe(agentAddress);
   });
 
   it("should not let an agent reach the account endpoints", async () => {
