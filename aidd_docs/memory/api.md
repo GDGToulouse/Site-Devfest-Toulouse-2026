@@ -17,4 +17,5 @@
 - Erreurs en `{ error, message? }` (schéma `Error`), pagination via le schéma `Pagination`, tous deux dans `src/backend/src/schemas/common.ts`
 - Validation des entrées par les JSON Schemas de Fastify, déclarés sur chaque route ; helpers `notFound()` et validation d'id dans `src/backend/src/lib/admin-helpers.ts`
 - Limite de débit par IP, deux budgets séparés : l'API et les fichiers uploadés (`src/backend/src/lib/rate-limit-options.ts`)
+- Formulaire de contact, catégorie brochure : 3 demandes par heure et par IP (mémoire), un envoi par heure et par adresse (base : `ContactMessage`), réponse identique à un succès au-delà (`lib/brochure-limits.ts`, #662) ; l'IP vient de `TRUST_PROXY_HOPS` (`architecture.md`)
 - Spec OpenAPI servie sur `/api/docs` ; référence de l'API publique : `docs/api-publique.md`

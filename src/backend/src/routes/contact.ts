@@ -6,6 +6,7 @@ import { makeToken } from "../lib/brochure-token.js";
 import { sendContactWebhook } from "../lib/contact-webhook.js";
 import { getFeaturedEdition } from "./editions.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { brochureIpRetryAfter, claimAddress, consumeBrochureIpBudget, hasRecentBrochureRequest } from "../lib/brochure-limits.js";
 
 interface ContactBody {
   firstName: string;
@@ -74,7 +75,8 @@ export default async function contactRoutes(app: FastifyInstance) {
   });
 
   // POST /api/contact/send — submit a contact message
-  // Rate limit: 5 messages per 15 minutes per IP
+  // Rate limit: 5 messages per 15 minutes per IP. Brochure requests also have
+  // their own caps (#662): 3 per hour per IP, 1 mail per hour per address.
   app.post<{ Body: ContactBody }>("/contact/send", {
     schema: { body: contactBodySchema },
     // Every field at its ceiling stays under 16 KiB.
@@ -138,6 +140,16 @@ export default async function contactRoutes(app: FastifyInstance) {
       return reply.status(400).send({ success: false, errors });
     }
 
+    // The brochure confirmation goes to an address nobody proved theirs (#662).
+    // Per IP first: past three requests an hour the answer is a plain refusal.
+    if (requiresCompanyInfo && !consumeBrochureIpBudget(request.ip)) {
+      request.log.warn({ ip: request.ip, email }, "[contact] brochure requests per IP exceeded");
+      return reply
+        .status(429)
+        .header("retry-after", String(brochureIpRetryAfter(request.ip)))
+        .send({ success: false, error: "Too Many Requests", message: "Too many brochure requests, try again later" });
+    }
+
     // Resolve recipients from the category we already fetched above.
     let recipients: string[] = [];
     let categoryLabel: string | null = null;
@@ -154,21 +166,37 @@ export default async function contactRoutes(app: FastifyInstance) {
       recipients = [defaultEmail?.value || "contact@devfesttoulouse.fr"];
     }
 
-    // Store message in DB
-    const stored = await prisma.contactMessage.create({
-      data: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone?.trim() || null,
-        company: company?.trim() || "",
-        jobTitle: jobTitle?.trim() || "",
-        categoryLabel,
-        message: message.trim(),
-        locale: locale || null,
-        categoryId: categoryId || null,
-      },
-    });
+    // Store message in DB. A brochure request for an address that had one in the
+    // last hour is answered like a success, so the form reveals nothing, but
+    // stores and sends nothing (#662).
+    const release = requiresCompanyInfo ? claimAddress(email) : null;
+    if (requiresCompanyInfo && !release) {
+      request.log.warn({ ip: request.ip, email }, "[contact] brochure request already in progress for this address — ignored");
+      return { success: true };
+    }
+    let stored;
+    try {
+      if (requiresCompanyInfo && category && (await hasRecentBrochureRequest(category.id, email))) {
+        request.log.warn({ ip: request.ip, email }, "[contact] brochure already sent to this address within the hour — ignored");
+        return { success: true };
+      }
+      stored = await prisma.contactMessage.create({
+        data: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          phone: phone?.trim() || null,
+          company: company?.trim() || "",
+          jobTitle: jobTitle?.trim() || "",
+          categoryLabel,
+          message: message.trim(),
+          locale: locale || null,
+          categoryId: categoryId || null,
+        },
+      });
+    } finally {
+      release?.();
+    }
 
     // --- Send notification email to recipients (existing behaviour) ---
     try {
