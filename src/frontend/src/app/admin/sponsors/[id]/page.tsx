@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
-import { adminFetch, getAdminSession } from "@/lib/admin-api";
+import { adminFetch, getAdminSession, humanError } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
 import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
@@ -230,7 +230,8 @@ export default function SponsorEditorPage() {
     };
 
     if (isNew) {
-      const { data, status, errorBody } = await adminFetch<{ id: number }>("/sponsors", { method: "POST", body: JSON.stringify(payload) });
+      const result = await adminFetch<{ id: number }>("/sponsors", { method: "POST", body: JSON.stringify(payload) });
+      const { data, status, errorBody } = result;
       setIsSaving(false);
       // The slug is global since #129, so a taken name means the company is
       // already there — offer to attach it to the chosen edition rather than
@@ -241,17 +242,21 @@ export default function SponsorEditorPage() {
         return;
       }
       if (status >= 400 || !data) {
-        setError("Échec de la création.");
+        // The backend says which field it refused, a link for instance (#658).
+        setError(humanError(result, "Échec de la création."));
         return;
       }
       router.push(`/admin/sponsors/${data.id}`);
     } else {
-      const { status } = await adminFetch(`/sponsors/${sponsorId}`, { method: "PUT", body: JSON.stringify(payload) });
+      const result = await adminFetch(`/sponsors/${sponsorId}`, { method: "PUT", body: JSON.stringify(payload) });
+      const { status } = result;
       setIsSaving(false);
       // Anything but 200 failed, network included: a dropped connection comes
       // back as status 0, which `>= 400` announced as a save (#428).
       if (status !== 200) {
-        setSaveState({ kind: "error", text: "Échec de l'enregistrement. Réessayez." });
+        // Status 0 never reached the backend: there is no refusal to quote.
+        const fallback = "Échec de l'enregistrement. Réessayez.";
+        setSaveState({ kind: "error", text: status >= 400 ? humanError(result, fallback) : fallback });
         return;
       }
       // Stays on the page rather than redirecting to the list (#394): the

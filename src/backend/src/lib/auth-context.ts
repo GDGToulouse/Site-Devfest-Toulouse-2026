@@ -205,6 +205,22 @@ export async function refuseAgents(_request: FastifyRequest, reply: FastifyReply
 }
 
 /**
+ * preHandler that keeps API keys away from managing keys (#658). A key that
+ * could mint, rotate or revoke keys would outlive its own expiry and
+ * revocation. Keys are a person's gesture, from the browser; AI agents are
+ * already refused by refuseAgents. Runs after the area's own guard.
+ */
+export async function refuseApiKeys(request: FastifyRequest, reply: FastifyReply) {
+  const ctx = await getAuthContext(request);
+  if (ctx?.source === "apiKey") {
+    reply.code(403).send({
+      error: "Forbidden",
+      message: "Une clé d'API ne peut pas gérer les clés d'accès : passez par le navigateur.",
+    });
+  }
+}
+
+/**
  * preHandler that requires ANY authenticated back-office user (ADMIN or
  * EDITOR). Used for per-user routes such as `/api/me/*` where ownership
  * is enforced inside the handler.

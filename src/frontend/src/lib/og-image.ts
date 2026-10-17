@@ -42,13 +42,18 @@ const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
  * `/uploads/…`: they are read from the backend, which serves them, rather than
  * through the public domain. `null` when the image cannot be had, so the
  * caller draws its fallback instead of failing.
+ *
+ * Nothing else is fetched: an absolute URL comes from data a speaker or a
+ * sponsor typed, and these cards are public, so following it would let anyone
+ * make this server call any address, internal ones included (#658).
  */
 export async function imageDataUri(src: string): Promise<string | null> {
-  if (src.startsWith("/") && !src.startsWith("/uploads/")) return staticDataUri(src);
-  const url = /^https?:\/\//.test(src) ? src : `${BACKEND_URL}${src}`;
+  if (!src.startsWith("/")) return null;
+  if (!src.startsWith("/uploads/")) return staticDataUri(src);
   try {
-    const upstream = await fetch(url);
+    const upstream = await fetch(`${BACKEND_URL}${src}`);
     if (!upstream.ok) return null;
+    if (Number(upstream.headers.get("content-length")) > MAX_IMAGE_BYTES) return null;
 
     const bytes = await upstream.arrayBuffer();
     if (bytes.byteLength > MAX_IMAGE_BYTES) return null;

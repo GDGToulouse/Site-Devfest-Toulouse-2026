@@ -41,7 +41,7 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. | `a1b2c3d4...` |
+| `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. Hors local (`NODE_ENV=production` ou `ENV_NAME` autre que `local`), le backend refuse de démarrer s'il manque ou s'il vaut encore un exemple `change-me…` ; même refus pour `MAGIC_LINK_SECRET`, `REVALIDATE_SECRET`, `BROCHURE_TOKEN_SECRET` et `TRASH_PURGE_SECRET` laissés à leur exemple. | `a1b2c3d4...` |
 | `MAGIC_LINK_SECRET` | oui | Secret pour générer et vérifier les liens de modification speakers/sponsors. Distinct du `SESSION_SECRET`. | `e5f6g7h8...` |
 | `TRASH_PURGE_SECRET` | non | Secret partagé permettant à la tâche planifiée d'appeler la purge de corbeille sans session (en-tête `X-Purge-Secret`). **Sans cette variable, l'endpoint n'accepte qu'une session ADMIN** — la purge automatique ne tourne pas, mais rien ne casse. | (32+ caractères aléatoires) |
 | `TRASH_RETENTION_DAYS` | non | Délai de conservation en corbeille avant purge définitive. Défaut **30**. Une valeur invalide ou `< 1` retombe sur 30 : une faute de frappe ne doit pas vider la corbeille. | `30` |

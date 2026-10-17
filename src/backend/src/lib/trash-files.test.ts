@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
+import fs from "node:fs";
+import path from "node:path";
 
-import { FILE_REFERENCES } from "./trash-files.js";
+import { FILE_REFERENCES, purgeFiles } from "./trash-files.js";
+import { UPLOADS_DIR } from "./image-store.js";
 import { FILE_ONLY_MODELS, TRASH_ENTITIES } from "./trash-registry.js";
 
 // FILE_REFERENCES (used to reference-count a shared upload before purging it)
@@ -37,5 +40,23 @@ describe("FILE_REFERENCES derivation (#307)", () => {
     expect(keys).toContain("editionSponsor.comKitLogoWebUrl");
     expect(keys).toContain("editionSponsor.comKitLogoPrintUrl");
     expect(keys).toContain("editionSponsor.comKitCharterUrl");
+  });
+});
+
+// A speaker or a sponsor sets their own image URL. Read through its basename,
+// `/uploads/anything/<someone-else's file>` pointed at another file, which no
+// exact reference count protected: a purge deleted a file still in use (#658).
+describe("purgeFiles — only a plain /uploads/<file> URL is a file of ours", () => {
+  it("should leave alone a file reached through a nested path", async () => {
+    const name = `purge-guard-${Date.now()}.png`;
+    const file = path.join(UPLOADS_DIR, name);
+    await fs.promises.mkdir(UPLOADS_DIR, { recursive: true });
+    await fs.promises.writeFile(file, "x");
+
+    const [outcome] = await purgeFiles([`/uploads/anything/${name}`], { model: "speaker", id: -1 });
+
+    expect(outcome.deleted).toBe(false);
+    expect(fs.existsSync(file)).toBe(true);
+    await fs.promises.unlink(file);
   });
 });

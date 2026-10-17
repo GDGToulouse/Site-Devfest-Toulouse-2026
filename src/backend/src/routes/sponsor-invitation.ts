@@ -1,8 +1,11 @@
 import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../lib/prisma.js";
+import { APIError } from "better-auth/api";
+
+import { auth } from "../lib/auth.js";
 import { getAuthContext } from "../lib/auth-context.js";
-import { findPendingInvitation, normalizeEmail } from "../lib/sponsor-invitation.js";
+import { findPendingInvitation, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
 
 // Accepting an invitation to a sponsor space (#362).
 //
@@ -37,6 +40,43 @@ export default async function sponsorInvitationRoutes(app: FastifyInstance) {
       // address a third party could harvest from a forwarded link.
       emailHint: maskEmail(contact.email),
     };
+  });
+
+  // POST /api/sponsor-invitation/:token/sign-up — open the invited account.
+  //
+  // The only way to create a sponsor account with a password (#658): the token
+  // proves the mailbox, so the address is the invitation's, never the body's,
+  // and the account starts verified. Answers with better-auth's own session
+  // cookie; binding the account to the company stays /accept's job.
+  app.post<{ Params: { token: string }; Body: { password: string } }>("/sponsor-invitation/:token/sign-up", {
+    schema: {
+      params: tokenParamsSchema,
+      body: {
+        type: "object",
+        required: ["password"],
+        properties: { password: { type: "string", minLength: 1, maxLength: 128 } },
+      },
+    },
+  }, async (request, reply) => {
+    const contact = await findPendingInvitation(request.params.token);
+    if (!contact) return reply.code(404).send({ error: "invitation_invalid" });
+
+    try {
+      const { headers } = await signUpWithInvitation(contact.email, () =>
+        auth.api.signUpEmail({
+          body: { email: contact.email, password: request.body.password, name: contact.name || contact.email },
+          returnHeaders: true,
+        }),
+      );
+      const cookies = headers.getSetCookie();
+      if (cookies.length) reply.header("set-cookie", cookies);
+      return { success: true };
+    } catch (err) {
+      if (err instanceof APIError) {
+        return reply.code(err.statusCode).send({ error: err.body?.code ?? "sign_up_failed", message: err.body?.message });
+      }
+      throw err;
+    }
   });
 
   // POST /api/sponsor-invitation/:token/accept — bind the signed-in account.

@@ -43,4 +43,22 @@ describe("Admin Contact API", () => {
     expect(body).toHaveProperty("totalPages");
     await app.close();
   });
+
+  // Without `emails`, the handler split undefined and answered 500, which
+  // also fired the 5xx alert webhook.
+  it("POST /api/admin/contact/messages/:id/forward should refuse a body without emails", async () => {
+    const app = await buildAdminApp();
+    const list = await app.inject({ method: "GET", url: "/api/admin/contact/messages" });
+    const [message] = list.json().messages;
+    expect(message).toBeDefined();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/contact/messages/${message.id}/forward`,
+      payload: {},
+    });
+
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
 });

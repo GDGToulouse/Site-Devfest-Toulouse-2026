@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { validateWebhookUrl } from "./webhook-url.js";
+import { postJson } from "./safe-fetch.js";
 
 // Alerting channel for server errors (#118). Reuses the webhook conventions
 // already in place for contact submissions: URL stored in SiteSetting,
@@ -90,14 +91,9 @@ export async function sendAlert(
   }
 
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      redirect: "manual",
-    });
-    if (!response.ok) {
+    // Pinned to the address it checks, like the contact webhook (#658).
+    const response = await postJson(url, payload, { timeoutMs: TIMEOUT_MS });
+    if (response.status < 200 || response.status >= 300) {
       return { status: "failed", error: `HTTP ${response.status} ${response.statusText}` };
     }
     return { status: "success", error: null };

@@ -25,9 +25,33 @@ interface ContactBody {
   website?: string;
 }
 
+// The domain's labels cannot hold a dot, so each dot has one place to match:
+// the check stays linear in the address's length.
 function validateEmail(email: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  return /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(email);
 }
+
+// The form is public and anonymous: bound every field before the handler, so a
+// malformed body is refused cheaply and never reaches the mailer. The ceilings
+// sit well above anything a person types; 254 is the longest valid address.
+// The optional fields take null as well as absence: JSON.stringify turns a
+// category id that is not a number into null.
+const contactBodySchema = {
+  type: "object",
+  properties: {
+    firstName: { type: "string", maxLength: 100 },
+    lastName: { type: "string", maxLength: 100 },
+    email: { type: "string", maxLength: 254 },
+    phone: { type: ["string", "null"], maxLength: 40 },
+    company: { type: ["string", "null"], maxLength: 200 },
+    jobTitle: { type: ["string", "null"], maxLength: 200 },
+    categoryId: { type: ["integer", "null"], minimum: 1 },
+    message: { type: "string", maxLength: 10_000 },
+    locale: { type: ["string", "null"], maxLength: 10 },
+    confirmUrl: { type: ["string", "null"], maxLength: 2048 },
+    website: { type: ["string", "null"], maxLength: 2048 },
+  },
+} as const;
 
 export default async function contactRoutes(app: FastifyInstance) {
   // GET /api/contact/categories — public list of active categories
@@ -52,6 +76,9 @@ export default async function contactRoutes(app: FastifyInstance) {
   // POST /api/contact/send — submit a contact message
   // Rate limit: 5 messages per 15 minutes per IP
   app.post<{ Body: ContactBody }>("/contact/send", {
+    schema: { body: contactBodySchema },
+    // Every field at its ceiling stays under 16 KiB.
+    bodyLimit: 32 * 1024,
     config: {
       rateLimit: {
         max: 5,

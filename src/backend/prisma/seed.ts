@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
+import { hasTrashedAccount } from "../src/lib/trashed-account.js";
 
 // Set BASE_URL before importing auth (Better Auth needs it at import time)
 process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
@@ -107,6 +108,13 @@ export async function seedBase({ skipAccountEmails = [] }: { skipAccountEmails?:
     .filter((e) => e && !skipAccountEmails.includes(e));
 
   for (const email of adminEmails) {
+    // Removed from the back-office but still listed: recreating it would hand
+    // the access back on every restart (#658). Taking the address out of
+    // ADMIN_EMAILS is what finishes the removal.
+    if (await hasTrashedAccount(prisma, email)) {
+      console.log(`Admin account in the trash, not recreated: ${email} — remove it from ADMIN_EMAILS`);
+      continue;
+    }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (!existing) {
       const password = crypto.randomUUID().slice(0, 16);

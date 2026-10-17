@@ -83,9 +83,12 @@ export default function ProfilePage() {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
+        // A new password is what someone sets once they fear their account
+        // was taken: it signs out every other session (#658).
         body: JSON.stringify({
           currentPassword,
           newPassword,
+          revokeOtherSessions: true,
         }),
       });
 

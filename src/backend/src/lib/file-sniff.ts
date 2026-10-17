@@ -38,3 +38,28 @@ export const EXTENSION_BY_MIME: Record<string, string> = {
   "image/svg+xml": ".svg",
   "application/pdf": ".pdf",
 };
+
+// Office documents, for the upload only: a zip (OOXML) or an OLE container
+// (legacy formats) says which family, the file name's extension which member.
+// The extension is kept only when it belongs to the family the bytes show, so
+// a client cannot store anything else under a name it chose.
+const OOXML_MIME_BY_EXTENSION: Record<string, string> = {
+  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+};
+const OLE_MIME_BY_EXTENSION: Record<string, string> = {
+  ".doc": "application/msword",
+  ".ppt": "application/vnd.ms-powerpoint",
+  ".xls": "application/vnd.ms-excel",
+};
+
+export function sniffOfficeDocument(buffer: Buffer, ext: string): { mimetype: string; ext: string } | null {
+  if (startsWith(buffer, [0x50, 0x4b, 0x03, 0x04]) && OOXML_MIME_BY_EXTENSION[ext]) {
+    return { mimetype: OOXML_MIME_BY_EXTENSION[ext], ext };
+  }
+  if (startsWith(buffer, [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]) && OLE_MIME_BY_EXTENSION[ext]) {
+    return { mimetype: OLE_MIME_BY_EXTENSION[ext], ext };
+  }
+  return null;
+}

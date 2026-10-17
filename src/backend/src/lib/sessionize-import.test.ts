@@ -59,6 +59,15 @@ describe("buildSocialLinks", () => {
   it("handles undefined links", () => {
     expect(buildSocialLinks(undefined)).toEqual({ social: {}, count: 0 });
   });
+
+  // The links are typed by CFP candidates, third parties to the team.
+  it("should drop a link that is not an http(s) URL", () => {
+    const { social } = buildSocialLinks([
+      { url: "javascript:alert(1)", linkType: "Twitter" },
+      { url: "/\\evil.example", linkType: "Blog" },
+    ]);
+    expect(social).toEqual({});
+  });
 });
 
 describe("matchEnum (format/level)", () => {

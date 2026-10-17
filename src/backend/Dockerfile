@@ -6,7 +6,9 @@ RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 
 COPY src/backend/package.json src/backend/pnpm-lock.yaml ./
 
-RUN pnpm install --config.confirmModulesPurge=false
+# Exactly the lockfile the CI tested: without --frozen-lockfile, pnpm would
+# resolve and rewrite a stale one and ship untested versions (#658).
+RUN pnpm install --frozen-lockfile --config.confirmModulesPurge=false
 
 COPY src/backend/ ./
 

@@ -88,6 +88,53 @@ export async function fetchRemoteFile(
   }
 }
 
+// How much of a webhook's answer is kept: the back-office test button shows
+// its start, nothing else reads it.
+const POST_RESPONSE_MAX_BYTES = 4096;
+
+export interface PostJsonOptions {
+  timeoutMs?: number;
+  isAllowedAddress?: (address: string, family: number) => boolean;
+}
+
+/**
+ * POST a JSON payload to a URL someone else chose: the webhooks (#658). Same
+ * guard as fetchRemoteFile, the address checked inside the socket's own
+ * lookup, so a record cannot turn private between a check and the send. A
+ * redirect is answered as is, never followed. Throws RemoteFetchError when the
+ * request cannot be made; any HTTP status is a result.
+ */
+export async function postJson(
+  rawUrl: string,
+  payload: unknown,
+  { timeoutMs = REMOTE_FETCH_TIMEOUT_MS, isAllowedAddress = isPublicAddress }: PostJsonOptions = {},
+): Promise<{ status: number; statusText: string; body: string }> {
+  const deadline = Date.now() + timeoutMs;
+  const url = checkUrl(rawUrl, isAllowedAddress);
+  const body = JSON.stringify(payload);
+
+  const response = await new Promise<http.IncomingMessage>((resolve, reject) => {
+    const client = url.protocol === "https:" ? https : http;
+    const req = client.request(url, {
+      method: "POST",
+      lookup: pinnedLookup(isAllowedAddress),
+      headers: {
+        "content-type": "application/json",
+        "content-length": Buffer.byteLength(body),
+        "user-agent": "DevFestToulouse-site/1.0",
+      },
+      timeout: Math.max(1, deadline - Date.now()),
+    });
+    req.on("response", resolve);
+    req.on("timeout", () => req.destroy(new RemoteFetchError("timeout")));
+    req.on("error", (err) => reject(err instanceof RemoteFetchError ? err : new RemoteFetchError("network", err.message)));
+    req.end(body);
+  });
+
+  const text = await readCapped(response, Number.MAX_SAFE_INTEGER, deadline, POST_RESPONSE_MAX_BYTES);
+  return { status: response.statusCode ?? 0, statusText: response.statusMessage ?? "", body: text.toString("utf8") };
+}
+
 // Syntax and literal addresses. A hostname is resolved, and checked, by the
 // socket itself (pinnedLookup) — a literal IP skips that lookup, so it is
 // checked here.
@@ -143,13 +190,22 @@ function request(url: URL, deadline: number, isAllowedAddress: RemoteFetchOption
   });
 }
 
-function readCapped(response: http.IncomingMessage, maxBytes: number, deadline: number) {
+// `keepBytes`: stop reading once that much is in hand and return it, rather
+// than failing as `maxBytes` does — enough of an answer to show.
+function readCapped(response: http.IncomingMessage, maxBytes: number, deadline: number, keepBytes?: number) {
   return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
     const timer = setTimeout(() => response.destroy(new RemoteFetchError("timeout")), Math.max(1, deadline - Date.now()));
     response.on("data", (chunk: Buffer) => {
       size += chunk.length;
+      if (keepBytes !== undefined && size >= keepBytes) {
+        chunks.push(chunk);
+        clearTimeout(timer);
+        response.destroy();
+        resolve(Buffer.concat(chunks).subarray(0, keepBytes));
+        return;
+      }
       if (size > maxBytes) {
         response.destroy(new RemoteFetchError("too_large"));
         return;

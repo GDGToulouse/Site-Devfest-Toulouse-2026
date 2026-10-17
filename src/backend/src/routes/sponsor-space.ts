@@ -18,6 +18,7 @@ import {
   newJobOfferData,
   type JobOfferBody,
 } from "../lib/job-offers.js";
+import { sniffMime } from "../lib/file-sniff.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { originalNamesByUrl, rememberOriginalName } from "../lib/file-metadata.js";
 import { revalidateJobOfferPages } from "../lib/revalidate.js";
@@ -644,9 +645,13 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
 
     const buffer = await data.toBuffer();
     if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
+    // The declared type is the client's to choose: the bytes decide, and the
+    // file is stored as what it is (#658).
+    const mimetype = sniffMime(buffer);
+    if (!mimetype || !UPLOAD_MIMES.has(mimetype)) return reply.code(400).send({ error: "invalid_file_type" });
 
     try {
-      const url = await storeImageBuffer(buffer, data.mimetype);
+      const url = await storeImageBuffer(buffer, mimetype);
       // Keep the name the sponsor's machine gave it (#378): a com kit is three
       // files that all look alike once they are `<timestamp>-<random>.pdf`.
       await rememberOriginalName(url, data.filename);

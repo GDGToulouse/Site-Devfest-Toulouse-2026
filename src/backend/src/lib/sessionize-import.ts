@@ -2,7 +2,8 @@ import { resolveSpeakerPhoto } from "./speaker-photo.js";
 import { prisma } from "./prisma.js";
 import { findRoomClash } from "./room-clash.js";
 import { slugify, uniqueSlug } from "./slug.js";
-import { validateWebhookUrl } from "./webhook-url.js";
+import { fetchSessionizeJson } from "./sessionize-fetch.js";
+import { isSafeUrl } from "./sanitize.js";
 import { parseWallTime } from "./zoned-time.js";
 import { syncServiceSlots, type ServiceSlotsReport, type SzServiceSlot } from "./sessionize-service-slots.js";
 
@@ -165,7 +166,10 @@ export function socialKeyFor(link: SzLink): string | null {
 export function buildSocialLinks(links: SzLink[] | undefined): { social: Record<string, string>; count: number } {
   const social: Record<string, string> = {};
   let count = 0;
-  for (const link of links ?? []) {
+  // Typed by CFP candidates, third parties to the team: only http(s) links
+  // reach the public profile.
+  const safeLinks = (links ?? []).filter((l) => isSafeUrl(l.url) && !l.url.trim().startsWith("/"));
+  for (const link of safeLinks) {
     const key = socialKeyFor(link);
     if (key && !social[key]) {
       social[key] = link.url;
@@ -174,7 +178,7 @@ export function buildSocialLinks(links: SzLink[] | undefined): { social: Record<
   }
   // Use the first generic link as the website if none matched explicitly.
   if (!social.website) {
-    const generic = (links ?? []).find((l) => !socialKeyFor(l));
+    const generic = safeLinks.find((l) => !socialKeyFor(l));
     if (generic) {
       social.website = generic.url;
       count++;
@@ -582,15 +586,11 @@ export async function loadSessionizeData(opts: { json?: string; url?: string }):
   if (opts.json?.trim()) {
     raw = JSON.parse(opts.json);
   } else if (opts.url?.trim()) {
-    // The URL comes from a back-office form, so guard it against SSRF before
-    // fetching: without this an editor could point it at the cloud metadata
-    // endpoint, an internal DB, or another backend on the shared Coolify network
-    // (#306). validateWebhookUrl rejects loopback/private/link-local hosts and
-    // throws on a bad scheme — same guard the contact webhook already uses.
-    await validateWebhookUrl(opts.url.trim());
-    const res = await fetch(opts.url, { headers: { accept: "application/json" } });
-    if (!res.ok) throw new Error(`Sessionize fetch failed: HTTP ${res.status}`);
-    raw = await res.json();
+    // The URL comes from a back-office form: an editor could point it at the
+    // cloud metadata endpoint, an internal DB, or another backend on the shared
+    // Coolify network (#306). fetchRemoteFile checks every redirect hop, pins
+    // the resolved address, caps the size and gives up after a delay (#658).
+    raw = await fetchSessionizeJson(opts.url.trim());
   } else {
     throw new Error("Provide either `json` or `url`.");
   }

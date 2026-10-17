@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeRichHtml, isSafeUrl } from "./sanitize.js";
+import { sanitizeRichHtml, isSafeUrl, unsafeUrlRefusal } from "./sanitize.js";
 
 describe("isSafeUrl", () => {
   it("should accept http and https URLs", () => {
@@ -25,6 +25,12 @@ describe("isSafeUrl", () => {
 
   it("should reject a protocol-relative URL (it bypasses the scheme check)", () => {
     expect(isSafeUrl("//evil.example.com/x.png")).toBe(false);
+  });
+
+  // A browser turns the backslash into a slash: `/\host` leaves for `//host`.
+  it("should reject a path holding a backslash", () => {
+    expect(isSafeUrl("/\\evil.example")).toBe(false);
+    expect(isSafeUrl("/uploads\\x.png")).toBe(false);
   });
 
   it("should reject a schemeless value rather than coercing it", () => {
@@ -105,5 +111,34 @@ describe("sanitizeRichHtml", () => {
     );
     expect(sanitizeRichHtml('<a href="#section">a</a>')).toContain('href="#section"');
     expect(sanitizeRichHtml('<a href="/fr/actualites">a</a>')).toContain('href="/fr/actualites"');
+  });
+});
+
+// The site's utility CSS is all there for whoever writes rich text: a class is
+// enough to lay a full-screen block over a public page (#658). Only the
+// layout classes of the WordPress import survive.
+describe("sanitizeRichHtml — classes", () => {
+  it("should drop a class outside the import's list", () => {
+    const html = sanitizeRichHtml('<div class="fixed inset-0 z-[60] bg-blanc"><p class="text-3xl">x</p></div>');
+    expect(html).not.toContain("class=");
+    expect(html).toContain("<p>x</p>");
+  });
+
+  it("should keep the import's layout classes and drop the rest of the attribute", () => {
+    const html = sanitizeRichHtml('<div class="grid md:grid-cols-2 fixed"><p>x</p></div>');
+    expect(html).toContain('class="grid md:grid-cols-2"');
+  });
+});
+
+describe("unsafeUrlRefusal", () => {
+  it("should name the refused field and say what a link may be", () => {
+    const refusal = unsafeUrlRefusal({ photoUrl: "javascript:alert(1)" }, ["photoUrl"]);
+
+    expect(refusal).toMatchObject({ error: "unsafe_url", field: "photoUrl" });
+    expect(refusal?.message).toContain("chemins du site");
+  });
+
+  it("should return nothing when every link passes", () => {
+    expect(unsafeUrlRefusal({ photoUrl: "/uploads/a.png", socialLinks: { github: "https://github.com/x" } }, ["photoUrl"])).toBeNull();
   });
 });

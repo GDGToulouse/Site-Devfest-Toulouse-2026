@@ -1,5 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 
+import { RICH_TEXT_CLASSES } from "./rich-text-classes.js";
+
 /**
  * Allowlist-based HTML sanitization for rich text stored from the admin UI
  * (TipTap editor). Applied server-side before write so the database never
@@ -26,6 +28,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
     img: ["src", "alt", "title", "width", "height", "data-align"],
     "*": ["class"],
   },
+  // Classes from the import's closed list only (#658): any other would hand
+  // whoever writes rich text, sponsors included, the site's utility CSS.
+  allowedClasses: { "*": [...RICH_TEXT_CLASSES] },
   // Only safe URL schemes for href/src. Blocks javascript:, data:, vbscript:
   // and other exotic schemes that can carry executable content.
   allowedSchemes: ["http", "https", "mailto", "tel"],
@@ -75,10 +80,45 @@ const SAFE_URL_SCHEMES = ["http:", "https:"];
 export function isSafeUrl(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith("/")) return !trimmed.startsWith("//"); // protocol-relative bypasses the scheme check
+  // Protocol-relative bypasses the scheme check, and a browser reads a
+  // backslash as a slash: `/\host` leaves for `//host` too.
+  if (trimmed.startsWith("/")) return !trimmed.startsWith("//") && !trimmed.includes("\\");
   try {
     return SAFE_URL_SCHEMES.includes(new URL(trimmed).protocol);
   } catch {
     return false;
   }
+}
+
+/**
+ * The first URL field of a body that isSafeUrl refuses, or null. Empty strings
+ * clear a field and pass. `socialLinks` is checked entry by entry.
+ */
+export function findUnsafeUrl(body: Record<string, unknown>, fields: readonly string[]): string | null {
+  for (const field of fields) {
+    const value = body[field];
+    if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
+  }
+  const social = body.socialLinks;
+  if (social && typeof social === "object") {
+    for (const [key, entry] of Object.entries(social as Record<string, unknown>)) {
+      if (typeof entry === "string" && entry.trim() && !isSafeUrl(entry)) return `socialLinks.${key}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * The 400 body for a body whose URL field isSafeUrl refuses, or null when
+ * every one passes: the back-office routes answer it as is, with the field to
+ * point the editor at.
+ */
+export function unsafeUrlRefusal(body: object, fields: readonly string[]) {
+  const field = findUnsafeUrl(body as Record<string, unknown>, fields);
+  if (!field) return null;
+  return {
+    error: "unsafe_url",
+    field,
+    message: `Lien refusé (${field}) : seules les adresses http(s) et les chemins du site (commençant par /) sont acceptés.`,
+  };
 }

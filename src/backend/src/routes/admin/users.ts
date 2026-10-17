@@ -232,10 +232,12 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       });
 
       // If banning, delete all active sessions — and the AI agents' grants
-      // (#514): lifting the ban must not quietly hand them back.
+      // (#514) and API keys (#658): lifting the ban must not quietly hand them
+      // back.
       if (user.banned) {
         await prisma.session.deleteMany({ where: { userId: id } });
         await revokeAgents(id);
+        await prisma.apiKey.updateMany({ where: { userId: id, revokedAt: null }, data: { revokedAt: new Date() } });
       }
 
       return { id: user.id, banned: user.banned };

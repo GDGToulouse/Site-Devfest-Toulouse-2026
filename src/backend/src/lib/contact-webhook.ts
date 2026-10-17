@@ -1,5 +1,6 @@
 import { prisma } from "./prisma.js";
 import { validateWebhookUrl } from "./webhook-url.js";
+import { postJson } from "./safe-fetch.js";
 import { notDeleted } from "./admin-helpers.js";
 
 // Common shape of the JSON sent to the configured webhook URL.
@@ -87,22 +88,18 @@ export async function sendContactWebhook(
     return { status: "skipped", error: msg };
   }
 
-  let response: Response;
+  // Pinned to the address it checks: the record cannot turn private between
+  // validateWebhookUrl and the send (#658).
+  let response: { status: number; statusText: string };
   try {
-    response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(TIMEOUT_MS),
-      redirect: "manual",
-    });
+    response = await postJson(url, payload, { timeoutMs: TIMEOUT_MS });
   } catch (err) {
     const msg = truncateError(err);
     await recordOutcome(payload.id, "failed", msg);
     return { status: "failed", error: msg };
   }
 
-  if (!response.ok) {
+  if (response.status < 200 || response.status >= 300) {
     const msg = `HTTP ${response.status} ${response.statusText}`;
     await recordOutcome(payload.id, "failed", msg);
     return { status: "failed", error: msg, httpStatus: response.status };

@@ -8,7 +8,7 @@ import { generateAltText } from "../../lib/alt-text.js";
 import { UPLOADS_DIR, UnsafeSvgError } from "../../lib/image-store.js";
 import { storeUpload, type StoredUpload } from "../../lib/upload-store.js";
 import { fetchRemoteFile, RemoteFetchError } from "../../lib/safe-fetch.js";
-import { EXTENSION_BY_MIME, sniffMime } from "../../lib/file-sniff.js";
+import { EXTENSION_BY_MIME, sniffMime, sniffOfficeDocument } from "../../lib/file-sniff.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
 import { FILE_PAGE_SIZE, pageFiles, type FileListType } from "../../lib/file-list.js";
@@ -89,18 +89,6 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "No file uploaded" });
     }
 
-    // Some browsers send .ico with an empty or generic mimetype — accept it
-    // when the extension is unambiguous.
-    const ext = path.extname(data.filename).toLowerCase();
-    const isIcoByExt = ext === ".ico";
-    if (!ALLOWED_MIMES.includes(data.mimetype) && !isIcoByExt) {
-      // Consume the stream to avoid hanging
-      await data.toBuffer();
-      return reply.code(400).send({
-        error: `Invalid file type: ${data.mimetype}. Allowed: ${ALLOWED_MIMES.join(", ")}`,
-      });
-    }
-
     // Buffer the upload first so it can be written as-is or recompressed. The
     // stream is already capped at 20 MB via limits, so memory stays bounded.
     const buffer = await data.toBuffer();
@@ -109,9 +97,22 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       return reply.code(413).send({ error: "File too large (max 20 MB)" });
     }
 
+    // The bytes say what the file is, as for the import by URL: the declared
+    // mimetype and the file name are the client's to choose, and /uploads/
+    // serves the stored extension's content-type on the site's own origin.
+    const detected = sniffMime(buffer);
+    const type = detected
+      ? { mimetype: detected, ext: EXTENSION_BY_MIME[detected] }
+      : sniffOfficeDocument(buffer, path.extname(data.filename).toLowerCase());
+    if (!type || !ALLOWED_MIMES.includes(type.mimetype)) {
+      return reply.code(400).send({
+        error: "Ce fichier n'est ni une image (JPEG, PNG, WebP, GIF, SVG, ICO), ni un PDF, ni un document Office.",
+      });
+    }
+
     let stored: StoredUpload;
     try {
-      stored = await storeUpload(buffer, data.mimetype, ext || ".jpg", request.log);
+      stored = await storeUpload(buffer, type.mimetype, type.ext, request.log);
     } catch (err) {
       if (err instanceof UnsafeSvgError) {
         return reply.code(400).send({ error: "Invalid SVG: nothing renderable left once scripts were removed" });
@@ -144,7 +145,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       originalName: data.filename,
       url: `/uploads/${uniqueName}`,
       size: stored.size,
-      mimetype: data.mimetype,
+      mimetype: type.mimetype,
       alt,
       // Compression telemetry — the UI tells the editor when the image was
       // downscaled or recompressed.

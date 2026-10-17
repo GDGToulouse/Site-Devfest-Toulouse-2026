@@ -47,7 +47,7 @@ export default function ContactForm({ categories, locale, forceCategoryId, submi
     const errs: Record<string, string> = {};
     if (!formData.firstName.trim()) errs.firstName = t("firstNameError");
     if (!formData.lastName.trim()) errs.lastName = t("lastNameError");
-    if (!formData.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+    if (!formData.email.trim() || !/^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/.test(formData.email))
       errs.email = t("emailError");
     if (requiresCompanyInfo && !formData.company.trim()) errs.company = t("companyError");
     if (requiresCompanyInfo && !formData.jobTitle.trim()) errs.jobTitle = t("jobTitleError");

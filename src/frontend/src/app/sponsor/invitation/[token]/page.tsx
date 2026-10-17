@@ -93,7 +93,7 @@ export default function SponsorInvitationPage({ params }: { params: Promise<{ to
   }
 
   if (needsSignIn) {
-    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} mode="signup" />;
+    return <SponsorLogin callbackURL={`/sponsor/invitation/${token}`} invitationToken={token} emailHint={preview.emailHint} />;
   }
 
   return (

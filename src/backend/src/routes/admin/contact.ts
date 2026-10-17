@@ -215,7 +215,17 @@ export default async function adminContactRoutes(app: FastifyInstance) {
   app.post<{
     Params: { id: string };
     Body: { emails: string };
-  }>("/contact/messages/:id/forward", async (request, reply) => {
+  }>("/contact/messages/:id/forward", {
+    schema: {
+      body: {
+        type: "object",
+        required: ["emails"],
+        properties: {
+          emails: { type: "string", minLength: 1, maxLength: 2000 },
+        },
+      },
+    },
+  }, async (request, reply) => {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
