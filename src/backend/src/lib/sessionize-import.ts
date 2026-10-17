@@ -3,6 +3,7 @@ import { prisma } from "./prisma.js";
 import { findRoomClash } from "./room-clash.js";
 import { slugify, uniqueSlug } from "./slug.js";
 import { validateWebhookUrl } from "./webhook-url.js";
+import { isSafeUrl } from "./sanitize.js";
 import { parseWallTime } from "./zoned-time.js";
 import { syncServiceSlots, type ServiceSlotsReport, type SzServiceSlot } from "./sessionize-service-slots.js";
 
@@ -165,7 +166,10 @@ export function socialKeyFor(link: SzLink): string | null {
 export function buildSocialLinks(links: SzLink[] | undefined): { social: Record<string, string>; count: number } {
   const social: Record<string, string> = {};
   let count = 0;
-  for (const link of links ?? []) {
+  // Typed by CFP candidates, third parties to the team: only http(s) links
+  // reach the public profile.
+  const safeLinks = (links ?? []).filter((l) => isSafeUrl(l.url) && !l.url.trim().startsWith("/"));
+  for (const link of safeLinks) {
     const key = socialKeyFor(link);
     if (key && !social[key]) {
       social[key] = link.url;
@@ -174,7 +178,7 @@ export function buildSocialLinks(links: SzLink[] | undefined): { social: Record<
   }
   // Use the first generic link as the website if none matched explicitly.
   if (!social.website) {
-    const generic = (links ?? []).find((l) => !socialKeyFor(l));
+    const generic = safeLinks.find((l) => !socialKeyFor(l));
     if (generic) {
       social.website = generic.url;
       count++;

@@ -27,6 +27,12 @@ describe("isSafeUrl", () => {
     expect(isSafeUrl("//evil.example.com/x.png")).toBe(false);
   });
 
+  // A browser turns the backslash into a slash: `/\host` leaves for `//host`.
+  it("should reject a path holding a backslash", () => {
+    expect(isSafeUrl("/\\evil.example")).toBe(false);
+    expect(isSafeUrl("/uploads\\x.png")).toBe(false);
+  });
+
   it("should reject a schemeless value rather than coercing it", () => {
     expect(isSafeUrl("www.example.com")).toBe(false);
   });

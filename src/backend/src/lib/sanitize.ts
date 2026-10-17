@@ -75,10 +75,30 @@ const SAFE_URL_SCHEMES = ["http:", "https:"];
 export function isSafeUrl(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith("/")) return !trimmed.startsWith("//"); // protocol-relative bypasses the scheme check
+  // Protocol-relative bypasses the scheme check, and a browser reads a
+  // backslash as a slash: `/\host` leaves for `//host` too.
+  if (trimmed.startsWith("/")) return !trimmed.startsWith("//") && !trimmed.includes("\\");
   try {
     return SAFE_URL_SCHEMES.includes(new URL(trimmed).protocol);
   } catch {
     return false;
   }
+}
+
+/**
+ * The first URL field of a body that isSafeUrl refuses, or null. Empty strings
+ * clear a field and pass. `socialLinks` is checked entry by entry.
+ */
+export function findUnsafeUrl(body: Record<string, unknown>, fields: readonly string[]): string | null {
+  for (const field of fields) {
+    const value = body[field];
+    if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
+  }
+  const social = body.socialLinks;
+  if (social && typeof social === "object") {
+    for (const [key, entry] of Object.entries(social as Record<string, unknown>)) {
+      if (typeof entry === "string" && entry.trim() && !isSafeUrl(entry)) return `socialLinks.${key}`;
+    }
+  }
+  return null;
 }
