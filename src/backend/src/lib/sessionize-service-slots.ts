@@ -1,6 +1,6 @@
 import type { ScheduleEntryKind } from "../generated/prisma/client.js";
 import { prisma } from "./prisma.js";
-import { validateWebhookUrl } from "./webhook-url.js";
+import { fetchSessionizeJson } from "./sessionize-fetch.js";
 import { parseWallTime } from "./zoned-time.js";
 
 // The Sessionize service sessions — welcome, breaks, lunch, keynotes still
@@ -80,10 +80,7 @@ export async function loadServiceSlots(importUrl: string): Promise<SzServiceSlot
   const url = gridSmartUrl(importUrl);
   if (!url) throw new Error("Lien Sessionize non reconnu : impossible d'en déduire la vue GridSmart.");
   // Derived from a URL typed in the back-office: still user input (#306).
-  await validateWebhookUrl(url);
-  const res = await fetch(url, { headers: { accept: "application/json" } });
-  if (!res.ok) throw new Error(`Sessionize GridSmart fetch failed: HTTP ${res.status}`);
-  return extractServiceSlots(await res.json());
+  return extractServiceSlots(await fetchSessionizeJson(url));
 }
 
 const KIND_KEYWORDS: Array<[RegExp, ScheduleEntryKind]> = [
