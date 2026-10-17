@@ -23,6 +23,8 @@ services:
       # cache invalidation when the admin edits content). If unset, revalidation
       # is disabled and public pages stay cached until the s-maxage TTL.
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # Plausible analytics script URL. If unset, analytics stays off.
       - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     expose:
@@ -101,6 +103,8 @@ services:
       - MAGIC_LINK_SECRET=${MAGIC_LINK_SECRET:-}
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # HMAC secret to sign per-message brochure download links sent by email.
       # If unset, confirmation emails fall back to the raw URL (no tracking).
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
