@@ -44,6 +44,13 @@ import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
  * entry point and by the tests that check the real composition — a guard only
  * the real server carries is a guard nothing checks (#514).
  */
+function isInvalidInput(err: Error): boolean {
+  if (err.name === "PrismaClientValidationError") return true;
+  // PostgreSQL's class 22 is "data exception": the value, not the server.
+  const cause = (err as { cause?: { kind?: string; code?: string } }).cause;
+  return err.name === "DriverAdapterError" && cause?.kind === "postgres" && !!cause.code?.startsWith("22");
+}
+
 export async function buildServer() {
   // LOG_LEVEL: set to "debug" (or "trace") to enable verbose .debug() entries
   // scattered across the codebase (auth guards, proxy, etc.). Defaults to "info"
@@ -101,6 +108,13 @@ export async function buildServer() {
   // webhook when one is configured (#118). Only 5xx are alerted: 4xx are client
   // mistakes, not incidents. The reply itself keeps Fastify's default shape.
   app.setErrorHandler((err: FastifyError, request, reply) => {
+    // A value the database cannot take (out of range, malformed, a NUL byte)
+    // is the caller's mistake: a 400, not a server error paging the team.
+    if (isInvalidInput(err)) {
+      request.log.warn({ err, route: request.routeOptions.url }, "Invalid input rejected by the database");
+      return reply.code(400).send({ error: "invalid_input", message: "Paramètre invalide." });
+    }
+
     const statusCode = err.statusCode ?? 500;
 
     if (statusCode >= 500) {
@@ -122,6 +136,12 @@ export async function buildServer() {
       });
     }
 
+    // The detail of a server error stays in the logs: Prisma's message quotes
+    // the query, the tables and the source path (#658). The request id ties
+    // the answer to its log line.
+    if (statusCode >= 500) {
+      return reply.code(statusCode).send({ error: "Internal Server Error", requestId: request.id });
+    }
     reply.send(err);
   });
 
