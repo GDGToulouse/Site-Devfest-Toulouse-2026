@@ -5,6 +5,7 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import { redactUrl } from "./lib/log-redact.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { registerRequestContext } from "./lib/request-context.js";
 import { registerRouteCatalog } from "./lib/route-catalog.js";
@@ -61,7 +62,20 @@ export async function buildServer() {
   // (#467) — a limit only the real server carries is a limit nothing checks.
   const app = Fastify({
     ...serverOptions,
-    logger: { level: process.env.LOG_LEVEL || "info" },
+    logger: {
+      level: process.env.LOG_LEVEL || "info",
+      // Fastify's own request fields, the URL with its bearer secrets masked
+      // (#658): edit links, invitations and magic links travel in it.
+      serializers: {
+        req: (req) => ({
+          method: req.method,
+          url: redactUrl(req.url),
+          host: req.host,
+          remoteAddress: req.ip,
+          remotePort: req.socket?.remotePort,
+        }),
+      },
+    },
   });
 
   // Fastify rejects `content-type: application/json` with an empty payload

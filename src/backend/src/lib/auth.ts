@@ -109,6 +109,9 @@ export const auth = betterAuth({
     // accounts. Single-use and short-lived, unlike the 30-day edit link.
     magicLink({
       expiresIn: MAGIC_LINK_TTL_SECONDS,
+      // Stored as a hash: a database read must not hand out live sign-in
+      // links (#658). Links issued before this change stop working.
+      storeToken: "hashed",
       disableSignUp: true,
       sendMagicLink: async ({ email, url }) => {
         await sendEmail({
