@@ -1,6 +1,8 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { internalApiHeaders } from "./internal-api";
+
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 // The site's own static images (public/), such as the sponsors' logos shipped
@@ -51,7 +53,7 @@ export async function imageDataUri(src: string): Promise<string | null> {
   if (!src.startsWith("/")) return null;
   if (!src.startsWith("/uploads/")) return staticDataUri(src);
   try {
-    const upstream = await fetch(`${BACKEND_URL}${src}`);
+    const upstream = await fetch(`${BACKEND_URL}${src}`, { headers: internalApiHeaders() });
     if (!upstream.ok) return null;
     if (Number(upstream.headers.get("content-length")) > MAX_IMAGE_BYTES) return null;
 

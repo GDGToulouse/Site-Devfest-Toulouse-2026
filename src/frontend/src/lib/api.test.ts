@@ -122,3 +122,29 @@ describe("fetchAPI — success is unchanged", () => {
     await expect(getTags()).resolves.toHaveLength(1);
   });
 });
+
+// #689 — server-side calls prove they come from our frontend with a shared
+// secret, so the backend does not count them in a visitor's rate-limit budget.
+describe("fetchAPI — the shared secret (#689)", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const sentHeaders = () => (vi.mocked(global.fetch).mock.calls[0][1] as RequestInit).headers as Record<string, string> | undefined;
+
+  it("should send the secret in a header when it is configured", async () => {
+    vi.stubEnv("INTERNAL_API_SECRET", "s3cret");
+    mockFetch(() => jsonResponse([]));
+
+    await getTags();
+
+    expect(sentHeaders()).toEqual({ "x-internal-api-secret": "s3cret" });
+  });
+
+  it("should send no header when the secret is unset or empty", async () => {
+    vi.stubEnv("INTERNAL_API_SECRET", "");
+    mockFetch(() => jsonResponse([]));
+
+    await getTags();
+
+    expect(sentHeaders()?.["x-internal-api-secret"]).toBeUndefined();
+  });
+});
