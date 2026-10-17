@@ -232,9 +232,12 @@ export async function buildServer() {
   //
   // In production the docs list every admin endpoint (schema, query params,
   // auth scheme) which is great for internal use but also shortens the recon
-  // loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true (or
-  // non-production env) so the default prod deployment keeps them off.
-  const swaggerPublic = process.env.SWAGGER_PUBLIC === "true" || process.env.NODE_ENV !== "production";
+  // loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true, or a
+  // local run. A deployed dev environment (dev-j) is public too and runs
+  // without NODE_ENV=production, so the environment's name decides (#658).
+  const isLocalRun = !process.env.ENV_NAME || process.env.ENV_NAME === "local";
+  const swaggerPublic =
+    process.env.SWAGGER_PUBLIC === "true" || (process.env.NODE_ENV !== "production" && isLocalRun);
   if (swaggerPublic) {
     await registerSwagger(app);
   } else {

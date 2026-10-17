@@ -8,6 +8,8 @@ const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 const plausibleOrigin = plausibleSrc ? new URL(plausibleSrc).origin : "";
 
 const nextConfig: NextConfig = {
+  // No `X-Powered-By: Next.js`: it names the stack to whoever probes it (#658).
+  poweredByHeader: false,
   // The backend accepts up to 20 MB per upload (see admin/files.ts).
   // Next.js' default of 10 MB on proxied bodies would silently truncate
   // multipart payloads and break image uploads — bump it past 20 MB plus
