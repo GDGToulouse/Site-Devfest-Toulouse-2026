@@ -64,6 +64,16 @@ describe("POST /api/edit/:token/upload", () => {
     await app.close();
   });
 
+  // The declared type is the client's to choose: the bytes decide (#658).
+  it("rejects a page declared as a GIF", async () => {
+    const app = await buildEditApp();
+    const { payload, headers } = multipartBody("fake.gif", "image/gif", Buffer.from("<html><body>x</body></html>"));
+    const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("invalid_file_type");
+    await app.close();
+  });
+
   // SVG and PDF were allowed here for the sponsor logo and com-kit charter
   // (#346, #374). Sponsors upload through their authenticated space now (#362),
   // and this endpoint — where the token is the only credential — is back to the

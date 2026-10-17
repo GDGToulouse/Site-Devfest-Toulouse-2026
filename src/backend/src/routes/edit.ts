@@ -9,6 +9,7 @@ import {
   revalidateTalkFootprint,
   speakerFootprint,
 } from "../lib/page-footprint.js";
+import { sniffMime } from "../lib/file-sniff.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { rememberOriginalName } from "../lib/file-metadata.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
@@ -474,9 +475,13 @@ export default async function editRoutes(app: FastifyInstance) {
 
     const buffer = await data.toBuffer();
     if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
+    // The declared type is the client's to choose: the bytes decide, and the
+    // file is stored as what it is (#658).
+    const mimetype = sniffMime(buffer);
+    if (!mimetype || !UPLOAD_MIMES.has(mimetype)) return reply.code(400).send({ error: "invalid_file_type" });
 
     try {
-      const url = await storeImageBuffer(buffer, data.mimetype);
+      const url = await storeImageBuffer(buffer, mimetype);
       // Keep the name the speaker's machine gave it (#378) — the stored one
       // identifies nothing once the upload screen is closed.
       await rememberOriginalName(url, data.filename);
