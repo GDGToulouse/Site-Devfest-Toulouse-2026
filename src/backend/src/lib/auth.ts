@@ -15,6 +15,7 @@ import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
 import { sendPasswordResetEmail } from "./password-reset-email.js";
 import { hasPendingInvitation, isTokenProvenSignUp, normalizeEmail } from "./sponsor-invitation.js";
+import { trustedOriginsFor } from "./trusted-origins.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -24,22 +25,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
 
 function normalizeUrl(url: string): string {
   return url.replace(/\/$/, "");
-}
-
-// Build a wildcard origin from the public base URL so we don't have to list
-// each environment subdomain (dev-j, beta, prod). Returns null for non-FQDN
-// hostnames (e.g. localhost) to avoid accidental wildcards in local dev.
-function buildWildcardOrigin(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const parts = parsed.hostname.split(".");
-    if (parts.length >= 2 && !/^\d+\.\d+\.\d+\.\d+$/.test(parsed.hostname)) {
-      return `${parsed.protocol}//*.${parts.slice(-2).join(".")}`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 // An absolute URL, or the local default. Vite injects BASE_URL="/" (its own base
@@ -57,10 +42,7 @@ const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3
 export const MCP_RESOURCE = `${baseUrl}/api/mcp`;
 // Who signs the agents' tokens: better-auth names itself by its base path.
 export const AUTH_ISSUER = `${baseUrl}/api/auth`;
-const wildcardOrigin = buildWildcardOrigin(baseUrl);
-const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrigin] : [])].filter(
-  (v, i, arr) => arr.indexOf(v) === i,
-);
+const trustedOrigins = trustedOriginsFor(baseUrl, frontendUrl);
 
 export const auth = betterAuth({
   // Reuse SESSION_SECRET so we keep a single secret to manage. Better Auth
