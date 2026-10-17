@@ -22,12 +22,26 @@ describe("imageDataUri (#600)", () => {
     expect(uri).toBe("data:image/png;base64,AQID");
   });
 
-  it("should fetch an absolute URL as it is", async () => {
+  // The URL comes from data a speaker or a sponsor typed, and these cards are
+  // public: fetching it would let anyone make the server call any address.
+  it("should not fetch an absolute URL, so the card draws its fallback", async () => {
     const fetchMock = stubFetch(new Response(new Uint8Array([1]), { headers: { "content-type": "image/jpeg" } }));
 
-    await imageDataUri("https://cdn.example/photo.jpg");
+    const uri = await imageDataUri("http://127.0.0.1:4000/api/health");
 
-    expect(fetchMock.mock.calls[0][0]).toBe("https://cdn.example/photo.jpg");
+    expect(uri).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should give up on an upload whose declared size is over the ceiling, before reading it", async () => {
+    const response = new Response(new Uint8Array([1]), {
+      headers: { "content-type": "image/png", "content-length": String(64 * 1024 * 1024) },
+    });
+    const read = vi.spyOn(response, "arrayBuffer");
+    stubFetch(response);
+
+    expect(await imageDataUri("/uploads/huge.png")).toBeNull();
+    expect(read).not.toHaveBeenCalled();
   });
 
   it("should give up on a missing image so the card draws its fallback", async () => {
