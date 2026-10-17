@@ -135,7 +135,7 @@ describe("Public replays (#102)", () => {
     const app = await buildApp();
     const byFormat = await app.inject({ method: "GET", url: "/api/replays?format=KEYNOTE" });
     const byYear = await app.inject({ method: "GET", url: `/api/replays?year=${edition.year}` });
-    const otherYear = await app.inject({ method: "GET", url: "/api/replays?year=1999" });
+    const otherYear = await app.inject({ method: "GET", url: "/api/replays?year=1501" });
     await app.close();
 
     const formatSlugs = byFormat.json().map((r: { slug: string }) => r.slug);

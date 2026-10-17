@@ -53,9 +53,9 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await prisma.talk.deleteMany({ where: { id: created.talkId } });
-  await prisma.speaker.deleteMany({ where: { id: created.speakerId } });
-  await prisma.sponsor.deleteMany({ where: { id: created.sponsorId } });
+  if (created.talkId !== undefined) await prisma.talk.deleteMany({ where: { id: created.talkId } });
+  if (created.speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: created.speakerId } });
+  if (created.sponsorId !== undefined) await prisma.sponsor.deleteMany({ where: { id: created.sponsorId } });
 });
 
 describe("Admin record details (#484)", () => {

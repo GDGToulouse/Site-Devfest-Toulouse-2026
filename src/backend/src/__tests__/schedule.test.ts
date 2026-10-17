@@ -65,12 +65,12 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await prisma.talkSimulcast.deleteMany({ where: { talk: { editionId } } });
-  await prisma.talk.deleteMany({ where: { editionId } });
-  await prisma.scheduleEntry.deleteMany({ where: { editionId } });
-  await prisma.edition.deleteMany({ where: { id: editionId } });
-  await prisma.room.deleteMany({ where: { venueId } });
-  await prisma.venue.deleteMany({ where: { id: venueId } });
+  if (editionId !== undefined) await prisma.talkSimulcast.deleteMany({ where: { talk: { editionId } } });
+  if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
+  if (editionId !== undefined) await prisma.scheduleEntry.deleteMany({ where: { editionId } });
+  if (editionId !== undefined) await prisma.edition.deleteMany({ where: { id: editionId } });
+  if (venueId !== undefined) await prisma.room.deleteMany({ where: { venueId } });
+  if (venueId !== undefined) await prisma.venue.deleteMany({ where: { id: venueId } });
 });
 
 describe("scheduling a talk (#105)", () => {

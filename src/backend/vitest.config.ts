@@ -23,6 +23,9 @@ const SEQUENTIAL = ["src/**/trash-purge.test.ts"];
 // startup latency, not for any single slow assertion.
 const testTimeout = 30000;
 
+// Refuses a bulk delete/update whose filter lost a value to `undefined` (#681).
+const setupFiles = ["src/__tests__/support/setup-prisma-guard.ts"];
+
 export default defineConfig({
   test: {
     projects: [
@@ -32,6 +35,7 @@ export default defineConfig({
           include,
           exclude: [...exclude, ...SEQUENTIAL],
           testTimeout,
+          setupFiles,
           sequence: { groupOrder: 0 },
         },
       },
@@ -41,6 +45,7 @@ export default defineConfig({
           include: SEQUENTIAL,
           exclude,
           testTimeout,
+          setupFiles,
           fileParallelism: false,
           sequence: { groupOrder: 1 },
         },

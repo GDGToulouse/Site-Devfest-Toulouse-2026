@@ -5,7 +5,7 @@ import { prisma } from "../lib/prisma.js";
 
 // #567 — the recap of the audience feedback, sent to each speaker when an
 // admin decides: real votes only, hidden messages left out, a fresh link to
-// the details unless the team locked it. On an edition of its own (1992).
+// the details unless the team locked it. On an edition of its own (1540).
 
 const sent: { to: string[]; subject: string; text: string; html: string }[] = [];
 let failFor: string | null = null;
@@ -19,7 +19,7 @@ vi.mock("../lib/email.js", async (importOriginal) => ({
 
 const { default: adminFeedbackRoutes } = await import("../routes/admin/feedback.js");
 
-const YEAR = 1992;
+const YEAR = 1540;
 const tag = randomUUID().slice(0, 8);
 const ADA = `ada-${tag}@example.com`;
 const BOB = `bob-${tag}@example.com`;
@@ -46,7 +46,7 @@ async function talk(key: string, speakerKeys: string[]) {
 
 beforeAll(async () => {
   await prisma.edition.deleteMany({ where: { year: YEAR } });
-  editionId = (await prisma.edition.create({ data: { year: YEAR, startDate: new Date("1992-11-19T00:00:00.000Z") } })).id;
+  editionId = (await prisma.edition.create({ data: { year: YEAR, startDate: new Date("1540-11-19T00:00:00.000Z") } })).id;
   await speaker("ada", { name: "Ada", contactEmail: ADA });
   await speaker("bob", { name: "Bob", contactEmail: BOB, locale: "en" });
   await speaker("carl", { name: "Carl" });

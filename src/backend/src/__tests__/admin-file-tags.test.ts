@@ -46,6 +46,7 @@ describe("Media library tags (#373)", () => {
     const untagged = await app.inject({ method: "GET", url: "/api/admin/files?page=1&limit=200&tag=none" });
 
     expect(tagged.statusCode).toBe(200);
+    expect([page.statusCode, untagged.statusCode], untagged.body).toEqual([200, 200]);
     expect(tagged.json().tags).toEqual([expect.objectContaining({ id: logos.id, name: `Logos ${stamp}` })]);
     expect(page.json().items.map((f: { filename: string }) => f.filename)).toEqual([filename]);
     expect(untagged.json().items.map((f: { filename: string }) => f.filename)).not.toContain(filename);

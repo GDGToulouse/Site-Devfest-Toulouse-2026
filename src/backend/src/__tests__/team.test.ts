@@ -18,7 +18,7 @@ const { prisma } = await import("../lib/prisma.js");
 // years they organised, shown in alphabetical order of last name (RG-412).
 // Tests on a past year of their own, so the featured edition's team and its
 // menu flag never move while other suites run.
-const TEST_YEAR = 1991;
+const TEST_YEAR = 1520;
 
 let app: FastifyInstance;
 let editionId: number;

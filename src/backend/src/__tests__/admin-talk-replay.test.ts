@@ -18,7 +18,7 @@ const { prisma } = await import("../lib/prisma.js");
 // filled videoUrl, so the 2026 replays had no way onto the site. The field takes
 // a YouTube video only, the one thing the player, its thumbnail and the
 // VideoObject can use.
-const TEST_YEAR = 1993;
+const TEST_YEAR = 1550;
 
 let app: FastifyInstance;
 let editionId: number;
@@ -32,7 +32,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await prisma.talk.deleteMany({ where: { editionId } });
+  if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
   await prisma.edition.delete({ where: { id: editionId } });
 });
 

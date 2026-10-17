@@ -14,6 +14,7 @@
 ## Conventions
 
 - Règles complètes : `.claude/rules/testing.md` (nommage, test rouge avant le correctif, un commit par correctif)
+- Les suites backend partagent une base et tournent en parallèle : chaque fichier possède ses années d'édition (`Edition.year` est `@unique`, `test-year-ownership.test.ts` refuse un doublon entre 1500 et 2005), et un nettoyage qui filtre sur un id posé en `beforeAll` se garde par `if (id !== undefined)`. Un `deleteMany` / `updateMany` au filtre vide ou `undefined` est refusé par `src/__tests__/support/guard-unscoped-writes.ts`, chargé pour tous les fichiers (#681) : Prisma écarte la clé `undefined`, et le nettoyage d'une suite dont le `beforeAll` a échoué effaçait toute la table, données de démo comprises
 - Un échec isolé qui ne se reproduit pas est d'abord une collision de fixtures : relancer avant d'enquêter, et le dire
 - « Tests N passed » ne veut pas dire vert : une exception non interceptée pendant un rendu sort en « Unhandled Errors / Errors 1 error » et fait échouer la CI. Lire le code de sortie de `vitest run` (ou la ligne `Errors`), jamais la seule ligne `Tests` (#416, mock de `/files` resté à l'ancienne forme)
 - Une base locale déjà pleine masque les échecs « données manquantes ». Reproduire la CI = `migrate deploy` + `seed-dev.ts` + tests sur une **base fraîche**

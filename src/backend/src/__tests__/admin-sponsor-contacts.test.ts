@@ -33,7 +33,7 @@ describe("Admin sponsor contacts (#250)", () => {
   });
 
   afterAll(async () => {
-    await prisma.sponsor.deleteMany({ where: { id: sponsorId } });
+    if (sponsorId !== undefined) await prisma.sponsor.deleteMany({ where: { id: sponsorId } });
     await app.close();
   });
 

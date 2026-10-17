@@ -60,7 +60,7 @@ describe("importSessionize schedule (#519)", () => {
   });
 
   afterAll(async () => {
-    await prisma.talk.deleteMany({ where: { editionId } });
+    if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
     await prisma.edition.delete({ where: { id: editionId } });
     await prisma.venue.delete({ where: { name: VENUE } });
   });

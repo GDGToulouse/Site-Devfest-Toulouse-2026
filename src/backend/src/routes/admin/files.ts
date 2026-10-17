@@ -266,10 +266,17 @@ export default async function adminFileRoutes(app: FastifyInstance) {
     // list, never one per file.
     const usagesByUrl = await listFileUsages(filenames.map((f) => `/uploads/${f}`));
 
-    const items = await Promise.all(
+    const listed = await Promise.all(
       filenames.map(async (filename) => {
         const filePath = path.join(UPLOADS_DIR, filename);
-        const stat = await fs.promises.stat(filePath);
+        // A file deleted since the readdir above is simply no longer listed:
+        // failing the whole library for it (#681) would make every delete a
+        // possible 500 for whoever is browsing.
+        const stat = await fs.promises.stat(filePath).catch((error: NodeJS.ErrnoException) => {
+          if (error.code === "ENOENT") return null;
+          throw error;
+        });
+        if (!stat) return null;
         const ext = path.extname(filename).toLowerCase();
         return {
           filename,
@@ -287,6 +294,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
         };
       }),
     );
+    const items = listed.filter((item) => item !== null);
 
     items.sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt));
 
