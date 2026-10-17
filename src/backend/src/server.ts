@@ -6,6 +6,7 @@ import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
 import { redactUrl } from "./lib/log-redact.js";
+import { trustedOrigins } from "./lib/auth.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { registerRequestContext } from "./lib/request-context.js";
 import { registerRouteCatalog } from "./lib/route-catalog.js";
@@ -45,6 +46,8 @@ import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
  * entry point and by the tests that check the real composition — a guard only
  * the real server carries is a guard nothing checks (#514).
  */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
 function isInvalidInput(err: Error): boolean {
   if (err.name === "PrismaClientValidationError") return true;
   // PostgreSQL's class 22 is "data exception": the value, not the server.
@@ -157,6 +160,21 @@ export async function buildServer() {
       return reply.code(statusCode).send({ error: "Internal Server Error", requestId: request.id });
     }
     reply.send(err);
+  });
+
+  // SameSite=Lax stops cross-site writes, not same-site ones: a page anywhere
+  // under the registered domain (old sites, other environments) gets the
+  // session cookie attached. A write carried by that cookie must name one of
+  // our origins (#658). Bearer calls carry no ambient credential, and
+  // better-auth checks its own routes.
+  app.addHook("onRequest", async (request, reply) => {
+    if (SAFE_METHODS.has(request.method) || request.url.startsWith("/api/auth/")) return;
+    if (request.headers.authorization || !request.headers.cookie?.includes("session_token=")) return;
+    const origin = request.headers.origin;
+    const isOwnOrigin = origin ? trustedOrigins.includes(origin) : request.headers["sec-fetch-site"] === "same-origin";
+    if (!isOwnOrigin) {
+      return reply.code(403).send({ error: "invalid_origin", message: "Requête refusée : origine inconnue." });
+    }
   });
 
   const corsOrigins = [

@@ -42,7 +42,8 @@ const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3
 export const MCP_RESOURCE = `${baseUrl}/api/mcp`;
 // Who signs the agents' tokens: better-auth names itself by its base path.
 export const AUTH_ISSUER = `${baseUrl}/api/auth`;
-const trustedOrigins = trustedOriginsFor(baseUrl, frontendUrl);
+// Also the origins a cookie-carried write must come from (server.ts, #658).
+export const trustedOrigins = trustedOriginsFor(baseUrl, frontendUrl);
 
 export const auth = betterAuth({
   // Reuse SESSION_SECRET so we keep a single secret to manage. Better Auth
