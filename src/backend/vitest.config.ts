@@ -15,7 +15,7 @@ const exclude = ["node_modules", "dist"];
 // Vitest offers no per-file concurrency pragma; a project matched by glob is the
 // documented way to isolate one file without dropping parallelism for the rest.
 // `groupOrder` puts it in its own pass, after everything else.
-const SEQUENTIAL = ["src/**/trash-purge.test.ts"];
+const SEQUENTIAL = ["src/**/trash-purge*.test.ts"];
 
 // The integration tests boot a real Fastify app and hit Postgres. The first few
 // pay the one-off tsx transform + cold connection cost, which blows past
