@@ -154,6 +154,19 @@ export const auth = betterAuth({
     }),
   ],
   databaseHooks: {
+    // better-auth knows nothing of User.banned (no admin plugin): a banned
+    // account could still sign in, and the session it opened outlived the ban
+    // (#658). The API refuses it meanwhile; this refuses the session itself.
+    session: {
+      create: {
+        before: async (session) => {
+          const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { banned: true } });
+          if (owner?.banned) {
+            throw new APIError("FORBIDDEN", { message: "Ce compte est suspendu. Contactez un administrateur." });
+          }
+        },
+      },
+    },
     user: {
       create: {
         before: async (user) => {
