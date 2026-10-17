@@ -24,7 +24,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedAttributes: {
     a: ["href", "title", "target", "rel"],
     img: ["src", "alt", "title", "width", "height", "data-align"],
-    "*": ["class"],
+    // No class: the site's utility CSS would be there for whoever writes rich
+    // text, sponsors included, down to a block laid over the whole page
+    // (#658). The editor emits none, and .article-content styles by tag.
   },
   // Only safe URL schemes for href/src. Blocks javascript:, data:, vbscript:
   // and other exotic schemes that can carry executable content.

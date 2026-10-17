@@ -113,3 +113,14 @@ describe("sanitizeRichHtml", () => {
     expect(sanitizeRichHtml('<a href="/fr/actualites">a</a>')).toContain('href="/fr/actualites"');
   });
 });
+
+// The site's utility CSS is all there for whoever writes rich text: a class is
+// enough to lay a full-screen block over a public page (#658). Nothing the
+// editor produces needs one, and no style of .article-content reads one.
+describe("sanitizeRichHtml — classes", () => {
+  it("should drop the class attribute", () => {
+    const html = sanitizeRichHtml('<div class="fixed inset-0 z-[60] bg-blanc"><p class="text-3xl">x</p></div>');
+    expect(html).not.toContain("class=");
+    expect(html).toContain("<p>x</p>");
+  });
+});
