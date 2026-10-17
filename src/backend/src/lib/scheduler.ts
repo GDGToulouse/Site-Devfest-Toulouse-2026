@@ -6,11 +6,15 @@ import { runInContext, systemContext } from "./request-context.js";
 import { AUDIT_RETENTION_MONTHS, purgeExpiredAuditLog } from "./audit-purge.js";
 import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 import { applyScheduledStatus } from "./edition-status-schedule.js";
+import { purgeExpiredTrash } from "./trash-purge.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
 const FEATURED_ROTATION_CRON = "0 1 * * *";
 const AUDIT_PURGE_CRON = "0 3 * * *";
+// 4 AM Paris time, after the audit purge: the quietest hour, and the last of the
+// nightly clean-ups.
+const TRASH_PURGE_CRON = "0 4 * * *";
 // Midnight Paris time, when the event day starts and real votes open (#566).
 const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // Every quarter of an hour past midnight, Paris time (#585): a redeploy at
@@ -18,6 +22,26 @@ const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // that moves the status back by hand on a trigger day is not overruled.
 const STATUS_SCHEDULE_CRON = "0,15,30,45 0 * * *";
 const TIMEZONE = "Europe/Paris";
+
+/**
+ * Empty the trash of what is past its retention window (#149, #664). Never
+ * throws: a failing run is logged and the next day retries, a cron must not take
+ * the server down.
+ */
+export async function runTrashPurge(log: Pick<FastifyBaseLogger, "info" | "error">): Promise<void> {
+  try {
+    // The purge is awaited inside the context: its Prisma queries are lazy and
+    // would otherwise leave it unattributed. The history reads "Purge de la
+    // corbeille" as the actor of every deletion.
+    const report = await runInContext(systemContext("Purge de la corbeille"), async () => await purgeExpiredTrash());
+    log.info(
+      { purged: report.totalPurged, cutoff: report.cutoff, retentionDays: report.retentionDays },
+      "Trash purged",
+    );
+  } catch (err) {
+    log.error({ err }, "Trash purge failed");
+  }
+}
 
 /**
  * Register the backend's scheduled tasks. Called once at boot.
@@ -70,6 +94,10 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "audit-log-purge", timezone: TIMEZONE, noOverlap: true },
   );
 
+  // Daily, so an element leaves the trash the day after its window ends. Safe on
+  // several replicas: the purge is idempotent, a second run finds nothing.
+  cron.schedule(TRASH_PURGE_CRON, () => runTrashPurge(log), { name: "trash-purge", timezone: TIMEZONE, noOverlap: true });
+
   // A feedback test mode left on is switched off when real voting opens, and
   // the votes of the trial go with it (#566). Every night, not only on the
   // day: a run missed at midnight (a redeploy) is caught by the next. Votes
@@ -106,7 +134,7 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
   );
 
   log.info(
-    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, FEEDBACK_TEST_MODE_CRON, STATUS_SCHEDULE_CRON], timezone: TIMEZONE },
+    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, TRASH_PURGE_CRON, FEEDBACK_TEST_MODE_CRON, STATUS_SCHEDULE_CRON], timezone: TIMEZONE },
     "Scheduled tasks started",
   );
 }
