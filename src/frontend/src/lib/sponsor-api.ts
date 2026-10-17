@@ -146,11 +146,12 @@ export function getSponsorAccount() {
   return call<SponsorAccount>("/api/sponsor-space/me");
 }
 
-// Same better-auth endpoint as the admin profile page; it serves any account.
+// Same better-auth endpoint as the admin profile page; it serves any account,
+// and signs out the account's other sessions, as the admin page does (#658).
 export function changeSponsorPassword(currentPassword: string, newPassword: string) {
   return call<unknown>("/api/auth/change-password", {
     method: "POST",
-    body: JSON.stringify({ currentPassword, newPassword }),
+    body: JSON.stringify({ currentPassword, newPassword, revokeOtherSessions: true }),
   });
 }
 

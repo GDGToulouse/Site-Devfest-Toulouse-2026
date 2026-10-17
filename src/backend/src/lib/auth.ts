@@ -76,6 +76,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
+    // A reset is what someone does once they fear their account was taken:
+    // the sessions opened before it must not survive it (#658).
+    revokeSessionsOnPasswordReset: true,
     // The link points to a frontend page, not to better-auth's own callback
     // (an API route, not navigable), and to the admin or the partner space
     // depending on the account's role (#411).
