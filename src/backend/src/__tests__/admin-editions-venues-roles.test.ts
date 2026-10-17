@@ -57,7 +57,7 @@ describe("Editions, venues and rooms: the team reads, an ADMIN writes (#530)", (
 
   it("should refuse an EDITOR writing an edition", async () => {
     const update = await app.inject({ method: "PUT", url: `/api/admin/editions/${editionId}`, payload: { galleryUrl: null } });
-    const create = await app.inject({ method: "POST", url: "/api/admin/editions", payload: { year: 1902 } });
+    const create = await app.inject({ method: "POST", url: "/api/admin/editions", payload: { year: 1510 } });
     const featured = await app.inject({ method: "PUT", url: "/api/admin/editions/featured", payload: { editionId } });
 
     expect(update.statusCode).toBe(403);

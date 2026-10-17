@@ -20,7 +20,7 @@ beforeAll(async () => {
 
   // Past years of their own, so the featured edition never moves.
   const [y1, y2, trashedYear] = await Promise.all(
-    [1994, 1995, 1996].map((year, i) =>
+    [1560, 1561, 1562].map((year, i) =>
       prisma.edition.create({ data: { year, ...(i === 2 ? { deletedAt: new Date() } : {}) } }),
     ),
   );
@@ -39,7 +39,7 @@ beforeAll(async () => {
     });
   const sponsors = await Promise.all([
     make("loyal", [
-      { editionId: y1.id, publicationStatus: "PUBLISHED", logoUrl: "/uploads/1994.png", tierNameFr: "Or 1994" },
+      { editionId: y1.id, publicationStatus: "PUBLISHED", logoUrl: "/uploads/1560.png", tierNameFr: "Or 1560" },
       { editionId: y2.id, publicationStatus: "PUBLISHED" },
     ]),
     make("draft", [{ editionId: y1.id, publicationStatus: "DRAFT" }]),
@@ -64,8 +64,8 @@ describe("GET /api/sponsors/hall-of-fame (#611)", () => {
     expect(res.statusCode).toBe(200);
     expect(loyal).toMatchObject({ name: "HoF loyal", logoUrl: "/uploads/today.png" });
     expect(loyal.participations).toEqual([
-      expect.objectContaining({ year: 1995, logoUrl: "/uploads/today.png", tier: expect.objectContaining({ nameFr: "Or" }) }),
-      expect.objectContaining({ year: 1994, logoUrl: "/uploads/1994.png", tier: expect.objectContaining({ nameFr: "Or 1994" }) }),
+      expect.objectContaining({ year: 1561, logoUrl: "/uploads/today.png", tier: expect.objectContaining({ nameFr: "Or" }) }),
+      expect.objectContaining({ year: 1560, logoUrl: "/uploads/1560.png", tier: expect.objectContaining({ nameFr: "Or 1560" }) }),
     ]);
   });
 
