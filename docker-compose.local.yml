@@ -42,6 +42,9 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # No Traefik here and the frontend adds no X-Forwarded-For: trust nobody, so
+      # `request.ip` is the socket (#663). The deployed composes set 1.
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-0}
       # Normally injected at build time from the deployed commit (#290). Set it
       # locally to exercise the badge; empty means "not a deployed build".
       - APP_COMMIT=${APP_COMMIT:-}

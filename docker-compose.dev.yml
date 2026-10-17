@@ -48,6 +48,13 @@ services:
       - BASE_URL=${BASE_URL}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # Proxies between the visitor and this backend (#663): Traefik, then the
+      # Next.js frontend, whose container is the socket peer. Traefik writes
+      # X-Forwarded-For and Next passes it on; the backend counts one hop back
+      # from the socket for `request.ip` (rate limits, history). Set it to the
+      # real chain: too low merges visitors into one bucket, too high lets them
+      # pick their address. Unset = 0 = trust nobody.
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-1}
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
