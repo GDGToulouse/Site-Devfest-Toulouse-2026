@@ -32,8 +32,24 @@ describe("htmlToText", () => {
     expect(htmlToText("  déjà du texte  ")).toBe("déjà du texte");
   });
 
-  it("leaves entities as-is (documented: good enough for meta)", () => {
-    expect(htmlToText("<p>Tom &amp; Jerry</p>")).toBe("Tom &amp; Jerry");
+  // The meta description and og:description are text: a meta tag shows "&amp;" as
+  // typed, and Next escapes the ampersand once more (#661).
+  it("decodes the entities the backend wrote, so the text reads as typed", () => {
+    expect(htmlToText("<p>Tom &amp; Jerry</p>")).toBe("Tom & Jerry");
+    expect(htmlToText("<p>R&amp;D &lt; 5 &gt; 3 &quot;x&quot; &#39;y&#39; &#x1F94B;</p>")).toBe("R&D < 5 > 3 \"x\" 'y' \u{1F94B}");
+  });
+
+  it("decodes once: an escaped entity stays an entity", () => {
+    expect(htmlToText("<p>&amp;amp;</p>")).toBe("&amp;");
+  });
+
+  it("treats a non-breaking space as a space, and leaves an unknown entity alone", () => {
+    expect(htmlToText("<p>Qui sommes-nous&nbsp;?</p>")).toBe("Qui sommes-nous ?");
+    expect(htmlToText("<p>&unknown; ok</p>")).toBe("&unknown; ok");
+  });
+
+  it("does not turn decoded text back into markup", () => {
+    expect(htmlToText("<p>&lt;script&gt;alert(1)&lt;/script&gt;</p>")).toBe("<script>alert(1)</script>");
   });
 });
 
