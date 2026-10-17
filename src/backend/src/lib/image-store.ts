@@ -126,7 +126,8 @@ export async function fetchAndStoreImage(url: string): Promise<string> {
   // resolve the true format before storing.
   const format = (await sharp(buffer, { failOn: "none" }).metadata()).format;
   if (!format) throw new Error("unreadable image data");
-  const realMime = `image/${format === "jpg" ? "jpeg" : format}`;
+  // sharp names JPEG "jpeg" (0.35 dropped the "jpg" alias from its types).
+  const realMime = `image/${format}`;
 
   return storeImageBuffer(buffer, realMime);
 }
