@@ -85,6 +85,17 @@ describe("API route guards (#514)", () => {
     expect(open).toEqual([]);
   });
 
+  it("should keep API keys away from managing keys", () => {
+    // A key minting a key would survive its own expiry and revocation (#658).
+    const KEY_AREAS = ["/api/me/api-keys", "/api/admin/api-keys"];
+    const open = routes
+      .filter((r) => KEY_AREAS.some((area) => r.path.startsWith(area)))
+      .filter((r) => !r.preHandlers.includes("refuseApiKeys"))
+      .map(key);
+
+    expect(open).toEqual([]);
+  });
+
   it("should keep writes on editions, venues and rooms ADMIN-only, reads open to the team", () => {
     // The team reads them; writing is an ADMIN's call (#530). The group grants
     // the read, so each write route must carry requireAdminRole itself.

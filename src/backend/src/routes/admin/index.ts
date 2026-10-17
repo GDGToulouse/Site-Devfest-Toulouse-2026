@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAdmin, requireAdminRole, requireTeamBrowserSession } from "../../lib/admin-guard.js";
-import { refuseAgents } from "../../lib/auth-context.js";
+import { refuseAgents, refuseApiKeys } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
@@ -86,7 +86,10 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(async (credentialsApp) => {
       credentialsApp.addHook("preHandler", refuseAgents);
       await credentialsApp.register(adminUserRoutes);
-      await credentialsApp.register(adminApiKeyRoutes);
+      await credentialsApp.register(async (keysApp) => {
+        keysApp.addHook("preHandler", refuseApiKeys);
+        await keysApp.register(adminApiKeyRoutes);
+      });
     });
     // Who changed what, from where: personal data, not for editors (#513).
     await adminApp.register(adminAuditRoutes);

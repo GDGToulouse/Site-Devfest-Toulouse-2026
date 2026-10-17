@@ -41,6 +41,10 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "jeton d'invitation, puis l'e-mail de la session doit correspondre",
     anonymous: [404],
   },
+  "POST /api/sponsor-invitation/:token/sign-up": {
+    why: "jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule",
+    anonymous: [400, 404],
+  },
   "POST /api/contact/send": { why: "formulaire de contact public : tout le monde peut écrire, débit limité" },
   "POST /api/talks/:slug/feedback": {
     why: "avis du public (#564) : anonyme, un par navigateur et par session, ouvert le jour J et le lendemain, débit limité",
@@ -66,7 +70,8 @@ export function accessOf(route: InventoryRoute): string {
   // purge runs the editors' requireAdmin, then requireAdminRole.
   const guard = [...route.preHandlers].reverse().find((name) => KNOWN_GUARDS[name]);
   const agents = route.preHandlers.includes("refuseAgents") ? " ; refusé aux agents IA" : "";
-  if (guard) return `${KNOWN_GUARDS[guard]}${agents}`;
+  const keys = route.preHandlers.includes("refuseApiKeys") ? " et aux clés d'API" : "";
+  if (guard) return `${KNOWN_GUARDS[guard]}${agents}${keys}`;
   const self = SELF_GUARDED[`${route.method} ${route.path}`];
   return self ? `Contrôlé dans la route : ${self.why}` : "Public";
 }
