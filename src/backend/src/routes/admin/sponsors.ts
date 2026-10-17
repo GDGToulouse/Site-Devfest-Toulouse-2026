@@ -17,7 +17,7 @@ import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
-import { findUnsafeUrl, sanitizeRichHtml } from "../../lib/sanitize.js";
+import { sanitizeRichHtml, unsafeUrlRefusal } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface StandContact {
@@ -176,6 +176,9 @@ function serialize(s: {
     })),
   };
 }
+
+// The sponsor's fields that reach `href` and `src` on public pages (#223).
+const URL_FIELDS = ["logoUrl", "websiteUrl", "comKitLogoWebUrl", "comKitLogoPrintUrl", "comKitCharterUrl"];
 
 export default async function adminSponsorRoutes(app: FastifyInstance) {
   // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
@@ -346,14 +349,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
     // These fields reach `href` and `src` on public pages (#223).
-    const unsafeField = findUnsafeUrl(body as unknown as Record<string, unknown>, ["logoUrl", "websiteUrl", "comKitLogoWebUrl", "comKitLogoPrintUrl", "comKitCharterUrl"]);
-    if (unsafeField) {
-      return reply.code(400).send({
-        error: "unsafe_url",
-        field: unsafeField,
-        message: `Lien refusé (${unsafeField}) : seules les adresses http(s) ou /uploads/… sont acceptées.`,
-      });
-    }
+    const refusal = unsafeUrlRefusal(body, URL_FIELDS);
+    if (refusal) return reply.code(400).send(refusal);
     // The display attributes come along: the participation freezes them (#375)
     // so renaming or recolouring the shared catalogue later leaves this
     // edition's wall untouched.
@@ -448,14 +445,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     const body = request.body;
     // These fields reach `href` and `src` on public pages (#223).
-    const unsafeField = findUnsafeUrl(body as unknown as Record<string, unknown>, ["logoUrl", "websiteUrl", "comKitLogoWebUrl", "comKitLogoPrintUrl", "comKitCharterUrl"]);
-    if (unsafeField) {
-      return reply.code(400).send({
-        error: "unsafe_url",
-        field: unsafeField,
-        message: `Lien refusé (${unsafeField}) : seules les adresses http(s) ou /uploads/… sont acceptées.`,
-      });
-    }
+    const refusal = unsafeUrlRefusal(body, URL_FIELDS);
+    if (refusal) return reply.code(400).send(refusal);
 
     // Changing tier re-freezes the appearance (#375): the participation must
     // show the tier it was actually moved to, not the one it left.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeRichHtml, isSafeUrl } from "./sanitize.js";
+import { sanitizeRichHtml, isSafeUrl, unsafeUrlRefusal } from "./sanitize.js";
 
 describe("isSafeUrl", () => {
   it("should accept http and https URLs", () => {
@@ -127,5 +127,18 @@ describe("sanitizeRichHtml — classes", () => {
   it("should keep the import's layout classes and drop the rest of the attribute", () => {
     const html = sanitizeRichHtml('<div class="grid md:grid-cols-2 fixed"><p>x</p></div>');
     expect(html).toContain('class="grid md:grid-cols-2"');
+  });
+});
+
+describe("unsafeUrlRefusal", () => {
+  it("should name the refused field and say what a link may be", () => {
+    const refusal = unsafeUrlRefusal({ photoUrl: "javascript:alert(1)" }, ["photoUrl"]);
+
+    expect(refusal).toMatchObject({ error: "unsafe_url", field: "photoUrl" });
+    expect(refusal?.message).toContain("chemins du site");
+  });
+
+  it("should return nothing when every link passes", () => {
+    expect(unsafeUrlRefusal({ photoUrl: "/uploads/a.png", socialLinks: { github: "https://github.com/x" } }, ["photoUrl"])).toBeNull();
   });
 });

@@ -8,7 +8,7 @@ import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { generateEditToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
-import { findUnsafeUrl } from "../../lib/sanitize.js";
+import { unsafeUrlRefusal } from "../../lib/sanitize.js";
 import {
   EDIT_LINK_STATES,
   SPEAKER_MISSING,
@@ -235,14 +235,8 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "editionId and name are required" });
     }
     // These fields reach `href` and `src` on public pages (#223).
-    const unsafeField = findUnsafeUrl(body as unknown as Record<string, unknown>, ["photoUrl"]);
-    if (unsafeField) {
-      return reply.code(400).send({
-        error: "unsafe_url",
-        field: unsafeField,
-        message: `Lien refusé (${unsafeField}) : seules les adresses http(s) ou /uploads/… sont acceptées.`,
-      });
-    }
+    const refusal = unsafeUrlRefusal(body, ["photoUrl"]);
+    if (refusal) return reply.code(400).send(refusal);
 
     const baseSlug = slugify(body.name);
 
@@ -380,14 +374,8 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     const { id } = request.params;
     const body = request.body;
     // These fields reach `href` and `src` on public pages (#223).
-    const unsafeField = findUnsafeUrl(body as unknown as Record<string, unknown>, ["photoUrl"]);
-    if (unsafeField) {
-      return reply.code(400).send({
-        error: "unsafe_url",
-        field: unsafeField,
-        message: `Lien refusé (${unsafeField}) : seules les adresses http(s) ou /uploads/… sont acceptées.`,
-      });
-    }
+    const refusal = unsafeUrlRefusal(body, ["photoUrl"]);
+    if (refusal) return reply.code(400).send(refusal);
     const before = await speakerFootprint([Number(id)]);
 
     const speaker = await prisma.speaker.update({

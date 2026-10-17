@@ -107,3 +107,18 @@ export function findUnsafeUrl(body: Record<string, unknown>, fields: readonly st
   }
   return null;
 }
+
+/**
+ * The 400 body for a body whose URL field isSafeUrl refuses, or null when
+ * every one passes: the back-office routes answer it as is, with the field to
+ * point the editor at.
+ */
+export function unsafeUrlRefusal(body: object, fields: readonly string[]) {
+  const field = findUnsafeUrl(body as Record<string, unknown>, fields);
+  if (!field) return null;
+  return {
+    error: "unsafe_url",
+    field,
+    message: `Lien refusé (${field}) : seules les adresses http(s) et les chemins du site (commençant par /) sont acceptés.`,
+  };
+}
