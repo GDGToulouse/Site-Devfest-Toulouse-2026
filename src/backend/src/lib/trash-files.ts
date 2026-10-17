@@ -165,9 +165,17 @@ export async function listFileUsages(urls: readonly string[]): Promise<Map<strin
   return byUrl;
 }
 
-/** Guard against a crafted path escaping the uploads directory. */
+// What the upload pipeline stores: one file name right under /uploads/.
+const UPLOAD_URL = /^\/uploads\/[^/\\?#]+$/;
+
+/**
+ * Guard against a crafted path escaping the uploads directory, or reaching
+ * another file than the one it names: read through its basename,
+ * `/uploads/x/<file>` meant someone else's file, which the exact-URL reference
+ * count did not protect (#658).
+ */
 function resolveUploadPath(url: string): string | null {
-  if (!url.startsWith("/uploads/")) return null;
+  if (!UPLOAD_URL.test(url)) return null;
   const name = path.basename(url);
   if (!name || name === "." || name === "..") return null;
   const full = path.join(UPLOADS_DIR, name);
