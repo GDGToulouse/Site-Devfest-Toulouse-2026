@@ -28,7 +28,8 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `REVALIDATE_SECRET` | oui en prod | Secret partagé entre backend et frontend pour invalider le cache Next via `POST /api/revalidate`. Si absent, la revalidation est désactivée (le cache reste statique jusqu'au TTL `s-maxage`). | (32+ caractères aléatoires) |
 | `BROCHURE_TOKEN_SECRET` | oui en prod | Secret HMAC utilisé pour signer les liens de téléchargement de la plaquette envoyés par email. Si absent, le mail de confirmation tombe sur l'URL brute (sans tracking). | (32+ caractères aléatoires) |
 | `GEMINI_API_KEY` | non (mais requise pour la traduction IA) | Clé API Google Gemini utilisée par la fonctionnalité de traduction FR⇄EN du back-office. Si absente, l'endpoint `/api/admin/translate` répond `503 not_configured` et le bouton « Traduire » est désactivé côté UI. **Free tier** : données potentiellement utilisées pour l'entraînement — ne pas activer sur du contenu confidentiel. Migrer vers Tier 1 payant si besoin. Obtenir une clé : https://aistudio.google.com/apikey | `AIzaSy...` |
-| `ENV_NAME` | non | Nom de l'environnement de déploiement. Sert à l'aliasing réseau Docker **et** est exposé dans l'admin via `GET /api/health` → badge `v{version} · {environment}` dans la sidebar (#171). Défaut `local`. | `beta`, `prod` |
+| `ENV_NAME` | non | Nom de l'environnement de déploiement. Sert à l'aliasing réseau Docker **et** est exposé dans l'admin via `GET /api/health` → badge `v{version} · {environment}` dans la sidebar (#171). Défaut `local` (`dev` dans `docker-compose.dev.yml`). Hors `local`, `seed-dev.ts` exige `DEV_SEED_PASSWORD`. | `beta`, `prod` |
+| `DEV_SEED_PASSWORD` | oui sur `dev-j` | Mot de passe posé par `seed-dev.ts` sur les comptes de démo (ADMIN, EDITOR, sponsors), au lieu des mots de passe publics de `docs/comptes-dev-local.md`. 12 caractères minimum. Sans elle, sur un environnement dont `ENV_NAME` n'est pas `local`, le seed échoue et le backend ne démarre pas. Inutile en local et en CI. | (20+ caractères aléatoires) |
 | `APP_VERSION` | non | Surcharge le numéro de version applicatif (semver) exposé par `GET /api/health`. Par défaut, la constante `APP_VERSION` du code (`1.0.0`), incrémentée à la main à chaque release et taguée sur `main`. | `1.0.0` |
 
 ## Base de données (backend uniquement)
@@ -77,10 +78,17 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
 |---|---|---|---|---|---|---|
-| **Local / dev-j** | `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`) |
+| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`, protégée par mot de passe sur dev-j) |
 | **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
 
 > ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
+
+### MailHog sur dev-j
+
+| Variable | Obligatoire | Description | Exemple |
+|----------|:-----------:|-------------|---------|
+| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API MailHog. | `julien` |
+| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair : MailHog le hache lui-même (bcrypt) au démarrage. Sans ces deux variables, le conteneur MailHog refuse de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde MailHog sans authentification. | (20+ caractères aléatoires) |
 
 > ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
 

@@ -126,7 +126,9 @@ export async function seedBase({ skipAccountEmails = [] }: { skipAccountEmails?:
           where: { email },
           data: { role: "ADMIN", emailVerified: true },
         });
-        console.log(`Admin account created: ${email} — password: ${password}`);
+        // The password stays out of the logs, which Coolify keeps and shows:
+        // the account signs in by magic link, OAuth or 'Mot de passe oublié'.
+        console.log(`Admin account created: ${email} — use 'Mot de passe oublié' or a magic link`);
       } catch (err) {
         await prisma.user.create({
           data: { email, name: email.split("@")[0], role: "ADMIN" },
