@@ -70,7 +70,7 @@ describe("Sessionize service slots (#546)", () => {
   });
 
   beforeEach(async () => {
-    await prisma.scheduleEntry.deleteMany({ where: { editionId } });
+    if (editionId !== undefined) await prisma.scheduleEntry.deleteMany({ where: { editionId } });
   });
 
   afterAll(async () => {

@@ -46,7 +46,7 @@ describe("GET /api/edit/:token — speaker sessions (#229)", () => {
 
   afterAll(async () => {
     await prisma.talk.deleteMany({ where: { id: { in: talkIds } } });
-    await prisma.speaker.deleteMany({ where: { id: speakerId } });
+    if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("returns only the speaker's PUBLISHED talks, read-only", async () => {

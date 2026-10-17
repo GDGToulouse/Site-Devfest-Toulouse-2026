@@ -34,7 +34,7 @@ describe("importSessionize absent from Sessionize (#509)", () => {
   });
 
   afterAll(async () => {
-    await prisma.talk.deleteMany({ where: { editionId } });
+    if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
     await prisma.edition.delete({ where: { id: editionId } });
     await prisma.speaker.deleteMany({ where: { name: { in: [kept.fullName, gone.fullName] } } });
   });

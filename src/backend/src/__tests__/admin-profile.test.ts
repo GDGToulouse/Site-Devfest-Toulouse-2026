@@ -30,7 +30,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await app.close();
   await prisma.user.delete({ where: { id: userId } });
-  await prisma.auditLog.deleteMany({ where: { entityId: userId } });
+  if (userId !== undefined) await prisma.auditLog.deleteMany({ where: { entityId: userId } });
 });
 
 describe("PUT /api/admin/profile", () => {

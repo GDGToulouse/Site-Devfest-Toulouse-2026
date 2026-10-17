@@ -43,7 +43,7 @@ describe("POST /api/edit/:token/upload", () => {
   });
 
   afterAll(async () => {
-    await prisma.speaker.deleteMany({ where: { id: speakerId } });
+    if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("stores an uploaded image and returns its /uploads URL", async () => {

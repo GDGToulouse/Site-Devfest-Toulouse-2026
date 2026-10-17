@@ -48,8 +48,8 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await prisma.apiKey.deleteMany({ where: { userId } });
-  await prisma.user.deleteMany({ where: { id: userId } });
+  if (userId !== undefined) await prisma.apiKey.deleteMany({ where: { userId } });
+  if (userId !== undefined) await prisma.user.deleteMany({ where: { id: userId } });
 });
 
 describe("API keys are managed from the browser, never by a key", () => {
