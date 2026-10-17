@@ -132,3 +132,76 @@ describe("POST /api/contact/send", () => {
     await app.close();
   });
 });
+
+// The form is public and anonymous: a malformed body must be refused at the
+// door, cheaply, never reach the handler's string calls nor the mailer.
+describe("POST /api/contact/send — body bounds", () => {
+  it("should accept the optional fields as null", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: {
+        firstName: "Null",
+        lastName: "Fields",
+        email: "null-fields@test.com",
+        phone: null,
+        company: null,
+        jobTitle: null,
+        categoryId: null,
+        message: "Optional fields sent as null by the form.",
+        locale: null,
+        confirmUrl: null,
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    await app.close();
+  });
+
+  it("should refuse a non-text name with a 400, not a 500", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: { firstName: { first: "a" }, lastName: "x", email: "a@b.cd", message: "0123456789xx" },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("should refuse an oversized address quickly", async () => {
+    const app = await buildApp();
+    const started = performance.now();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: { firstName: "a", lastName: "b", email: `a@${".".repeat(30_000)}@`, message: "0123456789xx" },
+    });
+    const elapsed = performance.now() - started;
+    expect(res.statusCode).toBe(400);
+    expect(elapsed).toBeLessThan(200);
+    await app.close();
+  });
+
+  it("should refuse a name longer than a name", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: { firstName: "a".repeat(101), lastName: "b", email: "a@b.cd", message: "0123456789xx" },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("should refuse a body far larger than any real message", async () => {
+    const app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/contact/send",
+      payload: { firstName: "a", lastName: "b", email: "a@b.cd", message: "x".repeat(200_000) },
+    });
+    expect([400, 413]).toContain(res.statusCode);
+    await app.close();
+  });
+});
