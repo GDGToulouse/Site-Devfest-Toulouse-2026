@@ -1,4 +1,5 @@
 import { promises as dns } from "node:dns";
+import net from "node:net";
 
 /**
  * Validate a webhook URL against SSRF attacks:
@@ -58,30 +59,57 @@ export async function validateWebhookUrl(raw: string): Promise<URL> {
   return parsed;
 }
 
+// Ranges no outgoing request may reach: private networks, loopback,
+// link-local (cloud metadata), shared address space (CGNAT), benchmarking,
+// documentation, multicast and reserved.
+const PRIVATE_V4 = new net.BlockList();
+for (const [network, prefix] of [
+  ["0.0.0.0", 8], ["10.0.0.0", 8], ["100.64.0.0", 10], ["127.0.0.0", 8],
+  ["169.254.0.0", 16], ["172.16.0.0", 12], ["192.0.0.0", 24], ["192.0.2.0", 24],
+  ["192.168.0.0", 16], ["198.18.0.0", 15], ["198.51.100.0", 24], ["203.0.113.0", 24],
+  ["224.0.0.0", 4], ["240.0.0.0", 4],
+] as const) {
+  PRIVATE_V4.addSubnet(network, prefix, "ipv4");
+}
+
+// IPv6: the same kinds of range, plus every transition prefix that carries an
+// IPv4 address (IPv4-compatible, NAT64, Teredo, 6to4): a public web server
+// has no reason to resolve to one, and each could smuggle a private IPv4 in.
+// IPv4-mapped addresses (::ffff:0:0/96) are judged by their IPv4 part instead.
+const PRIVATE_V6 = new net.BlockList();
+for (const [network, prefix] of [
+  ["::", 96], ["64:ff9b::", 96], ["64:ff9b:1::", 48], ["2001::", 32],
+  ["2001:db8::", 32], ["2002::", 16], ["fc00::", 7], ["fe80::", 10], ["ff00::", 8],
+] as const) {
+  PRIVATE_V6.addSubnet(network, prefix, "ipv6");
+}
+
+/**
+ * The IPv4 address inside an IPv4-mapped IPv6 one, whatever its notation:
+ * the WHATWG parser turns `[::ffff:127.0.0.1]` into `[::ffff:7f00:1]`, and
+ * reading only the dotted form let the hexadecimal one through (#658).
+ */
+function mappedIPv4(address: string): string | null {
+  let text = address.split("%")[0].toLowerCase();
+  const dotted = /(\d+)\.(\d+)\.(\d+)\.(\d+)$/.exec(text);
+  if (dotted) {
+    const [a, b, c, d] = dotted.slice(1).map(Number);
+    text = `${text.slice(0, dotted.index)}${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = text.split("::");
+  const headWords = head ? head.split(":") : [];
+  const tailWords = tail ? tail.split(":") : [];
+  const words = tail === undefined
+    ? headWords
+    : [...headWords, ...Array(8 - headWords.length - tailWords.length).fill("0"), ...tailWords];
+  const values = words.map((word) => parseInt(word, 16));
+  if (values.length !== 8 || values.slice(0, 5).some((v) => v !== 0) || values[5] !== 0xffff) return null;
+  return `${values[6] >> 8}.${values[6] & 0xff}.${values[7] >> 8}.${values[7] & 0xff}`;
+}
+
 export function isPrivateAddress(address: string, family: number): boolean {
-  if (family === 4) {
-    const parts = address.split(".").map(Number);
-    const [a, b] = parts;
-    if (a === 10) return true;
-    if (a === 127) return true;
-    if (a === 169 && b === 254) return true; // link-local + cloud metadata
-    if (a === 172 && b >= 16 && b <= 31) return true;
-    if (a === 192 && b === 168) return true;
-    if (a === 0) return true;
-    if (a >= 224) return true; // multicast + reserved
-    return false;
-  }
-  // IPv6
-  const lower = address.toLowerCase();
-  if (lower === "::" || lower === "::1") return true;
-  // Link-local fe80::/10
-  if (lower.startsWith("fe8") || lower.startsWith("fe9") || lower.startsWith("fea") || lower.startsWith("feb")) return true;
-  // Unique local fc00::/7
-  if (lower.startsWith("fc") || lower.startsWith("fd")) return true;
-  // IPv4-mapped ::ffff:xxx.xxx.xxx.xxx — check the v4 part
-  if (lower.startsWith("::ffff:")) {
-    const v4 = lower.slice(7);
-    return isPrivateAddress(v4, 4);
-  }
-  return false;
+  if (family === 4) return PRIVATE_V4.check(address, "ipv4");
+  const v4 = mappedIPv4(address);
+  if (v4) return PRIVATE_V4.check(v4, "ipv4");
+  return PRIVATE_V6.check(address.split("%")[0], "ipv6");
 }

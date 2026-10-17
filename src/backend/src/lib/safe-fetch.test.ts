@@ -86,6 +86,11 @@ describe("fetchRemoteFile (#617)", () => {
     expect(await codeOf(fetchRemoteFile("file:///etc/passwd", { maxBytes: 1000 }))).toBe("invalid_protocol");
   });
 
+  it("should refuse the loopback written as an IPv4-mapped IPv6 literal", async () => {
+    expect(await codeOf(fetchRemoteFile("http://[::ffff:127.0.0.1]/", { maxBytes: 1000 }))).toBe("private_ip");
+    expect(await codeOf(fetchRemoteFile("http://[::ffff:7f00:1]/", { maxBytes: 1000 }))).toBe("private_ip");
+  });
+
   it("should refuse a redirect into a private address or an internal name", async () => {
     expect(await codeOf(fetchRemoteFile(`${base}/redirect-private`, { maxBytes: 1000, isAllowedAddress: loopbackOnly }))).toBe("private_ip");
     expect(await codeOf(fetchRemoteFile(`${base}/redirect-internal`, { maxBytes: 1000, isAllowedAddress: loopbackOnly }))).toBe(
