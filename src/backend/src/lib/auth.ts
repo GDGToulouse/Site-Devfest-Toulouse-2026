@@ -14,7 +14,7 @@ import { prisma } from "./prisma.js";
 import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
 import { sendPasswordResetEmail } from "./password-reset-email.js";
-import { hasPendingInvitation, normalizeEmail } from "./sponsor-invitation.js";
+import { hasPendingInvitation, isTokenProvenSignUp, normalizeEmail } from "./sponsor-invitation.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -186,11 +186,15 @@ export const auth = betterAuth({
           }
           if (isAdminEmail(user.email)) return;
 
-          if (await hasPendingInvitation(user.email)) {
+          // The mailbox must be proven too (#658): by the identity provider
+          // (emailVerified, which a sign-up body cannot set) or by the token,
+          // through POST /api/sponsor-invitation/:token/sign-up.
+          const isMailboxProven = user.emailVerified === true || isTokenProvenSignUp(user.email);
+          if (isMailboxProven && (await hasPendingInvitation(user.email))) {
             // Sponsors get a role that grants nothing in the back-office. The
             // default is EDITOR, which requireAnyAuthenticated lets through —
             // leaving it would hand /api/admin/* to every sponsor.
-            return { data: { ...user, role: "SPONSOR" } };
+            return { data: { ...user, role: "SPONSOR", emailVerified: true } };
           }
 
           throw new APIError("FORBIDDEN", {

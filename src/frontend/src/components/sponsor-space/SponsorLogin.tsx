@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
-import { requestMagicLink, requestSponsorPasswordReset, signUpWithEmail } from "@/lib/sponsor-api";
+import { requestMagicLink, requestSponsorPasswordReset, signUpWithInvitation } from "@/lib/sponsor-api";
 import SponsorFeedback from "@/components/sponsor-space/SponsorFeedback";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
@@ -15,16 +15,18 @@ interface Providers {
   github: boolean;
 }
 
-// mode="signup" is what someone arriving from an invitation sees. They have no
+// invitationToken is set for someone arriving from an invitation. They have no
 // account yet, and a screen headed "Sign in" reads as a dead end (#362) — the
-// form is the same either way, only the wording changes.
+// form is the same either way, only the wording changes, and the password
+// opens the account through the token (#658).
 export default function SponsorLogin({
   callbackURL,
-  mode = "signin",
+  invitationToken,
 }: {
   callbackURL: string;
-  mode?: "signin" | "signup";
+  invitationToken?: string;
 }) {
+  const mode = invitationToken ? "signup" : "signin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -47,10 +49,9 @@ export default function SponsorLogin({
     setError(null);
     // sign-in only authenticates an existing account; someone arriving from an
     // invitation has none yet and needs sign-up (#362).
-    const result =
-      mode === "signup"
-        ? await signUpWithEmail(email.trim(), password, email.trim())
-        : await signInWithEmail(email, password);
+    const result = invitationToken
+      ? await signUpWithInvitation(invitationToken, password)
+      : await signInWithEmail(email, password);
     if (result.success) {
       window.location.href = callbackURL;
       return;
