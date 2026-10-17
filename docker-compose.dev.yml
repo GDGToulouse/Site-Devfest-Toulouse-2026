@@ -51,7 +51,9 @@ services:
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
-      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      # No default: a public one would sign dev-j's sessions (#658). The
+      # backend refuses to start without it.
+      - SESSION_SECRET=${SESSION_SECRET:-}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
