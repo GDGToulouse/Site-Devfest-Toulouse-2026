@@ -1,6 +1,6 @@
 # Comptes de test — Développement local uniquement
 
-> **ATTENTION** : ces comptes sont exclusivement destinés au développement local (`docker compose up`). Ne jamais utiliser ces identifiants en production ou sur un environnement accessible publiquement.
+> **ATTENTION** : ces mots de passe sont publics (ils sont dans ce dépôt). Ils ne valent qu'en local et en CI. Un environnement déployé avec `docker-compose.dev.yml` (`dev-j`…) donne à ces mêmes comptes le mot de passe de sa variable `DEV_SEED_PASSWORD`, et le seed refuse de tourner sans elle (voir [Environnement déployé](#environnement-déployé-dev-j)).
 
 ## Comptes provisionnés par le seed
 
@@ -28,7 +28,8 @@ le seed de base les laisse de côté depuis #433 (`skipAccountEmails`). Avant ce
 les créait le premier avec un mot de passe **aléatoire**, et `seed-dev.ts` trouvait alors les
 comptes déjà là — le mot de passe documenté n'était donc jamais posé, dès la toute première
 installation. Toute autre adresse listée dans `ADMIN_EMAILS` reste provisionnée par
-`prisma/seed.ts`, avec un mot de passe aléatoire affiché dans la sortie du seed.
+`prisma/seed.ts`, avec un mot de passe aléatoire qui n'est **pas** affiché : se connecter par
+lien magique, OAuth ou « Mot de passe oublié ».
 
 ## Seed
 
@@ -58,6 +59,25 @@ existants au lieu de les sauter.
 5. Cliquer **« Se connecter »**
 
 > Si les mots de passe n'ont pas pu être provisionnés par le seed (tables Better Auth pas encore créées), utiliser le flow **« Mot de passe oublié ? »** → MailHog (http://localhost:8025) pour en définir un.
+
+## Environnement déployé (dev-j)
+
+Sur un environnement déployé avec `docker-compose.dev.yml`, `seed-dev.ts` tourne à chaque démarrage
+(`db-boot.sh`) et pose sur les quatre comptes ci-dessus le mot de passe de `DEV_SEED_PASSWORD`, le
+même pour tous, au lieu des mots de passe documentés. La règle tient dans
+`src/backend/src/lib/dev-seed-password.ts` :
+
+| `ENV_NAME` | `DEV_SEED_PASSWORD` | Mot de passe posé |
+|---|---|---|
+| absent ou `local` (local, CI) | absent | celui du tableau ci-dessus |
+| n'importe lequel | présent (12 caractères minimum) | `DEV_SEED_PASSWORD` |
+| autre que `local` (`dev-j`…) | absent | aucun : le seed échoue et le backend ne démarre pas |
+
+Le MailHog de ces environnements est protégé par authentification HTTP : `MAILHOG_USER` et
+`MAILHOG_PASSWORD`, sans lesquelles il refuse de démarrer. Le MailHog local reste ouvert.
+
+Les mots de passe ne sont plus écrits dans la sortie du seed : les journaux de Coolify les
+gardaient.
 
 ## Première connexion (OAuth)
 

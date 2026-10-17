@@ -66,6 +66,12 @@ services:
       # ADMIN session — the purge stops running, nothing opens up.
       - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}
       - TRASH_RETENTION_DAYS=${TRASH_RETENTION_DAYS:-}
+      # seed-dev.ts gives its demo accounts DEV_SEED_PASSWORD here: the
+      # documented ones are public. A named environment without it makes the
+      # seed fail, and db-boot.sh stops the backend (#658). Unset ENV_NAME falls
+      # back on "dev", not "local", so it never reopens the documented ones.
+      - ENV_NAME=${ENV_NAME:-dev}
+      - DEV_SEED_PASSWORD=${DEV_SEED_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
@@ -104,6 +110,24 @@ services:
   mailhog:
     image: mailhog/mailhog:latest
     container_name: devfest-${ENV_NAME:-local}-mailhog
+    # Its UI and API are public behind Traefik and hold every e-mail the
+    # environment sends, sign-in links included: HTTP auth is mandatory here
+    # (#658). MailHog wants a `user:bcrypt` file; it is written at start from
+    # two plain variables, hashed by MailHog itself, so no `$` of a bcrypt
+    # hash has to survive Coolify's variable handling. SMTP stays open to the
+    # backend. The local compose keeps MailHog without auth.
+    environment:
+      - MAILHOG_USER=${MAILHOG_USER:-}
+      - MAILHOG_PASSWORD=${MAILHOG_PASSWORD:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$MAILHOG_USER" ] || [ -z "$$MAILHOG_PASSWORD" ]; then
+          echo "MAILHOG_USER and MAILHOG_PASSWORD are required: MailHog will not start unprotected." >&2
+          exit 1
+        fi
+        printf '%s:%s\n' "$$MAILHOG_USER" "$$(MailHog bcrypt "$$MAILHOG_PASSWORD")" > /tmp/mailhog-auth
+        exec MailHog -auth-file=/tmp/mailhog-auth
     expose:
       - "8025"
     networks:
