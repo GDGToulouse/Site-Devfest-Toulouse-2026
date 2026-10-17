@@ -49,7 +49,10 @@ export async function validateWebhookUrl(raw: string): Promise<URL> {
   // Resolve all IPv4/IPv6 addresses the hostname points to — each one must be
   // public. A malicious DNS record pointing `evil.example.com` to 10.0.0.1 is
   // caught here. `dns.lookup` wants the bracket-less form for IPv6 literals.
+  // A name that does not resolve now could resolve anywhere at send time:
+  // refused rather than waved through (#658).
   const addrs = await dns.lookup(bare, { all: true }).catch(() => []);
+  if (addrs.length === 0) throw new Error("unresolved_hostname");
   for (const { address, family } of addrs) {
     if (isPrivateAddress(address, family)) {
       throw new Error("private_ip");

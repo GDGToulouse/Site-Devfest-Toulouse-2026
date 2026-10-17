@@ -48,6 +48,13 @@ describe("validateWebhookUrl", () => {
     await expect(validateWebhookUrl("http://postfix/mail")).rejects.toThrow("internal_hostname");
   });
 
+  // A name that does not resolve at check time could resolve anywhere at send
+  // time: it is refused rather than waved through (#658).
+  it("rejects a hostname that does not resolve", async () => {
+    vi.spyOn(dns, "lookup").mockRejectedValue(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }));
+    await expect(validateWebhookUrl("https://nowhere.example.org/hook")).rejects.toThrow("unresolved_hostname");
+  });
+
   it("rejects URLs whose hostname resolves to a private IP", async () => {
     stubLookup("10.0.0.1");
     await expect(validateWebhookUrl("http://sneaky.example/x")).rejects.toThrow("private_ip");

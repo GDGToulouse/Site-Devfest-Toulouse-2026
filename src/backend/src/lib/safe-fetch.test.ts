@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
 
-import { fetchRemoteFile, RemoteFetchError } from "./safe-fetch.js";
+import { fetchRemoteFile, postJson, RemoteFetchError } from "./safe-fetch.js";
 
 // #617 — fetching a URL someone else chose. A real server on the loopback plays
 // the remote site; the tests allow 127.0.0.1 explicitly (isAllowedAddress), and
@@ -50,6 +50,15 @@ beforeAll(async () => {
         pump();
         return;
       }
+      case "/hook": {
+        let body = "";
+        req.on("data", (c) => (body += c));
+        req.on("end", () => res.writeHead(201, { "content-type": "text/plain" }).end(`got ${req.method} ${body}`));
+        return;
+      }
+      case "/hook-redirect":
+        res.writeHead(307, { location: "http://10.0.0.1/secret" }).end();
+        return;
       case "/slow":
         return; // never answers
       default:
@@ -116,5 +125,26 @@ describe("fetchRemoteFile (#617)", () => {
 
   it("should report a missing file as an HTTP error", async () => {
     expect(await codeOf(fetchRemoteFile(`${base}/nope`, { maxBytes: 1000, isAllowedAddress: loopbackOnly }))).toBe("http_error");
+  });
+});
+
+// Webhooks: a POST, never redirected, answered with the status and the start
+// of the body (the back-office's test button shows it).
+describe("postJson", () => {
+  it("should post the payload as JSON and hand back status and body", async () => {
+    const res = await postJson(`${base}/hook`, { a: 1 }, { isAllowedAddress: loopbackOnly });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toBe('got POST {"a":1}');
+  });
+
+  it("should not follow a redirect", async () => {
+    const res = await postJson(`${base}/hook-redirect`, {}, { isAllowedAddress: loopbackOnly });
+
+    expect(res.status).toBe(307);
+  });
+
+  it("should refuse the loopback by default", async () => {
+    expect(await codeOf(postJson(`${base}/hook`, {}))).toBe("private_ip");
   });
 });
