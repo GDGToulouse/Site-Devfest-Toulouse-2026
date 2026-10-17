@@ -16,15 +16,18 @@ interface Providers {
 }
 
 // invitationToken is set for someone arriving from an invitation. They have no
-// account yet, and a screen headed "Sign in" reads as a dead end (#362) — the
-// form is the same either way, only the wording changes, and the password
-// opens the account through the token (#658).
+// account yet, and a screen headed "Sign in" reads as a dead end (#362). The
+// password opens the account through the token, for the invited address
+// whatever is typed (#658): the form shows that address, masked as the page
+// received it, instead of asking for one.
 export default function SponsorLogin({
   callbackURL,
   invitationToken,
+  emailHint,
 }: {
   callbackURL: string;
   invitationToken?: string;
+  emailHint?: string;
 }) {
   const mode = invitationToken ? "signup" : "signin";
   const [email, setEmail] = useState("");
@@ -198,16 +201,22 @@ export default function SponsorLogin({
       )}
 
       <form onSubmit={handlePassword} className="space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-noir">Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-          />
-        </label>
+        {invitationToken ? (
+          <p className="text-sm text-noir">
+            Compte créé pour <strong>{emailHint}</strong>
+          </p>
+        ) : (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+        )}
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-noir">Mot de passe</span>
           <input
@@ -234,7 +243,7 @@ export default function SponsorLogin({
 
         <button
           type="submit"
-          disabled={isLoading || !email.trim() || !password}
+          disabled={isLoading || (!invitationToken && !email.trim()) || !password}
           className="w-full rounded-[12px] bg-malachite px-4 py-3 font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-50"
         >
           {isLoading ? "Connexion…" : mode === "signup" ? "Créer mon compte" : "Me connecter"}
