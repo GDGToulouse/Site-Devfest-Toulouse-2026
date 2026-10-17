@@ -1,5 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 
+import { RICH_TEXT_CLASSES } from "./rich-text-classes.js";
+
 /**
  * Allowlist-based HTML sanitization for rich text stored from the admin UI
  * (TipTap editor). Applied server-side before write so the database never
@@ -24,10 +26,11 @@ const OPTIONS: sanitizeHtml.IOptions = {
   allowedAttributes: {
     a: ["href", "title", "target", "rel"],
     img: ["src", "alt", "title", "width", "height", "data-align"],
-    // No class: the site's utility CSS would be there for whoever writes rich
-    // text, sponsors included, down to a block laid over the whole page
-    // (#658). The editor emits none, and .article-content styles by tag.
+    "*": ["class"],
   },
+  // Classes from the import's closed list only (#658): any other would hand
+  // whoever writes rich text, sponsors included, the site's utility CSS.
+  allowedClasses: { "*": [...RICH_TEXT_CLASSES] },
   // Only safe URL schemes for href/src. Blocks javascript:, data:, vbscript:
   // and other exotic schemes that can carry executable content.
   allowedSchemes: ["http", "https", "mailto", "tel"],
