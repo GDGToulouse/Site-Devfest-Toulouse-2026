@@ -42,7 +42,10 @@ export function escapeText(value: string): string {
     .replace(/\\/g, "\\\\")
     .replace(/;/g, "\\;")
     .replace(/,/g, "\\,")
-    .replace(/\r?\n/g, "\\n");
+    // A bare CR ends the line for some clients, and what follows would read as
+    // a property (#658); tab is the only other control character text keeps.
+    .replace(/\r\n|\r|\n/g, "\\n")
+    .replace(/[\u0000-\u0008\u000b-\u001f\u007f]/g, "");
 }
 
 /**

@@ -34,6 +34,16 @@ describe("iCalendar escaping", () => {
   it("turns a line break into its escape rather than ending the property", () => {
     expect(escapeText("Marie Dupont\nJean Martin")).toBe("Marie Dupont\\nJean Martin");
   });
+
+  // A speaker edits their talk's title: a bare carriage return ends the line
+  // for some calendar clients, and what follows reads as a property (#658).
+  it("turns a bare carriage return into a line break escape too", () => {
+    expect(escapeText("Talk\rURL:https://evil.example")).toBe("Talk\\nURL:https://evil.example");
+  });
+
+  it("drops the other control characters", () => {
+    expect(escapeText("a\u0000b\u0007c\td")).toBe("abc\td");
+  });
 });
 
 describe("line folding", () => {
