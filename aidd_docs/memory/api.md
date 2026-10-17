@@ -15,6 +15,7 @@
 ## Contracts
 
 - Erreurs en `{ error, message? }` (schéma `Error`), pagination via le schéma `Pagination`, tous deux dans `src/backend/src/schemas/common.ts`
+- Les champs de texte riche passent par `sanitizeRichHtml` : une valeur **sans balise** est du texte et devient `<p>…</p>` avec `&`, `<`, `>` échappés une fois (#661) ; sans cela, une page qui affiche le texte brut échappait `&amp;` une seconde fois. `htmlToText` (frontend) décode les entités pour les meta
 - Validation des entrées par les JSON Schemas de Fastify, déclarés sur chaque route ; helpers `notFound()` et validation d'id dans `src/backend/src/lib/admin-helpers.ts`
 - Limite de débit par IP, deux budgets séparés : l'API et les fichiers uploadés (`src/backend/src/lib/rate-limit-options.ts`)
 - Spec OpenAPI servie sur `/api/docs` ; référence de l'API publique : `docs/api-publique.md`

@@ -117,6 +117,35 @@ describe("sanitizeRichHtml", () => {
 // The site's utility CSS is all there for whoever writes rich text: a class is
 // enough to lay a full-screen block over a public page (#658). Only the
 // layout classes of the WordPress import survive.
+describe("sanitizeRichHtml — a value without any tag (#661)", () => {
+  // The API, the MCP connector and the history import send plain text; the
+  // editor always sends HTML. Stored as `Cloud &amp; DevOps`, a text read by a
+  // page that prints plain text escaped the ampersand a second time.
+  it("should store plain text as a paragraph, its ampersand escaped once", () => {
+    expect(sanitizeRichHtml("Cloud & DevOps")).toBe("<p>Cloud &amp; DevOps</p>");
+  });
+
+  it("should keep < and > as characters of the text", () => {
+    expect(sanitizeRichHtml("moins de 10 < 20 > 5")).toBe("<p>moins de 10 &lt; 20 &gt; 5</p>");
+  });
+
+  it("should keep the paragraphs and line breaks the text had", () => {
+    expect(sanitizeRichHtml("Un\nDeux\n\nTrois\r\n\r\nQuatre")).toBe("<p>Un<br />Deux</p><p>Trois</p><p>Quatre</p>");
+  });
+
+  it("should leave HTML as it was, ampersand included", () => {
+    expect(sanitizeRichHtml("<p>Cloud &amp; DevOps</p>")).toBe("<p>Cloud &amp; DevOps</p>");
+  });
+
+  it("should still neutralise a script hidden in a text", () => {
+    expect(sanitizeRichHtml("Cloud & DevOps <script>alert(1)</script>")).toBe("Cloud &amp; DevOps ");
+  });
+
+  it("should give nothing for a blank text", () => {
+    expect(sanitizeRichHtml("  \n ")).toBe("");
+  });
+});
+
 describe("sanitizeRichHtml — classes", () => {
   it("should drop a class outside the import's list", () => {
     const html = sanitizeRichHtml('<div class="fixed inset-0 z-[60] bg-blanc"><p class="text-3xl">x</p></div>');

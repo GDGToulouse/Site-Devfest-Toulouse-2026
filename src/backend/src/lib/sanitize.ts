@@ -60,8 +60,31 @@ const OPTIONS: sanitizeHtml.IOptions = {
   nonTextTags: ["script", "style", "textarea", "option", "noscript"],
 };
 
+// Same test as the front-office's `looksLikeHtml`: a value either carries tags
+// or is text, and both sides must agree on which, or one of them escapes it twice.
+const HAS_TAG = /<[a-z][\s\S]*>/i;
+
+/**
+ * A value without a tag is text, and the API, the MCP connector and the history
+ * import send it that way (#661); only the editor sends HTML. Sanitizing it as
+ * HTML would turn `&` into `&amp;`, which a page printing it as text escapes a
+ * second time. It is stored as HTML instead, a paragraph per blank line, like
+ * what the editor produces: the ampersand is escaped once, here, and every page
+ * reads it as HTML.
+ */
+function textToHtml(text: string): string {
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped
+    .split(/\r?\n[ \t]*\r?\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replace(/\r?\n/g, "<br />")}</p>`)
+    .join("");
+}
+
 export function sanitizeRichHtml(html: string | null | undefined): string {
   if (!html) return "";
+  if (!HAS_TAG.test(html)) return textToHtml(html);
   return sanitizeHtml(html, OPTIONS);
 }
 
