@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getReplays, getReplayFilters } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -8,8 +8,13 @@ import ReplayFiltersBar from "@/components/replays/ReplayFiltersBar";
 import type { TalkFormat } from "@/lib/types";
 import { pageMetadata } from "@/lib/page-metadata";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("replays");
   return {
     title: t("pageTitle"),
@@ -21,11 +26,14 @@ export async function generateMetadata(): Promise<Metadata> {
 const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"];
 
 export default async function ReplaysPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("replays");
 
   // Filters live in the URL and are applied server-side, so a filtered view is

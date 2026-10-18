@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("next-intl/server", () => ({
-  getLocale: vi.fn(async () => locale),
+  setRequestLocale: vi.fn(),
   getTranslations: vi.fn(async () => (key: string) => key),
 }));
 
@@ -35,7 +35,7 @@ const PAGE = {
   updatedAt: "2026-08-17T00:00:00Z",
 };
 
-const params = (slug: string) => Promise.resolve({ slug });
+const params = (slug: string) => Promise.resolve({ locale, slug });
 
 beforeEach(() => {
   locale = "fr";

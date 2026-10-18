@@ -4,10 +4,12 @@ config.autoAddCss = false;
 
 import type { Metadata, Viewport } from "next";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { draftMode } from "next/headers";
 import { routing } from "@/i18n/routing";
+import { googleSans } from "../fonts";
+import "../globals.css";
 import PlausibleProvider from "next-plausible";
 import WebVitals from "@/components/WebVitals";
 import Header from "@/components/Header";
@@ -30,6 +32,22 @@ import { jsonLdScript } from "@/lib/seo";
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 const isProduction = BASE_URL === "https://devfesttoulouse.fr";
 const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
+
+// The public site is rendered once per page and served from Next's cache (#700).
+// The locale comes from the URL segment, never from the request headers:
+// reading them anywhere in the tree makes every page below dynamic again. The
+// unprefixed URLs are handled by the next-intl proxy (src/proxy.ts), which
+// redirects or rewrites them to /fr or /en before they reach this segment.
+//
+// Empty on purpose: nothing is prerendered by `next build`. The pages read the
+// backend, which is not reachable while the Docker image is built (the API
+// helpers then degrade to empty data): prerendering there would bake empty
+// pages into the image. Each page is instead rendered on its first request,
+// then cached and regenerated on demand (/api/revalidate) or after its
+// `revalidate` window.
+export function generateStaticParams() {
+  return [];
+}
 
 export async function generateMetadata({
   params,
@@ -88,6 +106,11 @@ export default async function LocaleLayout({
     notFound();
   }
 
+  // Tells next-intl which locale this render is for, so getTranslations() and
+  // friends do not fall back to the request headers. Every page below does the
+  // same: layouts and pages render in parallel, the layout cannot do it for them.
+  setRequestLocale(locale);
+
   const [edition, cfp, identity, socialLinks, pages, navOrder, draft] = await Promise.all([
     getCurrentEdition(),
     getCfpSettings(),
@@ -123,41 +146,43 @@ export default async function LocaleLayout({
   };
 
   return (
-    <>
-      {plausibleSrc && (
-        <>
-          <PlausibleProvider src={plausibleSrc} />
-          <WebVitals />
-        </>
-      )}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
-      />
-      <a
-        href="#main-content"
-        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
-      >
-        {locale === "fr" ? "Aller au contenu" : "Skip to content"}
-      </a>
-      <NextIntlClientProvider>
-        {draft.isEnabled && <PreviewBanner />}
-        <LanguageSuggestionBanner />
-        <EditionProvider
-          edition={edition}
-          cfp={cfp}
-          identity={identity}
-          socialLinks={socialLinks}
-          pages={pages}
-          navOrder={navOrder}
-        >
-          <Header />
-          <main id="main-content" role="main" className="flex-1">
-            {children}
-          </main>
-          <Footer />
-        </EditionProvider>
-      </NextIntlClientProvider>
-    </>
+    <html lang={locale} className={`h-full antialiased ${googleSans.variable}`} suppressHydrationWarning>
+      <body className="min-h-full flex flex-col">
+          {plausibleSrc && (
+            <>
+              <PlausibleProvider src={plausibleSrc} />
+              <WebVitals />
+            </>
+          )}
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLdScript(organizationJsonLd) }}
+          />
+          <a
+            href="#main-content"
+            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-50 focus:bg-bleu focus:text-blanc focus:px-4 focus:py-2 focus:rounded-s"
+          >
+            {locale === "fr" ? "Aller au contenu" : "Skip to content"}
+          </a>
+          <NextIntlClientProvider>
+            {draft.isEnabled && <PreviewBanner />}
+            <LanguageSuggestionBanner />
+            <EditionProvider
+              edition={edition}
+              cfp={cfp}
+              identity={identity}
+              socialLinks={socialLinks}
+              pages={pages}
+              navOrder={navOrder}
+            >
+              <Header />
+              <main id="main-content" role="main" className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </EditionProvider>
+          </NextIntlClientProvider>
+      </body>
+    </html>
   );
 }

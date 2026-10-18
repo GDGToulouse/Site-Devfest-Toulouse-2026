@@ -14,7 +14,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 vi.mock("next-intl/server", () => ({
-  getLocale: async () => "fr",
+  setRequestLocale: () => {},
   getTranslations: async () => (key: string) => key,
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null }));

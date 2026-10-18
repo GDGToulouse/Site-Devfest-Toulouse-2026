@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getHallOfFame } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -7,8 +7,13 @@ import Breadcrumb from "@/components/Breadcrumb";
 import HallOfFameCard from "@/components/speakers/HallOfFameCard";
 import { Link } from "@/i18n/navigation";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("hallOfFame");
   const people = await getHallOfFame();
 
@@ -22,11 +27,14 @@ export async function generateMetadata(): Promise<Metadata> {
 // Everyone who ever spoke at a DevFest Toulouse (#352). `/speakers` answers "who
 // is speaking this year"; this page answers "who has ever spoken".
 export default async function HallOfFamePage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("hallOfFame");
 
   const sp = await searchParams;

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound, permanentRedirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getJobOffers } from "@/lib/api";
 import { markLinksSponsored, SPONSORED_LINK_REL } from "@/lib/html";
@@ -32,9 +32,15 @@ async function resolveOffer(segment: string) {
   return found;
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ offer: string }> }): Promise<Metadata> {
-  const { offer: segment } = await params;
-  const locale = await getLocale();
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string; offer: string }> }): Promise<Metadata> {
+  const { locale, offer: segment } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("jobOffers");
   const found = await resolveOffer(segment);
   if (!found) return { title: t("title") };
@@ -52,9 +58,9 @@ export async function generateMetadata({ params }: { params: Promise<{ offer: st
   };
 }
 
-export default async function JobOfferPage({ params }: { params: Promise<{ offer: string }> }) {
-  const { offer: segment } = await params;
-  const locale = await getLocale();
+export default async function JobOfferPage({ params }: { params: Promise<{ locale: string; offer: string }> }) {
+  const { locale, offer: segment } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("jobOffers");
   const found = await resolveOffer(segment);
   if (!found) notFound();

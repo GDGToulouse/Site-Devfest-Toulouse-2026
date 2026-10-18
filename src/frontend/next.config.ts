@@ -188,6 +188,22 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store" },
         ],
       },
+      // The sponsor space and the agent connection screens are client shells,
+      // statically rendered since the root layout stopped reading the request
+      // (#700). Next would label them `s-maxage=31536000`: private screens, so
+      // no shared cache may keep them, like the back-office above.
+      {
+        source: "/sponsor/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
+      {
+        source: "/connect/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
       // Cache-Control: homepage — short cache (5 min)
       // Both public rules stand aside in draft preview (#618): Next sends that
       // page `private, no-store`, which these rules would otherwise overwrite

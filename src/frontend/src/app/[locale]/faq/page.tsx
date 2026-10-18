@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getFaq } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -10,8 +10,9 @@ import { Link } from "@/i18n/navigation";
 
 const THEMES: FaqTheme[] = ["VENUE", "TICKETS", "PROGRAMME", "PRACTICAL", "OTHER"];
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("faq");
   return {
     title: t("pageTitle"),
@@ -33,8 +34,9 @@ function inLocale(item: FaqItem, locale: string) {
 // The FAQ (#111): questions grouped by theme, each a native disclosure —
 // <details>/<summary> open with the keyboard and announce their state with no
 // script — and a FAQPage block for search engines.
-export default async function FaqPage() {
-  const locale = await getLocale();
+export default async function FaqPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("faq");
   const items = await getFaq();
 

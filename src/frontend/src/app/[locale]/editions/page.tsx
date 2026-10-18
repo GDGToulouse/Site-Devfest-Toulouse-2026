@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getEditions } from "@/lib/api";
 import { buildTimeline } from "@/lib/edition-timeline";
@@ -8,8 +8,9 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("editionsList");
   return {
     title: t("pageTitle"),
@@ -18,8 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function EditionsListPage() {
-  const locale = await getLocale();
+export default async function EditionsListPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("editionsList");
 
   // A timeline rather than a grid of years (#104): the coming edition on top,
