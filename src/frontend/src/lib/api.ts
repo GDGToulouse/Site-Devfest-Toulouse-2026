@@ -1,4 +1,4 @@
-import type { FaqItem,
+import type { FaqItem, TeamMember,
   Edition,
   EditionDetail,
   EditionSummary,
@@ -21,6 +21,7 @@ import type { FaqItem,
   SpeakerPublic,
   SpeakerDetail,
   HallOfFameEntry,
+  SponsorHallOfFameEntry,
   TalkDetail,
   EditionSpeaker,
   EditionTalk,
@@ -31,8 +32,9 @@ import type { FaqItem,
   EcosystemPartner,
   CarouselSlide,
 } from "./types";
+import { internalApiHeaders } from "./internal-api";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
+export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
 /**
  * Raised when the backend could not answer at all — 5xx, network failure,
@@ -82,7 +84,7 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
   let res: Response;
 
   try {
-    res = await fetch(url, { next: { revalidate } });
+    res = await fetch(url, { next: { revalidate }, headers: internalApiHeaders() });
   } catch (cause) {
     console.error(`[api] ${path} — backend unreachable`, cause);
     if (isBuildTime()) return null;
@@ -166,6 +168,11 @@ export async function getContentPage(slug: string): Promise<ContentPage | null> 
 }
 
 // The published FAQ (#111), theme by theme in the page's order.
+// The featured edition's organisers, alphabetical (#110).
+export async function getTeam(): Promise<{ year: number | null; members: TeamMember[] }> {
+  return (await fetchAPI<{ year: number | null; members: TeamMember[] }>("/api/team")) ?? { year: null, members: [] };
+}
+
 export async function getFaq(): Promise<FaqItem[]> {
   return (await fetchAPI<FaqItem[]>("/api/faq")) || [];
 }
@@ -191,6 +198,11 @@ export async function getCfpSettings(): Promise<CfpSettings> {
 
 export async function getContactCategories(): Promise<ContactCategory[]> {
   return (await fetchAPI<ContactCategory[]>("/api/contact/categories")) || [];
+}
+
+// The menu's top-level order set in the admin (#606). Empty: the code's order.
+export async function getNavOrder(): Promise<string[]> {
+  return (await fetchAPI<{ order: string[] }>("/api/settings/nav-order"))?.order ?? [];
 }
 
 export async function getSocialLinks(): Promise<SocialLinks> {
@@ -257,6 +269,11 @@ export async function getSpeakerBySlug(slug: string): Promise<SpeakerDetail | nu
 // exact same set by construction.
 export async function getHallOfFame(): Promise<HallOfFameEntry[]> {
   return (await fetchAPI<HallOfFameEntry[]>("/api/speakers/hall-of-fame")) || [];
+}
+
+// Every company that ever sponsored (#611). Also feeds the sitemap entry.
+export async function getSponsorsHallOfFame(): Promise<SponsorHallOfFameEntry[]> {
+  return (await fetchAPI<SponsorHallOfFameEntry[]>("/api/sponsors/hall-of-fame")) || [];
 }
 
 export async function getTalkBySlug(slug: string): Promise<TalkDetail | null> {

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import type { AdminSponsorTier } from "@/lib/types";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
+import PublicationSwitch from "@/components/admin/PublicationSwitch";
 
 import { inputClass, removeButtonClass, type SponsorFormValue } from "./sponsor-form-shared";
 
@@ -14,6 +15,10 @@ interface SponsorParticipationFieldsProps {
   // The year being edited. Shown on the fields whose scope it is, because the
   // whole point of the split is that "the logo" is never the company's logo.
   year: number | null;
+  // The participation as stored, and the company's slug for the preview of a
+  // draft (#632). Absent while the company is being created.
+  savedStatus?: "DRAFT" | "PUBLISHED";
+  sponsorSlug?: string;
 }
 
 // What this company bought for ONE edition (#393). These columns live on
@@ -24,6 +29,8 @@ export default function SponsorParticipationFields({
   onChange,
   tiers,
   year,
+  savedStatus,
+  sponsorSlug,
 }: SponsorParticipationFieldsProps) {
   const [isLogoPickerOpen, setIsLogoPickerOpen] = useState(false);
 
@@ -87,15 +94,17 @@ export default function SponsorParticipationFields({
         </div>
       </div>
 
-      <label className="flex items-center gap-2 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={value.publicationStatus === "PUBLISHED"}
-          onChange={(e) => onChange({ ...value, publicationStatus: e.target.checked ? "PUBLISHED" : "DRAFT" })}
-          className="rounded border-gris/30 text-malachite focus:ring-malachite"
+      <div>
+        <span className="block text-sm font-medium text-noir mb-1">Statut sur l&apos;édition{yearSuffix}</span>
+        <PublicationSwitch
+          label={`Statut de la participation${yearSuffix}`}
+          value={value.publicationStatus}
+          savedValue={savedStatus}
+          unpublishMessage={`Retirer ${value.name || "ce sponsor"} du site pour${yearSuffix || " cette édition"} ? Il n'y sera plus visible après l'enregistrement.`}
+          previewHref={sponsorSlug ? `/api/preview?type=sponsor&slug=${encodeURIComponent(sponsorSlug)}` : null}
+          onChange={(publicationStatus) => onChange({ ...value, publicationStatus })}
         />
-        <span className="text-sm text-noir">Publié sur l&apos;édition{yearSuffix} (visible sur le site)</span>
-      </label>
+      </div>
 
       <ImagePickerDialog
         open={isLogoPickerOpen}

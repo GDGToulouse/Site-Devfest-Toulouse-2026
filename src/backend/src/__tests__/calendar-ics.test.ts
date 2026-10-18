@@ -70,8 +70,8 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await prisma.talk.deleteMany({ where: { editionId } });
-  await prisma.edition.deleteMany({ where: { id: editionId } });
+  if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
+  if (editionId !== undefined) await prisma.edition.deleteMany({ where: { id: editionId } });
   await prisma.venue.deleteMany({ where: { name: `Lieu agenda ${TEST_YEAR}` } });
 });
 

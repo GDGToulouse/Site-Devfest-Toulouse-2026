@@ -27,7 +27,7 @@ describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
   });
 
   afterAll(async () => {
-    await prisma.speaker.deleteMany({ where: { id: speakerId } });
+    if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("accepts and persists a bluesky link", async () => {

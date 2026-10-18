@@ -11,7 +11,7 @@
 
 | Artifact | Support | Native representation |
 | --- | --- | --- |
-| Lot de développement | GitHub Issues | milestone `Lot N` |
+| Horizon de livraison | GitHub Issues | milestone `asap`, `next` ou `next-year` |
 | Bug | GitHub Issues | label `bug` |
 | Évolution | GitHub Issues | label `enhancement` |
 | Doc / question | GitHub Issues | label `documentation`, `question` |
@@ -26,8 +26,9 @@
 
 ## Planning
 
-- Priority: lots de développement et rétroplanning, `docs/priorisation-developpement.md`
-- Milestone: seulement si l'issue appartient au périmètre du lot ; jamais de milestone fourre-tout (`Backlog`, `v1.x`)
+- Milestone: horizon par rapport à la prochaine édition, seule date de planning. `asap` = engagé pour l'édition (le contenu des prochaines versions), `next` = si possible pour l'édition, sinon plus tard, `next-year` = pas pour cette édition ; aucun = pas encore planifiée. Ni milestone par version, ni fourre-tout
+- Priority: labels `priorité haute` / `priorité très faible`, pour l'ordre à l'intérieur d'un milestone
+- Les milestones `Lot 1`-`Lot 5` sont le découpage du périmètre initial 2026 (`docs/priorisation-developpement.md`) : plus de nouvelle issue dedans
 
 ## Relations
 

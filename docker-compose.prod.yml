@@ -23,6 +23,8 @@ services:
       # cache invalidation when the admin edits content). If unset, revalidation
       # is disabled and public pages stay cached until the s-maxage TTL.
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # Plausible analytics script URL. If unset, analytics stays off.
       - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
     expose:
@@ -89,11 +91,20 @@ services:
       # silently targets the wrong container (#232).
       - FRONTEND_URL=http://devfest-${ENV_NAME:-local}-frontend:3000
       - PORT=4000
+      # Proxies between the visitor and this backend (#663): Traefik, then the
+      # Next.js frontend, whose container is the socket peer. Traefik writes
+      # X-Forwarded-For and Next passes it on; the backend counts one hop back
+      # from the socket for `request.ip` (rate limits, history). Set it to the
+      # real chain: too low merges visitors into one bucket, too high lets them
+      # pick their address. Unset = 0 = trust nobody.
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-1}
       - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       - SESSION_SECRET=${SESSION_SECRET}
       - MAGIC_LINK_SECRET=${MAGIC_LINK_SECRET:-}
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # HMAC secret to sign per-message brochure download links sent by email.
       # If unset, confirmation emails fall back to the raw URL (no tracking).
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}

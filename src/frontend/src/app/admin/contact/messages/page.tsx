@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch, getAdminSession } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
+import ListPagination from "@/components/admin/ListPagination";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ContactCategories from "@/components/admin/ContactCategories";
 
@@ -35,11 +36,12 @@ interface MessagesResponse {
   totalPages: number;
 }
 
+const PAGE_SIZE = 50;
+
 export default function ContactMessagesPage() {
   const [activeTab, setActiveTab] = useState<"messages" | "categories">("messages");
   const [messages, setMessages] = useState<Message[]>([]);
   const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState<Message | null>(null);
@@ -65,11 +67,10 @@ export default function ContactMessagesPage() {
 
   async function loadMessages(p = 1) {
     setIsLoading(true);
-    const { data } = await adminFetch<MessagesResponse>(`/contact/messages?page=${p}&limit=50`);
+    const { data } = await adminFetch<MessagesResponse>(`/contact/messages?page=${p}&limit=${PAGE_SIZE}`);
     if (data) {
       setMessages(data.messages);
       setPage(data.page);
-      setTotalPages(data.totalPages);
       setTotal(data.total);
     }
     setIsLoading(false);
@@ -95,7 +96,8 @@ export default function ContactMessagesPage() {
     await adminFetch(`/contact/messages/${deleteTarget.id}`, { method: "DELETE" });
     if (selected?.id === deleteTarget.id) setSelected(null);
     setDeleteTarget(null);
-    loadMessages(page);
+    // The last message of a page gone: step back rather than show an empty page.
+    loadMessages(messages.length === 1 && page > 1 ? page - 1 : page);
   }
 
   async function handleForward() {
@@ -148,7 +150,7 @@ export default function ContactMessagesPage() {
 
   const categories = [...new Set(messages.map((m) => m.categoryLabel).filter(Boolean))] as string[];
 
-  if (isLoading && activeTab === "messages") return <p className="text-gris">Chargement...</p>;
+  if (isLoading && activeTab === "messages") return <p className="text-gris">Chargement…</p>;
 
   return (
     <div>
@@ -270,15 +272,8 @@ export default function ContactMessagesPage() {
             </div>
           )}
 
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-4 pt-3 border-t border-gris/20">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button key={p} onClick={() => loadMessages(p)} className={`px-3 py-1 rounded text-sm ${p === page ? "bg-malachite text-blanc" : "bg-blanc text-gris hover:bg-blanc-casse"}`}>
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
+          {/* "51–100 sur 327" rather than one button per page (#416). */}
+          <ListPagination page={page} limit={PAGE_SIZE} total={total} onPageChange={(next) => loadMessages(next)} />
         </div>
 
         {/* Message detail — 2 cols */}
@@ -391,7 +386,7 @@ export default function ContactMessagesPage() {
                       disabled={isForwarding || !forwardEmails.trim()}
                       className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
                     >
-                      {isForwarding ? "Envoi..." : "Envoyer"}
+                      {isForwarding ? "Envoi…" : "Envoyer"}
                     </button>
                   </div>
                 </div>

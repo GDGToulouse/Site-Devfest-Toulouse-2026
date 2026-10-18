@@ -74,7 +74,7 @@ export default function AdminDashboard() {
     loadStats();
   }, []);
 
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  if (isLoading) return <p className="text-gris">Chargement…</p>;
 
   return (
     <div className="space-y-10">

@@ -44,7 +44,7 @@ describe("Modification link of trashed content (#523)", () => {
 
   afterAll(async () => {
     await prisma.talk.deleteMany({ where: { id: { in: [liveTalkId, trashedTalkId] } } });
-    await prisma.speaker.deleteMany({ where: { id: speakerId } });
+    if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("should neither list nor edit a trashed session", async () => {

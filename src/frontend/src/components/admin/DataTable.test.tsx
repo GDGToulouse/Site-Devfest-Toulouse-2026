@@ -63,6 +63,16 @@ describe("DataTable", () => {
     expect(screen.queryByText("Modifier")).not.toBeInTheDocument();
   });
 
+  it("offers a read-only look at a row, named after it (#484)", async () => {
+    const onView = vi.fn();
+    render(<DataTable columns={columns} data={rows} onView={onView} />);
+
+    await userEvent.click(screen.getByRole("button", { name: "Consulter Bob" }));
+
+    expect(onView).toHaveBeenCalledWith(rows[1]);
+    expect(screen.getByRole("columnheader", { name: "Actions" })).toBeInTheDocument();
+  });
+
   it("stays non-selectable without selectedIds/onSelectionChange", () => {
     render(<DataTable columns={columns} data={rows} />);
     expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();

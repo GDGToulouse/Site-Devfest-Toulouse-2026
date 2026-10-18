@@ -5,6 +5,7 @@ import {
   type RoomOccupation,
 } from "../src/lib/room-clash.js";
 import { FAQ_DRAFTS } from "./faq-drafts.js";
+import { devSeedPassword } from "../src/lib/dev-seed-password.js";
 
 // Dev-only test accounts — see docs/comptes-dev-local.md
 const DEV_ACCOUNTS = [
@@ -122,6 +123,9 @@ async function seedDev() {
   if (process.env.NODE_ENV === "production") {
     throw new Error("seed-dev.ts is destructive and sets known passwords — never run it in production.");
   }
+  // Read before anything is written, so a deployed environment without its
+  // password fails without having half-seeded the database.
+  const seedPassword = devSeedPassword(process.env);
 
   // Run base seed first (contact categories, admin accounts) — but not the two
   // accounts below, which this script owns and gives a documented password
@@ -1210,8 +1214,8 @@ async function seedDev() {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
     if (existing) {
       await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
-      await applyDevPassword(existing.id, account.password);
-      console.log(`Dev account repaired: ${account.email} (${account.role}) — password: ${account.password}`);
+      await applyDevPassword(existing.id, seedPassword ?? account.password);
+      console.log(`Dev account repaired: ${account.email} (${account.role})`);
       continue;
     }
     {
@@ -1220,14 +1224,14 @@ async function seedDev() {
           body: {
             name: account.name,
             email: account.email,
-            password: account.password,
+            password: seedPassword ?? account.password,
           },
         });
         await prisma.user.update({
           where: { email: account.email },
           data: { role: account.role, emailVerified: true },
         });
-        console.log(`Dev account created: ${account.email} (${account.role}) — password: ${account.password}`);
+        console.log(`Dev account created: ${account.email} (${account.role})`);
       } catch (err) {
         await prisma.user.create({
           data: { email: account.email, name: account.name, role: account.role },
@@ -1247,7 +1251,7 @@ async function seedDev() {
       update: { name: account.name, role: "SPONSOR", emailVerified: true },
       create: { email: account.email, name: account.name, role: "SPONSOR", emailVerified: true },
     });
-    await applyDevPassword(user.id, account.password);
+    await applyDevPassword(user.id, seedPassword ?? account.password);
 
     for (const link of account.contacts) {
       const sponsor = await prisma.sponsor.findUniqueOrThrow({ where: { slug: link.sponsorSlug } });
@@ -1269,7 +1273,7 @@ async function seedDev() {
       }
     }
     const companies = account.contacts.map((c) => `${c.sponsorSlug} (${c.accessRole})`).join(", ");
-    console.log(`Dev sponsor account: ${account.email} — password: ${account.password} — ${companies}`);
+    console.log(`Dev sponsor account: ${account.email} — ${companies}`);
   }
 
   // The FAQ drafts (#111), once: a reseed must not duplicate them nor undo

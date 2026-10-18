@@ -19,7 +19,9 @@
     "jobOffers": "Job offers",
     "venue": "Venue",
     "blog": "News",
-    "faq": "FAQ"
+    "faq": "FAQ",
+    "team": "Team",
+    "sponsorsHallOfFame": "Hall of fame"
   },
   "cta": {
     "becomeSponsor": "Become a sponsor",
@@ -116,8 +118,10 @@
     "legalNotice": "Legal notice",
     "codeOfConduct": "Code of conduct",
     "sitemap": "Sitemap",
+    "sourceCode": "Source code",
     "replays": "Replays",
-    "hallOfFame": "Hall of fame"
+    "hallOfFame": "Hall of fame",
+    "sponsorsHallOfFame": "Sponsors hall of fame"
   },
   "notFound": {
     "title": "Page not found",
@@ -549,5 +553,40 @@
       "PRACTICAL": "On site",
       "OTHER": "Other questions"
     }
+  },
+  "team": {
+    "home": "Home",
+    "pageTitle": "The team",
+    "metaTitle": "Team",
+    "description": "The GDG Toulouse volunteers who organise DevFest Toulouse.",
+    "intro": "DevFest Toulouse is organised by volunteers from GDG Toulouse.",
+    "introYear": "DevFest Toulouse {year} is organised by volunteers from GDG Toulouse.",
+    "empty": "The team will be introduced soon.",
+    "website": "Website",
+    "linkedin": "LinkedIn",
+    "twitter": "X (Twitter)",
+    "github": "GitHub",
+    "bluesky": "Bluesky",
+    "linkOf": "{name}'s {network}"
+  },
+  "preview": {
+    "label": "Preview — unpublished content",
+    "exit": "Exit preview"
+  },
+  "sponsorsHallOfFame": {
+    "title": "Sponsors hall of fame",
+    "heading": "Sponsors hall of fame",
+    "description": "Every company that has supported DevFest Toulouse since 2016: {count} partners across all editions.",
+    "intro": "{count} companies have supported DevFest Toulouse since 2016.",
+    "home": "Home",
+    "sponsors": "Sponsors",
+    "empty": "No sponsor for this edition.",
+    "allYears": "All editions",
+    "filterLabel": "Filter by edition",
+    "countLabel": "{count, plural, one {# company} other {# companies}}",
+    "sortLabel": "Sort",
+    "sortByName": "By name",
+    "sortByParticipations": "By participations",
+    "editions": "{count, plural, one {# edition} other {# editions}}"
   }
 }

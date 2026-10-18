@@ -250,7 +250,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
     }
   }
 
-  if (isLoading) return <p className="text-gris text-sm">Chargement...</p>;
+  if (isLoading) return <p className="text-gris text-sm">Chargement…</p>;
 
   return (
     <div>
@@ -316,7 +316,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
           <div className="flex gap-3 justify-end">
             <button onClick={() => setShowForm(false)} className="px-4 py-2 text-sm rounded-lg border border-gris/30 text-gris hover:bg-blanc-casse">Annuler</button>
             <button onClick={handleSave} disabled={isSaving} className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50">
-              {isSaving ? "Sauvegarde..." : "Sauvegarder"}
+              {isSaving ? "Enregistrement…" : "Enregistrer"}
             </button>
           </div>
         </div>
@@ -408,7 +408,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                 disabled={!selectedEvent || isImporting}
                 className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
               >
-                {isImporting ? "Import en cours..." : "Importer"}
+                {isImporting ? "Import en cours…" : "Importer"}
               </button>
             </div>
           </div>

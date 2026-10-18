@@ -80,7 +80,7 @@ export default function CategoriesDataPage() {
       </div>
 
       {isLoading ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <div className="mb-4 flex flex-wrap items-center gap-3">

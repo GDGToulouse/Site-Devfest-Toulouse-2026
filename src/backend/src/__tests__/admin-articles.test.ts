@@ -6,12 +6,27 @@ import { prisma } from "../lib/prisma.js";
 // moves the row to the trash, so every run used to leave its fixtures behind —
 // they piled up run after run, and their parked slugs kept holding the unique
 // index. Purge them for real once the file is done.
+//
+// Only this file's own rows: a parked slug reads `__trash_<id>__<slug>`, and
+// purging every trashed article removed the one trash-endpoints.test.ts had
+// just put in the trash while it was being listed, failing the CI at random.
+const ARTICLE_PREFIXES = [
+  "test-article-",
+  "dated-article-",
+  "now-article-",
+  "dup-test-",
+  "fr-only-",
+  "publish-gate-",
+  "direct-publish-",
+  "draft-permissive-",
+];
+
 afterAll(async () => {
   await prisma.article.deleteMany({
-    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+    where: { deletedAt: { not: null }, OR: ARTICLE_PREFIXES.map((p) => ({ slug: { contains: `__${p}` } })) },
   });
   await prisma.tag.deleteMany({
-    where: { deletedAt: { not: null }, slug: { contains: "__trash_" } },
+    where: { deletedAt: { not: null }, slug: { contains: "__test-tag-" } },
   });
 });
 
@@ -302,5 +317,27 @@ describe("Admin Articles API", () => {
     expect(delRes.statusCode).toBe(200);
 
     await app.close();
+  });
+});
+
+// #415 — the articles list had no way to find an article but paging through it.
+describe("GET /api/admin/articles — search (#415)", () => {
+  it("finds an article by its title in either language or by its author", async () => {
+    const app = await buildAdminApp();
+    const tag = `search-${Date.now()}`;
+    const article = await prisma.article.create({
+      data: { slug: tag, titleFr: `Titre ${tag}`, titleEn: "English title", author: "Grace Hopper", contentFr: "", contentEn: "" },
+    });
+
+    const byEnglishTitle = await app.inject({ method: "GET", url: `/api/admin/articles?search=english title` });
+    const byAuthor = await app.inject({ method: "GET", url: `/api/admin/articles?search=grace hopper` });
+    const byFrenchTitle = await app.inject({ method: "GET", url: `/api/admin/articles?search=${tag}` });
+    await prisma.article.delete({ where: { id: article.id } });
+    await app.close();
+
+    const ids = (res: { json: () => { articles: { id: number }[] } }) => res.json().articles.map((a) => a.id);
+    expect(ids(byEnglishTitle)).toContain(article.id);
+    expect(ids(byAuthor)).toContain(article.id);
+    expect(ids(byFrenchTitle)).toEqual([article.id]);
   });
 });

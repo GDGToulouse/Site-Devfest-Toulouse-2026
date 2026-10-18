@@ -22,12 +22,26 @@ describe("imageDataUri (#600)", () => {
     expect(uri).toBe("data:image/png;base64,AQID");
   });
 
-  it("should fetch an absolute URL as it is", async () => {
+  // The URL comes from data a speaker or a sponsor typed, and these cards are
+  // public: fetching it would let anyone make the server call any address.
+  it("should not fetch an absolute URL, so the card draws its fallback", async () => {
     const fetchMock = stubFetch(new Response(new Uint8Array([1]), { headers: { "content-type": "image/jpeg" } }));
 
-    await imageDataUri("https://cdn.example/photo.jpg");
+    const uri = await imageDataUri("http://127.0.0.1:4000/api/health");
 
-    expect(fetchMock.mock.calls[0][0]).toBe("https://cdn.example/photo.jpg");
+    expect(uri).toBeNull();
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should give up on an upload whose declared size is over the ceiling, before reading it", async () => {
+    const response = new Response(new Uint8Array([1]), {
+      headers: { "content-type": "image/png", "content-length": String(64 * 1024 * 1024) },
+    });
+    const read = vi.spyOn(response, "arrayBuffer");
+    stubFetch(response);
+
+    expect(await imageDataUri("/uploads/huge.png")).toBeNull();
+    expect(read).not.toHaveBeenCalled();
   });
 
   it("should give up on a missing image so the card draws its fallback", async () => {
@@ -40,5 +54,24 @@ describe("imageDataUri (#600)", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("fetch failed")));
 
     expect(await imageDataUri("/uploads/photo.png")).toBeNull();
+  });
+});
+
+// #116 — a sponsor's logo can be one of the site's own static files, which the
+// backend does not serve.
+describe("imageDataUri — static files (#116)", () => {
+  it("should read a file of public/ from disk rather than from the backend", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const uri = await imageDataUri("/images/sponsors/aeronova-systems.svg");
+
+    expect(uri).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("should refuse a path that climbs out of public/", async () => {
+    expect(await imageDataUri("/../package.json")).toBeNull();
+    expect(await imageDataUri("/images/../../next.config.ts")).toBeNull();
   });
 });

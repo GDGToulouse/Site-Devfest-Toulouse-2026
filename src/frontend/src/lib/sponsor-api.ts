@@ -94,6 +94,10 @@ interface Result<T> {
   data: T | null;
   status: number;
   error?: string;
+  // Fastify's schema rejections carry error "Bad Request" only; the field at
+  // fault is in code + message (#610).
+  code?: string;
+  message?: string;
 }
 
 async function call<T>(path: string, options: RequestInit = {}): Promise<Result<T>> {
@@ -111,7 +115,13 @@ async function call<T>(path: string, options: RequestInit = {}): Promise<Result<
 
     if (!res.ok) {
       const body = await res.json().catch(() => null);
-      return { data: null, status: res.status, ...(body?.error ? { error: body.error } : {}) };
+      return {
+        data: null,
+        status: res.status,
+        ...(body?.error ? { error: body.error } : {}),
+        ...(body?.code ? { code: body.code } : {}),
+        ...(body?.message ? { message: body.message } : {}),
+      };
     }
 
     return { data: (await res.json()) as T, status: res.status };
@@ -136,11 +146,12 @@ export function getSponsorAccount() {
   return call<SponsorAccount>("/api/sponsor-space/me");
 }
 
-// Same better-auth endpoint as the admin profile page; it serves any account.
+// Same better-auth endpoint as the admin profile page; it serves any account,
+// and signs out the account's other sessions, as the admin page does (#658).
 export function changeSponsorPassword(currentPassword: string, newPassword: string) {
   return call<unknown>("/api/auth/change-password", {
     method: "POST",
-    body: JSON.stringify({ currentPassword, newPassword }),
+    body: JSON.stringify({ currentPassword, newPassword, revokeOtherSessions: true }),
   });
 }
 
@@ -255,19 +266,19 @@ export async function uploadSponsorFile(
 // signInWithEmail, which only authenticates an account that already exists —
 // a sponsor arriving from an invitation has none yet.
 //
-// The server accepts this only for an address holding a live invitation; any
-// other one is refused by the user.create.before hook in auth.ts.
-export async function signUpWithEmail(
-  email: string,
+// Through the invitation's token, not better-auth's sign-up: the token proves
+// the mailbox, and the account is created for the invited address, whatever
+// the form says (#658). The answer carries the new session's cookie.
+export async function signUpWithInvitation(
+  token: string,
   password: string,
-  name: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch("/api/auth/sign-up/email", {
+    const res = await fetch(`/api/sponsor-invitation/${encodeURIComponent(token)}/sign-up`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
+      body: JSON.stringify({ password }),
     });
     if (res.ok) return { success: true };
 

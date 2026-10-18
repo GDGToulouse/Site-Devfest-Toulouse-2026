@@ -70,6 +70,8 @@ Livrable de cette étape : une **cause racine confirmée**, avec `fichier:ligne`
 
 Si un label domaine pertinent n'existe pas encore, **proposer de le créer** (Step 5) plutôt que d'en coller un approximatif.
 
+**Milestone** (à proposer, pas obligatoire) : est-ce pour la prochaine édition ? Oui, on s'y engage → `asap` · Si possible, sans garantie → `next` · Non → `next-year` · Ne sait pas → aucun. Le choix revient au propriétaire du projet : le poser en question (Step 3 a), avec le « (Recommandé) » issu du test. Jamais de `Lot N` ni d'autre milestone. Règle complète : [`docs/cycle-de-vie-issues.md`](../../../docs/cycle-de-vie-issues.md) § « Rattachement au milestone ».
+
 ## Step 3 — (si nécessaire) Interviewer sur les choix ouverts
 
 **Deux destinataires distincts — ne pas les confondre.**
@@ -114,20 +116,22 @@ gh label create "admin" --color "5319e7" --description "Interface d'administrati
 Puis poser les labels sur l'issue :
 
 ```bash
-gh issue edit <number> --add-label bug --add-label admin
+gh issue edit <number> --add-label bug --add-label admin --milestone asap
 ```
+
+`--milestone` seulement si le propriétaire a choisi un horizon ; sans réponse, ne pas en poser.
 
 Confirmer :
 
 ```bash
-gh issue view <number> --json number,title,labels --jq '{n:.number, labels:[.labels[].name]}'
+gh issue view <number> --json number,title,labels,milestone --jq '{n:.number, labels:[.labels[].name], milestone:.milestone.title}'
 ```
 
 **Une issue qualifiée sans label posé n'est pas terminée** — revenir à cette étape avant de conclure.
 
 ## Step 6 — Récapituler
 
-Pour un lot, présenter un tableau de synthèse (numéro, type, cause racine en une phrase, complexité) et lister les labels posés. Signaler :
+Pour un lot, présenter un tableau de synthèse (numéro, type, cause racine en une phrase, complexité) et lister les labels et milestones posés. Signaler :
 - les **bugs systémiques** (une même cause touche plusieurs endroits — ex. un pattern répété sur tous les champs optionnels d'un formulaire) ;
 - les **décisions en attente** (questions de scope non tranchées) ;
 - toute erreur d'un agent que tu as corrigée (fiabilité).
@@ -137,7 +141,7 @@ Pour un lot, présenter un tableau de synthèse (numéro, type, cause racine en 
 ## Conventions transverses
 
 - **Langue** : français (code/commits en anglais, cf. CLAUDE.md).
-- **Liens** : `[fichier.tsx](src/frontend/src/...)` ou `[fichier.ts:42](src/backend/src/...#L42)`, relatifs à la racine du repo ; `#NN` pour les issues liées.
+- **Liens** : un chemin relatif (`src/...`) **ne fait pas de lien** dans un commentaire d'issue. Utiliser un permalien figé sur un commit poussé : `https://github.com/GDGToulouse/Site-Devfest-Toulouse-2026/blob/<sha>/src/backend/src/...#L42` (`git ls-remote origin <branche>` donne le SHA ; vérifier que les fichiers cités n'y diffèrent pas du local). Encoder les crochets d'un chemin Next (`[id]` → `%5Bid%5D`). `#NN` pour les issues liées.
 - **Citer du code vérifié** : `Read`/`Grep` avant d'affirmer une ligne comme cause racine.
 - **Pas de secrets** : jamais de tokens, mots de passe, `DATABASE_URL`, secrets OAuth/SMTP dans un commentaire.
 - **Git** : commandes `gh`/`git` chacune dans son propre appel Bash, jamais chaînées avec `&&` ni `cd`.

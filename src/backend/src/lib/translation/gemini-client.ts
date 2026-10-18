@@ -83,13 +83,15 @@ export async function callGemini(params: GeminiCallParams): Promise<GeminiCallRe
     },
   };
 
-  const url = `${ENDPOINT}/${params.model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  // The key travels as a header: in the query string it landed in every log
+  // that records URLs (#658).
+  const url = `${ENDPOINT}/${params.model}:generateContent`;
 
   let res: Response;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify(body),
     });
   } catch (err) {

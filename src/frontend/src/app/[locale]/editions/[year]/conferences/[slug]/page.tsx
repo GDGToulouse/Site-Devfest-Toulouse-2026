@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getEditionByYear, getEditionTalkBySlug } from "@/lib/api";
+import { getCurrentEdition, getEditionByYear } from "@/lib/api";
+import { getEditionTalkPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
 import { buildVideoJsonLd, canonicalLocaleFor, jsonLdScript } from "@/lib/seo";
@@ -27,7 +28,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { year, slug } = await params;
   const locale = await getLocale();
-  const talk = await getEditionTalkBySlug(Number(year), slug);
+  const talk = await getEditionTalkPage(Number(year), slug);
 
   if (!talk) return { title: "Session not found" };
 
@@ -54,7 +55,15 @@ export default async function EditionTalkDetailPage({
   const yearNum = Number(year);
   if (!Number.isInteger(yearNum)) notFound();
 
-  const talk = await getEditionTalkBySlug(yearNum, slug);
+  // One page per talk of the featured edition (#633): two pages cached apart
+  // drifted, one of them missing a speaker. Temporary on purpose — the
+  // featured edition moves on each year, and a remembered permanent redirect
+  // would keep sending this address to /conferences once it 404s there.
+  if (yearNum === (await getCurrentEdition())?.year) {
+    redirect(`/${locale}/conferences/${encodeURIComponent(slug)}`);
+  }
+
+  const talk = await getEditionTalkPage(yearNum, slug);
   if (!talk) notFound();
 
   // A replay as a VideoObject (#382). Its upload date is the edition's: a

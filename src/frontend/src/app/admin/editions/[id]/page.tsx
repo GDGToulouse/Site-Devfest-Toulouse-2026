@@ -89,7 +89,7 @@ export default function EditionDetailPage() {
     if (!isNaN(editionId)) loadEdition();
   }, [editionId]);
 
-  if (isLoading || !edition) return <p className="text-gris">Chargement...</p>;
+  if (isLoading || !edition) return <p className="text-gris">Chargement…</p>;
 
   const statusInfo = editionStatusInfo(edition.status);
 

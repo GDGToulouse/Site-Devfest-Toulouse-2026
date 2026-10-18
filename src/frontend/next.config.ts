@@ -8,6 +8,8 @@ const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 const plausibleOrigin = plausibleSrc ? new URL(plausibleSrc).origin : "";
 
 const nextConfig: NextConfig = {
+  // No `X-Powered-By: Next.js`: it names the stack to whoever probes it (#658).
+  poweredByHeader: false,
   // The backend accepts up to 20 MB per upload (see admin/files.ts).
   // Next.js' default of 10 MB on proxied bodies would silently truncate
   // multipart payloads and break image uploads — bump it past 20 MB plus
@@ -131,6 +133,11 @@ const nextConfig: NextConfig = {
         source: "/api/faq",
         destination: `${backendUrl}/api/faq`,
       },
+      // The organisers' team (#110).
+      {
+        source: "/api/team",
+        destination: `${backendUrl}/api/team`,
+      },
       {
         source: "/api/categories",
         destination: `${backendUrl}/api/categories`,
@@ -182,8 +189,13 @@ const nextConfig: NextConfig = {
         ],
       },
       // Cache-Control: homepage — short cache (5 min)
+      // Both public rules stand aside in draft preview (#618): Next sends that
+      // page `private, no-store`, which these rules would otherwise overwrite
+      // with an s-maxage — a shared cache could then serve a draft to anyone.
+      // The cookie is Next's own draft-mode marker.
       {
         source: "/:locale(fr|en)",
+        missing: [{ type: "cookie", key: "__prerender_bypass" }],
         headers: [
           { key: "Cache-Control", value: "s-maxage=300, stale-while-revalidate=60" },
         ],
@@ -201,6 +213,7 @@ const nextConfig: NextConfig = {
       // cached for an hour. Serve 5xx with `no-store` at that layer.
       {
         source: "/:locale(fr|en)/:path+",
+        missing: [{ type: "cookie", key: "__prerender_bypass" }],
         headers: [
           { key: "Cache-Control", value: "s-maxage=3600, stale-while-revalidate=60" },
         ],

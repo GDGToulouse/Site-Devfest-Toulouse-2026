@@ -20,6 +20,8 @@ services:
       # the admin's saves never purged anything here: every change waited for
       # the hour-long s-maxage, and a status switch looked broken.
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
     expose:
       - "3000"
     depends_on:
@@ -48,10 +50,22 @@ services:
       - BASE_URL=${BASE_URL}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # Proxies between the visitor and this backend (#663): Traefik, then the
+      # Next.js frontend, whose container is the socket peer. Traefik writes
+      # X-Forwarded-For and Next passes it on; the backend counts one hop back
+      # from the socket for `request.ip` (rate limits, history). Set it to the
+      # real chain: too low merges visitors into one bucket, too high lets them
+      # pick their address. Unset = 0 = trust nobody.
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-1}
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
-      - SESSION_SECRET=${SESSION_SECRET:-change-me-session-secret-min-32-chars}
+      # No default: a public one would sign dev-j's sessions (#658). The
+      # backend refuses to start without it once it is told it runs deployed
+      # (NODE_ENV=production, or an ENV_NAME other than "local").
+      - SESSION_SECRET=${SESSION_SECRET:-}
       - OAUTH_GOOGLE_CLIENT_ID=${OAUTH_GOOGLE_CLIENT_ID:-}
       - OAUTH_GOOGLE_CLIENT_SECRET=${OAUTH_GOOGLE_CLIENT_SECRET:-}
       - OAUTH_GITHUB_CLIENT_ID=${OAUTH_GITHUB_CLIENT_ID:-}
@@ -66,6 +80,12 @@ services:
       # ADMIN session — the purge stops running, nothing opens up.
       - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}
       - TRASH_RETENTION_DAYS=${TRASH_RETENTION_DAYS:-}
+      # seed-dev.ts gives its demo accounts DEV_SEED_PASSWORD here: the
+      # documented ones are public. A named environment without it makes the
+      # seed fail, and db-boot.sh stops the backend (#658). Unset ENV_NAME falls
+      # back on "dev", not "local", so it never reopens the documented ones.
+      - ENV_NAME=${ENV_NAME:-dev}
+      - DEV_SEED_PASSWORD=${DEV_SEED_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy
@@ -104,6 +124,24 @@ services:
   mailhog:
     image: mailhog/mailhog:latest
     container_name: devfest-${ENV_NAME:-local}-mailhog
+    # Its UI and API are public behind Traefik and hold every e-mail the
+    # environment sends, sign-in links included: HTTP auth is mandatory here
+    # (#658). MailHog wants a `user:bcrypt` file; it is written at start from
+    # two plain variables, hashed by MailHog itself, so no `$` of a bcrypt
+    # hash has to survive Coolify's variable handling. SMTP stays open to the
+    # backend. The local compose keeps MailHog without auth.
+    environment:
+      - MAILHOG_USER=${MAILHOG_USER:-}
+      - MAILHOG_PASSWORD=${MAILHOG_PASSWORD:-}
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        if [ -z "$$MAILHOG_USER" ] || [ -z "$$MAILHOG_PASSWORD" ]; then
+          echo "MAILHOG_USER and MAILHOG_PASSWORD are required: MailHog will not start unprotected." >&2
+          exit 1
+        fi
+        printf '%s:%s\n' "$$MAILHOG_USER" "$$(MailHog bcrypt "$$MAILHOG_PASSWORD")" > /tmp/mailhog-auth
+        exec MailHog -auth-file=/tmp/mailhog-auth
     expose:
       - "8025"
     networks:

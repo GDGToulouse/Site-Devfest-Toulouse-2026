@@ -3,6 +3,105 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { notDeleted, parseSocialLinks } from "../lib/admin-helpers.js";
 
+// The person's page, shared by the public route and the team's draft preview
+// (#618). `includeDrafts` lifts every publication filter, the trash ones stay:
+// the preview shows the page as it will read once everything is published.
+export async function findSpeakerPage(slug: string, { includeDrafts = false } = {}) {
+  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  const speaker = await prisma.speaker.findFirst({
+    where: {
+      slug,
+      ...notDeleted,
+      editions: { some: { ...published, edition: notDeleted } },
+    },
+    include: {
+      // Nested reads need their own filter: a query extension would not reach
+      // them (Prisma applies those to the top-level operation only).
+      //
+      // `edition: notDeleted` is required here since #352: the route used to
+      // resolve getFeaturedEdition(), which already filtered the trash. Now
+      // that it spans every year, a trashed edition would resurface.
+      editions: {
+        where: { ...published, edition: notDeleted },
+        select: {
+          isFeatured: true,
+          editionId: true,
+          edition: { select: { year: true } },
+          // Per-edition since #353: the employer of that year, not the latest
+          // one. publicationStatus left the identity for the participation
+          // (#129), so "published" now means published for THAT year, not any
+          // year — a sponsor in draft for 2019 must not surface on a 2019 card
+          // merely because it is published in 2026. A to-one relation takes no
+          // `where` in a select, hence the nested participation list here.
+          sponsor: {
+            select: {
+              slug: true,
+              name: true,
+              deletedAt: true,
+              editions: { select: { editionId: true, publicationStatus: true } },
+            },
+          },
+        },
+        orderBy: { edition: { year: "desc" } },
+      },
+      talks: {
+        where: { ...published, ...notDeleted, edition: notDeleted },
+        // level/language/category describe the session the same way the talk
+        // page does (#359). level is nullable — 42 of the imported talks carry
+        // none — so the client must treat it as optional.
+        select: {
+          slug: true,
+          title: true,
+          format: true,
+          level: true,
+          language: true,
+          videoUrl: true,
+          category: { select: { nameFr: true, nameEn: true, color: true } },
+          edition: { select: { year: true } },
+        },
+        orderBy: { title: "asc" },
+      },
+    },
+  });
+
+  if (!speaker) return null;
+
+  // Talks are filed into the years the person is actually published on. A talk
+  // whose year has no published participation is dropped, never given a
+  // section of its own — otherwise a draft year would leak through its talks.
+  const byYear = new Map(speaker.editions.map((link) => [link.edition.year, [] as typeof speaker.talks]));
+  for (const talk of speaker.talks) {
+    byYear.get(talk.edition.year)?.push(talk);
+  }
+
+  return {
+    id: speaker.id,
+    slug: speaker.slug,
+    name: speaker.name,
+    photoUrl: speaker.photoUrl,
+    company: speaker.company,
+    city: speaker.city,
+    bioFr: speaker.bioFr,
+    bioEn: speaker.bioEn,
+    socialLinks: parseSocialLinks(speaker.socialLinks),
+    participations: speaker.editions.map((link) => ({
+      year: link.edition.year,
+      isFeatured: link.isFeatured,
+      // The employer of that year (#353). Hidden unless the sponsor is out of
+      // the trash and published for THIS year specifically — not "published on
+      // any year" (#129 moved publicationStatus off the identity).
+      sponsor: (() => {
+        if (!link.sponsor || link.sponsor.deletedAt) return null;
+        const thatYear = link.sponsor.editions.find((e) => e.editionId === link.editionId);
+        return thatYear && (includeDrafts || thatYear.publicationStatus === "PUBLISHED")
+          ? { slug: link.sponsor.slug, name: link.sponsor.name }
+          : null;
+      })(),
+      talks: (byYear.get(link.edition.year) ?? []).map(({ edition, ...talk }) => talk),
+    })),
+  };
+}
+
 export default async function speakerRoutes(app: FastifyInstance) {
   // GET /api/speakers — published speakers of the featured edition, alphabetical.
   app.get("/speakers", async (_request, reply) => {
@@ -88,97 +187,8 @@ export default async function speakerRoutes(app: FastifyInstance) {
       params: { type: "object", required: ["slug"], properties: { slug: { type: "string" } } },
     },
   }, async (request, reply) => {
-    const speaker = await prisma.speaker.findFirst({
-      where: {
-        slug: request.params.slug,
-        ...notDeleted,
-        editions: { some: { publicationStatus: "PUBLISHED", edition: notDeleted } },
-      },
-      include: {
-        // Nested reads need their own filter: a query extension would not reach
-        // them (Prisma applies those to the top-level operation only).
-        //
-        // `edition: notDeleted` is required here since #352: the route used to
-        // resolve getFeaturedEdition(), which already filtered the trash. Now
-        // that it spans every year, a trashed edition would resurface.
-        editions: {
-          where: { publicationStatus: "PUBLISHED", edition: notDeleted },
-          select: {
-            isFeatured: true,
-            editionId: true,
-            edition: { select: { year: true } },
-            // Per-edition since #353: the employer of that year, not the latest
-            // one. publicationStatus left the identity for the participation
-            // (#129), so "published" now means published for THAT year, not any
-            // year — a sponsor in draft for 2019 must not surface on a 2019 card
-            // merely because it is published in 2026. A to-one relation takes no
-            // `where` in a select, hence the nested participation list here.
-            sponsor: {
-              select: {
-                slug: true,
-                name: true,
-                deletedAt: true,
-                editions: { select: { editionId: true, publicationStatus: true } },
-              },
-            },
-          },
-          orderBy: { edition: { year: "desc" } },
-        },
-        talks: {
-          where: { publicationStatus: "PUBLISHED", ...notDeleted, edition: notDeleted },
-          // level/language/category describe the session the same way the talk
-          // page does (#359). level is nullable — 42 of the imported talks carry
-          // none — so the client must treat it as optional.
-          select: {
-            slug: true,
-            title: true,
-            format: true,
-            level: true,
-            language: true,
-            videoUrl: true,
-            category: { select: { nameFr: true, nameEn: true, color: true } },
-            edition: { select: { year: true } },
-          },
-          orderBy: { title: "asc" },
-        },
-      },
-    });
-
-    if (!speaker) return reply.status(404).send({ error: "Speaker not found" });
-
-    // Talks are filed into the years the person is actually published on. A talk
-    // whose year has no published participation is dropped, never given a
-    // section of its own — otherwise a draft year would leak through its talks.
-    const byYear = new Map(speaker.editions.map((link) => [link.edition.year, [] as typeof speaker.talks]));
-    for (const talk of speaker.talks) {
-      byYear.get(talk.edition.year)?.push(talk);
-    }
-
-    return {
-      id: speaker.id,
-      slug: speaker.slug,
-      name: speaker.name,
-      photoUrl: speaker.photoUrl,
-      company: speaker.company,
-      city: speaker.city,
-      bioFr: speaker.bioFr,
-      bioEn: speaker.bioEn,
-      socialLinks: parseSocialLinks(speaker.socialLinks),
-      participations: speaker.editions.map((link) => ({
-        year: link.edition.year,
-        isFeatured: link.isFeatured,
-        // The employer of that year (#353). Hidden unless the sponsor is out of
-        // the trash and published for THIS year specifically — not "published on
-        // any year" (#129 moved publicationStatus off the identity).
-        sponsor: (() => {
-          if (!link.sponsor || link.sponsor.deletedAt) return null;
-          const thatYear = link.sponsor.editions.find((e) => e.editionId === link.editionId);
-          return thatYear?.publicationStatus === "PUBLISHED"
-            ? { slug: link.sponsor.slug, name: link.sponsor.name }
-            : null;
-        })(),
-        talks: (byYear.get(link.edition.year) ?? []).map(({ edition, ...talk }) => talk),
-      })),
-    };
+    const page = await findSpeakerPage(request.params.slug);
+    if (!page) return reply.status(404).send({ error: "Speaker not found" });
+    return page;
   });
 }

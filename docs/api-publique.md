@@ -67,6 +67,8 @@ Si un administrateur rétrograde un utilisateur à `EDITOR`, **tous ses jetons p
 curl https://devfesttoulouse.fr/api/editions
 curl https://devfesttoulouse.fr/api/editions/current
 curl https://devfesttoulouse.fr/api/faq
+curl https://devfesttoulouse.fr/api/team?year=2026
+curl https://devfesttoulouse.fr/api/sponsors/hall-of-fame
 curl https://devfesttoulouse.fr/api/articles/latest?limit=4
 ```
 
@@ -93,6 +95,18 @@ curl -X POST https://devfesttoulouse.fr/api/admin/articles \
   }'
 ```
 
+### Importer un fichier depuis une URL (ADMIN ou EDITOR)
+
+Le serveur télécharge le fichier et le range dans la médiathèque, comme un téléversement (#617). Utile depuis le connecteur MCP, dont `call_route` n'envoie que du JSON. Images (JPEG, PNG, WebP, GIF, SVG, ICO) et PDF, 20 Mo au plus ; le type est lu dans le contenu, et les adresses privées sont refusées, redirections comprises.
+
+```bash
+curl -X POST https://devfesttoulouse.fr/api/admin/files/import-url \
+  -H "Authorization: Bearer dft_live_XXXXXXXX" \
+  -H "Content-Type: application/json" \
+  -d '{ "url": "https://exemple.org/logo.png", "alt": "Logo Exemple" }'
+# → 201 { "filename": "…png", "url": "/uploads/…png", "mimetype": "image/png", … }
+```
+
 ### Poster un message de contact (public)
 
 ```bash
@@ -106,6 +120,13 @@ curl -X POST https://devfesttoulouse.fr/api/contact/send \
     "message": "Bonjour, je souhaite sponsoriser l'\''édition 2026."
   }'
 ```
+
+Débit : 5 messages par 15 minutes et par IP. La catégorie `sponsor-brochure` (formulaire « recevoir la brochure ») a en plus, parce qu'elle envoie un e-mail à une adresse non vérifiée (#662) :
+
+- **par adresse** : un envoi par heure. Une 2e demande pour la même adresse (casse ignorée) dans l'heure répond `200 { "success": true }` comme la première, sans rien enregistrer ni envoyer ;
+- **par IP** : 3 demandes valides par heure, ensuite `429` avec `Retry-After`.
+
+Les compteurs par IP sont en mémoire (un seul réplica) : un redémarrage les remet à zéro. Les autres catégories ne changent pas.
 
 ---
 

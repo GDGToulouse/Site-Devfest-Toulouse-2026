@@ -22,7 +22,7 @@
 | Programme / grille | Les créneaux (`ScheduleEntry`) d'une édition, par salle (`Room`) |
 | Replay | La vidéo YouTube d'un talk passé |
 | Corbeille | Suppression douce, avec purge différée |
-| Lot | Un lot de développement, suivi en milestone GitHub |
+| Lot | Un lot du périmètre initial 2026, suivi en milestone GitHub ; le travail suivant se range en `asap` / `next` / `next-year` |
 
 ## Key features
 

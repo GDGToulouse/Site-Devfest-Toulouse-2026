@@ -27,6 +27,7 @@ export const adminNavGroups: AdminNavGroup[] = [
       { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
       { label: "Conférences", path: "/admin/talks", icon: "microphone", roles: ["ADMIN", "EDITOR"] },
       { label: "Sponsors", path: "/admin/sponsors", icon: "handshake", roles: ["ADMIN", "EDITOR"] },
+      { label: "Offres d'emploi", path: "/admin/job-offers", icon: "briefcase", roles: ["ADMIN", "EDITOR"] },
       // An offer commits the association to a price: ADMIN-only like its API
       // writes (#521). Editors still read the catalogue from the sponsor form.
       { label: "Offres de sponsoring", path: "/admin/sponsor-tiers", icon: "star", roles: ["ADMIN"] },
@@ -38,7 +39,9 @@ export const adminNavGroups: AdminNavGroup[] = [
     items: [
       { label: "Articles", path: "/admin/articles", icon: "file-text", roles: ["ADMIN", "EDITOR"] },
       { label: "Pages", path: "/admin/pages", icon: "book", roles: ["ADMIN", "EDITOR"] },
+      { label: "Tags", path: "/admin/tags", icon: "tag", roles: ["ADMIN", "EDITOR"] },
       { label: "FAQ", path: "/admin/faq", icon: "question", roles: ["ADMIN", "EDITOR"] },
+      { label: "Équipe", path: "/admin/team", icon: "users", roles: ["ADMIN", "EDITOR"] },
       { label: "Fichiers", path: "/admin/files", icon: "image", roles: ["ADMIN", "EDITOR"] },
     ],
   },
@@ -63,6 +66,8 @@ export const adminNavGroups: AdminNavGroup[] = [
       // Who changed what, from which address: personal data, ADMIN only like
       // its API (#513).
       { label: "Historique", path: "/admin/history", icon: "clock", roles: ["ADMIN"] },
+      // The header is on every page: its order is an admin's call (#606).
+      { label: "Menu", path: "/admin/menu", icon: "bars", roles: ["ADMIN"] },
       { label: "Paramètres", path: "/admin/settings", icon: "settings", roles: ["ADMIN"] },
     ],
   },

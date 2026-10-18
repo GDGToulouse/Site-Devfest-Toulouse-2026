@@ -48,8 +48,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.talk.deleteMany({ where: { editionId } });
-  await prisma.speaker.deleteMany({ where: { id: speakerId } });
+  if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
+  if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   await prisma.edition.delete({ where: { id: editionId } });
   await prisma.venue.delete({ where: { name: VENUE } });
   await app.close();

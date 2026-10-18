@@ -2,13 +2,14 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
-import { isSafeUrl } from "../lib/sanitize.js";
+import { findUnsafeUrl } from "../lib/sanitize.js";
+import { revalidateSpeakers } from "../lib/revalidate.js";
 import {
-  revalidateConferences,
-  revalidateSpeakers,
-  revalidateSpeaker,
-  revalidateTalk,
-} from "../lib/revalidate.js";
+  revalidateSpeakerFootprint,
+  revalidateTalkFootprint,
+  speakerFootprint,
+} from "../lib/page-footprint.js";
+import { sniffMime } from "../lib/file-sniff.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { rememberOriginalName } from "../lib/file-metadata.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
@@ -116,21 +117,6 @@ function findForbiddenKey(body: Record<string, unknown>): string | null {
   if (social && typeof social === "object") {
     for (const key of Object.keys(social as Record<string, unknown>)) {
       if (!(SOCIAL_KEYS as readonly string[]).includes(key)) return `socialLinks.${key}`;
-    }
-  }
-  return null;
-}
-
-// An empty string clears the field; anything else must be a safe URL. Returns
-// the offending field name, or null when every URL is acceptable.
-function findUnsafeUrl(body: Record<string, unknown>): string | null {
-  const value = body.photoUrl;
-  if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return "photoUrl";
-
-  const social = body.socialLinks;
-  if (social && typeof social === "object") {
-    for (const [key, entry] of Object.entries(social as Record<string, unknown>)) {
-      if (typeof entry === "string" && entry.trim() && !isSafeUrl(entry)) return `socialLinks.${key}`;
     }
   }
   return null;
@@ -359,13 +345,14 @@ export default async function editRoutes(app: FastifyInstance) {
 
     // The schema bounds the shape; scheme allowlisting is what stops a
     // `javascript:` URL from reaching a public href.
-    const unsafeField = findUnsafeUrl(request.body as Record<string, unknown>);
+    const unsafeField = findUnsafeUrl(request.body as Record<string, unknown>, ["photoUrl"]);
     if (unsafeField) {
       return reply.code(400).send({ error: "invalid_url", field: unsafeField });
     }
 
     const body = request.body as SpeakerEditBody;
     // A field absent from the body is left untouched; an empty string clears it.
+    const before = await speakerFootprint([entity.id]);
     await prisma.speaker.update({
       where: { id: entity.id },
       data: {
@@ -379,8 +366,9 @@ export default async function editRoutes(app: FastifyInstance) {
     });
     revalidateSpeakers();
     // Their own page too (#352), or the bio they just fixed stays stale for an
-    // hour on the very page the link is meant to update.
-    revalidateSpeaker(entity.slug);
+    // hour on the very page the link is meant to update — and their talks,
+    // which show their company (#633).
+    await revalidateSpeakerFootprint(before, [entity.id]);
 
     return { saved: true };
   });
@@ -450,8 +438,7 @@ export default async function editRoutes(app: FastifyInstance) {
 
       // Direct publication: the change is public right away — including on the
       // session's own two pages (#360), which is what the speaker will reload.
-      revalidateConferences();
-      revalidateTalk(talk.slug, talk.edition.year);
+      await revalidateTalkFootprint([], [talk.id]);
 
       // Notify the organizers (best-effort: a mail failure must not fail the
       // save the speaker just made).
@@ -488,9 +475,13 @@ export default async function editRoutes(app: FastifyInstance) {
 
     const buffer = await data.toBuffer();
     if (data.file.truncated) return reply.code(413).send({ error: "file_too_large" });
+    // The declared type is the client's to choose: the bytes decide, and the
+    // file is stored as what it is (#658).
+    const mimetype = sniffMime(buffer);
+    if (!mimetype || !UPLOAD_MIMES.has(mimetype)) return reply.code(400).send({ error: "invalid_file_type" });
 
     try {
-      const url = await storeImageBuffer(buffer, data.mimetype);
+      const url = await storeImageBuffer(buffer, mimetype);
       // Keep the name the speaker's machine gave it (#378) — the stored one
       // identifies nothing once the upload screen is closed.
       await rememberOriginalName(url, data.filename);

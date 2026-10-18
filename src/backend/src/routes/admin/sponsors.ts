@@ -12,12 +12,12 @@ import {
   type SponsorListFilters,
   type SponsorMissing,
 } from "../../lib/sponsor-list.js";
-import { revalidateJobOffers, revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
+import { revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
-import { sanitizeRichHtml } from "../../lib/sanitize.js";
+import { sanitizeRichHtml, unsafeUrlRefusal } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
 interface StandContact {
@@ -177,6 +177,9 @@ function serialize(s: {
   };
 }
 
+// The sponsor's fields that reach `href` and `src` on public pages (#223).
+const URL_FIELDS = ["logoUrl", "websiteUrl", "comKitLogoWebUrl", "comKitLogoPrintUrl", "comKitCharterUrl"];
+
 export default async function adminSponsorRoutes(app: FastifyInstance) {
   // GET /api/admin/sponsors?editionId=X — editionId omitted lists all editions
   // GET /api/admin/sponsors — filters, sort and pagination (#574), as the
@@ -241,7 +244,8 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
             editionId: true,
             edition: { select: { id: true, year: true } },
             tier: { select: TIER_SELECT },
-            _count: { select: { jobOffers: true } },
+            // Trashed offers are not the year's offers (#609).
+            _count: { select: { jobOffers: { where: notDeleted } } },
           },
           orderBy: { edition: { year: "desc" } },
         },
@@ -317,14 +321,24 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
             tier: { select: TIER_SELECT },
             // Job offers for admin consultation/moderation (#251), now per
             // participation since they are dated by the year's tier quota.
-            jobOffers: { orderBy: { createdAt: "asc" } },
+            jobOffers: { where: notDeleted, orderBy: { createdAt: "asc" } },
           },
           orderBy: { edition: { year: "desc" } },
+        },
+        // The speakers who came on its behalf, year by year (#484).
+        speakers: {
+          where: { speaker: notDeleted },
+          select: { edition: { select: { year: true } }, speaker: { select: { id: true, name: true } } },
+          orderBy: [{ edition: { year: "desc" } }, { speaker: { name: "asc" } }],
         },
       },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
-    return serialize(sponsor);
+    const { speakers, ...rest } = sponsor;
+    return {
+      ...serialize(rest),
+      speakers: speakers.map((s) => ({ id: s.speaker.id, name: s.speaker.name, year: s.edition.year })),
+    };
   });
 
   // POST /api/admin/sponsors
@@ -334,6 +348,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
     if (!body.editionId || !body.name?.trim() || !body.tierId) {
       return reply.code(400).send({ error: "editionId, name and tierId are required" });
     }
+    // These fields reach `href` and `src` on public pages (#223).
+    const refusal = unsafeUrlRefusal(body, URL_FIELDS);
+    if (refusal) return reply.code(400).send(refusal);
     // The display attributes come along: the participation freezes them (#375)
     // so renaming or recolouring the shared catalogue later leaves this
     // edition's wall untouched.
@@ -427,6 +444,9 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const id = Number(request.params.id);
     const body = request.body;
+    // These fields reach `href` and `src` on public pages (#223).
+    const refusal = unsafeUrlRefusal(body, URL_FIELDS);
+    if (refusal) return reply.code(400).send(refusal);
 
     // Changing tier re-freezes the appearance (#375): the participation must
     // show the tier it was actually moved to, not the one it left.
@@ -880,27 +900,6 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Contact not found" });
       }
       await prisma.sponsorContact.delete({ where: { id: contact.id } });
-      return reply.code(204).send();
-    },
-  );
-
-  // DELETE /api/admin/sponsors/:id/job-offers/:offerId — moderate an offer (#251).
-  // Job offers hang off the participation now (#129), not the identity
-  // directly, so ownership is checked through `editionSponsor.sponsorId`.
-  app.delete<{ Params: SponsorIdParams & { offerId: string } }>(
-    "/sponsors/:id/job-offers/:offerId",
-    { schema: { params: { type: "object", required: ["id", "offerId"], properties: { id: { type: "string" }, offerId: { type: "string" } } } } },
-    async (request, reply) => {
-      const offer = await prisma.sponsorJobOffer.findUnique({
-        where: { id: Number(request.params.offerId) },
-        include: { editionSponsor: { select: { sponsorId: true } } },
-      });
-      if (!offer || offer.editionSponsor.sponsorId !== Number(request.params.id)) {
-        return reply.code(404).send({ error: "Offer not found" });
-      }
-      await prisma.sponsorJobOffer.delete({ where: { id: offer.id } });
-      revalidateSponsors();
-      revalidateJobOffers();
       return reply.code(204).send();
     },
   );

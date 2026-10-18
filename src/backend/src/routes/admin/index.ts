@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { requireAdmin, requireAdminRole } from "../../lib/admin-guard.js";
-import { refuseAgents } from "../../lib/auth-context.js";
+import { requireAdmin, requireAdminRole, requireTeamBrowserSession } from "../../lib/admin-guard.js";
+import { refuseAgents, refuseApiKeys } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
@@ -10,9 +10,11 @@ import adminSettingsRoutes from "./settings.js";
 import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
 import adminFileRoutes from "./files.js";
+import adminFileTagRoutes from "./file-tags.js";
 import adminUserRoutes from "./users.js";
 import adminSponsorRoutes from "./sponsors.js";
 import adminSponsorTierRoutes from "./sponsor-tiers.js";
+import adminJobOfferRoutes from "./job-offers.js";
 import adminSpeakerRoutes from "./speakers.js";
 import adminCategoryRoutes from "./categories.js";
 import adminTalkRoutes from "./talks.js";
@@ -26,6 +28,9 @@ import adminAuditRoutes from "./audit.js";
 import adminFeedbackRoutes from "./feedback.js";
 import adminEditionPhotoRoutes from "./edition-photos.js";
 import adminFaqRoutes from "./faq.js";
+import adminTagRoutes from "./tags.js";
+import adminTeamRoutes from "./team.js";
+import adminPreviewRoutes from "./preview.js";
 
 export default async function adminRoutes(app: FastifyInstance) {
   // Auth check route (does its own auth check internally)
@@ -35,14 +40,18 @@ export default async function adminRoutes(app: FastifyInstance) {
   await app.register(async (editorApp) => {
     editorApp.addHook("preHandler", requireAdmin);
     await editorApp.register(adminArticleRoutes);
+    await editorApp.register(adminTagRoutes);
     await editorApp.register(adminPageRoutes);
     await editorApp.register(adminEditionPhotoRoutes);
     await editorApp.register(adminFaqRoutes);
+    await editorApp.register(adminTeamRoutes);
     await editorApp.register(adminContactRoutes);
     await editorApp.register(adminFileRoutes);
+    await editorApp.register(adminFileTagRoutes);
     await editorApp.register(adminTranslateRoutes);
     await editorApp.register(adminSponsorRoutes);
     await editorApp.register(adminSponsorTierRoutes);
+    await editorApp.register(adminJobOfferRoutes);
     await editorApp.register(adminSpeakerRoutes);
     await editorApp.register(adminCategoryRoutes);
     await editorApp.register(adminTalkRoutes);
@@ -60,6 +69,13 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminVenueRoutes);
   });
 
+  // Draft preview (#618): the team, from the browser only. Not under editorApp,
+  // whose requireAdmin also lets API keys and agent tokens through.
+  await app.register(async (previewApp) => {
+    previewApp.addHook("preHandler", requireTeamBrowserSession);
+    await previewApp.register(adminPreviewRoutes);
+  });
+
   // Routes restricted to ADMIN only
   await app.register(async (adminApp) => {
     adminApp.addHook("preHandler", requireAdminRole);
@@ -70,7 +86,10 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(async (credentialsApp) => {
       credentialsApp.addHook("preHandler", refuseAgents);
       await credentialsApp.register(adminUserRoutes);
-      await credentialsApp.register(adminApiKeyRoutes);
+      await credentialsApp.register(async (keysApp) => {
+        keysApp.addHook("preHandler", refuseApiKeys);
+        await keysApp.register(adminApiKeyRoutes);
+      });
     });
     // Who changed what, from where: personal data, not for editors (#513).
     await adminApp.register(adminAuditRoutes);

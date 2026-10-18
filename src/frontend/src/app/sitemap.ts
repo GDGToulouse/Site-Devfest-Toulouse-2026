@@ -100,6 +100,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     "/speakers",
     "/hall-of-fame",
     "/sponsors",
+    "/sponsors/hall-of-fame",
     "/proposer-un-talk",
     "/contact",
     "/devenir-sponsor",
@@ -115,6 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // it unconditionally would put a 404 in the sitemap.
   if (featured?.hasVenueInfo) fullyTranslatedRoutes.push("/lieu");
   if (featured?.hasFaq) fullyTranslatedRoutes.push("/faq");
+  if (featured?.hasTeam) fullyTranslatedRoutes.push("/equipe");
 
   // /programme renders a "coming soon" card rather than 404ing before the grid
   // is placed (#106), so listing it early would only index an empty page.

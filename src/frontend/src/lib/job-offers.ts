@@ -25,22 +25,10 @@ export function offerOnlyLocale(offer: JobOfferPublic): "fr" | "en" | undefined 
   return undefined;
 }
 
-const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
-
-// htmlToText leaves entities alone, which a meta tag tolerates; text rendered by
-// React would show "&amp;" as is.
-function decodeEntities(text: string): string {
-  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
-    if (code[0] !== "#") return ENTITIES[code.toLowerCase()] ?? entity;
-    const point = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
-    return Number.isFinite(point) ? String.fromCodePoint(point) : entity;
-  });
-}
-
 // Plain-text opening of the description for the list card and the page's meta
 // description, cut on a word rather than mid-word.
 export function offerExcerpt(offer: JobOfferPublic, locale: string, maxLength = 220): string {
-  const text = decodeEntities(htmlToText(offerDescription(offer, locale))).replace(/\s+/g, " ").trim();
+  const text = htmlToText(offerDescription(offer, locale));
   if (text.length <= maxLength) return text;
   const cut = text.slice(0, maxLength);
   const lastSpace = cut.lastIndexOf(" ");

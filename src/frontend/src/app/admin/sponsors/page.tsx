@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Sponsor, AdminSponsorTier } from "@/lib/types";
 import { useListParams } from "@/lib/use-list-params";
+import SponsorDetails from "@/components/admin/record-details/SponsorDetails";
 import DataTable, { type SortState } from "@/components/admin/DataTable";
 import ListPagination from "@/components/admin/ListPagination";
 import BulkActionBar from "@/components/admin/BulkActionBar";
@@ -54,6 +55,8 @@ const SELECT_CLASS =
 export default function SponsorsDataPage() {
   const router = useRouter();
   const { params, page, update } = useListParams(LIST_KEYS);
+  // The read-only panel opened from a row (#484).
+  const [viewedId, setViewedId] = useState<number | null>(null);
   const [editions, setEditions] = useState<{ id: number; year: number }[] | null>(null);
   const [tiers, setTiers] = useState<AdminSponsorTier[]>([]);
   const [list, setList] = useState<SponsorPage | null>(null);
@@ -309,13 +312,14 @@ export default function SponsorsDataPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<SponsorRow>
             columns={columns}
             data={list.items}
             emptyMessage={hasFilters ? "Aucun sponsor ne correspond à ces filtres" : "Aucun sponsor"}
+            onView={(s) => setViewedId(s.id)}
             onEdit={(s) => router.push(`/admin/sponsors/${s.id}`)}
             onDelete={(s) => setDeleteTarget(s)}
             selectedIds={selectedIds}
@@ -333,6 +337,8 @@ export default function SponsorsDataPage() {
           />
         </>
       )}
+
+      <SponsorDetails sponsorId={viewedId} onClose={() => setViewedId(null)} />
 
       <ConfirmDialog
         isOpen={!!deleteTarget}

@@ -80,7 +80,7 @@ export default function AdminApiKeysPage() {
       )}
 
       {isLoading ? (
-        <p className="text-sm text-gris py-12 text-center">Chargement...</p>
+        <p className="text-sm text-gris py-12 text-center">Chargement…</p>
       ) : !list || list.items.length === 0 ? (
         <div className="bg-blanc rounded-xl shadow-card p-12 text-center text-gris">
           Aucune clé correspondant aux critères.

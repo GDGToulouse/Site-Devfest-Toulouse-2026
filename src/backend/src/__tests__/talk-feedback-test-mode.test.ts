@@ -54,7 +54,7 @@ beforeAll(async () => {
 
 afterEach(async () => {
   vi.useRealTimers();
-  await prisma.talkFeedback.deleteMany({ where: { talkId } });
+  if (talkId !== undefined) await prisma.talkFeedback.deleteMany({ where: { talkId } });
   await prisma.edition.update({ where: { id: editionId }, data: { feedbackTestMode: false } });
 });
 

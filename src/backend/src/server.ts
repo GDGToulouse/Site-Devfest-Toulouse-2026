@@ -5,6 +5,8 @@ import helmet from "@fastify/helmet";
 import rateLimit from "@fastify/rate-limit";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import { redactUrl } from "./lib/log-redact.js";
+import { trustedOrigins } from "./lib/auth.js";
 import { buildAlertPayload, sendAlert } from "./lib/alert-webhook.js";
 import { registerRequestContext } from "./lib/request-context.js";
 import { registerRouteCatalog } from "./lib/route-catalog.js";
@@ -20,6 +22,7 @@ import articleRoutes from "./routes/articles.js";
 import settingsRoutes from "./routes/settings.js";
 import pageRoutes from "./routes/pages.js";
 import faqRoutes from "./routes/faq.js";
+import teamRoutes from "./routes/team.js";
 import contactRoutes from "./routes/contact.js";
 import talkFeedbackRoutes from "./routes/talk-feedback.js";
 import brochureRoutes from "./routes/brochure.js";
@@ -43,6 +46,15 @@ import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
  * entry point and by the tests that check the real composition — a guard only
  * the real server carries is a guard nothing checks (#514).
  */
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function isInvalidInput(err: Error): boolean {
+  if (err.name === "PrismaClientValidationError") return true;
+  // PostgreSQL's class 22 is "data exception": the value, not the server.
+  const cause = (err as { cause?: { kind?: string; code?: string } }).cause;
+  return err.name === "DriverAdapterError" && cause?.kind === "postgres" && !!cause.code?.startsWith("22");
+}
+
 export async function buildServer() {
   // LOG_LEVEL: set to "debug" (or "trace") to enable verbose .debug() entries
   // scattered across the codebase (auth guards, proxy, etc.). Defaults to "info"
@@ -53,7 +65,20 @@ export async function buildServer() {
   // (#467) — a limit only the real server carries is a limit nothing checks.
   const app = Fastify({
     ...serverOptions,
-    logger: { level: process.env.LOG_LEVEL || "info" },
+    logger: {
+      level: process.env.LOG_LEVEL || "info",
+      // Fastify's own request fields, the URL with its bearer secrets masked
+      // (#658): edit links, invitations and magic links travel in it.
+      serializers: {
+        req: (req) => ({
+          method: req.method,
+          url: redactUrl(req.url),
+          host: req.host,
+          remoteAddress: req.ip,
+          remotePort: req.socket?.remotePort,
+        }),
+      },
+    },
   });
 
   // Fastify rejects `content-type: application/json` with an empty payload
@@ -100,6 +125,13 @@ export async function buildServer() {
   // webhook when one is configured (#118). Only 5xx are alerted: 4xx are client
   // mistakes, not incidents. The reply itself keeps Fastify's default shape.
   app.setErrorHandler((err: FastifyError, request, reply) => {
+    // A value the database cannot take (out of range, malformed, a NUL byte)
+    // is the caller's mistake: a 400, not a server error paging the team.
+    if (isInvalidInput(err)) {
+      request.log.warn({ err, route: request.routeOptions.url }, "Invalid input rejected by the database");
+      return reply.code(400).send({ error: "invalid_input", message: "Paramètre invalide." });
+    }
+
     const statusCode = err.statusCode ?? 500;
 
     if (statusCode >= 500) {
@@ -121,7 +153,28 @@ export async function buildServer() {
       });
     }
 
+    // The detail of a server error stays in the logs: Prisma's message quotes
+    // the query, the tables and the source path (#658). The request id ties
+    // the answer to its log line.
+    if (statusCode >= 500) {
+      return reply.code(statusCode).send({ error: "Internal Server Error", requestId: request.id });
+    }
     reply.send(err);
+  });
+
+  // SameSite=Lax stops cross-site writes, not same-site ones: a page anywhere
+  // under the registered domain (old sites, other environments) gets the
+  // session cookie attached. A write carried by that cookie must name one of
+  // our origins (#658). Bearer calls carry no ambient credential, and
+  // better-auth checks its own routes.
+  app.addHook("onRequest", async (request, reply) => {
+    if (SAFE_METHODS.has(request.method) || request.url.startsWith("/api/auth/")) return;
+    if (request.headers.authorization || !request.headers.cookie?.includes("session_token=")) return;
+    const origin = request.headers.origin;
+    const isOwnOrigin = origin ? trustedOrigins.includes(origin) : request.headers["sec-fetch-site"] === "same-origin";
+    if (!isOwnOrigin) {
+      return reply.code(403).send({ error: "invalid_origin", message: "Requête refusée : origine inconnue." });
+    }
   });
 
   const corsOrigins = [
@@ -179,9 +232,12 @@ export async function buildServer() {
   //
   // In production the docs list every admin endpoint (schema, query params,
   // auth scheme) which is great for internal use but also shortens the recon
-  // loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true (or
-  // non-production env) so the default prod deployment keeps them off.
-  const swaggerPublic = process.env.SWAGGER_PUBLIC === "true" || process.env.NODE_ENV !== "production";
+  // loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true, or a
+  // local run. A deployed dev environment (dev-j) is public too and runs
+  // without NODE_ENV=production, so the environment's name decides (#658).
+  const isLocalRun = !process.env.ENV_NAME || process.env.ENV_NAME === "local";
+  const swaggerPublic =
+    process.env.SWAGGER_PUBLIC === "true" || (process.env.NODE_ENV !== "production" && isLocalRun);
   if (swaggerPublic) {
     await registerSwagger(app);
   } else {
@@ -253,6 +309,7 @@ export async function buildServer() {
   await app.register(settingsRoutes, { prefix: "/api" });
   await app.register(pageRoutes, { prefix: "/api" });
   await app.register(faqRoutes, { prefix: "/api" });
+  await app.register(teamRoutes, { prefix: "/api" });
   await app.register(contactRoutes, { prefix: "/api" });
   await app.register(brochureRoutes, { prefix: "/api" });
   await app.register(sponsorRoutes, { prefix: "/api" });

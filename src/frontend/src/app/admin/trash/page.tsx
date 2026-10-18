@@ -6,7 +6,7 @@ import { adminFetch, getAdminSession, purgeExpiredTrash } from "@/lib/admin-api"
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
 
-// The twelve soft-deletable entities, in the order the trash shows them. Kept in
+// The soft-deletable entities, in the order the trash shows them. Kept in
 // sync with the backend registry (trash-registry.ts); `adminOnly` mirrors the
 // API, which 403s an EDITOR on those — the page hides them rather than letting
 // the call fail.
@@ -16,6 +16,7 @@ const TRASH_ENTITIES: { key: string; label: string; adminOnly: boolean }[] = [
   { key: "speakers", label: "Speakers", adminOnly: false },
   { key: "talks", label: "Conférences", adminOnly: false },
   { key: "sponsors", label: "Sponsors", adminOnly: false },
+  { key: "job-offers", label: "Offres d'emploi", adminOnly: false },
   { key: "categories", label: "Catégories", adminOnly: false },
   { key: "contact-categories", label: "Catégories de contact", adminOnly: true },
   { key: "contact-messages", label: "Messages", adminOnly: true },
@@ -25,6 +26,7 @@ const TRASH_ENTITIES: { key: string; label: string; adminOnly: boolean }[] = [
   { key: "users", label: "Utilisateurs", adminOnly: true },
   { key: "pages", label: "Pages", adminOnly: false },
   { key: "faq", label: "FAQ", adminOnly: false },
+  { key: "team", label: "Équipe", adminOnly: false },
 ];
 
 interface TrashItem {

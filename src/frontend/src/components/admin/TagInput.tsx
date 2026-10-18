@@ -14,9 +14,21 @@ interface TagInputProps {
   selectedTagIds: number[];
   onChange: (tagIds: number[]) => void;
   onTagCreated: (tag: Tag) => void;
+  // Where new tags are created: the articles' by default, the media library's
+  // has its own taxonomy (#373).
+  createPath?: string;
+  // Accessible name of the text field.
+  label?: string;
 }
 
-export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreated }: TagInputProps) {
+export default function TagInput({
+  allTags,
+  selectedTagIds,
+  onChange,
+  onTagCreated,
+  createPath = "/tags",
+  label,
+}: TagInputProps) {
   const [query, setQuery] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -54,14 +66,18 @@ export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreat
     const name = query.trim();
     if (!name || exactMatch) return;
     setIsCreating(true);
-    const { data, status } = await adminFetch<Tag>("/tags", {
+    const result = await adminFetch<Tag>(createPath, {
       method: "POST",
       body: JSON.stringify({ name }),
     });
     setIsCreating(false);
-    if (data && status === 201) {
-      onTagCreated(data);
-      onChange([...selectedTagIds, data.id]);
+    // A 409 that names the tag holding the name (the media library's does):
+    // pick that one rather than leave the editor stuck on a duplicate.
+    const existing = result.status === 409 ? (result.errorBody?.existing as Tag | undefined) : undefined;
+    const tag = result.status === 201 ? result.data : existing;
+    if (tag) {
+      if (!allTags.some((t) => t.id === tag.id)) onTagCreated(tag);
+      if (!selectedTagIds.includes(tag.id)) onChange([...selectedTagIds, tag.id]);
       setQuery("");
       setIsOpen(false);
       inputRef.current?.focus();
@@ -112,7 +128,8 @@ export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreat
             onChange={(e) => { setQuery(e.target.value); setIsOpen(true); }}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder={selectedTags.length === 0 ? "Ajouter un tag..." : ""}
+            aria-label={label}
+            placeholder={selectedTags.length === 0 ? "Ajouter un tag…" : ""}
             className="flex-1 min-w-[120px] outline-none text-sm text-noir bg-transparent"
           />
         </div>
@@ -136,7 +153,7 @@ export default function TagInput({ allTags, selectedTagIds, onChange, onTagCreat
                 disabled={isCreating}
                 className="w-full text-left px-3 py-2 text-sm text-malachite hover:bg-malachite/5 transition-colors border-t border-gris/10"
               >
-                {isCreating ? "Creation..." : `Creer le tag "${query.trim()}"`}
+                {isCreating ? "Creation…" : `Creer le tag "${query.trim()}"`}
               </button>
             )}
           </div>

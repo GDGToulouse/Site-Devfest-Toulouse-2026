@@ -14,7 +14,8 @@ import { prisma } from "./prisma.js";
 import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
 import { sendPasswordResetEmail } from "./password-reset-email.js";
-import { hasPendingInvitation, normalizeEmail } from "./sponsor-invitation.js";
+import { hasPendingInvitation, isTokenProvenSignUp, normalizeEmail } from "./sponsor-invitation.js";
+import { trustedOriginsFor } from "./trusted-origins.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
 const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
@@ -24,22 +25,6 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || "")
 
 function normalizeUrl(url: string): string {
   return url.replace(/\/$/, "");
-}
-
-// Build a wildcard origin from the public base URL so we don't have to list
-// each environment subdomain (dev-j, beta, prod). Returns null for non-FQDN
-// hostnames (e.g. localhost) to avoid accidental wildcards in local dev.
-function buildWildcardOrigin(url: string): string | null {
-  try {
-    const parsed = new URL(url);
-    const parts = parsed.hostname.split(".");
-    if (parts.length >= 2 && !/^\d+\.\d+\.\d+\.\d+$/.test(parsed.hostname)) {
-      return `${parsed.protocol}//*.${parts.slice(-2).join(".")}`;
-    }
-    return null;
-  } catch {
-    return null;
-  }
 }
 
 // An absolute URL, or the local default. Vite injects BASE_URL="/" (its own base
@@ -57,10 +42,8 @@ const frontendUrl = normalizeUrl(process.env.FRONTEND_URL || "http://localhost:3
 export const MCP_RESOURCE = `${baseUrl}/api/mcp`;
 // Who signs the agents' tokens: better-auth names itself by its base path.
 export const AUTH_ISSUER = `${baseUrl}/api/auth`;
-const wildcardOrigin = buildWildcardOrigin(baseUrl);
-const trustedOrigins = [baseUrl, frontendUrl, ...(wildcardOrigin ? [wildcardOrigin] : [])].filter(
-  (v, i, arr) => arr.indexOf(v) === i,
-);
+// Also the origins a cookie-carried write must come from (server.ts, #658).
+export const trustedOrigins = trustedOriginsFor(baseUrl, frontendUrl);
 
 export const auth = betterAuth({
   // Reuse SESSION_SECRET so we keep a single secret to manage. Better Auth
@@ -76,6 +59,9 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
+    // A reset is what someone does once they fear their account was taken:
+    // the sessions opened before it must not survive it (#658).
+    revokeSessionsOnPasswordReset: true,
     // The link points to a frontend page, not to better-auth's own callback
     // (an API route, not navigable), and to the admin or the partner space
     // depending on the account's role (#411).
@@ -124,6 +110,9 @@ export const auth = betterAuth({
     // accounts. Single-use and short-lived, unlike the 30-day edit link.
     magicLink({
       expiresIn: MAGIC_LINK_TTL_SECONDS,
+      // Stored as a hash: a database read must not hand out live sign-in
+      // links (#658). Links issued before this change stop working.
+      storeToken: "hashed",
       disableSignUp: true,
       sendMagicLink: async ({ email, url }) => {
         await sendEmail({
@@ -169,6 +158,19 @@ export const auth = betterAuth({
     }),
   ],
   databaseHooks: {
+    // better-auth knows nothing of User.banned (no admin plugin): a banned
+    // account could still sign in, and the session it opened outlived the ban
+    // (#658). The API refuses it meanwhile; this refuses the session itself.
+    session: {
+      create: {
+        before: async (session) => {
+          const owner = await prisma.user.findUnique({ where: { id: session.userId }, select: { banned: true } });
+          if (owner?.banned) {
+            throw new APIError("FORBIDDEN", { message: "Ce compte est suspendu. Contactez un administrateur." });
+          }
+        },
+      },
+    },
     user: {
       create: {
         before: async (user) => {
@@ -186,11 +188,15 @@ export const auth = betterAuth({
           }
           if (isAdminEmail(user.email)) return;
 
-          if (await hasPendingInvitation(user.email)) {
+          // The mailbox must be proven too (#658): by the identity provider
+          // (emailVerified, which a sign-up body cannot set) or by the token,
+          // through POST /api/sponsor-invitation/:token/sign-up.
+          const isMailboxProven = user.emailVerified === true || isTokenProvenSignUp(user.email);
+          if (isMailboxProven && (await hasPendingInvitation(user.email))) {
             // Sponsors get a role that grants nothing in the back-office. The
             // default is EDITOR, which requireAnyAuthenticated lets through —
             // leaving it would hand /api/admin/* to every sponsor.
-            return { data: { ...user, role: "SPONSOR" } };
+            return { data: { ...user, role: "SPONSOR", emailVerified: true } };
           }
 
           throw new APIError("FORBIDDEN", {

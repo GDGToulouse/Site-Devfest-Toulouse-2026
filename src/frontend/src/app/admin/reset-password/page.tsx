@@ -116,7 +116,7 @@ function ResetPasswordContent() {
               disabled={isLoading}
               className="w-full px-6 py-3 rounded-[12px] bg-bleu text-blanc font-bold hover:bg-bleu/90 transition-colors disabled:opacity-50"
             >
-              {isLoading ? "Envoi..." : "Réinitialiser le mot de passe"}
+              {isLoading ? "Envoi…" : "Réinitialiser le mot de passe"}
             </button>
           </form>
         )}

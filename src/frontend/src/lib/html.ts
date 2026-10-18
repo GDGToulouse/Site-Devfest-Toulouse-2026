@@ -7,11 +7,25 @@ export function looksLikeHtml(value: string): boolean {
   return /<[a-z][\s\S]*>/i.test(value);
 }
 
-// Strips tags and collapses whitespace, for meta descriptions / OG tags where
-// only plain text belongs. Entities are left as-is (good enough for meta).
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " " };
+
+// The entities the backend's sanitizer writes (`&amp;`, `&lt;`, `&gt;`) plus the
+// ones a pasted text carries: the named few above and numeric references. Any
+// other name is left as it came rather than guessed at.
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (entity, code: string) => {
+    if (code[0] !== "#") return ENTITIES[code.toLowerCase()] ?? entity;
+    const point = code[1].toLowerCase() === "x" ? parseInt(code.slice(2), 16) : parseInt(code.slice(1), 10);
+    return Number.isFinite(point) && point > 0 && point <= 0x10ffff ? String.fromCodePoint(point) : entity;
+  });
+}
+
+// Strips tags, decodes entities and collapses whitespace, for meta descriptions
+// / OG tags and text rendered by React, where only plain text belongs. Tags go
+// first: decoded text such as "&lt;b&gt;" must stay text, not become a tag to
+// strip. Decoded once: the sanitizer escapes a "&" as "&amp;" and nothing else.
 export function htmlToText(value: string): string {
-  return value
-    .replace(/<[^>]*>/g, " ")
+  return decodeEntities(value.replace(/<[^>]*>/g, " "))
     .replace(/\s+/g, " ")
     .trim();
 }

@@ -18,6 +18,7 @@ export const KNOWN_GUARDS: Record<string, string> = {
   requireAdminRole: "ADMIN",
   requireAnyAuthenticated: "Équipe (ADMIN, EDITOR)",
   requireBrowserSession: "Tout compte, depuis le navigateur",
+  requireTeamBrowserSession: "Équipe (ADMIN, EDITOR), depuis le navigateur ; refusé aux clés d'API et aux agents IA",
   requireSponsorAccess_STAND: "Contact du sponsor (STAND et plus) ou ADMIN",
   requireSponsorAccess_EDITEUR: "Contact du sponsor (EDITEUR et plus) ou ADMIN",
   requireSponsorAccess_RESPONSABLE: "Contact du sponsor (RESPONSABLE) ou ADMIN",
@@ -39,6 +40,10 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
   "POST /api/sponsor-invitation/:token/accept": {
     why: "jeton d'invitation, puis l'e-mail de la session doit correspondre",
     anonymous: [404],
+  },
+  "POST /api/sponsor-invitation/:token/sign-up": {
+    why: "jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule",
+    anonymous: [400, 404],
   },
   "POST /api/contact/send": { why: "formulaire de contact public : tout le monde peut écrire, débit limité" },
   "POST /api/talks/:slug/feedback": {
@@ -65,7 +70,8 @@ export function accessOf(route: InventoryRoute): string {
   // purge runs the editors' requireAdmin, then requireAdminRole.
   const guard = [...route.preHandlers].reverse().find((name) => KNOWN_GUARDS[name]);
   const agents = route.preHandlers.includes("refuseAgents") ? " ; refusé aux agents IA" : "";
-  if (guard) return `${KNOWN_GUARDS[guard]}${agents}`;
+  const keys = route.preHandlers.includes("refuseApiKeys") ? " et aux clés d'API" : "";
+  if (guard) return `${KNOWN_GUARDS[guard]}${agents}${keys}`;
   const self = SELF_GUARDED[`${route.method} ${route.path}`];
   return self ? `Contrôlé dans la route : ${self.why}` : "Public";
 }

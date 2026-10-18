@@ -15,6 +15,7 @@ vi.mock("next/navigation", () => ({
 const adminFetch = vi.fn();
 vi.mock("@/lib/admin-api", () => ({
   adminFetch: (...args: unknown[]) => adminFetch(...args),
+  getAdminSession: async () => ({ role: "EDITOR" }),
 }));
 
 vi.mock("@/components/admin/RichTextEditor", () => ({

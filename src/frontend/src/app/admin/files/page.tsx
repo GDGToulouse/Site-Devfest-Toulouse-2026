@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { adminFetch } from "@/lib/admin-api";
+import { useListParams } from "@/lib/use-list-params";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import FileDetailsDialog from "@/components/admin/FileDetailsDialog";
+import ListPagination from "@/components/admin/ListPagination";
+import FileDetailsDialog, { type FileTag } from "@/components/admin/FileDetailsDialog";
+import ImportFromUrl from "@/components/admin/ImportFromUrl";
 import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileInfo {
@@ -19,7 +22,25 @@ interface FileInfo {
   originalName: string | null;
   // Who uses it, derived from the columns pointing at it (#483).
   usages: FileUsage[];
+  // Media library tags (#373).
+  tags: FileTag[];
 }
+
+type FileTab = "all" | "images" | "documents" | "unused";
+
+// One page of the library and the count of each tab (#416): the screen used to
+// load every file and render a thumbnail for each.
+interface FilePage {
+  page: number;
+  limit: number;
+  total: number;
+  counts: Record<FileTab, number>;
+  items: FileInfo[];
+}
+
+const PAGE_SIZE = 48;
+const LIST_KEYS = ["type", "tag"] as const;
+const EMPTY_PAGE: FilePage = { page: 1, limit: PAGE_SIZE, total: 0, counts: { all: 0, images: 0, documents: 0, unused: 0 }, items: [] };
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
@@ -53,26 +74,44 @@ function fileIconColor(ext: string): string {
 const ACCEPTED_TYPES = "image/jpeg,image/png,image/webp,image/gif,image/svg+xml,image/x-icon,image/vnd.microsoft.icon,application/pdf,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 export default function FilesAdminPage() {
-  const [files, setFiles] = useState<FileInfo[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { params, page, update } = useListParams(LIST_KEYS);
+  const filter: FileTab = (["images", "documents", "unused"] as const).find((t) => t === params.type) ?? "all";
+  const [list, setList] = useState<FilePage | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
-  const [filter, setFilter] = useState<"all" | "images" | "documents" | "unused">("all");
   const [detailsTarget, setDetailsTarget] = useState<FileInfo | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // The media library's tags (#373), for the filter; with their file counts.
+  const [fileTags, setFileTags] = useState<(FileTag & { fileCount: number })[]>([]);
 
-  async function loadFiles() {
-    setIsLoading(true);
-    const { data } = await adminFetch<FileInfo[]>("/files");
-    if (data) setFiles(data);
-    setIsLoading(false);
-  }
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  if (filter !== "all") query.set("type", filter);
+  if (params.tag) query.set("tag", params.tag);
+  const queryString = query.toString();
+
+  const loadFiles = useCallback(async () => {
+    const { data } = await adminFetch<FilePage>(`/files?${queryString}`);
+    setList(data ?? EMPTY_PAGE);
+  }, [queryString, setList]);
+
+  const loadFileTags = useCallback(async () => {
+    const { data } = await adminFetch<(FileTag & { fileCount: number })[]>("/file-tags");
+    setFileTags(data ?? []);
+  }, [setFileTags]);
+
+  useEffect(() => {
+    void loadFileTags();
+  }, [loadFileTags]);
 
   useEffect(() => {
     loadFiles();
-  }, []);
+  }, [loadFiles]);
+
+  function setFilter(next: FileTab) {
+    update({ type: next === "all" ? "" : next });
+  }
 
   async function handleUpload(file: File) {
     setIsUploading(true);
@@ -91,6 +130,9 @@ export default function FilesAdminPage() {
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setError(body?.error || "Erreur lors de l'upload");
+      } else if (page > 1) {
+        // The newest file opens the first page: go there to see it.
+        update({ page: "" });
       } else {
         await loadFiles();
       }
@@ -128,7 +170,9 @@ export default function FilesAdminPage() {
       setError(serverError ?? "La suppression a échoué. Réessayez.");
       return;
     }
-    loadFiles();
+    // The last file of a page gone: step back rather than show an empty page.
+    if (list && list.items.length === 1 && page > 1) update({ page: String(page - 1) });
+    else loadFiles();
   }
 
   function copyUrl(url: string) {
@@ -140,18 +184,10 @@ export default function FilesAdminPage() {
     setTimeout(() => setCopiedUrl(null), 2000);
   }
 
-  const filtered = files.filter((f) => {
-    if (filter === "images") return f.isImage;
-    if (filter === "documents") return !f.isImage;
-    if (filter === "unused") return f.usages.length === 0;
-    return true;
-  });
+  if (!list) return <p className="text-gris">Chargement…</p>;
 
-  const imageCount = files.filter((f) => f.isImage).length;
-  const docCount = files.filter((f) => !f.isImage).length;
-  const unusedCount = files.filter((f) => f.usages.length === 0).length;
-
-  if (isLoading) return <p className="text-gris">Chargement...</p>;
+  const filtered = list.items;
+  const { counts } = list;
 
   return (
     <div>
@@ -162,7 +198,7 @@ export default function FilesAdminPage() {
           disabled={isUploading}
           className="px-4 py-2 bg-malachite text-blanc rounded-lg text-sm font-medium hover:bg-malachite/90 disabled:opacity-50"
         >
-          {isUploading ? "Upload..." : "Uploader"}
+          {isUploading ? "Upload…" : "Uploader"}
         </button>
         <input
           ref={fileInputRef}
@@ -172,6 +208,38 @@ export default function FilesAdminPage() {
           onChange={handleFileChange}
           className="hidden"
         />
+      </div>
+
+      {/* By its address (#617): the server downloads the file. */}
+      <div className="mb-6 max-w-xl">
+        <ImportFromUrl
+          onImported={() => {
+            // The newest file opens the first page: go there to see it.
+            if (page > 1) update({ page: "" });
+            else void loadFiles();
+          }}
+        />
+      </div>
+
+      {/* By subject (#373): the tag narrows every tab below, counts included. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <label htmlFor="file-tag-filter" className="text-sm font-medium text-noir">
+          Tag
+        </label>
+        <select
+          id="file-tag-filter"
+          value={params.tag}
+          onChange={(e) => update({ tag: e.target.value })}
+          className="rounded-lg border border-gris/30 bg-blanc px-3 py-1.5 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        >
+          <option value="">Tous les tags</option>
+          <option value="none">Sans tag</option>
+          {fileTags.map((t) => (
+            <option key={t.id} value={t.slug}>
+              {t.name} ({t.fileCount})
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Filter tabs — see #233: confine overflow so the bar scrolls, not the page. */}
@@ -184,7 +252,7 @@ export default function FilesAdminPage() {
               : "text-gris hover:text-noir"
           }`}
         >
-          Tous ({files.length})
+          Tous ({counts.all})
         </button>
         <button
           onClick={() => setFilter("images")}
@@ -194,7 +262,7 @@ export default function FilesAdminPage() {
               : "text-gris hover:text-noir"
           }`}
         >
-          Images ({imageCount})
+          Images ({counts.images})
         </button>
         <button
           onClick={() => setFilter("documents")}
@@ -204,7 +272,7 @@ export default function FilesAdminPage() {
               : "text-gris hover:text-noir"
           }`}
         >
-          Documents ({docCount})
+          Documents ({counts.documents})
         </button>
         <button
           onClick={() => setFilter("unused")}
@@ -214,7 +282,7 @@ export default function FilesAdminPage() {
               : "text-gris hover:text-noir"
           }`}
         >
-          Non utilisés ({unusedCount})
+          Non utilisés ({counts.unused})
         </button>
       </div>
 
@@ -260,6 +328,8 @@ export default function FilesAdminPage() {
                   <img
                     src={file.url}
                     alt={file.alt || file.filename}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -316,6 +386,8 @@ export default function FilesAdminPage() {
         </div>
       )}
 
+      <ListPagination page={list.page} limit={list.limit} total={list.total} onPageChange={(next) => update({ page: String(next) })} />
+
       <ConfirmDialog
         isOpen={deleteTarget !== null}
         title="Supprimer le fichier"
@@ -331,9 +403,14 @@ export default function FilesAdminPage() {
         onSaved={(updated) => {
           // Patch the file in the list so the missing-alt badge disappears
           // immediately without a full refetch.
-          setFiles((prev) =>
-            prev.map((f) => (f.filename === updated.filename ? { ...f, alt: updated.alt } : f)),
+          setList((prev) =>
+            prev && {
+              ...prev,
+              items: prev.items.map((f) => (f.filename === updated.filename ? { ...f, alt: updated.alt, tags: updated.tags } : f)),
+            },
           );
+          // A new tag, or a count that moved, shows in the filter.
+          void loadFileTags();
         }}
       />
     </div>

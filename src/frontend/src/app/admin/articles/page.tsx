@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { adminFetch } from "@/lib/admin-api";
+import { useListParams } from "@/lib/use-list-params";
+import ListPagination from "@/components/admin/ListPagination";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
@@ -25,28 +27,47 @@ interface ArticlesResponse {
   totalPages: number;
 }
 
+const PAGE_SIZE = 20;
+// Long enough not to query on every key, short enough to feel immediate.
+const SEARCH_DELAY_MS = 300;
+const LIST_KEYS = ["search", "status"] as const;
+
+const SELECT_CLASS =
+  "rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50";
+
 export default function ArticlesListPage() {
+  // The page lives in the URL, like the other admin lists (#416): coming back
+  // from an article lands on the page it was opened from.
+  const { params, page, update } = useListParams(LIST_KEYS);
+  const [searchInput, setSearchInput] = useState(params.search);
   const [articles, setArticles] = useState<ArticleSummary[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteTarget, setDeleteTarget] = useState<ArticleSummary | null>(null);
   const [error, setError] = useState("");
 
-  async function loadArticles(p = 1) {
+  const loadArticles = useCallback(async () => {
     setIsLoading(true);
-    const { data } = await adminFetch<ArticlesResponse>(`/articles?page=${p}&limit=20`);
+    const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+    if (params.search) query.set("search", params.search);
+    if (params.status) query.set("status", params.status);
+    const { data } = await adminFetch<ArticlesResponse>(`/articles?${query.toString()}`);
     if (data) {
       setArticles(data.articles);
-      setTotalPages(data.totalPages);
-      setPage(data.page);
+      setTotal(data.total);
     }
     setIsLoading(false);
-  }
+  }, [page, params.search, params.status]);
 
   useEffect(() => {
     loadArticles();
-  }, []);
+  }, [loadArticles]);
+
+  useEffect(() => {
+    if (searchInput === params.search) return;
+    const timer = setTimeout(() => update({ search: searchInput.trim() }), SEARCH_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [searchInput, params.search, update]);
 
   async function handleDelete() {
     if (!deleteTarget) return;
@@ -59,7 +80,10 @@ export default function ArticlesListPage() {
       setError("La suppression a échoué. Réessayez.");
       return;
     }
-    loadArticles(page);
+    // The last article of a page gone: step back, or the list read "Aucun
+    // article" while earlier pages still held some (#416).
+    if (articles.length === 1 && page > 1) update({ page: String(page - 1) });
+    else loadArticles();
   }
 
   return (
@@ -74,6 +98,27 @@ export default function ArticlesListPage() {
         </Link>
       </div>
 
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <input
+          type="search"
+          aria-label="Rechercher"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Rechercher un titre ou un auteur…"
+          className="w-72 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
+        />
+        <select aria-label="Statut" value={params.status} onChange={(e) => update({ status: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Tous les statuts</option>
+          <option value="PUBLISHED">Publié</option>
+          <option value="DRAFT">Brouillon</option>
+        </select>
+        {!isLoading && (
+          <span className="text-sm text-gris" aria-live="polite">
+            {total} article{total > 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
       {error && (
         <p role="alert" aria-live="assertive" className="mb-6 rounded-xl bg-terre-cuite/10 p-4 text-sm text-terre-cuite">
           {error}
@@ -81,9 +126,11 @@ export default function ArticlesListPage() {
       )}
 
       {isLoading ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : articles.length === 0 ? (
-        <p className="text-gris py-8 text-center">Aucun article</p>
+        <p className="text-gris py-8 text-center">
+          {params.search || params.status ? "Aucun article ne correspond à ces filtres" : "Aucun article"}
+        </p>
       ) : (
         <>
           <div className="overflow-x-auto overflow-y-hidden rounded-xl shadow-card bg-blanc">
@@ -147,21 +194,7 @@ export default function ArticlesListPage() {
             </table>
           </div>
 
-          {totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => loadArticles(p)}
-                  className={`px-3 py-1 rounded text-sm ${
-                    p === page ? "bg-malachite text-blanc" : "bg-blanc text-gris hover:bg-blanc-casse"
-                  }`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
+          <ListPagination page={page} limit={PAGE_SIZE} total={total} onPageChange={(next) => update({ page: String(next) })} />
         </>
       )}
 

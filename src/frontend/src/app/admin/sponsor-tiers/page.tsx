@@ -77,7 +77,7 @@ export default function SponsorTiersPage() {
       )}
 
       {isLoading ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <DataTable<AdminSponsorTier>
           columns={columns}

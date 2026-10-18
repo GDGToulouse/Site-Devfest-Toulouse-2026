@@ -10,6 +10,8 @@ import { useDialog } from "@/lib/use-dialog";
 // benefit from a thumbnail card and alt is irrelevant for a downloadable
 // asset. Library filters to the target extensions passed via `accept`.
 
+const PICKER_PAGE_SIZE = 24;
+
 interface FileInfo {
   filename: string;
   url: string;
@@ -63,7 +65,9 @@ export default function FilePickerDialog({
   const dialogRef = useDialog({ open, onClose });
   const [tab, setTab] = useState<"library" | "upload">("library");
   const [files, setFiles] = useState<FileInfo[]>([]);
+  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,14 +83,23 @@ export default function FilePickerDialog({
     }
   }, [open]);
 
-  async function loadFiles() {
-    setIsLoading(true);
-    const { data } = await adminFetch<FileInfo[]>("/files");
+  // A page at a time, newest first, of the extensions this picker takes
+  // (#416): it used to load the whole library and filter it here. `reset`
+  // reloads from the first page, where a fresh upload lands.
+  async function loadFiles(reset = true) {
+    const nextPage = reset ? 1 : Math.floor(files.length / PICKER_PAGE_SIZE) + 1;
+    if (reset) setIsLoading(true);
+    else setIsLoadingMore(true);
+    const ext = extensions.map((e) => e.toLowerCase()).join(",");
+    const { data } = await adminFetch<{ total: number; items: FileInfo[] }>(
+      `/files?ext=${encodeURIComponent(ext)}&page=${nextPage}&limit=${PICKER_PAGE_SIZE}`,
+    );
     if (data) {
-      const allowed = new Set(extensions.map((e) => e.toLowerCase()));
-      setFiles(data.filter((f) => allowed.has(f.ext.toLowerCase())));
+      setFiles((prev) => (reset ? data.items : [...prev, ...data.items]));
+      setTotal(data.total);
     }
     setIsLoading(false);
+    setIsLoadingMore(false);
   }
 
   async function handleUpload(file: File) {
@@ -201,7 +214,7 @@ export default function FilePickerDialog({
           {tab === "library" && (
             <>
               {isLoading ? (
-                <p className="text-gris text-center py-8">Chargement...</p>
+                <p className="text-gris text-center py-8">Chargement…</p>
               ) : files.length === 0 ? (
                 <p className="text-gris text-center py-8">Aucun fichier. Uploadez-en un !</p>
               ) : (
@@ -234,6 +247,18 @@ export default function FilePickerDialog({
                     </li>
                   ))}
                 </ul>
+              )}
+              {files.length < total && (
+                <div className="mt-4 text-center">
+                  <button
+                    type="button"
+                    onClick={() => loadFiles(false)}
+                    disabled={isLoadingMore}
+                    className="rounded-lg border border-gris/30 bg-blanc px-4 py-2 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+                  >
+                    {isLoadingMore ? "Chargement…" : `Charger plus (${files.length} sur ${total})`}
+                  </button>
+                </div>
               )}
             </>
           )}

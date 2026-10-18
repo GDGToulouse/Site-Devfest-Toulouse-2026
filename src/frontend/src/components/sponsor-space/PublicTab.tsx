@@ -7,6 +7,8 @@ import RichTextEditor from "@/components/admin/RichTextEditor";
 import { saveSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
 import SponsorFileField from "@/components/sponsor-space/SponsorFileField";
 import SponsorFeedback, { type SponsorMessage } from "@/components/sponsor-space/SponsorFeedback";
+import RichTextLimitMeter from "@/components/sponsor-space/RichTextLimitMeter";
+import { richTextUsage, tooLongMessage, validationErrorMessage } from "@/lib/sponsor-text-limit";
 
 // What the public site shows about the company (#362). Read-only for STAND:
 // the booth team sees the page without being able to rewrite it.
@@ -35,9 +37,20 @@ export default function PublicTab({
   const [message, setMessage] = useState<SponsorMessage | null>(null);
 
   async function save() {
+    const tooLong = (
+      [
+        ["descriptionFr", descriptionFr],
+        ["descriptionEn", descriptionEn],
+      ] as const
+    ).find(([, html]) => richTextUsage(html).state === "over");
+    if (tooLong) {
+      setMessage({ isOk: false, text: tooLongMessage(tooLong[0]) });
+      return;
+    }
+
     setIsSaving(true);
     setMessage(null);
-    const { status, error } = await saveSponsorProfile(profile.id, {
+    const { status, error, code, message: detail } = await saveSponsorProfile(profile.id, {
       descriptionFr,
       descriptionEn,
       websiteUrl,
@@ -54,14 +67,15 @@ export default function PublicTab({
     setMessage({
       isOk: false,
       text:
-        error === "unsafe_url"
+        validationErrorMessage(code, detail) ??
+        (error === "unsafe_url"
           ? "Une des adresses saisies n'est pas valide. Utilisez une URL commençant par http:// ou https://."
           : // The logo is stored per edition (#375), so it has nowhere to go when
             // the company does not sponsor the current one. Saying "failed" here
             // sent the sponsor looking for a mistake in their own input.
             error === "no_current_participation"
             ? "Votre entreprise ne sponsorise pas l'édition en cours : le logo ne peut pas être enregistré. Contactez l'équipe DevFest Toulouse."
-            : "L'enregistrement a échoué. Réessayez.",
+            : "L'enregistrement a échoué. Réessayez."),
     });
   }
 
@@ -81,12 +95,18 @@ export default function PublicTab({
         isEmpty={(lang) => !(lang === "fr" ? descriptionFr : descriptionEn).trim()}
         renderPanel={(lang) =>
           canEdit ? (
-            <RichTextEditor
-              label={lang === "fr" ? "Description (français)" : "Description (English)"}
-              name={`description-${lang}`}
-              value={lang === "fr" ? descriptionFr : descriptionEn}
-              onChange={lang === "fr" ? setDescriptionFr : setDescriptionEn}
-            />
+            <>
+              <RichTextEditor
+                // The picker and the paste upload go through the admin file
+                // routes, which refuse a sponsor (#377).
+                showImageButton={false}
+                label={lang === "fr" ? "Description (français)" : "Description (English)"}
+                name={`description-${lang}`}
+                value={lang === "fr" ? descriptionFr : descriptionEn}
+                onChange={lang === "fr" ? setDescriptionFr : setDescriptionEn}
+              />
+              <RichTextLimitMeter html={lang === "fr" ? descriptionFr : descriptionEn} />
+            </>
           ) : (
             // RichTextEditor has no read-only mode; STAND gets the rendered
             // text rather than a disabled editor. Safe to inject: the field is

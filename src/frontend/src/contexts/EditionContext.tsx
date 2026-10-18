@@ -11,6 +11,8 @@ interface EditionContextValue {
   // Published admin-authored pages, so the header — a client component — can
   // place the ones an editor put in the menu (#420).
   pages: ContentPageSummary[];
+  // The menu order set in the admin (#606).
+  navOrder: string[];
 }
 
 const EditionContext = createContext<EditionContextValue>({
@@ -19,6 +21,7 @@ const EditionContext = createContext<EditionContextValue>({
   identity: {},
   socialLinks: {},
   pages: [],
+  navOrder: [],
 });
 
 export function EditionProvider({
@@ -27,6 +30,7 @@ export function EditionProvider({
   identity,
   socialLinks,
   pages = [],
+  navOrder = [],
   children,
 }: {
   edition: Edition | null;
@@ -34,10 +38,11 @@ export function EditionProvider({
   identity: Record<string, string>;
   socialLinks: SocialLinks;
   pages?: ContentPageSummary[];
+  navOrder?: string[];
   children: React.ReactNode;
 }) {
   return (
-    <EditionContext.Provider value={{ edition, cfp, identity, socialLinks, pages }}>
+    <EditionContext.Provider value={{ edition, cfp, identity, socialLinks, pages, navOrder }}>
       {children}
     </EditionContext.Provider>
   );
@@ -61,4 +66,8 @@ export function useSocialLinks() {
 
 export function useNavPages() {
   return useContext(EditionContext).pages;
+}
+
+export function useNavOrder() {
+  return useContext(EditionContext).navOrder;
 }

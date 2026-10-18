@@ -3,7 +3,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import { getLocale, getTranslations } from "next-intl/server";
 
-import { getSponsorBySlug } from "@/lib/api";
+import { getSponsorPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import { looksLikeHtml, htmlToText, markLinksSponsored, SPONSORED_LINK_REL } from "@/lib/html";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -18,7 +18,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const locale = await getLocale();
-  const sponsor = await getSponsorBySlug(slug);
+  const sponsor = await getSponsorPage(slug);
 
   if (!sponsor) return { title: "Sponsor not found" };
 
@@ -43,7 +43,7 @@ export default async function SponsorDetailPage({
   const { slug } = await params;
   const locale = await getLocale();
   const t = await getTranslations("sponsors");
-  const sponsor = await getSponsorBySlug(slug);
+  const sponsor = await getSponsorPage(slug);
 
   if (!sponsor) notFound();
 

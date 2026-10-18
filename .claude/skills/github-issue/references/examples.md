@@ -1,6 +1,6 @@
 # Exemples d'issues — repo `GDGToulouse/Site-Devfest-Toulouse-2026`
 
-3 exemples couvrant les cas principaux : **bug**, **enhancement / user story**, **question / décision**. Calqués sur les conventions réelles du repo (issues #64, #99, et un cas Lot 3).
+3 exemples couvrant les cas principaux : **bug**, **enhancement / user story**, **question / décision**. Calqués sur les conventions réelles du repo (issues #64, #99, et le hall of replays).
 
 ---
 
@@ -8,7 +8,7 @@
 
 **Titre** : `OAuth : le clic Google renvoie "null" au lieu de rediriger`
 
-**Labels** : `bug` · **Milestone** : `Lot 2 — Speakers, Sessions & Sponsors`
+**Labels** : `bug` · **Milestone** : `asap`
 
 **Body** :
 
@@ -53,7 +53,7 @@ flux OAuth.
 
 **Titre** : `Admin — gestion des images du carrousel « Derrière le DevFest »`
 
-**Labels** : `enhancement` · **Milestone** : `Lot 1 — Fondations & Billetterie`
+**Labels** : `enhancement` · **Milestone** : `next`
 
 **Body** :
 
@@ -98,11 +98,11 @@ partenaires écosystème et l'identité visuelle.
 
 ---
 
-## Exemple 3 — `enhancement` + User Story (Lot 3, vue programme)
+## Exemple 3 — `enhancement` + User Story (hall of replays)
 
 **Titre** : `Hall of replays — toutes les conférences vidéo, toutes éditions`
 
-**Labels** : `enhancement` · **Milestone** : `Lot 4 — Contenu complémentaire`
+**Labels** : `enhancement` · **Milestone** : `next-year`
 
 **Body** :
 

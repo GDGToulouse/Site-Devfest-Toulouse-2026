@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/admin-api";
 import type { Speaker } from "@/lib/types";
 import { useListParams } from "@/lib/use-list-params";
+import SpeakerDetails from "@/components/admin/record-details/SpeakerDetails";
 import DataTable, { type SortState } from "@/components/admin/DataTable";
 import ListPagination from "@/components/admin/ListPagination";
 import BulkActionBar from "@/components/admin/BulkActionBar";
@@ -60,6 +61,8 @@ function currentParticipation(speaker: SpeakerRow, year: string) {
 export default function SpeakersDataPage() {
   const router = useRouter();
   const { params, page, update } = useListParams(LIST_KEYS);
+  // The read-only panel opened from a row (#484).
+  const [viewedId, setViewedId] = useState<number | null>(null);
   const [editions, setEditions] = useState<{ id: number; year: number }[] | null>(null);
   const [list, setList] = useState<SpeakerPage | null>(null);
   const [searchInput, setSearchInput] = useState(params.search);
@@ -320,13 +323,14 @@ export default function SpeakersDataPage() {
       )}
 
       {list === null ? (
-        <p className="text-gris">Chargement...</p>
+        <p className="text-gris">Chargement…</p>
       ) : (
         <>
           <DataTable<SpeakerRow>
             columns={columns}
             data={list.items}
             emptyMessage={hasFilters ? "Aucun speaker ne correspond à ces filtres" : "Aucun speaker"}
+            onView={(s) => setViewedId(s.id)}
             onEdit={(s) => router.push(`/admin/speakers/${s.id}`)}
             onDelete={(s) => setDeleteTarget(s)}
             selectedIds={selectedIds}
@@ -344,6 +348,8 @@ export default function SpeakersDataPage() {
           />
         </>
       )}
+
+      <SpeakerDetails speakerId={viewedId} onClose={() => setViewedId(null)} />
 
       <ConfirmDialog
         isOpen={!!deleteTarget}
