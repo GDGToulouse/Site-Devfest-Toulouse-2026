@@ -20,6 +20,8 @@ services:
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # Unset by default: no analytics in local dev. Set it to exercise
       # Plausible and the Core Web Vitals reporting (#118).
       - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
@@ -61,6 +63,8 @@ services:
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
       # Lets the scheduled trash purge authenticate without a session (#149).
       # Unset locally by default: the endpoint then only accepts an ADMIN

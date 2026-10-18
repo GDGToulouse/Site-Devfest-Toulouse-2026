@@ -20,6 +20,8 @@ services:
       # the admin's saves never purged anything here: every change waited for
       # the hour-long s-maxage, and a status switch looked broken.
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
     expose:
       - "3000"
     depends_on:
@@ -57,6 +59,8 @@ services:
       - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-1}
       # Shared with the frontend to sign POST /api/revalidate (see frontend).
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       - DATABASE_URL=postgresql://${POSTGRES_USER:-devfest}:${POSTGRES_PASSWORD:-devfest}@db:5432/${POSTGRES_DB:-devfest}
       # No default: a public one would sign dev-j's sessions (#658). The
       # backend refuses to start without it once it is told it runs deployed

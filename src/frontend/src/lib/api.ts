@@ -32,6 +32,7 @@ import type { FaqItem, TeamMember,
   EcosystemPartner,
   CarouselSlide,
 } from "./types";
+import { internalApiHeaders } from "./internal-api";
 
 export const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:4000";
 
@@ -83,7 +84,7 @@ async function fetchAPI<T>(path: string, revalidate = 3600): Promise<T | null> {
   let res: Response;
 
   try {
-    res = await fetch(url, { next: { revalidate } });
+    res = await fetch(url, { next: { revalidate }, headers: internalApiHeaders() });
   } catch (cause) {
     console.error(`[api] ${path} — backend unreachable`, cause);
     if (isBuildTime()) return null;
