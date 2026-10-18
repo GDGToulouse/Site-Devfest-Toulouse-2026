@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 import createNextIntlPlugin from "next-intl/plugin";
 
 const isDev = process.env.NODE_ENV === "development";
@@ -8,6 +9,9 @@ const plausibleSrc = process.env.NEXT_PUBLIC_PLAUSIBLE_SRC || "";
 const plausibleOrigin = plausibleSrc ? new URL(plausibleSrc).origin : "";
 
 const nextConfig: NextConfig = {
+  // The ISR store, minus the 404 pages of invented slugs, which would fill the
+  // disk one URL at a time (#700). See cache-handler.js.
+  cacheHandler: path.resolve(process.cwd(), "cache-handler.js"),
   // No `X-Powered-By: Next.js`: it names the stack to whoever probes it (#658).
   poweredByHeader: false,
   // The backend accepts up to 20 MB per upload (see admin/files.ts).
