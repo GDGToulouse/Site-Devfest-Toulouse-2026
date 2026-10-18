@@ -12,6 +12,48 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.12.0] - 2026-10-18
+
+L'équipe se présente enfin sur le site : une **page Équipe** liste les organisateurs, et un **hall of fame** retrace toutes les entreprises partenaires depuis 2016. Chaque conférence de l'édition en cours n'a plus **qu'une seule page**, avec son replay, et les sponsors comme les conférences disposent de **visuels à partager** sur les réseaux.
+
+Le back-office gagne en confort : **aperçu des brouillons** sur le site, passage **Brouillon / Publié** explicite, gestion des **offres d'emploi** des sponsors, **import d'un fichier depuis une URL** et **tags de la médiathèque**. Cette version embarque aussi un **durcissement de sécurité** issu d'un audit interne, et la mise à jour des dépendances qui l'accompagne.
+
+> Trois migrations, **toutes additives** : `SponsorJobOffer.deletedAt` (corbeille des offres d'emploi), tables `TeamMember` et `TeamMemberEdition` (page Équipe), tables `FileTag` et `_FileMetadataToFileTag` (tags de la médiathèque). **Sauvegarde de la base recommandée avant déploiement.** Le backend refuse désormais de démarrer hors local si un secret vaut encore un exemple `change-me…`. Nouvelle variable `INTERNAL_API_SECRET`, à poser sur chaque environnement ; `TRUST_PROXY_HOPS` vaut `1` par défaut dans le compose. Les liens magiques envoyés juste avant le déploiement ne fonctionneront plus.
+
+### Ajouté
+
+- **Page Équipe** : les organisateurs de l'édition, par ordre alphabétique, administrables depuis le back-office (#110).
+- **Hall of fame des sponsors** : toutes les entreprises partenaires depuis 2016, triées par nom ou par nombre de participations, filtrables par année avec le logo et le niveau de l'époque (#611).
+- **Visuels à partager** pour les sponsors et les conférences, téléchargeables depuis l'admin (#116).
+- **Aperçu des brouillons** : un speaker, une conférence ou un sponsor non publié se consulte sur le site depuis l'admin (#618).
+- **Saisie du replay YouTube** d'une conférence dans l'admin (#636).
+- **Offres d'emploi des sponsors gérées depuis le back-office** (#609).
+- **Panneau de consultation** sur les lignes des listes de l'admin (#484).
+- **Gestion des tags d'articles** : renommer, fusionner, supprimer (#376).
+- **Image collée ou déposée** directement dans l'éditeur d'articles (#377).
+- **Menu public réordonnable** par glisser-déposer (#606).
+- **Import d'un fichier depuis une URL** dans la médiathèque et le sélecteur d'image (#617).
+- **Tags de la médiathèque** : classer les fichiers par sujet et filtrer par tag (#373).
+- **Lien vers le code source** du site en pied de page (#607).
+
+### Corrigé
+
+- **Conférences** : un speaker publié pouvait manquer sur la page d'une conférence, et deux pages divergeaient pour la même conférence ; il n'y a plus qu'une page par conférence de l'édition en cours (#633).
+- **Cache** : un import Sessionize met à jour tout le site (#627), et toute modification d'un speaker ou d'une conférence rafraîchit les pages qui l'affichent.
+- **Espace partenaire** : une description trop longue indique la limite au lieu d'être refusée sans explication (#610).
+- **Sponsors** : un « & » ne s'affiche plus « &amp; » dans une description en texte simple (#661).
+- **Corbeille** : la purge des éléments expirés tourne désormais chaque jour (#664).
+
+### Modifié
+
+- **Durcissement de sécurité** issu d'un audit interne : contrôle des fichiers déposés, validation des formulaires publics, sessions et clés d'API, appels sortants, en-têtes et configuration du déploiement (#658).
+- **Formulaire de demande de brochure** : une confirmation par heure et par adresse, et trois demandes par heure et par adresse IP (#662).
+- **Limitation de débit** : l'adresse du visiteur est lue derrière un nombre fixe de proxys (#663), et les appels du site lui-même au backend ne partagent plus le budget des visiteurs (#689).
+- **Dépendances** : Next.js 16.4, sharp 0.35, nodemailer 10, éditeur Tiptap 2.27.
+- **Back-office** : listes qui grandissent paginées (#416), libellés, retours et états vides harmonisés (#415), contrôle Brouillon / Publié explicite avec confirmation à la dépublication (#632).
+- **Performance** : la feuille de style des icônes est intégrée au lieu de bloquer le rendu (#479).
+- **Tests** : suite backend stabilisée (#555, #681).
+
 ## [1.11.0] - 2026-10-12
 
 Le site se prépare pour le jour J. La page d'accueil **suit le calendrier de l'événement** : « Dernier mois » pousse la billetterie avec un compte à rebours, « Dernière semaine » invite à préparer son programme, « Jour J » met en avant le programme du jour, et ces bascules se font **toutes seules à minuit** le jour venu. Le public peut **donner son avis sur chaque session**, et les speakers retrouvent les résultats dans leur espace.
