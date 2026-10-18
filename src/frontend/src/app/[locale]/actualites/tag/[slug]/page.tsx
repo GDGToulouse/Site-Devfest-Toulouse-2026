@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getArticles, getTags } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -20,13 +20,23 @@ async function findTag(slug: string) {
   return (await getTags()).find((tag) => tag.slug === slug) ?? null;
 }
 
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("articles");
   const tag = await findTag(slug);
 
@@ -45,11 +55,11 @@ export default async function TagPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("articles");
   const { page: pageParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);

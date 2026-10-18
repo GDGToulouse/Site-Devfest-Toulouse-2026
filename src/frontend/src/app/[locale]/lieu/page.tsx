@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { getCurrentEdition } from "@/lib/api";
@@ -9,8 +9,9 @@ import Breadcrumb from "@/components/Breadcrumb";
 // Server Component (Next.js 16), so it sits behind VenueMapClient.
 import VenueMapClient from "@/components/venue/VenueMapClient";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("venue");
   return {
     title: t("pageTitle"),
@@ -19,8 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function VenuePage() {
-  const locale = await getLocale();
+export default async function VenuePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("venue");
   const edition = await getCurrentEdition();
 

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition } from "@/lib/api";
 import { getSpeakerPage } from "@/lib/preview";
@@ -11,13 +11,19 @@ import { Link } from "@/i18n/navigation";
 import { absoluteUrl, jsonLdScript } from "@/lib/seo";
 import { pageMetadata } from "@/lib/page-metadata";
 
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const speaker = await getSpeakerPage(slug);
 
   if (!speaker) return { title: "Speaker not found" };
@@ -35,10 +41,10 @@ export async function generateMetadata({
 export default async function SpeakerDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("speakers");
   // Talk formats are translated under `replays` — the only namespace that owns
   // them. Named for what it does, so the two lookups stay legible.

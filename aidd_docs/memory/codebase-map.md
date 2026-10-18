@@ -12,7 +12,7 @@ flowchart TD
 
 ## Areas
 
-- `src/frontend/`: site public (`src/app/[locale]/`), back-office (`src/app/admin/`), espace partenaire (`src/app/sponsor/`), lien speaker (`src/app/edit/`), composants rangés par domaine (`src/components/`), client API (`src/lib/api.ts`)
+- `src/frontend/`: site public (`src/app/[locale]/`), back-office (`src/app/(app)/admin/`), espace partenaire (`src/app/(app)/sponsor/`), lien speaker (`src/app/(app)/edit/`), composants rangés par domaine (`src/components/`), client API (`src/lib/api.ts`)
 - `src/backend/`: routes REST (`src/routes/`, dont `admin/` pour le back-office), logique métier (`src/lib/`), plugins Fastify (`src/plugins/`), schéma, migrations et seeds (`prisma/`)
 - `docs/`: spécifications et procédures, en français ; index dans `CLAUDE.md`
 - `scripts/`: sauvegarde de la base de prod, imports depuis l'ancien site, garde-fou de version
@@ -22,7 +22,7 @@ flowchart TD
 ## Entry points
 
 - Backend : `src/backend/src/index.ts`
-- Frontend : `src/frontend/src/app/layout.tsx` et `src/frontend/src/proxy.ts`
+- Frontend : les deux layouts racines, `src/frontend/src/app/[locale]/layout.tsx` (site public) et `src/frontend/src/app/(app)/layout.tsx` (admin, espace partenaire, lien speaker, `/connect`), et `src/frontend/src/proxy.ts`
 
 ## Packages
 

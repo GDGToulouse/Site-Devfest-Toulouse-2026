@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition } from "@/lib/api";
 import { getTalkPage } from "@/lib/preview";
@@ -18,13 +18,19 @@ import { Link } from "@/i18n/navigation";
 // relative link would be dead there.
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const talk = await getTalkPage(slug);
 
   if (!talk) return { title: "Session not found" };
@@ -54,10 +60,10 @@ export async function generateMetadata({
 export default async function TalkDetailPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("conferences");
   const tcal = await getTranslations("calendar");
   // Language labels live under `replays`, the namespace that owns them.

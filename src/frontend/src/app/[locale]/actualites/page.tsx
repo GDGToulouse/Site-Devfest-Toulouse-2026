@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getArticles, getEditions, getTags } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -8,8 +8,13 @@ import ArticleCard from "@/components/ArticleCard";
 import ArticlesFilters from "@/components/articles/ArticlesFilters";
 import Pagination from "@/components/Pagination";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("articles");
   return {
     title: t("title"),
@@ -19,11 +24,14 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ArticlesPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<{ page?: string; edition?: string; tag?: string }>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("articles");
   const { page: pageParam, edition: editionParam, tag: tagParam } = await searchParams;
   const page = Math.max(Number(pageParam) || 1, 1);
