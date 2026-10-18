@@ -27,7 +27,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  await prisma.editionSponsorTier.deleteMany({ where: { editionId: testEditionId } });
+  if (testEditionId !== undefined) await prisma.editionSponsorTier.deleteMany({ where: { editionId: testEditionId } });
   await prisma.edition.delete({ where: { id: testEditionId } });
 });
 

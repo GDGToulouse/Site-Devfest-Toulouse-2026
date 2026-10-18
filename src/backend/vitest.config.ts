@@ -15,13 +15,16 @@ const exclude = ["node_modules", "dist"];
 // Vitest offers no per-file concurrency pragma; a project matched by glob is the
 // documented way to isolate one file without dropping parallelism for the rest.
 // `groupOrder` puts it in its own pass, after everything else.
-const SEQUENTIAL = ["src/**/trash-purge.test.ts"];
+const SEQUENTIAL = ["src/**/trash-purge*.test.ts"];
 
 // The integration tests boot a real Fastify app and hit Postgres. The first few
 // pay the one-off tsx transform + cold connection cost, which blows past
 // Vitest's 5s default on a shared CI runner. 30s is a safety margin for that
 // startup latency, not for any single slow assertion.
 const testTimeout = 30000;
+
+// Refuses a bulk delete/update whose filter lost a value to `undefined` (#681).
+const setupFiles = ["src/__tests__/support/setup-prisma-guard.ts"];
 
 export default defineConfig({
   test: {
@@ -32,6 +35,7 @@ export default defineConfig({
           include,
           exclude: [...exclude, ...SEQUENTIAL],
           testTimeout,
+          setupFiles,
           sequence: { groupOrder: 0 },
         },
       },
@@ -41,6 +45,7 @@ export default defineConfig({
           include: SEQUENTIAL,
           exclude,
           testTimeout,
+          setupFiles,
           fileParallelism: false,
           sequence: { groupOrder: 1 },
         },

@@ -7,9 +7,10 @@ import { purgeFiles } from "./trash-files.js";
  * Automatic purge of the trash (#149).
  *
  * Rows are kept for a grace period after deletion, then destroyed for good. The
- * schedule lives outside the process (a Coolify cron calling the endpoint)
- * rather than in an in-process timer: nothing to restart, nothing that fires
- * twice when two containers run, and it stays visible in the deploy config.
+ * daily run is a `node-cron` task of the backend (`scheduler.ts`, #664): the
+ * Coolify scheduled task this was first meant for was never created, and the
+ * trash never emptied. The endpoint (`routes/maintenance.ts`) stays for a manual
+ * run. Two runs at once are harmless — the purge is idempotent.
  */
 
 const DEFAULT_RETENTION_DAYS = 30;

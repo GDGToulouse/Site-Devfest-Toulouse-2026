@@ -1,5 +1,7 @@
 import sanitizeHtml from "sanitize-html";
 
+import { RICH_TEXT_CLASSES } from "./rich-text-classes.js";
+
 /**
  * Allowlist-based HTML sanitization for rich text stored from the admin UI
  * (TipTap editor). Applied server-side before write so the database never
@@ -26,6 +28,9 @@ const OPTIONS: sanitizeHtml.IOptions = {
     img: ["src", "alt", "title", "width", "height", "data-align"],
     "*": ["class"],
   },
+  // Classes from the import's closed list only (#658): any other would hand
+  // whoever writes rich text, sponsors included, the site's utility CSS.
+  allowedClasses: { "*": [...RICH_TEXT_CLASSES] },
   // Only safe URL schemes for href/src. Blocks javascript:, data:, vbscript:
   // and other exotic schemes that can carry executable content.
   allowedSchemes: ["http", "https", "mailto", "tel"],
@@ -55,8 +60,31 @@ const OPTIONS: sanitizeHtml.IOptions = {
   nonTextTags: ["script", "style", "textarea", "option", "noscript"],
 };
 
+// Same test as the front-office's `looksLikeHtml`: a value either carries tags
+// or is text, and both sides must agree on which, or one of them escapes it twice.
+const HAS_TAG = /<[a-z][\s\S]*>/i;
+
+/**
+ * A value without a tag is text, and the API, the MCP connector and the history
+ * import send it that way (#661); only the editor sends HTML. Sanitizing it as
+ * HTML would turn `&` into `&amp;`, which a page printing it as text escapes a
+ * second time. It is stored as HTML instead, a paragraph per blank line, like
+ * what the editor produces: the ampersand is escaped once, here, and every page
+ * reads it as HTML.
+ */
+function textToHtml(text: string): string {
+  const escaped = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return escaped
+    .split(/\r?\n[ \t]*\r?\n/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => `<p>${paragraph.replace(/\r?\n/g, "<br />")}</p>`)
+    .join("");
+}
+
 export function sanitizeRichHtml(html: string | null | undefined): string {
   if (!html) return "";
+  if (!HAS_TAG.test(html)) return textToHtml(html);
   return sanitizeHtml(html, OPTIONS);
 }
 
@@ -75,10 +103,45 @@ const SAFE_URL_SCHEMES = ["http:", "https:"];
 export function isSafeUrl(value: string): boolean {
   const trimmed = value.trim();
   if (!trimmed) return false;
-  if (trimmed.startsWith("/")) return !trimmed.startsWith("//"); // protocol-relative bypasses the scheme check
+  // Protocol-relative bypasses the scheme check, and a browser reads a
+  // backslash as a slash: `/\host` leaves for `//host` too.
+  if (trimmed.startsWith("/")) return !trimmed.startsWith("//") && !trimmed.includes("\\");
   try {
     return SAFE_URL_SCHEMES.includes(new URL(trimmed).protocol);
   } catch {
     return false;
   }
+}
+
+/**
+ * The first URL field of a body that isSafeUrl refuses, or null. Empty strings
+ * clear a field and pass. `socialLinks` is checked entry by entry.
+ */
+export function findUnsafeUrl(body: Record<string, unknown>, fields: readonly string[]): string | null {
+  for (const field of fields) {
+    const value = body[field];
+    if (typeof value === "string" && value.trim() && !isSafeUrl(value)) return field;
+  }
+  const social = body.socialLinks;
+  if (social && typeof social === "object") {
+    for (const [key, entry] of Object.entries(social as Record<string, unknown>)) {
+      if (typeof entry === "string" && entry.trim() && !isSafeUrl(entry)) return `socialLinks.${key}`;
+    }
+  }
+  return null;
+}
+
+/**
+ * The 400 body for a body whose URL field isSafeUrl refuses, or null when
+ * every one passes: the back-office routes answer it as is, with the field to
+ * point the editor at.
+ */
+export function unsafeUrlRefusal(body: object, fields: readonly string[]) {
+  const field = findUnsafeUrl(body as Record<string, unknown>, fields);
+  if (!field) return null;
+  return {
+    error: "unsafe_url",
+    field,
+    message: `Lien refusé (${field}) : seules les adresses http(s) et les chemins du site (commençant par /) sont acceptés.`,
+  };
 }

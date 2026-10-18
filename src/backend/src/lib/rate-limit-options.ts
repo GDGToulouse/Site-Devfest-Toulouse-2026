@@ -1,3 +1,5 @@
+import { createHash, timingSafeEqual } from "node:crypto";
+
 import type { FastifyRequest } from "fastify";
 
 /** Prefix `@fastify/static` serves the uploaded files under. */
@@ -50,6 +52,36 @@ export const authRateLimit = {
   keyGenerator: (request: FastifyRequest) => (isOAuthRequest(request.url) ? `oauth:${request.ip}` : `auth:${request.ip}`),
 };
 
+/** Header the frontend's server-side calls carry (#689). Lower-case: Node's. */
+export const INTERNAL_API_HEADER = "x-internal-api-secret";
+
+/**
+ * Is this a call from our own frontend's server (SSR), not a visitor (#689)?
+ *
+ * Those calls come from the frontend container, without a visitor address, so
+ * they all fell in one bucket: a spike on uncached pages drained the 200/min
+ * budget and the frontend rendered error pages for everyone. They carry the
+ * secret from `INTERNAL_API_SECRET` instead, and are exempt from the limit.
+ *
+ * - Unset or empty secret: no exemption, whatever the header says (today's
+ *   behaviour; deploying before the variable exists breaks nothing).
+ * - Compared in constant time, on digests so lengths do not leak either.
+ * - A call relayed from a browser (Next's `/api/*` rewrite) arrives with the
+ *   `X-Forwarded-For` Traefik wrote and passes the visitor's other headers on.
+ *   It is never exempt, even with the right secret: that header is the mark of
+ *   a visitor, and SSR calls have none. Visitors cannot know the secret anyway;
+ *   this keeps a leak of it from opening the API to bursts.
+ */
+export function isInternalCall(request: FastifyRequest): boolean {
+  const secret = process.env.INTERNAL_API_SECRET;
+  if (!secret) return false;
+  const sent = request.headers[INTERNAL_API_HEADER];
+  if (typeof sent !== "string" || sent === "") return false;
+  if (request.headers["x-forwarded-for"] !== undefined) return false;
+  const digest = (value: string) => createHash("sha256").update(value).digest();
+  return timingSafeEqual(digest(sent), digest(secret));
+}
+
 /**
  * Two budgets, two buckets: reading a brochure must not spend what the site's
  * own API calls need, and vice versa. A shared counter with two ceilings would
@@ -57,6 +89,7 @@ export const authRateLimit = {
  */
 export const rateLimitOptions = {
   timeWindow: "1 minute",
+  allowList: (request: FastifyRequest) => isInternalCall(request),
   max: (request: FastifyRequest) =>
     isUpload(request) ? UPLOADS_RATE_LIMIT_MAX : API_RATE_LIMIT_MAX,
   keyGenerator: (request: FastifyRequest) =>

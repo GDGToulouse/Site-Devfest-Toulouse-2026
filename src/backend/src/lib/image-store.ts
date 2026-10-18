@@ -6,6 +6,12 @@ import sharp from "sharp";
 import { fetchRemoteFile } from "./safe-fetch.js";
 import { sanitizeSvg } from "./svg-sanitize.js";
 
+// Decoders no upload needs, blocked for the whole process: files come from
+// third parties (speakers, sponsors), and libvips' TIFF, native VIPS and HEIF
+// loaders are where its advisories land (#658). JPEG, PNG, WebP, GIF and SVG
+// stay open: those are what the media library takes.
+sharp.block({ operation: ["VipsForeignLoadTiff", "VipsForeignLoadVips", "VipsForeignLoadHeif"] });
+
 // Single source of truth for where uploaded media lives. Served publicly at
 // /uploads/ (see index.ts static route). The container mounts it at /app/uploads;
 // UPLOADS_DIR overrides the path when running outside Docker.
@@ -120,7 +126,8 @@ export async function fetchAndStoreImage(url: string): Promise<string> {
   // resolve the true format before storing.
   const format = (await sharp(buffer, { failOn: "none" }).metadata()).format;
   if (!format) throw new Error("unreadable image data");
-  const realMime = `image/${format === "jpg" ? "jpeg" : format}`;
+  // sharp names JPEG "jpeg" (0.35 dropped the "jpg" alias from its types).
+  const realMime = `image/${format}`;
 
   return storeImageBuffer(buffer, realMime);
 }

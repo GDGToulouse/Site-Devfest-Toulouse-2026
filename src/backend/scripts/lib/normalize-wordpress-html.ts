@@ -1,5 +1,7 @@
 import { parse, HTMLElement } from "node-html-parser";
 
+import { RICH_TEXT_CLASSES } from "../../src/lib/rich-text-classes.js";
+
 /**
  * Converts legacy WordPress markup (Avada Fusion Builder, Gutenberg blocks and
  * classic-editor HTML) into clean, theme-independent HTML using Tailwind
@@ -15,42 +17,9 @@ import { parse, HTMLElement } from "node-html-parser";
  * `@source inline(...)`) because Tailwind v4 does not scan DB-stored HTML.
  */
 
-// Allowlist of utility classes the normalizer itself emits. Every other class
-// (theme chrome from Avada/Gutenberg, lazyload hints, social-embed bookkeeping,
-// etc.) is stripped. An allowlist is used rather than a deny-list because the
-// universe of legacy classes is open-ended, while the classes we emit are a
-// small fixed set — and these are exactly the ones safelisted in globals.css.
-const ALLOWED_CLASSES = new Set([
-  "grid",
-  "grid-cols-1",
-  "sm:grid-cols-2",
-  "md:grid-cols-2",
-  "md:grid-cols-4",
-  "md:grid-cols-5",
-  "gap-6",
-  "gap-8",
-  "items-center",
-  "md:col-span-2",
-  "md:col-span-3",
-  "w-full",
-  "rounded-lg",
-  "mx-auto",
-  "block",
-  "inline-block",
-  "no-underline",
-  "px-5",
-  "py-2",
-  "font-bold",
-  "text-center",
-  "text-left",
-  "text-right",
-  "text-sm",
-  "text-gris",
-  "p-4",
-  "bg-bismarck",
-  "text-blanc",
-  "bg-blanc-casse",
-]);
+// Every other class (theme chrome from Avada/Gutenberg, lazyload hints,
+// social-embed bookkeeping, etc.) is stripped: see RICH_TEXT_CLASSES.
+const ALLOWED_CLASSES = new Set(RICH_TEXT_CLASSES);
 
 const CAPTION_CLASS = "text-sm text-gris text-center";
 const BUTTON_CLASS =

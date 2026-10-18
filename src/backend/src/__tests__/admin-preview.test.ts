@@ -22,7 +22,7 @@ import { createAgentClient, createUserWithPassword, obtainAgentToken, signInCook
 
 const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 // A past year of its own, so the featured edition and its menu never move.
-const TEST_YEAR = 1992;
+const TEST_YEAR = 1530;
 
 let app: FastifyInstance;
 let clientId: string;
@@ -88,7 +88,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-  await prisma.talk.deleteMany({ where: { editionId } });
+  if (editionId !== undefined) await prisma.talk.deleteMany({ where: { editionId } });
   await prisma.speaker.deleteMany({ where: { id: { in: ids.speakerIds } } });
   await prisma.sponsor.deleteMany({ where: { id: { in: ids.sponsorIds } } });
   await prisma.edition.delete({ where: { id: editionId } });

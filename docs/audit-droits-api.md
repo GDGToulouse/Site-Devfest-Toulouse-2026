@@ -83,8 +83,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
-| GET | `/api/admin/api-keys` | ADMIN ; refusé aux agents IA |
-| DELETE | `/api/admin/api-keys/:id` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/api-keys` | ADMIN ; refusé aux agents IA et aux clés d'API |
+| DELETE | `/api/admin/api-keys/:id` | ADMIN ; refusé aux agents IA et aux clés d'API |
 | GET | `/api/admin/articles` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/articles` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
@@ -257,10 +257,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 |---|---|---|
 | GET | `/api/me/agents` | Tout compte, depuis le navigateur |
 | DELETE | `/api/me/agents/:clientId` | Tout compte, depuis le navigateur |
-| GET | `/api/me/api-keys` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA |
-| POST | `/api/me/api-keys` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA |
-| DELETE | `/api/me/api-keys/:id` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA |
-| POST | `/api/me/api-keys/:id/rotate` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA |
+| GET | `/api/me/api-keys` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
+| POST | `/api/me/api-keys` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
+| DELETE | `/api/me/api-keys/:id` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
+| POST | `/api/me/api-keys/:id/rotate` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
 
 ### Espace partenaire (14)
 
@@ -356,6 +356,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/speakers/hall-of-fame` | Public |
 | GET | `/api/sponsor-invitation/:token` | Public |
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
+| POST | `/api/sponsor-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule |
 | GET | `/api/sponsors` | Public |
 | GET | `/api/sponsors/:slug` | Public |
 | GET | `/api/sponsors/hall-of-fame` | Public |

@@ -11,13 +11,17 @@ services:
       # Next then compiles /_not-found instead of /[locale] and serves 404 on
       # every page until .next is wiped. A named volume is native Linux fs.
       - frontend_next:/app/.next
+    # Every port of this stack is published on the loopback only: its database,
+    # mail catcher and demo accounts use credentials published in the repo (#658).
     ports:
-      - "${FRONTEND_PORT:-3000}:3000"
+      - "127.0.0.1:${FRONTEND_PORT:-3000}:3000"
     environment:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - BACKEND_URL=http://backend:4000
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # Sent by the frontend server on its calls to the backend, which then exempts them from the rate limit (#689). Same value on both services; unset = no exemption.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       # Unset by default: no analytics in local dev. Set it to exercise
       # Plausible and the Core Web Vitals reporting (#118).
       - NEXT_PUBLIC_PLAUSIBLE_SRC=${NEXT_PUBLIC_PLAUSIBLE_SRC:-}
@@ -34,12 +38,15 @@ services:
       - backend_node_modules:/app/node_modules
       - ./uploads:/app/uploads
     ports:
-      - "${BACKEND_PORT:-4000}:4000"
+      - "127.0.0.1:${BACKEND_PORT:-4000}:4000"
     environment:
       - NODE_ENV=development
       - BASE_URL=${BASE_URL:-http://localhost:3000}
       - FRONTEND_URL=http://frontend:3000
       - PORT=4000
+      # No Traefik here and the frontend adds no X-Forwarded-For: trust nobody, so
+      # `request.ip` is the socket (#663). The deployed composes set 1.
+      - TRUST_PROXY_HOPS=${TRUST_PROXY_HOPS:-0}
       # Normally injected at build time from the deployed commit (#290). Set it
       # locally to exercise the badge; empty means "not a deployed build".
       - APP_COMMIT=${APP_COMMIT:-}
@@ -56,6 +63,8 @@ services:
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
+      # See the frontend service (#689): requests carrying it are not rate-limited.
+      - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
       - BROCHURE_TOKEN_SECRET=${BROCHURE_TOKEN_SECRET:-}
       # Lets the scheduled trash purge authenticate without a session (#149).
       # Unset locally by default: the endpoint then only accepts an ADMIN
@@ -82,7 +91,7 @@ services:
     container_name: devfest-local-db
     image: postgres:16-alpine
     ports:
-      - "${DB_PORT:-5432}:5432"
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-devfest}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-devfest}
@@ -99,8 +108,8 @@ services:
     container_name: devfest-local-mailhog
     image: mailhog/mailhog:latest
     ports:
-      - "1025:1025"
-      - "8025:8025"
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
 
 volumes:
   frontend_node_modules:

@@ -11,6 +11,11 @@ on:
     branches: [main, dev]
   workflow_dispatch:
 
+# Read-only token, never written to .git/config: the jobs run third-party code
+# (install scripts, builds, tests), which must not be able to push (#658).
+permissions:
+  contents: read
+
 jobs:
   lighthouse:
     name: Lighthouse — Performance & Quality
@@ -47,9 +52,11 @@ jobs:
       BASE_URL: http://localhost:3000
 
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -82,7 +89,7 @@ jobs:
         working-directory: src/backend
         run: |
           pnpm start &
-          npx wait-on http://localhost:4000/api/health --timeout 60000
+          npx --yes wait-on@9.5.1 http://localhost:4000/api/health --timeout 60000
 
       # --- Site
       - name: Install frontend
@@ -99,7 +106,7 @@ jobs:
         working-directory: src/frontend
         run: |
           pnpm start &
-          npx wait-on http://localhost:3000/fr --timeout 60000
+          npx --yes wait-on@9.5.1 http://localhost:3000/fr --timeout 60000
 
       - name: Run Lighthouse CI
         working-directory: src/frontend
@@ -110,7 +117,7 @@ jobs:
       # the runner is gone.
       - name: Upload Lighthouse reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: lighthouse-reports
           path: src/frontend/.lighthouseci

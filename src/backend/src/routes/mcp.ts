@@ -96,11 +96,13 @@ function buildServer(app: FastifyInstance, token: string, callerIp: string) {
       const response = await app.inject({
         method,
         url: `${pathname}${search}`,
+        // Keep the agent's address for the rate limit and the history, rather
+        // than every agent sharing the loopback's budget. As the socket's
+        // address, not an X-Forwarded-For header: that one only counts when the
+        // deployment trusts a proxy (#663), and this call has none in between.
+        remoteAddress: callerIp,
         headers: {
           authorization: `Bearer ${token}`,
-          // Keep the agent's address for the rate limit and the history, rather
-          // than every agent sharing the loopback's budget.
-          "x-forwarded-for": callerIp,
           ...(body !== undefined && { "content-type": "application/json" }),
         },
         ...(body !== undefined && { payload: JSON.stringify(body) }),

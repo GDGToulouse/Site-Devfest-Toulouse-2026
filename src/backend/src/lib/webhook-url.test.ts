@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import { promises as dns } from "node:dns";
-import { validateWebhookUrl } from "./webhook-url.js";
+import { isPrivateAddress, validateWebhookUrl } from "./webhook-url.js";
 
 // The SSRF check ends in a real `dns.lookup`. We stub it so the DNS-dependent
 // cases are deterministic in CI (no Internet, no reliance on third-party
@@ -48,6 +48,13 @@ describe("validateWebhookUrl", () => {
     await expect(validateWebhookUrl("http://postfix/mail")).rejects.toThrow("internal_hostname");
   });
 
+  // A name that does not resolve at check time could resolve anywhere at send
+  // time: it is refused rather than waved through (#658).
+  it("rejects a hostname that does not resolve", async () => {
+    vi.spyOn(dns, "lookup").mockRejectedValue(Object.assign(new Error("ENOTFOUND"), { code: "ENOTFOUND" }));
+    await expect(validateWebhookUrl("https://nowhere.example.org/hook")).rejects.toThrow("unresolved_hostname");
+  });
+
   it("rejects URLs whose hostname resolves to a private IP", async () => {
     stubLookup("10.0.0.1");
     await expect(validateWebhookUrl("http://sneaky.example/x")).rejects.toThrow("private_ip");
@@ -56,5 +63,45 @@ describe("validateWebhookUrl", () => {
   it("rejects URLs whose hostname resolves to the cloud metadata IP", async () => {
     stubLookup("169.254.169.254");
     await expect(validateWebhookUrl("http://metadata.example/latest")).rejects.toThrow("private_ip");
+  });
+});
+
+// The WHATWG parser rewrites `[::ffff:127.0.0.1]` as `[::ffff:7f00:1]`: an
+// IPv4 address embedded in IPv6 must be judged by its IPv4 part whatever the
+// notation, and the shared-address and benchmark ranges are not public either.
+describe("isPrivateAddress", () => {
+  it.each([
+    ["::ffff:7f00:1", 6],
+    ["::ffff:127.0.0.1", 6],
+    ["::ffff:a00:1", 6],
+    ["::ffff:c0a8:101", 6],
+    ["::ffff:a9fe:a9fe", 6],
+    ["64:ff9b::7f00:1", 6],
+    ["::7f00:1", 6],
+    ["2002:7f00:1::", 6],
+    ["::", 6],
+    ["::1", 6],
+    ["fe80::1", 6],
+    ["fd00::1", 6],
+    ["100.64.0.1", 4],
+    ["198.18.0.1", 4],
+    ["192.0.0.1", 4],
+    ["0.0.0.0", 4],
+    ["255.255.255.255", 4],
+  ] as const)("should treat %s as private", (address, family) => {
+    expect(isPrivateAddress(address, family)).toBe(true);
+  });
+
+  it.each([
+    ["93.184.216.34", 4],
+    ["8.8.8.8", 4],
+    ["::ffff:808:808", 6],
+    ["2606:4700:4700::1111", 6],
+  ] as const)("should treat %s as public", (address, family) => {
+    expect(isPrivateAddress(address, family)).toBe(false);
+  });
+
+  it("should refuse a webhook to an IPv4-mapped loopback literal", async () => {
+    await expect(validateWebhookUrl("http://[::ffff:127.0.0.1]:18765/hook")).rejects.toThrow();
   });
 });

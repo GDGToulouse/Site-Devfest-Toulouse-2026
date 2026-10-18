@@ -14,6 +14,7 @@
 ## Conventions
 
 - Règles complètes : `.claude/rules/testing.md` (nommage, test rouge avant le correctif, un commit par correctif)
+- Les suites backend partagent une base et tournent en parallèle : chaque fichier possède ses années d'édition (`Edition.year` est `@unique`, `test-year-ownership.test.ts` refuse un doublon entre 1500 et 2005), et un nettoyage qui filtre sur un id posé en `beforeAll` se garde par `if (id !== undefined)`. Un `deleteMany` / `updateMany` au filtre vide ou `undefined` est refusé par `src/__tests__/support/guard-unscoped-writes.ts`, chargé pour tous les fichiers (#681) : Prisma écarte la clé `undefined`, et le nettoyage d'une suite dont le `beforeAll` a échoué effaçait toute la table, données de démo comprises
 - Un échec isolé qui ne se reproduit pas est d'abord une collision de fixtures : relancer avant d'enquêter, et le dire
 - « Tests N passed » ne veut pas dire vert : une exception non interceptée pendant un rendu sort en « Unhandled Errors / Errors 1 error » et fait échouer la CI. Lire le code de sortie de `vitest run` (ou la ligne `Errors`), jamais la seule ligne `Tests` (#416, mock de `/files` resté à l'ancienne forme)
 - Une base locale déjà pleine masque les échecs « données manquantes ». Reproduire la CI = `migrate deploy` + `seed-dev.ts` + tests sur une **base fraîche**
@@ -29,7 +30,7 @@
 ## Browser QA
 
 - Entry: `docker compose -f docker-compose.local.yml up -d`, puis `http://localhost:3000` ; back-office sur `/admin` (pas `/fr/admin`)
-- Auth: `admin@devfesttoulouse.fr` / `admin1234!dev` (ADMIN) et `editor@devfesttoulouse.fr` / `editor1234!dev` (EDITOR), reposés par `seed-dev.ts` même sur des comptes existants (#433) — `docs/comptes-dev-local.md`
+- Auth: `admin@devfesttoulouse.fr` / `admin1234!dev` (ADMIN) et `editor@devfesttoulouse.fr` / `editor1234!dev` (EDITOR), reposés par `seed-dev.ts` même sur des comptes existants (#433) — `docs/comptes-dev-local.md`. En local et en CI seulement : sur `dev-j`, les mêmes comptes prennent `DEV_SEED_PASSWORD` et MailHog demande `MAILHOG_USER` / `MAILHOG_PASSWORD` (variables Coolify, que Julien détient)
 - Auth sponsor: `responsable@aeronova.example.com` (deux fiches) et `editeur@cassoulet.example.com`, mot de passe `sponsor1234!dev`, posés par `seed-dev.ts` sur `/sponsor/login`. Pour tester l'invitation elle-même : créer un contact (`POST /api/admin/sponsors/<id>/contacts`), lire l'invitation dans MailHog (`http://localhost:8025/api/v2/messages`, corps en quoted-printable), **se déconnecter** avant d'ouvrir `/sponsor/invitation/<token>`, puis relancer `seed-dev.ts` pour nettoyer
 - State: `src/backend/prisma/seed-dev.ts`, lancé à la main
 - Multi-navigateur : tout changement de mise en page (tableau, grille, `sticky`, hauteurs) se vérifie aussi dans Firefox et WebKit. Chrome seul a laissé passer en prod une grille du programme écrasée sous Firefox (#550). Comparer des mesures (hauteur, débordement via `scrollHeight`) plutôt que des captures à l'œil
@@ -50,4 +51,5 @@ Le code local ment souvent ; l'environnement avant le code. Test discriminant : 
 
 - **Le compose local ne migre ni ne seede** (pas de `db-boot.sh`) : sur un volume `pgdata` neuf, toutes les tables manquent (`The table … does not exist`). `docker exec devfest-local-backend sh -c 'pnpm exec prisma migrate deploy && pnpm exec tsx prisma/seed.ts && pnpm exec tsx prisma/seed-dev.ts'`
 - **Aucune purge de cache en local** sans `REVALIDATE_SECRET` dans `.env` (il n'y a pas de `.env` par défaut) : un enregistrement admin ne change la page qu'au bout d'une heure. Vider `.next/cache/fetch-cache` puis redémarrer le frontend, ou poser le secret dans `.env`
+- **Changer une dépendance du frontend** : `pnpm add` dans le conteneur qui tourne tue `next dev` en pleine installation, et rien n'est écrit. Arrêter le service, puis `docker compose -f docker-compose.local.yml run --rm --no-deps -T frontend sh -c 'corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm add …'` (l'image nue n'a pas pnpm). Pour une dépendance transitive : `pnpm update --no-save --depth Infinity <paquet>` ; sans `--no-save`, pnpm réécrit aussi les plages des dépendances directes
 - `.next/dev/types/{routes.d.ts,validator.ts}` se régénèrent tronqués et font échouer `tsc` sur du code sain : les supprimer, charger une page, relancer

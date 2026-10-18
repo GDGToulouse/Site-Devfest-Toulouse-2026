@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { prisma } from "./prisma.js";
 import { isInvitationExpired } from "./edit-token.js";
 import type { FastifySchemaValidationError } from "fastify";
@@ -31,6 +33,22 @@ export async function findPendingInvitation(token: string) {
   if (contact.invitationAcceptedAt) return null;
   if (isInvitationExpired(contact.invitationSentAt)) return null;
   return contact;
+}
+
+// An invited address proves nothing by itself: whoever learnt whom a company
+// invited could open that account first, keep its session, and inherit the
+// space once the real person accepts (#658). The account is created either by
+// an identity provider, which has proven the mailbox, or through the invitation
+// token, which reached it: the sign-up route runs better-auth inside this scope
+// for the invited address, and the sign-up hook reads it.
+const tokenProvenSignUp = new AsyncLocalStorage<string>();
+
+export function signUpWithInvitation<T>(email: string, fn: () => Promise<T>): Promise<T> {
+  return tokenProvenSignUp.run(normalizeEmail(email), fn);
+}
+
+export function isTokenProvenSignUp(email: string): boolean {
+  return tokenProvenSignUp.getStore() === normalizeEmail(email);
 }
 
 // The first person invited to a sponsor's space becomes its RESPONSABLE (#362).

@@ -8,6 +8,7 @@ import {
   getSponsorBySlug,
   getTalkBySlug,
 } from "./api";
+import { internalApiHeaders } from "./internal-api";
 import type { EditionTalkDetail, SpeakerDetail, SponsorDetail, TalkDetail } from "./types";
 
 // Draft preview (#618). In Next's draft mode, the speaker, talk and sponsor
@@ -26,7 +27,7 @@ export async function fetchPreview<T>(path: string): Promise<T | null | "denied"
   try {
     res = await fetch(`${BACKEND_URL}/api/admin/preview${path}`, {
       cache: "no-store",
-      headers: { cookie: cookieHeader },
+      headers: { ...internalApiHeaders(), cookie: cookieHeader },
     });
   } catch (cause) {
     console.error(`[preview] ${path} — backend unreachable`, cause);

@@ -54,7 +54,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.speaker.deleteMany({ where: { id: { in: Object.values(ids) } } });
-  await prisma.edition.deleteMany({ where: { id: editionId } });
+  if (editionId !== undefined) await prisma.edition.deleteMany({ where: { id: editionId } });
   await app.close();
 });
 

@@ -28,7 +28,8 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 | `REVALIDATE_SECRET` | oui en prod | Secret partagé entre backend et frontend pour invalider le cache Next via `POST /api/revalidate`. Si absent, la revalidation est désactivée (le cache reste statique jusqu'au TTL `s-maxage`). | (32+ caractères aléatoires) |
 | `BROCHURE_TOKEN_SECRET` | oui en prod | Secret HMAC utilisé pour signer les liens de téléchargement de la plaquette envoyés par email. Si absent, le mail de confirmation tombe sur l'URL brute (sans tracking). | (32+ caractères aléatoires) |
 | `GEMINI_API_KEY` | non (mais requise pour la traduction IA) | Clé API Google Gemini utilisée par la fonctionnalité de traduction FR⇄EN du back-office. Si absente, l'endpoint `/api/admin/translate` répond `503 not_configured` et le bouton « Traduire » est désactivé côté UI. **Free tier** : données potentiellement utilisées pour l'entraînement — ne pas activer sur du contenu confidentiel. Migrer vers Tier 1 payant si besoin. Obtenir une clé : https://aistudio.google.com/apikey | `AIzaSy...` |
-| `ENV_NAME` | non | Nom de l'environnement de déploiement. Sert à l'aliasing réseau Docker **et** est exposé dans l'admin via `GET /api/health` → badge `v{version} · {environment}` dans la sidebar (#171). Défaut `local`. | `beta`, `prod` |
+| `ENV_NAME` | non | Nom de l'environnement de déploiement. Sert à l'aliasing réseau Docker **et** est exposé dans l'admin via `GET /api/health` → badge `v{version} · {environment}` dans la sidebar (#171). Défaut `local` (`dev` dans `docker-compose.dev.yml`). Hors `local`, `seed-dev.ts` exige `DEV_SEED_PASSWORD`. | `beta`, `prod` |
+| `DEV_SEED_PASSWORD` | oui sur `dev-j` | Mot de passe posé par `seed-dev.ts` sur les comptes de démo (ADMIN, EDITOR, sponsors), au lieu des mots de passe publics de `docs/comptes-dev-local.md`. 12 caractères minimum. Sans elle, sur un environnement dont `ENV_NAME` n'est pas `local`, le seed échoue et le backend ne démarre pas. Inutile en local et en CI. | (20+ caractères aléatoires) |
 | `APP_VERSION` | non | Surcharge le numéro de version applicatif (semver) exposé par `GET /api/health`. Par défaut, la constante `APP_VERSION` du code (`1.0.0`), incrémentée à la main à chaque release et taguée sur `main`. | `1.0.0` |
 
 ## Base de données (backend uniquement)
@@ -41,9 +42,11 @@ Un fichier `.env.example` est fourni à la racine du projet avec des valeurs fic
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. | `a1b2c3d4...` |
+| `SESSION_SECRET` | oui | Secret pour signer les cookies et sessions. Minimum 32 caractères aléatoires. Hors local (`NODE_ENV=production` ou `ENV_NAME` autre que `local`), le backend refuse de démarrer s'il manque ou s'il vaut encore un exemple `change-me…` ; même refus pour `MAGIC_LINK_SECRET`, `REVALIDATE_SECRET`, `BROCHURE_TOKEN_SECRET` et `TRASH_PURGE_SECRET` laissés à leur exemple. | `a1b2c3d4...` |
+| `TRUST_PROXY_HOPS` | non | Nombre de proxys inverses entre le visiteur et le backend (#663). Le backend lit `request.ip` (limites de débit, historique) dans `X-Forwarded-For` en remontant ce nombre de sauts depuis la socket ; ce que le visiteur écrit plus à gauche ne compte pas. **Chaîne déployée (dev-j, beta, prod) : navigateur → Traefik → frontend Next → backend, donc `1`** (valeur par défaut des composes `prod` et `dev`) : Traefik remplace l'en-tête par l'adresse du visiteur, Next le transmet tel quel, le seul saut de confiance est le conteneur frontend. **Local : `0`** (pas de Traefik). Vide ou `0` : aucune confiance, `request.ip` est la socket. Un saut ne compte que s'il a une adresse privée ou de loopback. Une valeur qui n'est pas un entier ≥ 0 empêche le démarrage. Trop bas, tous les visiteurs partagent un compteur ; trop haut, un visiteur choisit son adresse. | `1` |
+| `INTERNAL_API_SECRET` | non (recommandé hors local) | Secret partagé entre frontend et backend (#689). Les appels du serveur Next vers le backend (rendu SSR, aperçus de brouillon, images OG) le portent dans l'en-tête `X-Internal-Api-Secret` et ne comptent pas dans la limite de débit par IP : sans lui ils arrivent tous du conteneur frontend, partagent un seul budget de 200 requêtes par minute, et un pic de trafic sur des pages non cachées fait répondre 429 au frontend, donc des pages en erreur pour tous. Le visiteur reste limité à son IP. **Même valeur sur le frontend et le backend d'un même environnement, valeur différente d'un environnement à l'autre** ; jamais `NEXT_PUBLIC_*`. Absent ou vide : aucune exemption (limite partagée, comportement d'avant), donc déployer avant de poser la variable ne casse rien. Un appel relayé depuis un navigateur (réécriture `/api/*`, porte `X-Forwarded-For`) n'est jamais exempté, même avec le bon secret. Génération : `openssl rand -hex 32`. | (64 caractères hexadécimaux) |
 | `MAGIC_LINK_SECRET` | oui | Secret pour générer et vérifier les liens de modification speakers/sponsors. Distinct du `SESSION_SECRET`. | `e5f6g7h8...` |
-| `TRASH_PURGE_SECRET` | non | Secret partagé permettant à la tâche planifiée d'appeler la purge de corbeille sans session (en-tête `X-Purge-Secret`). **Sans cette variable, l'endpoint n'accepte qu'une session ADMIN** — la purge automatique ne tourne pas, mais rien ne casse. | (32+ caractères aléatoires) |
+| `TRASH_PURGE_SECRET` | non | Secret partagé permettant de déclencher **à la main** la purge de corbeille sans session (en-tête `X-Purge-Secret`). Facultatif : la purge quotidienne est une tâche du backend et ne l'utilise pas. **Sans cette variable, l'endpoint n'accepte qu'une session ADMIN.** | (32+ caractères aléatoires) |
 | `TRASH_RETENTION_DAYS` | non | Délai de conservation en corbeille avant purge définitive. Défaut **30**. Une valeur invalide ou `< 1` retombe sur 30 : une faute de frappe ne doit pas vider la corbeille. | `30` |
 
 ## OAuth — Google + GitHub (backend uniquement)
@@ -77,10 +80,17 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
 |---|---|---|---|---|---|---|
-| **Local / dev-j** | `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`) |
+| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`, protégée par mot de passe sur dev-j) |
 | **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
 
 > ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
+
+### MailHog sur dev-j
+
+| Variable | Obligatoire | Description | Exemple |
+|----------|:-----------:|-------------|---------|
+| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API MailHog. | `julien` |
+| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair : MailHog le hache lui-même (bcrypt) au démarrage. Sans ces deux variables, le conteneur MailHog refuse de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde MailHog sans authentification. | (20+ caractères aléatoires) |
 
 > ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
 
@@ -113,51 +123,45 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 ---
 
-## Tâche planifiée — purge de la corbeille (#149)
+## Tâche planifiée — purge de la corbeille (#149, #664)
 
 Supprimer un élément depuis l'admin le place en **corbeille** : la ligne survit,
 masquée de l'admin comme du site public, et reste restaurable. Au-delà du délai
-de conservation (`TRASH_RETENTION_DAYS`, 30 jours par défaut), elle doit être
+de conservation (`TRASH_RETENTION_DAYS`, 30 jours par défaut), elle est
 détruite pour de bon — ainsi que les fichiers qu'elle était seule à utiliser.
 
-Le déclencheur est **externe au backend** : pas de minuterie applicative. Elle se
-réinitialiserait à chaque redéploiement, se déclencherait deux fois si un jour
-deux conteneurs tournent, et serait invisible depuis la configuration.
+**La purge tourne toute seule**, chaque jour à 4 h (heure de Paris), dans une
+tâche `node-cron` du backend (`src/backend/src/lib/scheduler.ts`). Rien à créer
+dans Coolify, aucun secret à poser. Un échec est écrit dans les logs
+(`Trash purge failed`) et la purge réessaie le lendemain ; un succès aussi
+(`Trash purged`, avec le nombre de lignes détruites).
 
-### Mise en place dans Coolify
+Elle apparaît dans l'historique comme une action du **système**, acteur
+« Purge de la corbeille ».
 
-1. Générer un secret et le poser en variable d'environnement du backend :
+Deux limites tant que le backend a un seul réplica : un redéploiement à 4 h
+saute la purge du jour (la suivante rattrape), et à plusieurs réplicas chacun la
+lancerait — sans danger, la purge est idempotente.
 
-   ```bash
-   openssl rand -hex 32
-   ```
+### Déclenchement manuel
 
-   → `TRASH_PURGE_SECRET` (runtime, **pas** « Available at Buildtime » : il n'est
-   lu qu'à l'exécution).
+Utile pour vérifier ce qu'une prochaine purge détruirait, ou pour vider tout de
+suite. Depuis le conteneur backend, avec `TRASH_PURGE_SECRET` posé :
 
-2. Créer une **Scheduled Task** sur la ressource backend :
+```bash
+# Ce que la prochaine purge détruirait — sans effet de bord, ne fait que lire
+curl -fsS http://localhost:4000/api/maintenance/purge-trash \
+  -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
+# → {"retentionDays":30,"cutoff":"2026-06-20T…"}
 
-   | Champ | Valeur |
-   |---|---|
-   | Command | voir ci-dessous |
-   | Frequency | `0 4 * * *` (tous les jours à 4 h) |
-   | Container | le conteneur backend |
+# Purger maintenant
+curl -fsS -X POST http://localhost:4000/api/maintenance/purge-trash \
+  -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
+```
 
-   ```bash
-   curl -fsS -X POST http://localhost:4000/api/maintenance/purge-trash \
-     -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
-   ```
-
-   L'appel se fait **depuis le conteneur**, sur `localhost` : le secret ne
-   transite jamais par le réseau public.
-
-3. Vérifier — la commande est sans effet de bord, elle ne fait que lire :
-
-   ```bash
-   curl -fsS http://localhost:4000/api/maintenance/purge-trash \
-     -H "X-Purge-Secret: $TRASH_PURGE_SECRET"
-   # → {"retentionDays":30,"cutoff":"2026-06-20T…"}
-   ```
+Sans secret, une **session ADMIN** déclenche la même purge depuis le back-office.
+Le secret (`openssl rand -hex 32`) se pose en variable d'exécution du backend,
+**pas** « Available at Buildtime ».
 
 ### Ce que renvoie la purge
 
@@ -178,8 +182,8 @@ ne doit pas casser l'illustration d'une autre.
 
 - **Idempotente** : relancée, elle ne trouve plus rien (`purged: 0`). Un cron qui
   se déclenche deux fois, ou qui rejoue après un timeout, est sans danger.
-- **Sans secret configuré**, l'endpoint n'accepte qu'une **session ADMIN** : la
-  purge automatique ne tourne pas, mais rien ne casse et rien ne s'ouvre.
+- **Sans secret configuré**, l'endpoint n'accepte qu'une **session ADMIN** : rien
+  ne s'ouvre. La purge quotidienne n'en dépend pas.
 - **Un EDITOR ne peut pas** déclencher la purge, même connecté.
 - Les éléments **vivants** ne sont jamais touchés, quel que soit le délai.
 

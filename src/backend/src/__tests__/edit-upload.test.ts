@@ -43,7 +43,7 @@ describe("POST /api/edit/:token/upload", () => {
   });
 
   afterAll(async () => {
-    await prisma.speaker.deleteMany({ where: { id: speakerId } });
+    if (speakerId !== undefined) await prisma.speaker.deleteMany({ where: { id: speakerId } });
   });
 
   it("stores an uploaded image and returns its /uploads URL", async () => {
@@ -58,6 +58,16 @@ describe("POST /api/edit/:token/upload", () => {
   it("rejects a non-image file", async () => {
     const app = await buildEditApp();
     const { payload, headers } = multipartBody("note.txt", "text/plain", Buffer.from("not an image"));
+    const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("invalid_file_type");
+    await app.close();
+  });
+
+  // The declared type is the client's to choose: the bytes decide (#658).
+  it("rejects a page declared as a GIF", async () => {
+    const app = await buildEditApp();
+    const { payload, headers } = multipartBody("fake.gif", "image/gif", Buffer.from("<html><body>x</body></html>"));
     const res = await app.inject({ method: "POST", url: `/api/edit/${TOKEN}/upload`, payload, headers });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toBe("invalid_file_type");

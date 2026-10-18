@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeRichHtml, isSafeUrl } from "./sanitize.js";
+import { sanitizeRichHtml, isSafeUrl, unsafeUrlRefusal } from "./sanitize.js";
 
 describe("isSafeUrl", () => {
   it("should accept http and https URLs", () => {
@@ -25,6 +25,12 @@ describe("isSafeUrl", () => {
 
   it("should reject a protocol-relative URL (it bypasses the scheme check)", () => {
     expect(isSafeUrl("//evil.example.com/x.png")).toBe(false);
+  });
+
+  // A browser turns the backslash into a slash: `/\host` leaves for `//host`.
+  it("should reject a path holding a backslash", () => {
+    expect(isSafeUrl("/\\evil.example")).toBe(false);
+    expect(isSafeUrl("/uploads\\x.png")).toBe(false);
   });
 
   it("should reject a schemeless value rather than coercing it", () => {
@@ -105,5 +111,63 @@ describe("sanitizeRichHtml", () => {
     );
     expect(sanitizeRichHtml('<a href="#section">a</a>')).toContain('href="#section"');
     expect(sanitizeRichHtml('<a href="/fr/actualites">a</a>')).toContain('href="/fr/actualites"');
+  });
+});
+
+// The site's utility CSS is all there for whoever writes rich text: a class is
+// enough to lay a full-screen block over a public page (#658). Only the
+// layout classes of the WordPress import survive.
+describe("sanitizeRichHtml — a value without any tag (#661)", () => {
+  // The API, the MCP connector and the history import send plain text; the
+  // editor always sends HTML. Stored as `Cloud &amp; DevOps`, a text read by a
+  // page that prints plain text escaped the ampersand a second time.
+  it("should store plain text as a paragraph, its ampersand escaped once", () => {
+    expect(sanitizeRichHtml("Cloud & DevOps")).toBe("<p>Cloud &amp; DevOps</p>");
+  });
+
+  it("should keep < and > as characters of the text", () => {
+    expect(sanitizeRichHtml("moins de 10 < 20 > 5")).toBe("<p>moins de 10 &lt; 20 &gt; 5</p>");
+  });
+
+  it("should keep the paragraphs and line breaks the text had", () => {
+    expect(sanitizeRichHtml("Un\nDeux\n\nTrois\r\n\r\nQuatre")).toBe("<p>Un<br />Deux</p><p>Trois</p><p>Quatre</p>");
+  });
+
+  it("should leave HTML as it was, ampersand included", () => {
+    expect(sanitizeRichHtml("<p>Cloud &amp; DevOps</p>")).toBe("<p>Cloud &amp; DevOps</p>");
+  });
+
+  it("should still neutralise a script hidden in a text", () => {
+    expect(sanitizeRichHtml("Cloud & DevOps <script>alert(1)</script>")).toBe("Cloud &amp; DevOps ");
+  });
+
+  it("should give nothing for a blank text", () => {
+    expect(sanitizeRichHtml("  \n ")).toBe("");
+  });
+});
+
+describe("sanitizeRichHtml — classes", () => {
+  it("should drop a class outside the import's list", () => {
+    const html = sanitizeRichHtml('<div class="fixed inset-0 z-[60] bg-blanc"><p class="text-3xl">x</p></div>');
+    expect(html).not.toContain("class=");
+    expect(html).toContain("<p>x</p>");
+  });
+
+  it("should keep the import's layout classes and drop the rest of the attribute", () => {
+    const html = sanitizeRichHtml('<div class="grid md:grid-cols-2 fixed"><p>x</p></div>');
+    expect(html).toContain('class="grid md:grid-cols-2"');
+  });
+});
+
+describe("unsafeUrlRefusal", () => {
+  it("should name the refused field and say what a link may be", () => {
+    const refusal = unsafeUrlRefusal({ photoUrl: "javascript:alert(1)" }, ["photoUrl"]);
+
+    expect(refusal).toMatchObject({ error: "unsafe_url", field: "photoUrl" });
+    expect(refusal?.message).toContain("chemins du site");
+  });
+
+  it("should return nothing when every link passes", () => {
+    expect(unsafeUrlRefusal({ photoUrl: "/uploads/a.png", socialLinks: { github: "https://github.com/x" } }, ["photoUrl"])).toBeNull();
   });
 });

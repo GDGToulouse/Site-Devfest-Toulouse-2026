@@ -5,6 +5,7 @@ import { DEFAULT_CFP_NOTIFICATION_EMAIL } from "../../lib/cfp-settings.js";
 import { revalidateAll, revalidateCfp, revalidateHome } from "../../lib/revalidate.js";
 import { NAV_ORDER_KEY, navOrderSchema, parseNavOrder } from "../../lib/nav-order.js";
 import { validateWebhookUrl } from "../../lib/webhook-url.js";
+import { postJson } from "../../lib/safe-fetch.js";
 
 interface CfpBody {
   isOpen: boolean;
@@ -195,18 +196,14 @@ export default async function adminSettingsRoutes(app: FastifyInstance) {
     };
 
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        signal: AbortSignal.timeout(10_000),
-        redirect: "manual",
-      });
-      const responseBody = await response.text().catch(() => "");
+      // Pinned to the address it checks, so the record cannot turn private
+      // between the check above and the send (#658).
+      const response = await postJson(webhookUrl, payload);
+      const isOk = response.status >= 200 && response.status < 300;
       return {
-        status: response.ok ? "sent" : "failed",
+        status: isOk ? "sent" : "failed",
         responseStatus: response.status,
-        responseBody: responseBody.slice(0, 500),
+        responseBody: response.body.slice(0, 500),
       };
     } catch (err) {
       return {

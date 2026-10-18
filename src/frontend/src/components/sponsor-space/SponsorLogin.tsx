@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
-import { requestMagicLink, requestSponsorPasswordReset, signUpWithEmail } from "@/lib/sponsor-api";
+import { requestMagicLink, requestSponsorPasswordReset, signUpWithInvitation } from "@/lib/sponsor-api";
 import SponsorFeedback from "@/components/sponsor-space/SponsorFeedback";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
@@ -15,16 +15,21 @@ interface Providers {
   github: boolean;
 }
 
-// mode="signup" is what someone arriving from an invitation sees. They have no
-// account yet, and a screen headed "Sign in" reads as a dead end (#362) — the
-// form is the same either way, only the wording changes.
+// invitationToken is set for someone arriving from an invitation. They have no
+// account yet, and a screen headed "Sign in" reads as a dead end (#362). The
+// password opens the account through the token, for the invited address
+// whatever is typed (#658): the form shows that address, masked as the page
+// received it, instead of asking for one.
 export default function SponsorLogin({
   callbackURL,
-  mode = "signin",
+  invitationToken,
+  emailHint,
 }: {
   callbackURL: string;
-  mode?: "signin" | "signup";
+  invitationToken?: string;
+  emailHint?: string;
 }) {
+  const mode = invitationToken ? "signup" : "signin";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -47,10 +52,9 @@ export default function SponsorLogin({
     setError(null);
     // sign-in only authenticates an existing account; someone arriving from an
     // invitation has none yet and needs sign-up (#362).
-    const result =
-      mode === "signup"
-        ? await signUpWithEmail(email.trim(), password, email.trim())
-        : await signInWithEmail(email, password);
+    const result = invitationToken
+      ? await signUpWithInvitation(invitationToken, password)
+      : await signInWithEmail(email, password);
     if (result.success) {
       window.location.href = callbackURL;
       return;
@@ -197,16 +201,22 @@ export default function SponsorLogin({
       )}
 
       <form onSubmit={handlePassword} className="space-y-4">
-        <label className="block">
-          <span className="mb-1 block text-sm font-medium text-noir">Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-          />
-        </label>
+        {invitationToken ? (
+          <p className="text-sm text-noir">
+            Compte créé pour <strong>{emailHint}</strong>
+          </p>
+        ) : (
+          <label className="block">
+            <span className="mb-1 block text-sm font-medium text-noir">Email</span>
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+        )}
         <label className="block">
           <span className="mb-1 block text-sm font-medium text-noir">Mot de passe</span>
           <input
@@ -233,7 +243,7 @@ export default function SponsorLogin({
 
         <button
           type="submit"
-          disabled={isLoading || !email.trim() || !password}
+          disabled={isLoading || (!invitationToken && !email.trim()) || !password}
           className="w-full rounded-[12px] bg-malachite px-4 py-3 font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-50"
         >
           {isLoading ? "Connexion…" : mode === "signup" ? "Créer mon compte" : "Me connecter"}

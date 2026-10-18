@@ -121,6 +121,13 @@ curl -X POST https://devfesttoulouse.fr/api/contact/send \
   }'
 ```
 
+Débit : 5 messages par 15 minutes et par IP. La catégorie `sponsor-brochure` (formulaire « recevoir la brochure ») a en plus, parce qu'elle envoie un e-mail à une adresse non vérifiée (#662) :
+
+- **par adresse** : un envoi par heure. Une 2e demande pour la même adresse (casse ignorée) dans l'heure répond `200 { "success": true }` comme la première, sans rien enregistrer ni envoyer ;
+- **par IP** : 3 demandes valides par heure, ensuite `429` avec `Retry-After`.
+
+Les compteurs par IP sont en mémoire (un seul réplica) : un redémarrage les remet à zéro. Les autres catégories ne changent pas.
+
 ---
 
 ## Codes HTTP

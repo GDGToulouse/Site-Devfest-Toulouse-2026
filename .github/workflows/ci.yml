@@ -6,6 +6,11 @@ on:
   pull_request:
     branches: [main, dev]
 
+# Read-only token, never written to .git/config: the jobs run third-party code
+# (install scripts, builds, tests), which must not be able to push (#658).
+permissions:
+  contents: read
+
 jobs:
   # Guards the versioning invariant (#288). The release bump lives only on
   # `main`, so nothing carries it back down: in July `main` shipped 1.3.0 while
@@ -15,10 +20,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # Full history: the guard reads the version file from `main`.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
+          persist-credentials: false
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
 
@@ -49,9 +55,11 @@ jobs:
       run:
         working-directory: src/frontend
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm
@@ -93,9 +101,11 @@ jobs:
       # writable workspace dir — storeImageBuffer mkdirs it recursively.
       UPLOADS_DIR: ${{ github.workspace }}/ci-uploads
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: 22
           cache: pnpm

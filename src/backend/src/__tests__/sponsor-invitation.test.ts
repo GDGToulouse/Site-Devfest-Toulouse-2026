@@ -214,17 +214,71 @@ describe("Sign-up through an invitation (#362)", () => {
   // default, EDITOR, which requireAnyAuthenticated lets through.
   it("creates the account with the SPONSOR role, never the EDITOR default", async () => {
     const email = `signup-${Date.now()}@example.org`;
-    const { sponsor } = await createSponsorWithInvitation("Signup Co", email);
-    
+    const { token } = await createSponsorWithInvitation("Signup Co", email);
 
-    await auth.api.signUpEmail({
-      body: { name: "Invited Person", email, password: "invited1234!test" },
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/sponsor-invitation/${token}/sign-up`,
+      payload: { password: "invited1234!test" },
     });
 
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["set-cookie"]).toBeDefined();
     const user = await prisma.user.findUniqueOrThrow({ where: { email } });
     created.userIds.push(user.id);
     // EDITOR here would hand /api/admin/* to every sponsor.
     expect(user.role).toBe("SPONSOR");
+    // The token reached that mailbox: the account starts verified (#514).
+    expect(user.emailVerified).toBe(true);
+  });
+
+  // Holding the address is not holding the mailbox: without the token, anyone
+  // who knew whom a company invited could open that account first, keep its
+  // session, and inherit the space once the real person accepts (#658).
+  it("refuses a plain sign-up on an invited address", async () => {
+    const email = `presignup-${Date.now()}@example.org`;
+    await createSponsorWithInvitation("Presignup Co", email);
+
+    await expect(
+      auth.api.signUpEmail({ body: { name: "Someone", email, password: "someone1234!test" } }),
+    ).rejects.toThrow();
+    expect(await prisma.user.count({ where: { email } })).toBe(0);
+  });
+
+  it("refuses a plain sign-up that claims a verified address", async () => {
+    const email = `claims-${Date.now()}@example.org`;
+    await createSponsorWithInvitation("Claims Co", email);
+
+    await expect(
+      auth.api.signUpEmail({
+        body: { name: "Someone", email, password: "someone1234!test", emailVerified: true } as never,
+      }),
+    ).rejects.toThrow();
+    expect(await prisma.user.count({ where: { email } })).toBe(0);
+  });
+
+  // An identity provider has proven the mailbox: an invited sponsor may still
+  // open their account with Google or GitHub.
+  it("lets an identity provider create the invited account", async () => {
+    const email = `oauth-${Date.now()}@example.org`;
+    await createSponsorWithInvitation("OAuth Co", email);
+
+    const ctx = await auth.$context;
+    // No endpoint context: the call stands for the OAuth callback itself.
+    const user = await ctx.internalAdapter.createUser({ email, name: "OAuth Person", emailVerified: true }, undefined as never);
+    created.userIds.push(user.id);
+
+    expect((await prisma.user.findUniqueOrThrow({ where: { email } })).role).toBe("SPONSOR");
+  });
+
+  it("refuses a sign-up through an unknown token", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/sponsor-invitation/does-not-exist/sign-up",
+      payload: { password: "someone1234!test" },
+    });
+
+    expect(res.statusCode).toBe(404);
   });
 
   it("refuses an address nobody invited", async () => {

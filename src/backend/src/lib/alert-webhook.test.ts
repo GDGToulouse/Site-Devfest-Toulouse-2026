@@ -7,6 +7,10 @@ vi.mock("./prisma.js", () => ({
   prisma: { siteSetting: { findUnique: vi.fn().mockResolvedValue(null) } },
 }));
 vi.mock("./webhook-url.js", () => ({ validateWebhookUrl: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("./safe-fetch.js", () => ({ postJson: vi.fn() }));
+
+const { postJson } = await import("./safe-fetch.js");
+const answer = (status: number) => vi.mocked(postJson).mockResolvedValue({ status, statusText: "", body: "" });
 
 describe("buildAlertPayload", () => {
   it("carries the route pattern and the error message, never the raw URL", () => {
@@ -66,6 +70,7 @@ describe("sendAlert", () => {
   beforeEach(() => {
     resetThrottle();
     vi.mocked(prisma.siteSetting.findUnique).mockReset().mockResolvedValue(null);
+    vi.mocked(postJson).mockReset();
   });
 
   afterEach(() => {
@@ -82,20 +87,19 @@ describe("sendAlert", () => {
   });
 
   it("posts the payload when a URL is given", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 200 }));
-    vi.stubGlobal("fetch", fetchMock);
+    answer(200);
 
     const result = await sendAlert(payload(), { urlOverride: "https://hooks.example.com/x" });
 
     expect(result.status).toBe("success");
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0];
+    expect(postJson).toHaveBeenCalledOnce();
+    const [url, sent] = vi.mocked(postJson).mock.calls[0];
     expect(url).toBe("https://hooks.example.com/x");
-    expect(JSON.parse(init.body).kind).toBe("server_error");
+    expect((sent as { kind: string }).kind).toBe("server_error");
   });
 
   it("reports a non-2xx response as failed without throwing", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 500 })));
+    answer(500);
 
     const result = await sendAlert(payload(), { urlOverride: "https://hooks.example.com/x" });
 
@@ -104,7 +108,7 @@ describe("sendAlert", () => {
   });
 
   it("reports a network failure as failed without throwing", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network down")));
+    vi.mocked(postJson).mockRejectedValue(new Error("network down"));
 
     const result = await sendAlert(payload(), { urlOverride: "https://hooks.example.com/x" });
 
@@ -113,7 +117,7 @@ describe("sendAlert", () => {
   });
 
   it("does not throttle an explicit test (urlOverride)", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    answer(200);
 
     const first = await sendAlert(payload(), { urlOverride: "https://hooks.example.com/x" });
     const second = await sendAlert(payload(), { urlOverride: "https://hooks.example.com/x" });
@@ -123,7 +127,7 @@ describe("sendAlert", () => {
   });
 
   it("throttles a repeated error, but lets a different one through", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    answer(200);
     vi.stubEnv("ALERT_WEBHOOK_URL", "https://hooks.example.com/x");
 
     const same = () =>
@@ -143,7 +147,7 @@ describe("sendAlert", () => {
   // Regression: reading the URL from SiteSetting needs the database, so a
   // database outage used to silence the very alert we needed most.
   it("still alerts from the env var when the database is unreachable", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(null, { status: 200 })));
+    answer(200);
     vi.stubEnv("ALERT_WEBHOOK_URL", "https://hooks.example.com/x");
     vi.mocked(prisma.siteSetting.findUnique).mockRejectedValue(new Error("db down"));
 
