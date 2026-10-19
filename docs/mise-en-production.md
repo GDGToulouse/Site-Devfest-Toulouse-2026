@@ -36,8 +36,12 @@ Avant de lancer quoi que ce soit :
 
 ### Fenêtre de déploiement
 
-- **Ne pas déployer à J-1 du DevFest** ni pendant un pic connu (ouverture de
-  billetterie, campagne d'annonce). Un bug en prod à ce moment est très coûteux.
+- **Plus de fonctionnalité en prod à partir de J-3 du DevFest** : les participants
+  sont invités à visiter le site dans les 72 h avant l'événement, et un déploiement
+  fait retélécharger le JS et le CSS qu'ils ont en cache (#706). Un correctif de bug
+  reste possible, au cas par cas.
+- **Ne pas déployer pendant un pic connu** (ouverture de billetterie, campagne
+  d'annonce). Un bug en prod à ce moment est très coûteux.
 - **Prévenir l'équipe** avant de pousser en prod (canal habituel).
 - Privilégier un créneau où quelqu'un peut réagir en cas de souci (pas un vendredi soir).
 
