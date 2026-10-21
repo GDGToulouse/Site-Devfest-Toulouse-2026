@@ -6,6 +6,7 @@
 - Hors locale : back-office `/admin`, espace partenaire `/sponsor`, lien speaker `/edit/<token>`. `/fr/admin` renvoie 404
 - next-intl préfixe les routes racine **même sans `middleware.ts`** : toute route technique (sonde, webhook, callback) vit sous `/api/`. Vérifier empiriquement (`wget -S` : un `307` vers `/fr/...` trahit le préfixe). Une sonde Docker cassée rend le conteneur `unhealthy` et bloque tous les déploiements (#192)
 - Noms voisins, rôles opposés : `/api/health` est réécrit vers le backend (`next.config.ts`), `/api/healthz` est la sonde du frontend lui-même
+- Le site public et les écrans applicatifs (`/admin`, `/sponsor`, `/edit`, `/connect`) sont deux arbres à layout racine distinct (groupe de routes `(app)`) : passer de l'un à l'autre recharge la page. Une URL non reconnue sous une langue (`/fr/a/b/c`) est attrapée par `[locale]/[...rest]` pour avoir la 404 du site ; hors de ces arbres, Next répond sa 404 anglaise par défaut
 - Protection : le back-office et l'espace partenaire vérifient la session côté client puis côté API ; l'autorisation qui fait foi est celle du backend
 
 ## Structure

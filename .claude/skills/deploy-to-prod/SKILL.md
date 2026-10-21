@@ -71,7 +71,8 @@ qui n'ont pas le label : le poser + commenter les commits (voir la règle).
 
 ### Fenêtre de déploiement
 
-Rappeler à l'utilisateur : **ne pas déployer à J-1 du DevFest** ni pendant un pic
+Rappeler à l'utilisateur : **aucune fonctionnalité en prod à partir de J-3 du
+DevFest** (un correctif de bug reste possible, au cas par cas), ni pendant un pic
 (ouverture billetterie, annonce), **prévenir l'équipe**, préférer un créneau où
 quelqu'un peut réagir. Si le timing est sensible, demander confirmation explicite.
 
@@ -311,7 +312,7 @@ Ne pas improviser. Voir [`docs/mise-en-production.md`](../../../docs/mise-en-pro
 
 ## Checklist finale
 
-- [ ] Fenêtre de déploiement OK (pas J-1 DevFest / pic), équipe prévenue
+- [ ] Fenêtre de déploiement OK (pas de fonctionnalité à partir de J-3 DevFest, pas de pic), équipe prévenue
 - [ ] Diff réel `main..dev` revu, **migrations Prisma lues** (destructives repérées)
 - [ ] Bump SemVer choisi et **confirmé**
 - [ ] `APP_VERSION` + 2× `package.json` + `CHANGELOG.md` mis à jour dans la PR de promotion

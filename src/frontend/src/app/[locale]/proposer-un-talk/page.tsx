@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCfpSettings } from "@/lib/api";
 import { getCfpCtaUrl } from "@/lib/cfp";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("cfp");
   return {
     title: t("pageTitle"),
@@ -25,8 +26,9 @@ function formatDate(dateStr: string, locale: string): string {
   });
 }
 
-export default async function CfpPage() {
-  const locale = await getLocale();
+export default async function CfpPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("cfp");
   const cfp = await getCfpSettings();
   // Effective open state matches the Hero/Header CTA visibility (auto-closes

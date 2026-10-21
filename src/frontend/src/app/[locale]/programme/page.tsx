@@ -1,15 +1,12 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { Link } from "@/i18n/navigation";
 import { getCurrentEdition, getEditionSchedule } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
-import ProgrammeBrowser from "@/components/programme/ProgrammeBrowser";
-import { parseFavourites, parseView } from "@/lib/favourites";
-import { parseFilters } from "@/lib/talk-filters";
+import ProgrammeFromUrl from "@/components/programme/ProgrammeFromUrl";
 import { formatEventDate } from "@/lib/datetime";
-import { parsePrintGrouping } from "@/lib/print";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
 import { pageMetadata } from "@/lib/page-metadata";
 
@@ -17,8 +14,9 @@ import { pageMetadata } from "@/lib/page-metadata";
 // means nothing (#449).
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("programme");
   const edition = await getCurrentEdition();
   const year = edition?.year ?? new Date().getFullYear();
@@ -37,11 +35,12 @@ const TALK_LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 const READING_COLUMN = "mx-auto max-w-7xl";
 
 export default async function ProgrammePage({
-  searchParams,
+  params,
 }: {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  params: Promise<{ locale: string }>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("programme");
   const tc = await getTranslations("conferences");
   const tf = await getTranslations("favourites");
@@ -59,12 +58,6 @@ export default async function ProgrammePage({
   const levelLabels = Object.fromEntries(
     TALK_LEVELS.map((level) => [level, tc(`level.${level}`)]),
   );
-
-  // Read the selection and the filters from the URL on the server, so a
-  // bookmarked link renders them before hydration rather than flashing the
-  // whole programme.
-  const sp = await searchParams;
-  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v);
 
   const breadcrumbItems = [
     { label: t("home"), href: `/${locale}` },
@@ -107,7 +100,7 @@ export default async function ProgrammePage({
               nothing at all. Everything else on the page stays aligned with
               the rest of the site. */}
           <div className="mx-auto mt-8 max-w-[110rem]">
-            <ProgrammeBrowser
+            <ProgrammeFromUrl
               schedule={schedule!}
               locale={locale}
               formatLabels={formatLabels}
@@ -167,10 +160,6 @@ export default async function ProgrammePage({
                   common: t("printCommon"),
                 },
               }}
-              initialFavourites={parseFavourites(first(sp.fav))}
-              initialView={parseView(first(sp.view))}
-              initialFilters={parseFilters((key) => first(sp[key]))}
-              initialPrintGrouping={parsePrintGrouping(first(sp.print))}
             />
           </div>
 

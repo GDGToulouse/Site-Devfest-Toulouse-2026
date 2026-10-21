@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getSponsorTiers, getContactCategories } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -17,8 +17,9 @@ function localizedField(
   return (obj[key] as string) || "";
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("sponsor");
   return {
     title: t("pageTitle"),
@@ -27,8 +28,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function SponsorPage() {
-  const locale = await getLocale();
+export default async function SponsorPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("sponsor");
   const [edition, tiers, categories] = await Promise.all([
     getCurrentEdition(),

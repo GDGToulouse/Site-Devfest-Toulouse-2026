@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getJobOffers } from "@/lib/api";
 import { SPONSORED_LINK_REL } from "@/lib/html";
@@ -9,8 +9,9 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import { Link } from "@/i18n/navigation";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("jobOffers");
   return {
     title: t("title"),
@@ -22,9 +23,10 @@ export async function generateMetadata(): Promise<Metadata> {
 // Each offer used to be printed in full, one after the other: with five offers
 // of ~3,000 characters the page was already nine screens long (#556). The list
 // now shows a card per offer, and the full text lives on the offer's own page.
-export default async function JobOffersPage() {
+export default async function JobOffersPage({ params }: { params: Promise<{ locale: string }> }) {
   const t = await getTranslations("jobOffers");
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const sponsors = await getJobOffers();
   const offers = sponsors.flatMap((sponsor) => sponsor.jobOffers.map((offer) => ({ sponsor, offer })));
 

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getSponsorsHallOfFame } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -10,8 +10,13 @@ import { Link } from "@/i18n/navigation";
 
 const PATH = "/sponsors/hall-of-fame";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("sponsorsHallOfFame");
   const companies = await getSponsorsHallOfFame();
 
@@ -32,11 +37,14 @@ type Sort = "name" | "participations";
 // Year and order go through the URL rather than client state, like the speakers'
 // hall of fame (#352): a filtered view stays shareable and server-rendered.
 export default async function SponsorsHallOfFamePage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("sponsorsHallOfFame");
 
   const sp = await searchParams;

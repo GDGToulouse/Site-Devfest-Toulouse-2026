@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getContentPage } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("codeOfConduct");
   return {
     title: t("title"),
@@ -17,8 +18,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function CodeOfConductPage() {
-  const locale = await getLocale();
+export default async function CodeOfConductPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("codeOfConduct");
   const page = await getContentPage("code-de-conduite");
 

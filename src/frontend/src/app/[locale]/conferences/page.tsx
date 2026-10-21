@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getEditionTalks } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
@@ -9,8 +9,13 @@ import { parseFavourites } from "@/lib/favourites";
 import type { TalkFormat, TalkLevel } from "@/lib/types";
 import { pageMetadata } from "@/lib/page-metadata";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+// Reads the querystring on the server (#700): one render per request, not
+// cached. The rest of the site is statically rendered.
+export const dynamic = "force-dynamic";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("conferences");
   return {
     title: t("title"),
@@ -23,11 +28,14 @@ const TALK_FORMATS: TalkFormat[] = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHO
 const TALK_LEVELS: TalkLevel[] = ["DEBUTANT", "INTERMEDIAIRE", "CONFIRME"];
 
 export default async function ConferencesPage({
+  params,
   searchParams,
 }: {
+  params: Promise<{ locale: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const locale = await getLocale();
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("conferences");
   const tf = await getTranslations("favourites");
   const edition = await getCurrentEdition();

@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getSpeakers } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import SpeakerCard from "@/components/speakers/SpeakerCard";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("speakers");
   return {
     title: t("title"),
@@ -16,8 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function SpeakersPage() {
-  const locale = await getLocale();
+export default async function SpeakersPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("speakers");
   const [edition, speakers] = await Promise.all([getCurrentEdition(), getSpeakers()]);
   const year = edition?.year ?? new Date().getFullYear();
