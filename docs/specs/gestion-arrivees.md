@@ -286,7 +286,7 @@ kanban, **afin de** les sortir du bac avant que le participant arrive, puis de l
 | 5 | #641 | Flux temps réel, indicateur de connexion, PWA | Socle des écrans |
 | 6 | #642 | Écran Scan : caméra, recherche, guichet et charge des guichets, compostage Billetweb | |
 | 7 | #643 | Écran Guichet (kanban) — remplace « Distribution par centaines » et « Badges manuels » | |
-| 8 | à créer | Guichet d'aide : recherche, étiquette ZPL, impression sur la Zebra | Dépend de la question sur l'impression |
+| 8 | #713 | Guichet d'aide : recherche, étiquette ZPL, impression sur la Zebra | Dépend de la question sur l'impression |
 | 9 | #644 | Écran de suivi par guichet | |
 | 10 | #645 | Mode hors ligne | Optionnelle |
 
