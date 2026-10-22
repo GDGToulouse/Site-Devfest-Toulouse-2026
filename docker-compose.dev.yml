@@ -86,6 +86,10 @@ services:
       # back on "dev", not "local", so it never reopens the documented ones.
       - ENV_NAME=${ENV_NAME:-dev}
       - DEV_SEED_PASSWORD=${DEV_SEED_PASSWORD:-}
+      # A new value empties the database once at the next start, to switch the
+      # environment to another branch (#714). Declared here only: beta and
+      # prod never receive it. Empty = keep the data.
+      - DB_RESET_TOKEN=${DB_RESET_TOKEN:-}
     depends_on:
       db:
         condition: service_healthy
