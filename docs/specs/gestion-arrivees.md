@@ -1,7 +1,8 @@
 # Gestion des arrivées — badges et accueil
 
-**Version** : v2, 22 octobre 2026. Intègre les retours de l'équipe (Lionel, Arnaud, Valentin) :
-guichets, kanban, guichet d'aide avec imprimante d'étiquettes.
+**Version** : v2.1, 24 octobre 2026. Intègre les retours de l'équipe (Lionel, Arnaud, Valentin) :
+guichets, kanban, guichet d'aide avec imprimante d'étiquettes ; en v2.1, mode dégradé du Scan
+si le VPS tombe.
 **Échéance** : 19 novembre 2026 (jour du DevFest). Les badges partent à l'impression **5 jours
 avant** (14 novembre) : la numérotation et le PDF d'impression sont sur le chemin critique.
 **Milestone** : `asap-arrivees`, volontairement hors du schéma `asap` / `next` / `next-year` : la
@@ -143,8 +144,9 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-61 | À chaque reconnexion, l'écran relit l'état complet : aucune mise à jour perdue pendant une coupure. |
 | RG-ARR-62 | L'écran de suivi montre en temps réel : attendus, scannés, distribués, en attente ; une barre par guichet (À chercher, Prêt, Distribué) ; le flux dédié (scannés / attendus) et les étiquettes de l'aide à part. Lisible sur un grand écran. |
 | RG-ARR-63 | L'application (pages, scripts, styles, lecteur de codes) est mise en cache sur le téléphone et s'installe sur l'écran d'accueil. |
-| RG-ARR-64 | **Mode hors ligne** (issue optionnelle, le réseau sur place étant jugé stable) : le téléphone Scan précharge la table code → numéro de badge et le statut de flux, et met ses scans en file d'attente locale pendant une coupure. La recherche par nom et la charge des guichets restent en ligne. |
-| RG-ARR-65 | En mode hors ligne, aucune donnée personnelle n'est stockée sur le téléphone : la table préchargée est indexée par une empreinte du code, et effacée à la fin de l'événement. |
+| RG-ARR-64 | **Mode dégradé** (obligatoire) : le téléphone Scan garde dans le stockage du navigateur la table code → numéro de badge et accueil dédié. Il la charge à l'ouverture de l'écran et la relit à chaque reconnexion. Quand le backend ne répond plus (VPS en panne, réseau coupé), un scan affiche quand même le numéro et le guichet, sous un bandeau « Mode dégradé : rien n'est enregistré ». Le guichet cherche alors le badge à la main dans le bac, d'après le numéro annoncé. Ce qui se perd : la recherche par nom, l'alerte « déjà scanné », le kanban, la charge des guichets et le compostage. |
+| RG-ARR-65 | La table du mode dégradé ne contient aucune donnée personnelle : chaque entrée est indexée par une empreinte du code (un téléphone perdu ne livre ni noms ni codes valides) et ne porte que le numéro, ou la mention accueil dédié. Elle est effacée à la fin de l'événement. |
+| RG-ARR-67 | **File d'attente hors ligne** (issue optionnelle) : en mode dégradé, le téléphone Scan garde aussi ses scans en local, et les envoie au retour du backend : passage en « À chercher », historique, compostage. |
 | RG-ARR-66 | Les données des participants sont conservées **18 mois** après l'événement, pour informer les participants de l'édition suivante, puis supprimées. La politique de confidentialité le mentionne. **En attente d'un accord explicite** (question ouverte). |
 
 ---
@@ -197,6 +199,8 @@ nom, **afin de** lui annoncer son numéro et son guichet.
 
 - [ ] Caméra ouverte en un geste, utilisable à une main.
 - [ ] RG-ARR-30 à RG-ARR-37, charge des guichets comprise.
+- [ ] Mode dégradé (RG-ARR-64, RG-ARR-65) : backend arrêté, un scan affiche toujours le numéro et
+      le guichet, y compris après fermeture et réouverture de l'application.
 
 ### US-ARR-06 : Préparer et remettre les badges d'un guichet
 
@@ -219,12 +223,13 @@ kanban, **afin de** les sortir du bac avant que le participant arrive, puis de l
 
 - [ ] RG-ARR-62.
 
-### US-ARR-09 : Mode hors ligne (option)
+### US-ARR-09 : File d'attente hors ligne (option)
 
-**En tant que** bénévole Scan, **je veux** continuer à scanner pendant une coupure réseau,
-**afin que** la file d'attente n'attende pas le réseau. Issue optionnelle.
+**En tant que** bénévole Scan, **je veux** que mes scans faits en mode dégradé soient enregistrés
+au retour du réseau, **afin que** le suivi, l'historique et le compostage n'aient pas de trou.
+Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le numéro.
 
-- [ ] RG-ARR-64 et RG-ARR-65.
+- [ ] RG-ARR-67.
 
 ---
 
@@ -241,7 +246,9 @@ kanban, **afin de** les sortir du bac avant que le participant arrive, puis de l
 | Carte touchée par erreur | On la retouche (RG-ARR-43) |
 | Même carte touchée sur deux écrans | La seconde transition est ignorée (RG-ARR-44) |
 | Un guichet sature | Rouge sur les téléphones Scan (RG-ARR-36) ; le suivi aide à y déplacer un bénévole |
-| Coupure réseau | Indicateur rouge ; à la reconnexion, état relu (RG-ARR-61). Mode hors ligne si activé |
+| Coupure réseau ou VPS en panne | Indicateur rouge, mode dégradé : le Scan donne toujours numéro et guichet, les guichets cherchent dans les bacs d'après le numéro annoncé (RG-ARR-64). À la reconnexion, état relu (RG-ARR-61) |
+| Téléphone Scan jamais ouvert avec le réseau | Pas de table, pas de mode dégradé : chaque bénévole ouvre l'écran Scan une fois au briefing |
+| Sans confirmation, en mode dégradé | Pas de recherche par nom hors ligne : le participant donne son nom au guichet d'aide, qui attend le retour du réseau ou cherche dans le PDF d'impression |
 | Billetweb indisponible au moment du scan | Le scan réussit ; le compostage est retenté (RG-ARR-37) |
 
 ---
@@ -261,8 +268,12 @@ kanban, **afin de** les sortir du bac avant que le participant arrive, puis de l
   actuelle sert à lire). `attendees` est limité à 10 appels par minute.
 - **Volumes** : une journée, ~1 500 participants dont ~1 200 par les guichets, pic d'arrivée sur
   la première heure (~25 par minute) ; une quarantaine de bénévoles connectés en même temps.
-- **Réseau sur place** : Wi-Fi, 4G et 5G jugés stables, d'où le mode hors ligne en issue
+- **Réseau sur place** : Wi-Fi, 4G et 5G jugés stables. Le risque qui reste est le VPS, seul et
+  partagé avec le reste du site : d'où le mode dégradé obligatoire, la file d'attente restant
   optionnelle.
+- **Mode dégradé** : il ne sert que si l'application s'ouvre sans le serveur. Le cache de
+  l'application (RG-ARR-63, #641) en est donc la condition, à vérifier serveur arrêté, sur iOS
+  comme sur Android. Stockage local : ~1 500 entrées, quelques dizaines de Ko.
 
 ## Écarts avec l'existant
 
@@ -284,11 +295,11 @@ kanban, **afin de** les sortir du bac avant que le participant arrive, puis de l
 | 3 | #639 | Numérotation guichet / bac / rang à tour de rôle, PDF d'impression, gel, écriture dans Billetweb | **Chemin critique** : impression à J-5 |
 | 4 | #640 | Rôle `GUEST`, permission « arrivées » par édition, invitations en lot, choix du poste | Indépendant de 2-3 |
 | 5 | #641 | Flux temps réel, indicateur de connexion, PWA | Socle des écrans |
-| 6 | #642 | Écran Scan : caméra, recherche, guichet et charge des guichets, compostage Billetweb | |
+| 6 | #642 | Écran Scan : caméra, recherche, guichet et charge des guichets, compostage Billetweb, mode dégradé | |
 | 7 | #643 | Écran Guichet (kanban) — remplace « Distribution par centaines » et « Badges manuels » | |
 | 8 | #713 | Guichet d'aide : recherche, étiquette ZPL, impression sur la Zebra | Dépend de la question sur l'impression |
 | 9 | #644 | Écran de suivi par guichet | |
-| 10 | #645 | Mode hors ligne | Optionnelle |
+| 10 | #645 | File d'attente hors ligne | Optionnelle |
 
 ## Questions ouvertes
 
