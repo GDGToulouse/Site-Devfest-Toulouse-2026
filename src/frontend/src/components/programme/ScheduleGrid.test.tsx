@@ -29,6 +29,7 @@ const rows: ScheduleRow[] = [
     startsAt: "2026-11-19T08:50:00.000Z",
     cells: [[], []],
     covered: [false, false],
+    plenary: null,
   },
 ];
 
@@ -120,6 +121,7 @@ describe("a room with nothing on at that hour", () => {
         startsAt: "2026-11-19T08:50:00.000Z",
         cells: [[{ talk, isSimulcast: false, rowSpan: 1 }], []],
         covered: [false, false],
+        plenary: null,
       },
     ];
     const { container } = render(<ScheduleGrid {...props} rows={filled} />);
@@ -138,6 +140,7 @@ describe("a session reaching across two rows", () => {
       startsAt: "2026-11-19T08:50:00.000Z",
       cells: [[{ talk, isSimulcast: false, rowSpan: 2 }], []],
       covered: [false, false],
+      plenary: null,
     },
     {
       type: "slot",
@@ -145,6 +148,7 @@ describe("a session reaching across two rows", () => {
       startsAt: "2026-11-19T09:10:00.000Z",
       cells: [[], []],
       covered: [true, false],
+      plenary: null,
     },
   ];
 
@@ -166,6 +170,48 @@ describe("a session reaching across two rows", () => {
     expect(rows[1].querySelectorAll("td")).toHaveLength(1);
     // And the one cell it does draw is the free room, with its marker.
     expect(rows[1].querySelectorAll("td > [aria-hidden]")).toHaveLength(1);
+  });
+});
+
+describe("a keynote with the slot to itself (#716)", () => {
+  const keynote = {
+    slug: "keynote-cloture",
+    title: "Keynote de clôture",
+    format: "KEYNOTE",
+    startsAt: "2026-11-19T16:30:00.000Z",
+    endsAt: "2026-11-19T17:15:00.000Z",
+    speakers: [],
+    category: null,
+    room: "Amphithéâtre",
+    simulcasts: [{ roomId: 2, room: "Agora" }],
+  } as unknown as typeof talk;
+  const plenary = { talk: keynote, isSimulcast: false, rowSpan: 1 };
+  const plenaryRows: ScheduleRow[] = [
+    {
+      type: "slot",
+      key: "slot:1",
+      startsAt: "2026-11-19T16:30:00.000Z",
+      // Still in both columns, as the builder leaves it for the other views.
+      cells: [[plenary], [{ ...plenary, isSimulcast: true }]],
+      covered: [false, false],
+      plenary,
+    },
+  ];
+
+  it("is drawn once, across every room, with no dash beside it", () => {
+    const { container } = render(<ScheduleGrid {...props} rows={plenaryRows} />);
+
+    const cells = container.querySelectorAll("tbody td");
+    expect(cells).toHaveLength(1);
+    expect(cells[0]).toHaveAttribute("colspan", "2");
+    expect(screen.getAllByText("Keynote de clôture")).toHaveLength(1);
+    expect(container.querySelectorAll("td > [aria-hidden]")).toHaveLength(0);
+  });
+
+  it("names the room it is given in and the rooms it is relayed to", () => {
+    render(<ScheduleGrid {...props} rows={plenaryRows} />);
+
+    expect(screen.getByText(/Amphithéâtre · Agora \(retransmission\)/)).toBeInTheDocument();
   });
 });
 

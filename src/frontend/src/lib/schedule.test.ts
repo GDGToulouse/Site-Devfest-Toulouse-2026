@@ -300,3 +300,90 @@ describe("a session that outlasts its own row", () => {
     expect(slotRow(rows, 0).cells[0][0].rowSpan).toBe(1);
   });
 });
+
+// A keynote is the same session for everyone (#716): with the slot to itself,
+// the grid draws it once across every room instead of in its two columns with
+// dashes everywhere else.
+
+const RELAYED_KEYNOTE = talk({
+  slug: "keynote",
+  format: "KEYNOTE",
+  simulcasts: [{ roomId: HEMI.id, room: HEMI.name }],
+});
+
+describe("a keynote with the slot to itself (#716)", () => {
+  it("is drawn across the grid, from the room it is given in", () => {
+    const rows = buildScheduleRows(
+      schedule({ rooms: [AMPHI, HEMI, { id: 3, name: "Pastel", sortOrder: 2 }], talks: [RELAYED_KEYNOTE] }),
+    );
+
+    expect(slotRow(rows, 0).plenary?.talk.slug).toBe("keynote");
+    expect(slotRow(rows, 0).plenary?.isSimulcast).toBe(false);
+  });
+
+  it("keeps its columns for the views that list it by room", () => {
+    const rows = buildScheduleRows(schedule({ talks: [RELAYED_KEYNOTE] }));
+
+    expect(slotRow(rows, 0).cells[0].map((c) => c.talk.slug)).toEqual(["keynote"]);
+    expect(slotRow(rows, 0).cells[1].map((c) => c.talk.slug)).toEqual(["keynote"]);
+  });
+
+  it("stays in its room when another session starts beside it", () => {
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [
+          talk({ slug: "keynote", format: "KEYNOTE" }),
+          talk({ slug: "atelier", room: HEMI.name, roomId: HEMI.id }),
+        ],
+      }),
+    );
+
+    expect(slotRow(rows, 0).plenary).toBeNull();
+  });
+
+  it("stays in its room when a session starts before it ends", () => {
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [
+          talk({ slug: "keynote", format: "KEYNOTE" }),
+          talk({
+            slug: "quickie",
+            room: HEMI.name,
+            roomId: HEMI.id,
+            startsAt: "2026-11-19T08:20:00.000Z",
+            endsAt: "2026-11-19T08:40:00.000Z",
+          }),
+        ],
+      }),
+    );
+
+    expect(slotRow(rows, 0).plenary).toBeNull();
+  });
+
+  it("stays in its room when an earlier session is still running", () => {
+    const rows = buildScheduleRows(
+      schedule({
+        talks: [
+          talk({
+            slug: "atelier",
+            room: HEMI.name,
+            roomId: HEMI.id,
+            startsAt: "2026-11-19T07:00:00.000Z",
+            endsAt: "2026-11-19T09:00:00.000Z",
+          }),
+          talk({ slug: "conf", startsAt: "2026-11-19T07:00:00.000Z", endsAt: "2026-11-19T08:00:00.000Z" }),
+          talk({ slug: "keynote", format: "KEYNOTE" }),
+        ],
+      }),
+    );
+
+    expect(slotRow(rows, 1).covered[1]).toBe(true);
+    expect(slotRow(rows, 1).plenary).toBeNull();
+  });
+
+  it("leaves a conference alone in its slot in its room", () => {
+    const rows = buildScheduleRows(schedule({ talks: [talk({ slug: "conf" })] }));
+
+    expect(slotRow(rows, 0).plenary).toBeNull();
+  });
+});
