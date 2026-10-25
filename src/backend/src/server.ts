@@ -220,9 +220,9 @@ export async function buildServer() {
     // opaque origin with scripts disabled; `nosniff` stops a mislabelled file
     // from being reinterpreted as something executable.
     setHeaders: (reply, filePath) => {
-      reply.setHeader("X-Content-Type-Options", "nosniff");
+      reply.header("X-Content-Type-Options", "nosniff");
       if (filePath.toLowerCase().endsWith(".svg")) {
-        reply.setHeader("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
+        reply.header("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
       }
     },
   });
