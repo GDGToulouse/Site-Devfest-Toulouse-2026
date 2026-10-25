@@ -55,6 +55,15 @@ export interface ScheduleSlotRow {
    * by-hour print — can keep ignoring it: a list has no holes to fill.
    */
   covered: boolean[];
+  /**
+   * A keynote with the slot to itself (#716): the grid draws it once across
+   * every column rather than in its room and its relay rooms, with dashes in
+   * all the others — it is the same session for everyone. Null otherwise.
+   *
+   * Only the grid reads it. `cells` keeps the keynote in its columns, so the
+   * linear views and the by-room print go on as before.
+   */
+  plenary: ScheduleCell | null;
 }
 
 export interface ScheduleBandRow {
@@ -91,6 +100,7 @@ export function buildScheduleRows(schedule: EditionSchedule): ScheduleRow[] {
       startsAt: talk.startsAt,
       cells: columns.map(() => []),
       covered: columns.map(() => false),
+      plenary: null,
     });
   }
 
@@ -132,7 +142,28 @@ export function buildScheduleRows(schedule: EditionSchedule): ScheduleRow[] {
     }
   }
 
+  for (const row of rows) {
+    if (row.type === "slot") row.plenary = findPlenary(row);
+  }
+
   return rows;
+}
+
+/**
+ * The keynote that has its slot to itself, if any (#716).
+ *
+ * Alone means nothing else starts in the row, nothing from an earlier row is
+ * still running, and nothing starts before it ends — a later row inside its
+ * range would be a session in parallel, which is what `rowSpan > 1` says.
+ * Short of all three it stays in its columns: drawn across the grid, it would
+ * cover a session someone came to find.
+ */
+function findPlenary(row: ScheduleSlotRow): ScheduleCell | null {
+  if (row.covered.some(Boolean)) return null;
+  const cells = row.cells.flat();
+  if (new Set(cells.map((cell) => cell.talk.slug)).size !== 1) return null;
+  const main = cells.find((cell) => !cell.isSimulcast) ?? cells[0];
+  return main.talk.format === "KEYNOTE" && main.rowSpan === 1 ? main : null;
 }
 
 /**
