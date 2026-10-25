@@ -167,6 +167,24 @@ Si on change la valeur de `ENV_NAME` ou `BACKEND_URL` sur un environnement exist
 3. **Redeploy without cache** (sinon `routes-manifest.json` n'est pas régénéré).
 4. Refaire la checklist de vérifications.
 
+## Changer la branche de dev-j
+
+L'application `dev-j` peut déployer une autre branche le temps d'un test (par exemple
+`dev-arrivals`), puis revenir. Les deux branches n'ont pas les mêmes migrations : la base doit
+repartir de zéro à chaque bascule, sinon le code tourne sur les tables de l'autre branche (#714).
+
+1. Dans Coolify, sur l'application `dev-j` : changer la branche Git.
+2. Dans ses variables, donner à `DB_RESET_TOKEN` une valeur **jamais utilisée** : `arrivals-1`
+   à l'aller, `dev-j-2` au retour, et ainsi de suite.
+3. Redéployer. Au démarrage, le backend vide la base, rejoue les migrations et lance
+   `seed-dev.ts`. Les logs du backend portent `[db-boot] New reset token "…"` puis
+   `[db-boot] Database emptied.`
+4. Vérifier la connexion avec un compte de démo (mot de passe `DEV_SEED_PASSWORD`).
+
+Les redéploiements suivants gardent les données tant que le jeton ne change pas : inutile de
+vider la variable. Tout ce qui a été saisi à la main est perdu à la bascule ; les fichiers du
+volume `uploads` restent, orphelins.
+
 ## Suppression d'un environnement
 
 1. Supprimer la ressource Coolify (les containers et volumes sont supprimés).

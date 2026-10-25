@@ -42,12 +42,18 @@ services:
     # `localhost` resolves to ::1 and the server only listens on IPv4, so the
     # probe would fail every single time and block all deployments.
     # `curl` is absent from node:22-alpine; `wget` ships with BusyBox.
+    #
+    # Every probe is a process spawned through containerd, and the VPS runs
+    # about thirty containers: a 30s `interval` keeps the idle load down
+    # (#704), while `start_interval` (Docker 25+) still probes every 5s during
+    # `start_period`, so Coolify sees the new container healthy just as fast.
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/healthz"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
+      start_interval: 5s
     depends_on:
       - backend
     # Persist Next.js' on-the-fly image optimization cache across rebuilds.
@@ -141,12 +147,14 @@ services:
     # whereas undershooting marks the container unhealthy and blocks the deploy.
     # 127.0.0.1, not `localhost`: the latter resolves to ::1 and Fastify binds
     # 0.0.0.0 (IPv4 only), so every probe would be refused.
+    # Interval and `start_interval`: see the frontend healthcheck (#704).
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:4000/api/health"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 3
       start_period: 60s
+      start_interval: 5s
     depends_on:
       db:
         condition: service_healthy
@@ -181,11 +189,15 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pgdata:/var/lib/postgresql/data
+    # The backend waits for this check (`service_healthy`): `start_interval`
+    # keeps that wait short despite the 30s `interval` (#704).
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 5s
+      interval: 30s
       timeout: 5s
       retries: 5
+      start_period: 30s
+      start_interval: 2s
 
 networks:
   coolify:

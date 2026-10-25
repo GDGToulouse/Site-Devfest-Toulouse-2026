@@ -23,6 +23,17 @@ has_table() {
   pnpm exec tsx scripts/has-table.ts "$1" 2>/dev/null || echo "check_failed"
 }
 
+# dev-j only: a new DB_RESET_TOKEN empties the database once, so the
+# environment can switch branches (#714). Only docker-compose.dev.yml passes
+# the variable; refusing any other seed is the second fence before beta/prod.
+if [ -n "${DB_RESET_TOKEN:-}" ]; then
+  if [ "$SEED_SCRIPT" != "prisma/seed-dev.ts" ]; then
+    echo "[db-boot] DB_RESET_TOKEN is set but the seed is $SEED_SCRIPT, not prisma/seed-dev.ts — refusing to reset or start." >&2
+    exit 1
+  fi
+  pnpm exec tsx scripts/reset-db.ts "$DB_RESET_TOKEN"
+fi
+
 PRISMA_TABLE=$(has_table "_prisma_migrations")
 USER_TABLE=$(has_table "user")
 
