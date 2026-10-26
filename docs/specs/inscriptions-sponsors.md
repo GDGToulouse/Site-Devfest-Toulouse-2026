@@ -183,15 +183,15 @@ inscrits, **afin qu'**il gère lui-même la suite.
 
 | Ordre | Issue | Contenu | Dépend de |
 |---|---|---|---|
-| 1 | Modèle, quota et échéance | `SponsorGuest`, places par offre, ajustements, validité calculée, échéance de l'édition ; écran admin du quota | — |
-| 2 | Espace sponsor : inscrits | Liste, saisie, compteur, compte à rebours, lecture seule, alertes, mention données personnelles | 1 |
-| 3 | Import CSV | Modèle, détection séparateur et encodage, aperçu, contrôle du quota | 2 |
-| 4 | Admin : vue consolidée | Liste de l'édition, filtres, alertes, ajout après échéance | 1 |
-| 5 | Synchronisation Billetweb | Réglages de l'édition, aperçu, création des billets, numéro, origine, annulation, relecture | 1 |
-| 6 | Rattacher un billet existant | Rattachement par numéro de billet (RG-INS-49) | 5 |
-| 7 | Donner accès depuis un inscrit | Bouton, reprise de l'invitation #362 | 2 |
+| 1 | #727 Modèle, quota et échéance | `SponsorGuest`, places par offre, ajustements, validité calculée, échéance de l'édition ; écran admin du quota | — |
+| 2 | #728 Espace sponsor : inscrits | Liste, saisie, compteur, compte à rebours, lecture seule, alertes, mention données personnelles | #727 |
+| 3 | #729 Import CSV | Modèle, détection séparateur et encodage, aperçu, contrôle du quota | #728 |
+| 4 | #730 Admin : vue consolidée | Liste de l'édition, filtres, alertes, ajout après échéance | #727 |
+| 5 | #731 Synchronisation Billetweb | Réglages de l'édition, aperçu, création des billets, numéro, origine, annulation, relecture | #727 |
+| 6 | #732 Rattacher un billet existant | Rattachement par numéro de billet (RG-INS-49) | #731 |
+| 7 | #733 Donner accès depuis un inscrit | Bouton, reprise de l'invitation #362 | #728 |
 
-2, 4 et 5 avancent en parallèle une fois 1 livrée.
+#728, #730 et #731 avancent en parallèle une fois #727 livrée.
 
 ## Formulaire Billetweb existant
 
