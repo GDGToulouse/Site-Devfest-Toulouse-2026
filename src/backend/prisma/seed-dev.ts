@@ -471,17 +471,25 @@ async function seedDev() {
   console.log(`Sponsor tiers upserted: ${TIER_CATALOG.length}`);
 
   // --- Which tiers this edition proposes (#317) ---
+  // guestPlaces: the badges of the 2026 sponsor guide (#727).
   const EDITION_TIERS = [
-    { key: "platinum", sortOrder: 1 },
-    { key: "gold", sortOrder: 2 },
-    { key: "discovery", sortOrder: 3 },
-    { key: "soutien-communautes", sortOrder: 4 },
+    { key: "platinum", sortOrder: 1, guestPlaces: 8 },
+    { key: "gold", sortOrder: 2, guestPlaces: 4 },
+    { key: "discovery", sortOrder: 3, guestPlaces: 2 },
+    { key: "soutien-communautes", sortOrder: 4, guestPlaces: 1 },
   ];
   for (const et of EDITION_TIERS) {
     await prisma.editionSponsorTier.upsert({
       where: { editionId_tierId: { editionId: edition.id, tierId: sponsorTiers[et.key].id } },
-      update: { isVisible: true, price: null, sortOrder: et.sortOrder },
-      create: { editionId: edition.id, tierId: sponsorTiers[et.key].id, isVisible: true, price: null, sortOrder: et.sortOrder },
+      update: { isVisible: true, price: null, sortOrder: et.sortOrder, guestPlaces: et.guestPlaces },
+      create: {
+        editionId: edition.id,
+        tierId: sponsorTiers[et.key].id,
+        isVisible: true,
+        price: null,
+        sortOrder: et.sortOrder,
+        guestPlaces: et.guestPlaces,
+      },
     });
   }
   console.log(`Edition sponsor tiers created: ${EDITION_TIERS.length}`);

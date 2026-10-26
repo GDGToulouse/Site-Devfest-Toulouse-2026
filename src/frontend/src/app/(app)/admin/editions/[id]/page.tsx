@@ -14,6 +14,7 @@ import PhotosTab from "@/components/admin/edition-detail/PhotosTab";
 import KeyFiguresTab from "@/components/admin/edition-detail/KeyFiguresTab";
 import SponsoringTab from "@/components/admin/edition-detail/SponsoringTab";
 import EditionSponsorsTab from "@/components/admin/edition-detail/EditionSponsorsTab";
+import SponsorGuestsTab from "@/components/admin/sponsor-guests/SponsorGuestsTab";
 import ScheduleTab from "@/components/admin/edition-detail/ScheduleTab";
 import SynthesisOverview from "@/components/admin/edition-detail/SynthesisOverview";
 import { editionStatusInfo } from "@/lib/edition-status-labels";
@@ -51,6 +52,8 @@ const TABS = [
   // companies actually signed for the edition (#389). Neighbouring, distinct.
   { key: "sponsoring", label: "Sponsoring" },
   { key: "sponsors", label: "Sponsors" },
+  // The people the sponsors send, their places and their tickets (#727).
+  { key: "sponsor-guests", label: "Invités sponsors" },
   { key: "cfp", label: "CFP" },
   { key: "key-figures", label: "Chiffres clés" },
   { key: "feedback", label: "Avis" },
@@ -139,6 +142,7 @@ export default function EditionDetailPage() {
         {activeTab === "sponsors" && (
           <EditionSponsorsTab editionId={edition.id} />
         )}
+        {activeTab === "sponsor-guests" && <SponsorGuestsTab editionId={edition.id} />}
         {activeTab === "cfp" && (
           <CfpTab />
         )}

@@ -8,8 +8,9 @@ import PublicTab from "@/components/sponsor-space/PublicTab";
 import PrivateTab from "@/components/sponsor-space/PrivateTab";
 import TeamTab from "@/components/sponsor-space/TeamTab";
 import JobOffersTab from "@/components/sponsor-space/JobOffersTab";
+import GuestsTab from "@/components/sponsor-space/GuestsTab";
 import SponsorAccountBar from "@/components/sponsor-space/SponsorAccountBar";
-import { getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
+import { getSponsorGuests, getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
 import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
 
 // A sponsor's own space (#362), in three tabs — the split the issue asked for,
@@ -28,6 +29,9 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   // including the ones that would never resolve.
   const [outcome, setOutcome] = useState<"loading" | "denied" | "unreachable">("loading");
   const [activeTab, setActiveTab] = useState("public");
+  // The guests tab exists once registration has been opened for the edition
+  // (RG-INS-28): before that, there is nothing a sponsor can do with it.
+  const [hasGuestsTab, setHasGuestsTab] = useState(false);
 
   const load = useCallback(async () => {
     setOutcome("loading");
@@ -38,6 +42,8 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
     }
     if (data) {
       setProfile(data);
+      const guests = await getSponsorGuests(id);
+      setHasGuestsTab(Boolean(guests.data?.registration.hasEverOpened || guests.data?.guests));
       return;
     }
     // A dropped connection comes back as status 0 (#428). Reporting that as
@@ -95,6 +101,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
   const tabs = [
     { key: "public", label: "Fiche publique" },
     { key: "job-offers", label: "Offres d'emploi" },
+    ...(hasGuestsTab ? [{ key: "guests", label: "Invités" }] : []),
     ...(canEdit ? [{ key: "private", label: "Informations privées" }] : []),
     ...(canManageTeam ? [{ key: "team", label: "Accès" }] : []),
   ];
@@ -116,6 +123,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
       <div id={`sponsor-panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "public" && <PublicTab profile={profile} canEdit={canEdit} onSaved={load} />}
         {activeTab === "job-offers" && <JobOffersTab sponsorId={id} canEdit={canEdit} />}
+        {activeTab === "guests" && hasGuestsTab && <GuestsTab sponsorId={id} canManageTeam={canManageTeam} />}
         {activeTab === "private" && canEdit && <PrivateTab sponsorId={id} />}
         {activeTab === "team" && canManageTeam && <TeamTab sponsorId={id} />}
       </div>

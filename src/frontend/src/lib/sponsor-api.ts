@@ -1,3 +1,5 @@
+import type { Guest, GuestDraft, ImportFailure, ImportPreview } from "@/lib/sponsor-guests";
+
 // Client for a sponsor's own space (#362). Separate from admin-api.ts: that one
 // prefixes /api/admin and is meant for the organisers, whose accounts hold a
 // back-office role. A sponsor account holds none — its rights come from its
@@ -316,4 +318,75 @@ export function acceptInvitation(token: string) {
     `/api/sponsor-invitation/${token}/accept`,
     { method: "POST" },
   );
+}
+
+// --- Guests (#728, #729) ---
+
+export interface SponsorGuest extends Guest {
+  // A guest with a ticket is read-only here (RG-INS-27).
+  hasTicket: boolean;
+  isTicketCancelled: boolean;
+}
+
+export interface SponsorGuests {
+  registration: {
+    isOpen: boolean;
+    hasEverOpened: boolean;
+    deadline: string | null;
+    isPastDeadline: boolean;
+    canWrite: boolean;
+  };
+  // Absent while registration has never been opened (RG-INS-28).
+  quota?: number;
+  registeredCount?: number;
+  remaining?: number;
+  outOfQuotaCount?: number;
+  guests?: SponsorGuest[];
+}
+
+export function getSponsorGuests(sponsorId: number) {
+  return call<SponsorGuests>(`/api/sponsor-space/${sponsorId}/guests`);
+}
+
+export function createSponsorGuest(sponsorId: number, body: GuestDraft) {
+  return call<{ id: number }>(`/api/sponsor-space/${sponsorId}/guests`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function updateSponsorGuest(sponsorId: number, guestId: number, body: GuestDraft) {
+  return call<{ saved: boolean }>(`/api/sponsor-space/${sponsorId}/guests/${guestId}`, {
+    method: "PUT",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteSponsorGuest(sponsorId: number, guestId: number) {
+  return call<null>(`/api/sponsor-space/${sponsorId}/guests/${guestId}`, { method: "DELETE" });
+}
+
+export function sponsorGuestTemplateUrl(sponsorId: number) {
+  return `/api/sponsor-space/${sponsorId}/guests/template`;
+}
+
+// Outside call(): a refused file comes back with its faulty lines, which
+// call() does not keep.
+export async function importSponsorGuests(
+  sponsorId: number,
+  file: string,
+  confirm: boolean,
+): Promise<{ status: number; preview?: ImportPreview; failure?: ImportFailure }> {
+  try {
+    const res = await fetch(`/api/sponsor-space/${sponsorId}/guests/import`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ file, confirm }),
+    });
+    const body = await res.json().catch(() => null);
+    return res.ok ? { status: res.status, preview: body } : { status: res.status, failure: body ?? {} };
+  } catch {
+    return { status: 0 };
+  }
 }

@@ -125,6 +125,21 @@ model Edition {
   // production included (#566). Only before the day; the votes cast meanwhile
   // are marked as tests and deleted when it goes off, by hand or at midnight
   // on the day (lib/talk-feedback-test-mode.ts).
+  // Sponsor guest registration (#727). Closed on every edition until an admin
+  // opens it (RG-INS-28): the feature is built ahead of the decision to use it.
+  // `OpenedAt` is the first opening, kept when it closes again, so the sponsor
+  // space can tell "never opened" (section hidden) from "closed" (read-only).
+  isSponsorGuestRegistrationOpen   Boolean   @default(false)
+  sponsorGuestRegistrationOpenedAt DateTime?
+  // Null = the default, the Friday before startDate at 23:59 Paris time
+  // (RG-INS-21, lib/sponsor-guests.ts). Stored only once an admin sets it.
+  sponsorGuestDeadline             DateTime?
+  // Where the sync creates the guests' tickets (#731, RG-INS-47). Deliberately
+  // not the edition-wide Billetweb link of the arrivals work (#637), which lives
+  // on its own branch: two migrations adding the same column would collide.
+  sponsorGuestBilletwebEventId     String?
+  sponsorGuestBilletwebTicketId    String?
+  sponsorGuestBilletwebTicketName  String?
   feedbackTestMode        Boolean           @default(false)
   // When an admin last sent the speakers their feedback recap (#567).
   feedbackRecapSentAt     DateTime?
@@ -433,6 +448,10 @@ model EditionSponsorTier {
   isVisible Boolean  @default(true)
   price     String?
   sortOrder Int      @default(0)
+  // Guests a sponsor of this offer may register this year (#727, RG-INS-10):
+  // the "Badges" column of the sponsor guide, also what #438 calls badges. On
+  // the edition's offer, so changing it next year leaves this one alone (#375).
+  guestPlaces Int     @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -611,6 +630,7 @@ model User {
   // The sponsor spaces this account may act on (#362). A sponsor account holds
   // no back-office UserRole — its rights live entirely on these contacts.
   sponsorContacts SponsorContact[]
+  sponsorGuestAdjustments SponsorGuestAdjustment[]
   auditLogs       AuditLog[]
 
   oauthClients       OauthClient[]
@@ -1211,6 +1231,10 @@ model EditionSponsor {
   // tier (#251), so they hang off the participation, not the company.
   jobOffers SponsorJobOffer[]
 
+  // People the company sends to the event, and the places it may fill (#727).
+  guests           SponsorGuest[]
+  guestAdjustments SponsorGuestAdjustment[]
+
   @@unique([sponsorId, editionId])
   @@index([sponsorId])
   @@index([editionId])
@@ -1478,3 +1502,89 @@ model TeamMemberEdition {
   @@index([editionId])
 }
 
+
+// --- Sponsor guests (#727, docs/specs/inscriptions-sponsors.md) ---
+
+enum SponsorGuestGender {
+  FEMALE
+  MALE
+  UNSPECIFIED
+}
+
+enum SponsorGuestExperience {
+  STUDENT
+  UNDER_3_YEARS
+  FROM_3_TO_7_YEARS
+  OVER_7_YEARS
+}
+
+enum SponsorGuestDiet {
+  NONE
+  VEGETARIAN
+  VEGAN
+  OTHER
+}
+
+enum SponsorGuestAdjustmentReason {
+  PURCHASED
+  GOODWILL
+  CORRECTION
+}
+
+// Someone a sponsor sends to the event. Whether they fit in the quota is
+// computed from their rank, never stored (RG-INS-13): raising the quota must
+// bring the last ones back without touching a row. Hard-deleted, no trash: a
+// guest removed frees a place at once, and the history keeps the trace.
+model SponsorGuest {
+  id                Int                    @id @default(autoincrement())
+  lastName          String
+  firstName         String
+  email             String
+  gender            SponsorGuestGender
+  experience        SponsorGuestExperience
+  attendsAfterParty Boolean                @default(false)
+  diet              SponsorGuestDiet       @default(NONE)
+  needsAssistance   Boolean                @default(false)
+
+  // Set when the sync creates the ticket (#731). A guest with a ticket is
+  // read-only on the site and never sent again (RG-INS-27): Billetweb is the
+  // reference from then on. Unique so a ticket attached by hand (#732) belongs
+  // to one sponsor only.
+  billetwebOrderId     String?
+  billetwebTicketId    String?   @unique
+  // The reference printed on the ticket (« T356-3899-E1000 »), what a person
+  // reads out to the team; the id above is what the API filters on.
+  billetwebTicketRef   String?
+  billetwebSyncedAt    DateTime?
+  // Last failure of the sync for this guest, shown to the team until it passes.
+  billetwebError       String?
+  // Billetweb reports the ticket as cancelled (read back by the sync, RG-INS-48).
+  isBilletwebCancelled Boolean   @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  editionSponsorId Int
+  editionSponsor   EditionSponsor @relation(fields: [editionSponsorId], references: [id], onDelete: Cascade)
+
+  @@index([editionSponsorId, createdAt])
+}
+
+// A change to a participation's places on top of its offer's (RG-INS-11):
+// places bought separately, a goodwill gesture, a correction. Signed, and kept
+// as lines rather than one number so the team sees why the quota is what it is.
+model SponsorGuestAdjustment {
+  id        Int                          @id @default(autoincrement())
+  quantity  Int
+  reason    SponsorGuestAdjustmentReason
+  comment   String?
+  createdAt DateTime                     @default(now())
+
+  editionSponsorId Int
+  editionSponsor   EditionSponsor @relation(fields: [editionSponsorId], references: [id], onDelete: Cascade)
+  // SetNull: deleting an account must not erase why a sponsor has its places.
+  createdById      String?
+  createdBy        User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([editionSponsorId])
+}
