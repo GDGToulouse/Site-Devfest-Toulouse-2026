@@ -9,6 +9,7 @@
 - Les speakers n'ont pas de compte : ils passent par le lien `/edit/<token>`, valable 30 jours
 
 - Agents IA (MCP, #514) : better-auth est aussi serveur OAuth (`mcp()` + `jwt()` + `cimd()`), connexion sur `/connect`, consentement sur `/connect/consent`, découverte sous `/.well-known/` à la racine. Pièges : `clientPrivileges`/`resourcePrivileges` à `false` (sinon tout compte connecté crée des clients OAuth) ; les listes optionnelles des tables OAuth sont en `Json?`, car une liste Prisma ne stocke pas `null` et le fournisseur lit `null` comme « sans restriction » (`lib/oauth-nullable-lists.ts`)
+- Côté Claude Code, `.mcp.json` déclare les trois environnements (`devfest-prod`, `devfest-beta`, `devfest-dev-j`, adresses seules). Chacun se connecte par `/mcp` → Authenticate, avec son compte sur l'environnement visé (les bases ne sont pas partagées) ; le jeton reste sur sa machine. Contrôle : `GET /api/admin/session` répond le compte et `source: "mcp"`. Les écritures de `devfest-prod` touchent la prod directement : ne jamais ranger ses outils dans les permissions toujours accordées
 
 ## Authorization
 
