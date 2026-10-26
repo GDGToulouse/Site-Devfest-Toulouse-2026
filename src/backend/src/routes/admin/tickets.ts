@@ -1,4 +1,5 @@
 import type { FastifyInstance } from "fastify";
+import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
 import { revalidateBilletterie } from "../../lib/revalidate.js";
@@ -19,10 +20,17 @@ interface TicketTierBody {
   // Admin status override. "AUTO" (or null) clears it → falls back to
   // the BilletWeb sync / date-based computation.
   manualStatus?: TicketStatus | "AUTO" | null;
+  isOutsideFlow?: boolean;
   editionId: number;
 }
 
 const BILLETWEB_API = "https://www.billetweb.fr/api";
+
+const editionIdParams = {
+  type: "object",
+  required: ["editionId"],
+  properties: { editionId: { type: "string", pattern: "^[0-9]+$" } },
+} as const;
 
 // Maps BilletWeb's /event/:id/avail "avail" field to a sold-out flag.
 // "-1" (or a negative number) means unlimited → not sold out. A remaining
@@ -94,6 +102,92 @@ export function withTrackingSource(
   }
 }
 
+// A tier as the Billetweb import sees it: the fields Billetweb owns. Everything
+// else on the row (English name once translated, manual status, "outside the
+// flow") belongs to the site and survives a re-import (RG-ARR-11, #637).
+export interface ImportedTier {
+  billetwebTicketId: string;
+  name: string;
+  price: number;
+  isVisible: boolean;
+  saleStartDate: Date | null;
+  saleEndDate: Date | null;
+  isSoldOut: boolean | null;
+}
+
+interface ExistingTier {
+  id: number;
+  nameFr: string;
+  nameEn: string;
+  billetwebTicketId: string | null;
+  sortOrder: number;
+  deletedAt: Date | null;
+}
+
+export interface TierImportPlan {
+  updates: Array<{ id: number; data: Prisma.TicketTierUncheckedUpdateInput }>;
+  creates: Array<Omit<Prisma.TicketTierUncheckedCreateInput, "editionId">>;
+}
+
+// Matches Billetweb's tiers onto the edition's, by Billetweb id first, then —
+// for tiers imported before ids were kept — by French name. Billetweb's order
+// becomes the edition's; tiers it no longer returns go to the trash; tiers
+// created by hand keep their place after the imported ones.
+export function planTierImport(
+  existing: ExistingTier[],
+  imported: ImportedTier[],
+  externalUrl: string | null,
+  now: Date = new Date(),
+): TierImportPlan {
+  const byTicketId = new Map(
+    existing.filter((t) => t.billetwebTicketId).map((t) => [t.billetwebTicketId!, t]),
+  );
+  const claimed = new Set<number>();
+  const updates: TierImportPlan["updates"] = [];
+  const creates: TierImportPlan["creates"] = [];
+  let sortOrder = 0;
+
+  for (const tier of imported) {
+    const match =
+      byTicketId.get(tier.billetwebTicketId) ??
+      existing.find(
+        (t) => !t.billetwebTicketId && !t.deletedAt && !claimed.has(t.id) && t.nameFr === tier.name,
+      );
+    const billetwebData = {
+      nameFr: tier.name,
+      price: tier.price,
+      isVisible: tier.isVisible,
+      saleStartDate: tier.saleStartDate,
+      saleEndDate: tier.saleEndDate,
+      externalUrl,
+      isSoldOut: tier.isSoldOut,
+      billetwebTicketId: tier.billetwebTicketId,
+      sortOrder: sortOrder++,
+    };
+    if (match) {
+      claimed.add(match.id);
+      // The English name follows Billetweb's until someone translates it.
+      const nameEn = match.nameEn === match.nameFr ? { nameEn: tier.name } : {};
+      updates.push({ id: match.id, data: { ...billetwebData, ...nameEn } });
+    } else {
+      creates.push({ ...billetwebData, nameEn: tier.name });
+    }
+  }
+
+  const rest = existing
+    .filter((t) => !claimed.has(t.id))
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+  for (const t of rest) {
+    const isGoneFromBilletweb = t.billetwebTicketId !== null && !t.deletedAt;
+    updates.push({
+      id: t.id,
+      data: { sortOrder: sortOrder++, ...(isGoneFromBilletweb ? softDeleteData(now) : {}) },
+    });
+  }
+
+  return { updates, creates };
+}
+
 function toDateOrNull(value: string | null | undefined): Date | null {
   if (!value) return null;
   const d = new Date(value);
@@ -126,14 +220,65 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     }));
   });
 
-  // POST /api/admin/tickets/import/billetweb — import tiers from Billetweb
-  app.post<{
-    Body: { editionId: number; billetwebEventId: string; trackingSource?: string };
-  }>("/tickets/import/billetweb", async (request, reply) => {
-    const { editionId, billetwebEventId, trackingSource } = request.body;
+  // GET /api/admin/tickets/billetweb/link/:editionId — the edition's Billetweb event
+  app.get<{ Params: { editionId: string } }>(
+    "/tickets/billetweb/link/:editionId",
+    { schema: { params: editionIdParams } },
+    async (request, reply) => {
+      const edition = await prisma.edition.findFirst({
+        where: { id: Number(request.params.editionId), ...notDeleted },
+        select: { billetwebEventId: true, billetwebEventName: true },
+      });
+      if (!edition) return notFound(reply, "Edition");
+      return edition;
+    },
+  );
 
-    if (!editionId || !billetwebEventId) {
-      return reply.status(400).send({ error: "editionId and billetwebEventId are required" });
+  // DELETE /api/admin/tickets/billetweb/link/:editionId — unlinks the event
+  // (RG-ARR-10): wrong event picked, or the edition moved to another one. Tiers
+  // keep their Billetweb ids, so relinking the same event loses nothing; linking
+  // another one sends the old tiers to the trash at its first import.
+  app.delete<{ Params: { editionId: string } }>(
+    "/tickets/billetweb/link/:editionId",
+    { schema: { params: editionIdParams } },
+    async (request, reply) => {
+      const id = Number(request.params.editionId);
+      const edition = await prisma.edition.findFirst({ where: { id, ...notDeleted } });
+      if (!edition) return notFound(reply, "Edition");
+      await prisma.edition.update({
+        where: { id },
+        data: { billetwebEventId: null, billetwebEventName: null },
+      });
+      return { success: true };
+    },
+  );
+
+  // POST /api/admin/tickets/import/billetweb — imports the tiers of the
+  // edition's Billetweb event, linking it on the first import (#637).
+  app.post<{
+    Body: { editionId: number; billetwebEventId?: string; trackingSource?: string };
+  }>("/tickets/import/billetweb", async (request, reply) => {
+    const { editionId, trackingSource } = request.body;
+    if (!editionId) {
+      return reply.status(400).send({ error: "editionId is required" });
+    }
+
+    const edition = await prisma.edition.findFirst({ where: { id: editionId, ...notDeleted } });
+    if (!edition) return notFound(reply, "Edition");
+
+    const billetwebEventId = edition.billetwebEventId ?? request.body.billetwebEventId;
+    if (!billetwebEventId) {
+      return reply.status(400).send({ error: "billetwebEventId is required" });
+    }
+    if (
+      edition.billetwebEventId &&
+      request.body.billetwebEventId &&
+      request.body.billetwebEventId !== edition.billetwebEventId
+    ) {
+      return reply.status(409).send({
+        error: "edition_linked_elsewhere",
+        message: "L'édition est liée à un autre événement Billetweb : déliez-la d'abord.",
+      });
     }
 
     const params = getBilletwebParams();
@@ -167,41 +312,54 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     // Fetch per-ticket availability (sold-out) to seed isSoldOut (best-effort).
     const soldOutByTicket = await fetchBilletwebSoldOut(billetwebEventId, params);
 
-    // Replace the edition's tiers wholesale. This stays a HARD delete on
-    // purpose, unlike the single-tier DELETE below (#147): the loop right after
-    // re-creates tiers at sortOrder 0..n-1, and a soft-deleted row keeps its
-    // sortOrder slot — `@@unique([editionId, sortOrder])` would reject the
-    // re-import. sortOrder is an Int, so it cannot be parked out of the way the
-    // way a slug can. Tiers replaced by a re-import are mirror images of what
-    // BilletWeb just returned, so there is nothing worth keeping in the trash.
-    await prisma.ticketTier.deleteMany({ where: { editionId } });
-
-    // Create new tiers from Billetweb data
-    for (let i = 0; i < tickets.length; i++) {
-      const t = tickets[i];
-      const name = String(t.name || "");
-      const price = Number(t.price) || 0;
-      const visibility = Number(t.visibility);
-      const isVisible = visibility === 0 || visibility === 1;
-
-      await prisma.ticketTier.create({
-        data: {
-          nameFr: name,
-          nameEn: name,
-          price,
-          isVisible,
+    const imported: ImportedTier[] = tickets
+      .filter((t) => String(t.id ?? "") !== "")
+      .map((t) => {
+        const visibility = Number(t.visibility);
+        return {
+          billetwebTicketId: String(t.id),
+          name: String(t.name || ""),
+          price: Number(t.price) || 0,
+          isVisible: visibility === 0 || visibility === 1,
           saleStartDate: unixToDate(t.start_time),
           saleEndDate: unixToDate(t.end_time),
-          externalUrl: shopUrl,
-          isSoldOut: soldOutByTicket.get(String(t.id ?? "")) ?? null,
-          sortOrder: i,
-          editionId,
-        },
+          isSoldOut: soldOutByTicket.get(String(t.id)) ?? null,
+        };
       });
-    }
+
+    // Trashed tiers too: they still hold their sortOrder slot and Billetweb id.
+    const existing = await prisma.ticketTier.findMany({
+      where: { editionId },
+      select: { id: true, nameFr: true, nameEn: true, billetwebTicketId: true, sortOrder: true, deletedAt: true },
+    });
+    const plan = planTierImport(existing, imported, shopUrl);
+
+    // Tiers are updated in place, so their ids and site settings survive
+    // (#637) — the import used to delete and recreate them. Renumbering under
+    // `@@unique([editionId, sortOrder])` first parks every slot at -id: no two
+    // collide, and none clashes with the final 0..n-1. Raw on purpose, so the
+    // history does not log a throwaway value for each tier.
+    await prisma.$transaction([
+      prisma.$executeRaw`UPDATE "TicketTier" SET "sortOrder" = -"id" WHERE "editionId" = ${editionId}`,
+      ...plan.updates.map((u) => prisma.ticketTier.update({ where: { id: u.id }, data: u.data })),
+      ...plan.creates.map((data) =>
+        prisma.ticketTier.create({ data: { ...data, editionId } }),
+      ),
+      ...(edition.billetwebEventId
+        ? []
+        : [
+            prisma.edition.update({
+              where: { id: editionId },
+              data: {
+                billetwebEventId,
+                billetwebEventName: String(eventData[0]?.name ?? "") || null,
+              },
+            }),
+          ]),
+    ]);
 
     revalidateBilletterie();
-    return reply.status(201).send({ imported: tickets.length });
+    return reply.status(201).send({ imported: imported.length });
   });
 
   // GET /api/admin/tickets — list all ticket tiers
@@ -232,6 +390,8 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       isSoldOut: t.isSoldOut,
       externalUrl: t.externalUrl,
       sortOrder: t.sortOrder,
+      billetwebTicketId: t.billetwebTicketId,
+      isOutsideFlow: t.isOutsideFlow,
       editionId: t.editionId,
       editionYear: t.edition.year,
     }));
@@ -272,6 +432,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         saleEndDate: toDateOrNull(body.saleEndDate),
         externalUrl: body.externalUrl?.trim() || null,
         sortOrder,
+        isOutsideFlow: body.isOutsideFlow ?? false,
         editionId: body.editionId,
       },
     });
@@ -319,6 +480,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
         externalUrl: body.externalUrl !== undefined ? (body.externalUrl?.trim() || null) : existing.externalUrl,
         manualStatus,
         sortOrder: body.sortOrder ?? existing.sortOrder,
+        isOutsideFlow: body.isOutsideFlow ?? existing.isOutsideFlow,
       },
     });
 

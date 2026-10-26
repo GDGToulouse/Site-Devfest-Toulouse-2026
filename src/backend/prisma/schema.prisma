@@ -121,6 +121,12 @@ model Edition {
   // (#529). Back-office only: not the public call for papers page, which is
   // the `cfp_sessionize_url` site setting.
   sessionizeApiUrl        String?
+  // The Billetweb event this edition sells through (RG-ARR-10, #637). Once
+  // linked, re-importing the tiers updates them in place instead of replacing
+  // them. Unlinking clears these two fields only: tiers and attendees stay.
+  // The name is kept so the back-office shows the link without calling Billetweb.
+  billetwebEventId        String?
+  billetwebEventName      String?
   // Opens the audience feedback before the event day so the team can try it,
   // production included (#566). Only before the day; the votes cast meanwhile
   // are marked as tests and deleted when it goes off, by hand or at midnight
@@ -470,6 +476,14 @@ model TicketTier {
   // Sold-out flag synced from BilletWeb (/event/:id/avail). Null means the
   // tier was never synced from BilletWeb (created manually or legacy import).
   isSoldOut     Boolean?
+  // Billetweb's id for this tier (RG-ARR-11, #637): the key a re-import
+  // matches on, and what an attendee's `ticket_id` points to. Null = a tier
+  // created by hand, which imports never touch.
+  billetwebTicketId String?
+  // Its holders (speakers, staff, volunteers, contractors) skip the counters
+  // and get no badge number (RG-ARR-14). Set in the back-office only: an
+  // import never overwrites it.
+  isOutsideFlow     Boolean       @default(false)
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -479,6 +493,7 @@ model TicketTier {
   edition   Edition @relation(fields: [editionId], references: [id])
 
   @@unique([editionId, sortOrder])
+  @@unique([editionId, billetwebTicketId])
   @@index([deletedAt])
 }
 
