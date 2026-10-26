@@ -16,6 +16,7 @@ import adminSponsorRoutes from "./sponsors.js";
 import adminSponsorTierRoutes from "./sponsor-tiers.js";
 import adminJobOfferRoutes from "./job-offers.js";
 import adminSponsorGuestRoutes from "./sponsor-guests.js";
+import adminSponsorGuestBilletwebRoutes from "./sponsor-guests-billetweb.js";
 import adminSpeakerRoutes from "./speakers.js";
 import adminCategoryRoutes from "./categories.js";
 import adminTalkRoutes from "./talks.js";
@@ -54,6 +55,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await editorApp.register(adminSponsorTierRoutes);
     await editorApp.register(adminJobOfferRoutes);
     await editorApp.register(adminSponsorGuestRoutes);
+    await editorApp.register(adminSponsorGuestBilletwebRoutes);
     await editorApp.register(adminSpeakerRoutes);
     await editorApp.register(adminCategoryRoutes);
     await editorApp.register(adminTalkRoutes);

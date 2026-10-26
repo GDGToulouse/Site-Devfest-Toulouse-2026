@@ -1552,6 +1552,9 @@ model SponsorGuest {
   // to one sponsor only.
   billetwebOrderId     String?
   billetwebTicketId    String?   @unique
+  // The reference printed on the ticket (« T356-3899-E1000 »), what a person
+  // reads out to the team; the id above is what the API filters on.
+  billetwebTicketRef   String?
   billetwebSyncedAt    DateTime?
   // Last failure of the sync for this guest, shown to the team until it passes.
   billetwebError       String?

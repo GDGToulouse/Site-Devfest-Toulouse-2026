@@ -38,6 +38,7 @@ CREATE TABLE "SponsorGuest" (
     "needsAssistance" BOOLEAN NOT NULL DEFAULT false,
     "billetwebOrderId" TEXT,
     "billetwebTicketId" TEXT,
+    "billetwebTicketRef" TEXT,
     "billetwebSyncedAt" TIMESTAMP(3),
     "billetwebError" TEXT,
     "isBilletwebCancelled" BOOLEAN NOT NULL DEFAULT false,

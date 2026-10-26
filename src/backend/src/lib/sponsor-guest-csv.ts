@@ -123,7 +123,7 @@ export function detectSeparator(text: string): ";" | "," {
 }
 
 /** Lowercase, no accents, no punctuation: « Inf. à 3 ans » → « infa3ans ». */
-function squash(value: string) {
+export function squash(value: string) {
   return value
     .normalize("NFD")
     .replace(/[̀-ͯ]/g, "")
@@ -175,7 +175,17 @@ const EXPERIENCE_VALUES: Record<string, GuestBody["experience"]> = {
   "7ans": "OVER_7_YEARS",
 };
 
-function dietOf(value: string): GuestBody["diet"] | undefined {
+// The readers below serve the CSV and the Billetweb answers alike (#731): a
+// label written by a sponsor or an option of the ticket form.
+export function genderOf(value: string): GuestBody["gender"] | undefined {
+  return GENDER_VALUES[squash(value)];
+}
+
+export function experienceOf(value: string): GuestBody["experience"] | undefined {
+  return EXPERIENCE_VALUES[squash(value)];
+}
+
+export function dietOf(value: string): GuestBody["diet"] | undefined {
   const v = squash(value);
   if (v === "" || v.startsWith("pasde") || v === "aucun" || v === "non" || v === "none") return "NONE";
   if (v.startsWith("vegetarien")) return "VEGETARIAN";
@@ -185,7 +195,7 @@ function dietOf(value: string): GuestBody["diet"] | undefined {
 }
 
 // x / empty is how people tick a box in a spreadsheet (RG-INS-32).
-function booleanOf(value: string): boolean | undefined {
+export function booleanOf(value: string): boolean | undefined {
   const v = squash(value);
   if (["oui", "o", "x", "1", "true", "yes", "y", "vrai"].includes(v)) return true;
   if (["non", "n", "", "0", "false", "no", "faux"].includes(v)) return false;
@@ -239,9 +249,9 @@ export function readGuestCsv(bytes: Uint8Array): GuestCsvResult {
     for (const field of ["lastName", "firstName", "email"] as const) {
       if (!raw[field]) problems.push(`${COLUMNS.find((c) => c.field === field)!.header} manquant`);
     }
-    const gender = GENDER_VALUES[squash(raw.gender ?? "")];
+    const gender = genderOf(raw.gender ?? "");
     if (!gender) problems.push(`genre « ${raw.gender ?? ""} » inconnu`);
-    const experience = EXPERIENCE_VALUES[squash(raw.experience ?? "")];
+    const experience = experienceOf(raw.experience ?? "");
     if (!experience) problems.push(`expérience « ${raw.experience ?? ""} » inconnue`);
     const diet = dietOf(raw.diet ?? "");
     if (!diet) problems.push(`régime « ${raw.diet} » inconnu`);
