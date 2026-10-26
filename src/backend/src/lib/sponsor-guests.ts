@@ -183,6 +183,7 @@ export const guestSelect = {
   diet: true,
   needsAssistance: true,
   billetwebTicketId: true,
+  billetwebTicketRef: true,
   billetwebSyncedAt: true,
   billetwebError: true,
   isBilletwebCancelled: true,
