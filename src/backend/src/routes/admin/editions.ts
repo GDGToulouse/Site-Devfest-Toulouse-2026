@@ -5,6 +5,7 @@ import { revalidateAll, revalidateHome, revalidateEdition, revalidateSponsors } 
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
 import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
+import { defaultGuestDeadline } from "../../lib/sponsor-guests.js";
 
 interface EditionBody {
   year: number;
@@ -24,6 +25,10 @@ interface EditionBody {
   sponsorHeroImageUrl?: string;
   sponsorPageStatus?: "PRE_ANNOUNCEMENT" | "TEMPORARY" | "OPEN" | "SOLD_OUT";
   sponsorTemporaryFormUrl?: string;
+  // Sponsor guest registration (#727, RG-INS-21, RG-INS-28). A null deadline
+  // goes back to the default, the Friday before the edition.
+  isSponsorGuestRegistrationOpen?: boolean;
+  sponsorGuestDeadline?: string | null;
 }
 
 export default async function adminEditionRoutes(app: FastifyInstance) {
@@ -152,6 +157,10 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
+        isSponsorGuestRegistrationOpen: edition.isSponsorGuestRegistrationOpen,
+        sponsorGuestRegistrationOpenedAt: edition.sponsorGuestRegistrationOpenedAt,
+        sponsorGuestDeadline: edition.sponsorGuestDeadline,
+        defaultSponsorGuestDeadline: defaultGuestDeadline(edition.startDate),
         ticketTiersCount: edition._count.ticketTiers,
         articlesCount: edition._count.articles,
         speakersCount: edition._count.speakers,
@@ -190,6 +199,15 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
 
     const newStatus = body.status ?? existing.status;
 
+    let sponsorGuestDeadline = existing.sponsorGuestDeadline;
+    if (body.sponsorGuestDeadline !== undefined) {
+      sponsorGuestDeadline = body.sponsorGuestDeadline ? new Date(body.sponsorGuestDeadline) : null;
+      if (sponsorGuestDeadline && Number.isNaN(sponsorGuestDeadline.getTime())) {
+        return reply.status(400).send({ error: "invalid_field", field: "sponsorGuestDeadline" });
+      }
+    }
+    const isGuestRegistrationOpen = body.isSponsorGuestRegistrationOpen ?? existing.isSponsorGuestRegistrationOpen;
+
     const edition = await prisma.edition.update({
       where: { id },
       data: {
@@ -210,6 +228,12 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: body.sponsorHeroImageUrl !== undefined ? (body.sponsorHeroImageUrl || null) : existing.sponsorHeroImageUrl,
         sponsorPageStatus: body.sponsorPageStatus ?? existing.sponsorPageStatus,
         sponsorTemporaryFormUrl: body.sponsorTemporaryFormUrl !== undefined ? (body.sponsorTemporaryFormUrl || null) : existing.sponsorTemporaryFormUrl,
+        isSponsorGuestRegistrationOpen: isGuestRegistrationOpen,
+        // The first opening is kept when it closes again: the sponsor space
+        // then shows the guests read-only instead of hiding them (RG-INS-28).
+        sponsorGuestRegistrationOpenedAt:
+          existing.sponsorGuestRegistrationOpenedAt ?? (isGuestRegistrationOpen ? new Date() : null),
+        sponsorGuestDeadline,
       },
     });
 
@@ -411,7 +435,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       .filter((l) => l.tier.deletedAt === null)
       .map((l) => {
         const { deletedAt: _deletedAt, ...tier } = l.tier;
-        return { id: l.id, tierId: l.tierId, isVisible: l.isVisible, price: l.price, sortOrder: l.sortOrder, tier };
+        return { id: l.id, tierId: l.tierId, isVisible: l.isVisible, price: l.price, sortOrder: l.sortOrder, guestPlaces: l.guestPlaces, tier };
       });
   });
 
@@ -419,7 +443,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
   // edition (upsert). Creating the row means "proposed"; the body tunes it.
   app.put<{
     Params: { id: string; tierId: string };
-    Body: { isVisible?: boolean; price?: string | null; sortOrder?: number };
+    Body: { isVisible?: boolean; price?: string | null; sortOrder?: number; guestPlaces?: number };
   }>("/editions/:id/sponsor-tiers/:tierId", { preHandler: [requireAdminRole] }, async (request, reply) => {
     const editionId = Number(request.params.id);
     const tierId = Number(request.params.tierId);
@@ -431,12 +455,17 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
     if (!tier) return reply.code(422).send({ error: "Invalid tierId: no such sponsor tier" });
 
     const body = request.body;
+    // Guests a sponsor of this offer may register (#727, RG-INS-10).
+    if (body.guestPlaces !== undefined && (!Number.isInteger(body.guestPlaces) || body.guestPlaces < 0 || body.guestPlaces > 1000)) {
+      return reply.code(400).send({ error: "invalid_field", field: "guestPlaces" });
+    }
     const link = await prisma.editionSponsorTier.upsert({
       where: { editionId_tierId: { editionId, tierId } },
       update: {
         ...(body.isVisible !== undefined && { isVisible: body.isVisible }),
         ...(body.price !== undefined && { price: body.price || null }),
         ...(body.sortOrder !== undefined && { sortOrder: body.sortOrder }),
+        ...(body.guestPlaces !== undefined && { guestPlaces: body.guestPlaces }),
       },
       create: {
         editionId,
@@ -444,11 +473,12 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         isVisible: body.isVisible ?? true,
         price: body.price || null,
         sortOrder: body.sortOrder ?? 0,
+        guestPlaces: body.guestPlaces ?? 0,
       },
     });
 
     revalidateSponsors();
-    return { id: link.id, tierId: link.tierId, isVisible: link.isVisible, price: link.price, sortOrder: link.sortOrder };
+    return { id: link.id, tierId: link.tierId, isVisible: link.isVisible, price: link.price, sortOrder: link.sortOrder, guestPlaces: link.guestPlaces };
   });
 
   // DELETE /api/admin/editions/:id/sponsor-tiers/:tierId — stop offering a tier
