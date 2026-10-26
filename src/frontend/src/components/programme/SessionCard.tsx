@@ -26,7 +26,10 @@ interface SessionCardProps {
    * room has to be named — there is no column to do it.
    */
   variant?: "grid" | "agenda";
-  /** Shown on the mobile agenda, where there is no column to say which room. */
+  /**
+   * Shown where no column says which room: the mobile agenda, and in the grid a
+   * keynote drawn across every room (#716), which names its relays too.
+   */
   roomName?: string;
   /**
    * True in a column the talk is only relayed to (#456). Same talk, same slug,
@@ -147,7 +150,7 @@ export default function SessionCard({
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-1 gap-y-1 pt-2">
         <p className="text-xs tabular-nums text-gris">
           {isGrid ? (
-            [formatLabels[talk.format], duration].filter(Boolean).join(" · ")
+            [formatLabels[talk.format], duration, roomName].filter(Boolean).join(" · ")
           ) : (
             <>
               {formatEventTime(talk.startsAt)}

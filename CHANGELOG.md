@@ -12,6 +12,28 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.12.1] - 2026-10-25
+
+Le site tient la charge de l'événement : les **pages publiques sont rendues une fois puis servies du cache**, au lieu d'être recalculées à chaque visite. Mesuré sur la beta : environ 50 pages par seconde, et un temps de réponse médian de 0,16 s avec 100 visiteurs simultanés.
+
+> Aucune migration. Aucune nouvelle variable d'environnement en production. Passer du site public à l'admin, à l'espace sponsor ou à `/connect` recharge désormais la page (les adresses ne changent pas).
+
+### Modifié
+
+- **Une keynote seule sur son créneau occupe toute la largeur de la grille du programme**, au lieu d'apparaître dans sa salle et ses salles de retransmission avec des cases vides partout ailleurs. Sa carte nomme les salles (#716).
+- **Pages publiques servies du cache** : chaque page est calculée à sa première visite, puis resservie jusqu'à la prochaine modification depuis l'admin (#700).
+- **Healthchecks des conteneurs espacés à 30 s**, pour alléger la charge du serveur au repos sans ralentir les déploiements (#704).
+- **Gel des fonctionnalités en production à partir de J-3** avant le DevFest, au lieu de J-1 (procédure de mise en production).
+- Scénarios de **test de charge** (k6) pour la beta et `dev-j`, avec un garde-fou qui empêche de viser la production.
+
+### Corrigé
+
+- **Les adresses inexistantes répondent une vraie page 404**, sans encombrer le disque du serveur (#700).
+
+### Sécurité
+
+- **Dépendances mises à jour** contre les alertes Dependabot, dont `@fastify/static` 10 qui sert les fichiers uploadés. Trois alertes de gravité moyenne restent ouvertes : deux visent du code que le site n'appelle pas, la troisième demande de migrer l'éditeur de texte de l'admin.
+
 ## [1.12.0] - 2026-10-18
 
 L'équipe se présente enfin sur le site : une **page Équipe** liste les organisateurs, et un **hall of fame** retrace toutes les entreprises partenaires depuis 2016. Chaque conférence de l'édition en cours n'a plus **qu'une seule page**, avec son replay, et les sponsors comme les conférences disposent de **visuels à partager** sur les réseaux.

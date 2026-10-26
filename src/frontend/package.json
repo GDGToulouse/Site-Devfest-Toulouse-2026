@@ -1,6 +1,6 @@
 {
   "name": "devfest-toulouse-frontend",
-  "version": "1.12.1-beta",
+  "version": "1.12.2-beta",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -54,6 +54,7 @@
     "jsdom": "^25.0.1",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vite": "^8.1.6",
     "vitest": "^4.1.2"
   }
 }
