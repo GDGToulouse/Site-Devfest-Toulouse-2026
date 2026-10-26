@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getContentPage } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
@@ -13,13 +13,19 @@ import Breadcrumb from "@/components/Breadcrumb";
 // language columns. Statically-declared routes (mentions-legales,
 // code-de-conduite) keep priority over this segment and are untouched.
 
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }): Promise<Metadata> {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const page = await getContentPage(slug);
 
   if (!page) return {};
@@ -37,10 +43,10 @@ export async function generateMetadata({
 export default async function ContentPageBySlug({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ locale: string; slug: string }>;
 }) {
-  const { slug } = await params;
-  const locale = await getLocale();
+  const { locale, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("legalNotice");
   const page = await getContentPage(slug);
 

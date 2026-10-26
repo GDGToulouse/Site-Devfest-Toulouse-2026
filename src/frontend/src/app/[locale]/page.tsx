@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import {
   getCfpSettings,
@@ -121,8 +121,9 @@ function buildEventJsonLd(
   };
 }
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations({ locale, namespace: "home" });
 
   return {
@@ -136,8 +137,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function HomePage() {
-  const locale = await getLocale();
+export default async function HomePage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const [tSite, seoSettings] = await Promise.all([
     getTranslations({ locale, namespace: "site" }),
     getSeoSettings(),

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 
-import type { ScheduleRow } from "@/lib/schedule";
+import type { ScheduleRow, ScheduleTalk } from "@/lib/schedule";
 import type { ScheduleRoom } from "@/lib/types";
 import { formatEventTime } from "@/lib/datetime";
 import { localizedField } from "@/lib/i18n-helpers";
@@ -70,6 +70,18 @@ const CELL_GAP = 8;
 // pinned beneath it (#460), not behind them.
 const SLOT_TARGET = "scroll-mt-[120px] outline-none";
 
+/**
+ * Where a keynote drawn across the grid is given and relayed (#716). Its card no
+ * longer sits under the room columns, so it names them itself: "Amphithéâtre ·
+ * Agora (retransmission)".
+ */
+function plenaryRooms(talk: ScheduleTalk, labels: { roomTba: string; simulcast: string }): string {
+  const relays = (talk.simulcasts ?? [])
+    .filter((relay) => relay.room)
+    .map((relay) => `${relay.room} (${labels.simulcast.toLowerCase()})`);
+  return [talk.room || labels.roomTba, ...relays].join(" · ");
+}
+
 export default function ScheduleGrid({
   rows,
   rooms,
@@ -92,6 +104,8 @@ export default function ScheduleGrid({
   // laid out automatically, so a long title or a long category name decides
   // them, not `MIN_COLUMN`.
   const [header, setHeader] = useState({ scrollLeft: 0, height: 0, columns: [] as number[] });
+  // The box's own width, for a keynote drawn across the grid (#716): see it below.
+  const [viewportWidth, setViewportWidth] = useState(0);
 
   useEffect(() => {
     const el = scroller.current;
@@ -103,6 +117,7 @@ export default function ScheduleGrid({
         // A pixel of slack: fractional widths never land exactly on the end.
         right: el.scrollLeft + el.clientWidth < el.scrollWidth - 1,
       });
+      setViewportWidth(el.clientWidth);
 
       const row = headerRow.current;
       if (row) {
@@ -127,6 +142,18 @@ export default function ScheduleGrid({
       observer.disconnect();
     };
   }, [rooms.length, rows.length]);
+
+  // A keynote drawn across the grid (#716) is as wide as eight rooms, and its
+  // title sits at its far left: scroll right and it leaves with it, as the
+  // break labels did. So the card is cut to the visible part of the box and
+  // pinned just right of the hour column — the cell's left edge before any
+  // scroll is one gap, the hour column, and another gap. `min` keeps it inside
+  // its cell when the whole grid fits. Unmeasured, it simply fills the cell.
+  const plenaryLeft = (header.columns[0] ?? 0) + CELL_GAP * 2;
+  const plenaryFrame =
+    header.columns.length > 0 && viewportWidth > 0
+      ? { left: plenaryLeft, width: `min(100%, ${viewportWidth - plenaryLeft - CELL_GAP}px)` }
+      : undefined;
 
   return (
     // `-mx-6` cancels the page's own `px-6` for the grid alone (#460): eight
@@ -258,7 +285,25 @@ export default function ScheduleGrid({
                   >
                     {formatEventTime(row.startsAt)}
                   </th>
-                  {row.cells.map((cells, index) =>
+                  {row.plenary ? (
+                    // A keynote with the slot to itself (#716), once across every
+                    // room: in its two columns with dashes in the six others, it
+                    // read as reserved for those two rooms.
+                    <td colSpan={rooms.length} className="h-full align-top">
+                      <div className="sticky h-full" style={plenaryFrame}>
+                        <SessionCard
+                          talk={row.plenary.talk}
+                          locale={locale}
+                          formatLabels={formatLabels}
+                          variant="grid"
+                          roomName={plenaryRooms(row.plenary.talk, labels)}
+                          isFavourite={favourites.has(row.plenary.talk.slug)}
+                          onToggleFavourite={() => onToggleFavourite(row.plenary!.talk.slug)}
+                          favouriteLabels={favouriteLabels}
+                        />
+                      </div>
+                    </td>
+                  ) : row.cells.map((cells, index) =>
                     // No cell at all where a session from an earlier row is
                     // still running (#462): the one above spans onto this one,
                     // and a second `<td>` would push the whole row sideways.

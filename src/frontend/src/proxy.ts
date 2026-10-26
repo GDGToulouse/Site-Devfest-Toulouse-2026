@@ -9,12 +9,8 @@ const SOCIAL_CARD_PATH = /^\/(speakers|sponsors|conferences)\/[^/]+\/social-card
 export default function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Admin is mono-language: bypass i18n routing but forward the pathname
-  // through request headers so the root layout can pin <html lang> to the
-  // default locale (and ignore any NEXT_LOCALE cookie from a previous
-  // visit to a public page).
-  // Admin and the token-based edit pages are mono-language: bypass i18n routing
-  // but forward the pathname so the root layout can pin <html lang>.
+  // Admin and the token-based edit pages are mono-language: bypass i18n routing.
+  // Their <html lang> is fixed by the (app) root layout, not read from the request.
   // /sponsor and /sponsor/* joined them in #362: a sponsor's own space is an
   // application screen, not a page of the public site. Without this, next-intl
   // rewrites it to /fr/sponsor and every link 404s.
@@ -26,9 +22,7 @@ export default function proxy(request: NextRequest) {
   // configured in the OAuth provider and must not gain a locale prefix.
   const isAgentConnect = pathname === "/connect" || pathname.startsWith("/connect/");
   if (pathname.startsWith("/admin") || pathname.startsWith("/edit/") || isSponsorSpace || isAgentConnect) {
-    const requestHeaders = new Headers(request.headers);
-    requestHeaders.set("x-pathname", pathname);
-    return NextResponse.next({ request: { headers: requestHeaders } });
+    return NextResponse.next();
   }
 
   // Locale-agnostic image route handlers, the social cards of speakers

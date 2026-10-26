@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getTeam } from "@/lib/api";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 import TeamMemberCard from "@/components/team/TeamMemberCard";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("team");
   return {
     title: t("metaTitle"),
@@ -18,8 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
 
 // The organisers of the featured edition (#110), alphabetical by last name
 // (RG-412): four columns on desktop, two on a tablet, one on a phone (US-410).
-export default async function TeamPage() {
-  const locale = await getLocale();
+export default async function TeamPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("team");
   const { year, members } = await getTeam();
 

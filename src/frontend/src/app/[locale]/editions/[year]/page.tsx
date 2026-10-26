@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import {
@@ -24,7 +24,7 @@ import { Link } from "@/i18n/navigation";
 import EditionGallery from "@/components/editions/EditionGallery";
 
 interface PageProps {
-  params: Promise<{ year: string }>;
+  params: Promise<{ locale: string; year: string }>;
 }
 
 type BilanEdition = {
@@ -75,9 +75,15 @@ function buildCompletedEventJsonLd(edition: BilanEdition) {
   };
 }
 
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
+}
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { year } = await params;
-  const locale = await getLocale();
+  const { locale, year } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("bilan");
   return {
     // Absolute: the label already carries the brand and the year, so the
@@ -100,8 +106,8 @@ function formatDate(dateStr: string, locale: string): string {
 }
 
 export default async function BilanPage({ params }: PageProps) {
-  const { year } = await params;
-  const locale = await getLocale();
+  const { locale, year } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("bilan");
 
   const [edition, allEditions, speakers, talks, sponsors, featured] = await Promise.all([

@@ -17,22 +17,22 @@ The root files load every session through the project memory block in each AI co
 Refreshed automatically by the memory hook. Do not edit by hand.
 
 <!-- files:start -->
-- [aidd_docs/memory/api.md](aidd_docs/memory/api.md)
-- [aidd_docs/memory/architecture.md](aidd_docs/memory/architecture.md)
-- [aidd_docs/memory/auth.md](aidd_docs/memory/auth.md)
-- [aidd_docs/memory/backlog.md](aidd_docs/memory/backlog.md)
-- [aidd_docs/memory/codebase-map.md](aidd_docs/memory/codebase-map.md)
-- [aidd_docs/memory/coding-assertions.md](aidd_docs/memory/coding-assertions.md)
-- [aidd_docs/memory/database.md](aidd_docs/memory/database.md)
-- [aidd_docs/memory/deployment.md](aidd_docs/memory/deployment.md)
-- [aidd_docs/memory/design.md](aidd_docs/memory/design.md)
-- [aidd_docs/memory/ecosystem.md](aidd_docs/memory/ecosystem.md)
-- [aidd_docs/memory/forms.md](aidd_docs/memory/forms.md)
-- [aidd_docs/memory/integration.md](aidd_docs/memory/integration.md)
-- [aidd_docs/memory/navigation.md](aidd_docs/memory/navigation.md)
-- [aidd_docs/memory/project-brief.md](aidd_docs/memory/project-brief.md)
-- [aidd_docs/memory/testing.md](aidd_docs/memory/testing.md)
-- [aidd_docs/memory/vcs.md](aidd_docs/memory/vcs.md)
+- [api.md](api.md)
+- [architecture.md](architecture.md)
+- [auth.md](auth.md)
+- [backlog.md](backlog.md)
+- [codebase-map.md](codebase-map.md)
+- [coding-assertions.md](coding-assertions.md)
+- [database.md](database.md)
+- [deployment.md](deployment.md)
+- [design.md](design.md)
+- [ecosystem.md](ecosystem.md)
+- [forms.md](forms.md)
+- [integration.md](integration.md)
+- [navigation.md](navigation.md)
+- [project-brief.md](project-brief.md)
+- [testing.md](testing.md)
+- [vcs.md](vcs.md)
 <!-- files:end -->
 
 ## Maintaining it

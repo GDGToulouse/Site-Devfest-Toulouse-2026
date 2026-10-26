@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentTicketTiers } from "@/lib/api";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
 import Breadcrumb from "@/components/Breadcrumb";
 
-export async function generateMetadata(): Promise<Metadata> {
-  const locale = await getLocale();
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }): Promise<Metadata> {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("ticketing");
   return {
     title: t("pageTitle"),
@@ -16,8 +17,9 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-export default async function TicketingPage() {
-  const locale = await getLocale();
+export default async function TicketingPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("ticketing");
   const tiers = await getCurrentTicketTiers();
 

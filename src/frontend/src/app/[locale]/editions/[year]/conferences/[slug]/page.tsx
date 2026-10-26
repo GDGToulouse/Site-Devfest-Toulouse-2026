@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
-import { getLocale, getTranslations } from "next-intl/server";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getEditionByYear } from "@/lib/api";
 import { getEditionTalkPage } from "@/lib/preview";
@@ -17,8 +17,15 @@ import { Link } from "@/i18n/navigation";
 // also disambiguates a title reused across editions.
 
 interface RouteParams {
+  locale: string;
   year: string;
   slug: string;
+}
+
+// Rendered on the first request of each record, then cached (#700). Empty:
+// nothing is prerendered at build time, when the backend is not reachable.
+export function generateStaticParams() {
+  return [];
 }
 
 export async function generateMetadata({
@@ -26,8 +33,8 @@ export async function generateMetadata({
 }: {
   params: Promise<RouteParams>;
 }): Promise<Metadata> {
-  const { year, slug } = await params;
-  const locale = await getLocale();
+  const { locale, year, slug } = await params;
+  setRequestLocale(locale);
   const talk = await getEditionTalkPage(Number(year), slug);
 
   if (!talk) return { title: "Session not found" };
@@ -47,8 +54,8 @@ export default async function EditionTalkDetailPage({
 }: {
   params: Promise<RouteParams>;
 }) {
-  const { year, slug } = await params;
-  const locale = await getLocale();
+  const { locale, year, slug } = await params;
+  setRequestLocale(locale);
   const t = await getTranslations("replays");
   const tc = await getTranslations("conferences");
 

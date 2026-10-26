@@ -9,7 +9,7 @@ import fr from "../../../../../messages/fr.json";
 vi.mock("next-intl/server", async () => {
   const { createTranslator } = await import("next-intl");
   return {
-    getLocale: async () => "fr",
+    setRequestLocale: () => {},
     getTranslations: async (namespace: string) => createTranslator({ locale: "fr", messages: fr, namespace: namespace as never }),
   };
 });
@@ -47,7 +47,7 @@ const { default: SponsorsHallOfFamePage } = await import("./page");
 async function renderPage(query: Record<string, string> = {}) {
   render(
     <NextIntlClientProvider locale="fr" messages={fr}>
-      {await SponsorsHallOfFamePage({ searchParams: Promise.resolve(query) })}
+      {await SponsorsHallOfFamePage({ params: Promise.resolve({ locale: "fr" }), searchParams: Promise.resolve(query) })}
     </NextIntlClientProvider>,
   );
   return within(screen.getAllByRole("list").at(-1)!).getAllByRole("link").map((a) => a.getAttribute("href"));
