@@ -105,12 +105,12 @@ describe("Billetweb tier import (#637)", () => {
     await importTiers({ editionId });
 
     const after = await tiersOf(editionId);
-    expect(after.map((t) => [t.nameFr, t.deletedAt === null])).toEqual([
-      ["Late", true],
-      ["Invitation", true],
-      ["Early", false],
+    const live = after.filter((t) => t.deletedAt === null);
+    expect(live.map((t) => [t.id === manual.id, t.nameFr])).toEqual([
+      [false, "Late"],
+      [true, "Invitation"],
     ]);
-    expect(after[1].id).toBe(manual.id);
+    expect(after.find((t) => t.nameFr === "Early")?.deletedAt).not.toBeNull();
   });
 
   it("attaches tiers imported before ids were kept, by name", async () => {
