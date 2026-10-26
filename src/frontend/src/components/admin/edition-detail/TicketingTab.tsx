@@ -445,7 +445,9 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
               </p>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-6 py-4">
+            {/* Linked edition: no event to pick, so the list area only shows up to carry an error. */}
+            {(!link.billetwebEventId || importError) && (
+            <div className="flex-1 overflow-y-auto px-6 py-4 border-b border-gris/20">
               {isLoadingEvents && <p className="text-gris text-sm">Chargement des événements...</p>}
 
               {importError && (
@@ -475,8 +477,9 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
                 </button>
               ))}
             </div>
+            )}
 
-            <div className="px-6 py-4 border-t border-gris/20">
+            <div className="px-6 py-4">
               <FormField
                 label="Source de suivi"
                 name="trackingSource"
