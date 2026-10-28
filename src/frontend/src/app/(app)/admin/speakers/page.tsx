@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { adminFetch } from "@/lib/admin-api";
-import type { Speaker } from "@/lib/types";
+import type { Speaker, SpeakerEdition } from "@/lib/types";
 import { useListParams } from "@/lib/use-list-params";
 import SpeakerDetails from "@/components/admin/record-details/SpeakerDetails";
 import DataTable, { type SortState } from "@/components/admin/DataTable";
@@ -16,9 +16,17 @@ import ConfirmDialog from "@/components/admin/ConfirmDialog";
 // #351: a speaker takes part in several editions, so the row carries them all.
 // #572: the API adds what the filters are about — the talk count of the chosen
 // edition, the gaps in the profile and where the edit link stands.
+// A withdrawn participation (#726) reads apart from the drafts, so nobody
+// publishes a speaker who pulled out thinking they are still to be announced.
+const STATUS_BADGES: Record<SpeakerEdition["publicationStatus"], { label: string; variant: "green" | "gray" | "red" }> = {
+  PUBLISHED: { label: "Publié", variant: "green" },
+  DRAFT: { label: "Brouillon", variant: "gray" },
+  WITHDRAWN: { label: "Retiré", variant: "red" },
+};
+
 type SpeakerRow = Speaker & {
   talkCount: number;
-  status: "PUBLISHED" | "DRAFT" | null;
+  status: SpeakerEdition["publicationStatus"] | null;
   hasPhoto: boolean;
   hasBio: boolean;
   hasEmail: boolean;
@@ -188,8 +196,8 @@ export default function SpeakersDataPage() {
         if (!participation) return "—";
         return (
           <StatusBadge
-            status={participation.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
-            variant={participation.publicationStatus === "PUBLISHED" ? "green" : "gray"}
+            status={STATUS_BADGES[participation.publicationStatus].label}
+            variant={STATUS_BADGES[participation.publicationStatus].variant}
           />
         );
       },
@@ -253,6 +261,7 @@ export default function SpeakersDataPage() {
           <option value="">Tous les statuts</option>
           <option value="PUBLISHED">Publié</option>
           <option value="DRAFT">Brouillon</option>
+          <option value="WITHDRAWN">Retiré</option>
         </select>
         <select
           aria-label="Sessions"
