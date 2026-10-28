@@ -19,6 +19,10 @@ describe("isAdminPathAllowed", () => {
     expect(isAdminPathAllowed("/admin/job-offers", "EDITOR")).toBe(true);
   });
 
+  it("should keep an EDITOR off the arrivals, whose attendees are ADMIN-only (#638)", () => {
+    expect(isAdminPathAllowed("/admin/arrivals", "EDITOR")).toBe(false);
+  });
+
   it("should let an ADMIN manage the sponsoring offers", () => {
     expect(isAdminPathAllowed("/admin/sponsor-tiers", "ADMIN")).toBe(true);
   });
