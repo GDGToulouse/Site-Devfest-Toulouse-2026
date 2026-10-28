@@ -5,7 +5,7 @@ import { revalidateAll, revalidateHome, revalidateEdition, revalidateSponsors } 
 import { isValidStatIcon, STAT_ICON_KEYS } from "../../lib/stat-icons.js";
 import { notDeleted, softDeleteData } from "../../lib/admin-helpers.js";
 import { sanitizeRichHtml, isSafeUrl } from "../../lib/sanitize.js";
-import { defaultGuestDeadline } from "../../lib/sponsor-guests.js";
+import { defaultGuestDeadline, isSponsorGuestsEnabled } from "../../lib/sponsor-guests.js";
 
 interface EditionBody {
   year: number;
@@ -157,6 +157,7 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
         sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
         sponsorPageStatus: edition.sponsorPageStatus,
         sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
+        isSponsorGuestsEnabled: isSponsorGuestsEnabled(),
         isSponsorGuestRegistrationOpen: edition.isSponsorGuestRegistrationOpen,
         sponsorGuestRegistrationOpenedAt: edition.sponsorGuestRegistrationOpenedAt,
         sponsorGuestDeadline: edition.sponsorGuestDeadline,
@@ -207,6 +208,12 @@ export default async function adminEditionRoutes(app: FastifyInstance) {
       }
     }
     const isGuestRegistrationOpen = body.isSponsorGuestRegistrationOpen ?? existing.isSponsorGuestRegistrationOpen;
+    if (isGuestRegistrationOpen && !existing.isSponsorGuestRegistrationOpen && !isSponsorGuestsEnabled()) {
+      return reply.status(409).send({
+        error: "sponsor_guests_disabled",
+        message: "Les inscriptions des invités sponsors ne sont pas activées sur ce site.",
+      });
+    }
 
     const edition = await prisma.edition.update({
       where: { id },

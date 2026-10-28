@@ -17,7 +17,7 @@ import {
   resolveFieldMap,
   runSync,
 } from "../../lib/sponsor-guest-billetweb.js";
-import { addGuests, GUEST_EXPERIENCES, GUEST_GENDERS } from "../../lib/sponsor-guests.js";
+import { addGuests, GUEST_EXPERIENCES, GUEST_GENDERS, requireSponsorGuestsEnabled } from "../../lib/sponsor-guests.js";
 
 // Sponsor guests ↔ Billetweb (#731, #732). Reading the settings and the
 // preview is the team's; everything that creates, cancels or links a ticket in
@@ -38,6 +38,8 @@ function billetwebFailure(reply: FastifyReply, err: unknown) {
 }
 
 export default async function adminSponsorGuestBilletwebRoutes(app: FastifyInstance) {
+  app.addHook("onRequest", requireSponsorGuestsEnabled);
+
   // GET /api/admin/editions/:id/sponsor-guests/billetweb — where tickets go.
   app.get<{ Params: { id: string } }>(
     "/editions/:id/sponsor-guests/billetweb",

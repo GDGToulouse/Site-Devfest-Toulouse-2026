@@ -1,7 +1,7 @@
 process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
 process.env.LOG_LEVEL = "silent";
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from "vitest";
 import type { FastifyInstance } from "fastify";
 
 // #727, #730 — the team sets the places, opens registration and manages every
@@ -132,6 +132,45 @@ describe("Admin sponsor guests — edition settings (RG-INS-10, RG-INS-21, RG-IN
 
     expect(put.json().guestPlaces).toBe(2);
     expect(bad.statusCode).toBe(400);
+  });
+});
+
+// Not used for 2026: the feature ships asleep, and nothing of it answers until
+// an environment sets SPONSOR_GUESTS_ENABLED (vitest.config.ts sets it for the
+// other suites).
+describe("Admin sponsor guests — asleep without SPONSOR_GUESTS_ENABLED", () => {
+  beforeEach(() => {
+    vi.stubEnv("SPONSOR_GUESTS_ENABLED", "");
+    authContext.current.user.role = "ADMIN";
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("should tell the back-office the feature is off", async () => {
+    const res = await app.inject({ method: "GET", url: `/api/admin/editions/${editionId}` });
+
+    expect(res.json().isSponsorGuestsEnabled).toBe(false);
+  });
+
+  it("should answer 404 on the guest and Billetweb routes", async () => {
+    const list = await app.inject({ method: "GET", url: `/api/admin/editions/${editionId}/sponsor-guests` });
+    const billetweb = await app.inject({ method: "GET", url: `/api/admin/editions/${editionId}/sponsor-guests/billetweb` });
+
+    expect(list.statusCode).toBe(404);
+    expect(billetweb.statusCode).toBe(404);
+  });
+
+  it("should refuse to open registration", async () => {
+    const res = await app.inject({
+      method: "PUT",
+      url: `/api/admin/editions/${editionId}`,
+      payload: { isSponsorGuestRegistrationOpen: true },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe("sponsor_guests_disabled");
   });
 });
 

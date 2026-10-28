@@ -101,6 +101,7 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 |----------|:-----------:|-------------|---------|
 | `BILLETWEB_USER` | non | Identifiant utilisateur API Billetweb (email du compte). Facultatif : l'import manuel des tarifs reste possible sans. | `contact@devfesttoulouse.fr` |
 | `BILLETWEB_KEY` | non | Clé API Billetweb (générée dans le back-office Billetweb > API). | `abc123def456...` |
+| `SPONSOR_GUESTS_ENABLED` | non | `true` réveille les inscriptions des invités sponsors (#727-#733) : leurs routes, l'onglet « Invités sponsors » de l'édition, les places par offre. Absente ou toute autre valeur : la fonctionnalité dort (non utilisée en 2026) et ses routes répondent 404. | `true` |
 
 ---
 

@@ -1,8 +1,12 @@
 # Inscriptions des invités sponsors
 
 **Version** : v1, 26 octobre 2026. Conception validée avec Julien.
-**Milestone** : `asap`. Les inscriptions sont fermées par défaut (RG-INS-28) : Arnaud décide
-de les ouvrir depuis le back-office, cette année ou la suivante.
+**Milestone** : `next-year`. Développée en octobre 2026, puis **non utilisée pour 2026** :
+le code est livré en sommeil. Tant que le backend ne tourne pas avec
+`SPONSOR_GUESTS_ENABLED=true`, ses routes répondent 404 et l'admin n'en montre rien. Pour la
+réveiller : poser la variable dans Coolify, redéployer, puis ouvrir les inscriptions de
+l'édition (RG-INS-28). Reste à vérifier avant usage réel : la synchronisation contre le vrai
+Billetweb, avec une clé en lecture et écriture, sur un événement de test.
 **Objectif** : un sponsor inscrit lui-même les personnes qu'il envoie au DevFest, depuis son
 espace partenaire, dans la limite de ses places. Aujourd'hui il passe par Billetweb, ce qui
 n'est pas pratique pour lui et ne laisse aucun contrôle du quota à l'équipe.

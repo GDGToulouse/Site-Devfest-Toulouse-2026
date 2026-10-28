@@ -11,6 +11,7 @@ import {
   QuotaExceededError,
   registrationEditionSelect,
   registrationState,
+  requireSponsorGuestsEnabled,
   type GuestBody,
 } from "../lib/sponsor-guests.js";
 import { guestCsvTemplate, prepareGuestImport, previewGuestImport } from "../lib/sponsor-guest-csv.js";
@@ -98,6 +99,8 @@ function serializeGuest(g: Awaited<ReturnType<typeof loadGuestBook>>["guests"][n
 }
 
 export default async function sponsorSpaceGuestRoutes(app: FastifyInstance) {
+  app.addHook("onRequest", requireSponsorGuestsEnabled);
+
   // GET /api/sponsor-space/:sponsorId/guests — the year's guests and places.
   app.get<{ Params: { sponsorId: string } }>("/sponsor-space/:sponsorId/guests", {
     schema: { params: sponsorIdParams },
