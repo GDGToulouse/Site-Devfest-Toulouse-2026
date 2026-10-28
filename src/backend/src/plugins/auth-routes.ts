@@ -1,12 +1,12 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 import { auth } from "../lib/auth.js";
-import { authRateLimit } from "../lib/rate-limit-options.js";
+import { authAccountRateLimit, authRateLimit } from "../lib/rate-limit-options.js";
 
 /**
  * Hand every auth request to better-auth. Strict budget on sign-in, sign-up and
- * password reset; a wider one, in its own bucket, for the MCP connector's OAuth
- * endpoints (rate-limit-options.ts).
+ * password reset, per IP and per account; a wider one, in its own bucket, for
+ * the MCP connector's OAuth endpoints (rate-limit-options.ts).
  *
  * OAuth clients post `application/x-www-form-urlencoded` (RFC 6749) to the
  * token and revocation endpoints (#514). Fastify has no parser for it, so it
@@ -23,7 +23,10 @@ export async function registerAuthRoutes(app: FastifyInstance) {
     );
 
     const config = { rateLimit: authRateLimit };
-    authApp.route({ method: ["GET", "POST"], url: "/api/auth/*", config, handler: forwardToAuth });
+    // The per-account budget, on top of the per-IP one (#642). Absent when the
+    // rate-limit plugin is not registered, as in most tests.
+    const preHandler = authApp.hasDecorator("createRateLimit") ? [authAccountRateLimit(authApp)] : [];
+    authApp.route({ method: ["GET", "POST"], url: "/api/auth/*", config, preHandler, handler: forwardToAuth });
     // Discovery documents live at the origin root (RFC 8414, RFC 9728): an MCP
     // client looks for /.well-known/oauth-protected-resource/api/mcp, not under
     // /api/auth. better-auth recognises those paths itself.

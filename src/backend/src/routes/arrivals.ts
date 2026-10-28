@@ -10,6 +10,7 @@ import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.
 import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadge } from "../lib/badge-state.js";
 import { buildOfflineTable, scanTicket, searchAttendees } from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
+import { arrivalsRateLimit } from "../lib/rate-limit-options.js";
 import type { BadgeState } from "../generated/prisma/client.js";
 
 // The volunteers' side of the arrivals permission (#640): accepting an
@@ -40,10 +41,14 @@ const editionParamsSchema = {
   properties: { editionId: { type: "integer", minimum: 1 } },
 } as const;
 
+// The event-day screens' own budget (rate-limit-options.ts): the whole venue
+// shares one address. The invitation routes keep the general API budget.
+const config = { rateLimit: arrivalsRateLimit };
+
 export default async function arrivalsRoutes(app: FastifyInstance) {
   // GET /api/arrivals/current — the edition the screens work on, and whether
   // the caller may. 401 tells the page to sign in first.
-  app.get("/arrivals/current", async (request, reply) => {
+  app.get("/arrivals/current", { config }, async (request, reply) => {
     const ctx = await getAuthContext(request);
     if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
     const edition = await findCurrentEdition();
@@ -59,7 +64,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   // and a ping when nothing does.
   app.get<{ Params: { editionId: number } }>(
     "/arrivals/:editionId/stream",
-    { schema: { params: editionParamsSchema } },
+    { config, schema: { params: editionParamsSchema } },
     async (request, reply) => {
       const { editionId } = request.params;
       const ctx = await getAuthContext(request);
@@ -120,6 +125,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   app.post<{ Params: { editionId: number; attendeeId: number }; Body: { from: BadgeState; to: BadgeState } }>(
     "/arrivals/:editionId/badges/:attendeeId/move",
     {
+      config,
       schema: {
         params: {
           type: "object",
@@ -167,6 +173,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   app.post<{ Params: { editionId: number }; Body: { code?: string; attendeeId?: number } }>(
     "/arrivals/:editionId/scan",
     {
+      config,
       schema: {
         params: editionParamsSchema,
         body: {
@@ -203,6 +210,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   app.get<{ Params: { editionId: number }; Querystring: { q: string } }>(
     "/arrivals/:editionId/search",
     {
+      config,
       schema: {
         params: editionParamsSchema,
         querystring: {
@@ -225,7 +233,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   // when the backend is gone (RG-ARR-64, RG-ARR-65).
   app.get<{ Params: { editionId: number } }>(
     "/arrivals/:editionId/offline-table",
-    { schema: { params: editionParamsSchema } },
+    { config, schema: { params: editionParamsSchema } },
     async (request, reply) => {
       const { editionId } = request.params;
       const ctx = await getAuthContext(request);

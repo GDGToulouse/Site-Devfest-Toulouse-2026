@@ -4,9 +4,13 @@ import { describe, it, expect } from "vitest";
 
 import {
   API_RATE_LIMIT_MAX,
+  ARRIVALS_RATE_LIMIT_MAX,
+  AUTH_ACCOUNT_RATE_LIMIT_MAX,
   AUTH_RATE_LIMIT_MAX,
   OAUTH_RATE_LIMIT_MAX,
   UPLOADS_RATE_LIMIT_MAX,
+  arrivalsRateLimit,
+  authAccountRateLimit,
   authRateLimit,
   rateLimitOptions,
 } from "./rate-limit-options.js";
@@ -96,10 +100,10 @@ describe("rate limit on auth and the MCP connector's OAuth endpoints (#514)", ()
     expect(codes.at(-1)).toBe(429);
   });
 
-  it("gives an agent's token requests their own, wider budget", async () => {
+  it("gives an agent's token requests their own budget", async () => {
     const app = await authApp();
 
-    const oauth = await post(app, "/api/auth/oauth2/token", AUTH_RATE_LIMIT_MAX * 3);
+    const oauth = await post(app, "/api/auth/oauth2/token", OAUTH_RATE_LIMIT_MAX);
     const signIn = await post(app, "/api/auth/sign-in/email", 1);
 
     expect(oauth).not.toContain(429);
@@ -108,6 +112,66 @@ describe("rate limit on auth and the MCP connector's OAuth endpoints (#514)", ()
 
   it("still caps the OAuth endpoints", async () => {
     const codes = await post(await authApp(), "/api/auth/oauth2/token", OAUTH_RATE_LIMIT_MAX + 1);
+
+    expect(codes.at(-1)).toBe(429);
+  });
+});
+
+describe("rate limit at the venue, where every phone shares one address (#642)", () => {
+  // Wired as plugins/auth-routes.ts wires it: per IP on the route, per account
+  // in preHandler.
+  async function venueApp() {
+    const app = Fastify({ logger: false });
+    await app.register(rateLimit, rateLimitOptions);
+    app.post(
+      "/api/auth/sign-in/email",
+      { config: { rateLimit: authRateLimit }, preHandler: [authAccountRateLimit(app)] },
+      async () => ({ ok: true }),
+    );
+    app.get("/api/arrivals/current", { config: { rateLimit: arrivalsRateLimit } }, async () => ({ ok: true }));
+    app.get("/api/editions", async () => ({ ok: true }));
+    return app;
+  }
+
+  const signIn = (app: Awaited<ReturnType<typeof venueApp>>, email: string) =>
+    app.inject({ method: "POST", url: "/api/auth/sign-in/email", payload: { email, password: "x" } });
+
+  it("should let forty volunteers sign in within the same minute", async () => {
+    const app = await venueApp();
+
+    const codes = [];
+    for (let i = 0; i < 40; i++) codes.push((await signIn(app, `benevole-${i}@example.org`)).statusCode);
+
+    expect(codes).not.toContain(429);
+  });
+
+  it("should still hold one account to its budget, and not lock out the others", async () => {
+    const app = await venueApp();
+
+    const codes = [];
+    for (let i = 0; i <= AUTH_ACCOUNT_RATE_LIMIT_MAX; i++) codes.push((await signIn(app, "Lea@example.org")).statusCode);
+    const sameAccountOtherCase = await signIn(app, "lea@example.org");
+    const otherAccount = await signIn(app, "max@example.org");
+
+    expect(codes.at(-1)).toBe(429);
+    expect(sameAccountOtherCase.statusCode).toBe(429);
+    expect(otherAccount.statusCode).toBe(200);
+  });
+
+  it("should give the event-day screens their own bucket, past the API budget", async () => {
+    const app = await venueApp();
+
+    const codes = await hammer(app as Awaited<ReturnType<typeof probeApp>>, "/api/arrivals/current", API_RATE_LIMIT_MAX + 50);
+    const site = await app.inject({ method: "GET", url: "/api/editions" });
+
+    expect(codes).not.toContain(429);
+    expect(site.statusCode).toBe(200);
+  });
+
+  it("should still cap the event-day screens", async () => {
+    const app = await venueApp();
+
+    const codes = await hammer(app as Awaited<ReturnType<typeof probeApp>>, "/api/arrivals/current", ARRIVALS_RATE_LIMIT_MAX + 1);
 
     expect(codes.at(-1)).toBe(429);
   });
