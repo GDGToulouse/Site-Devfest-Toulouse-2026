@@ -8,6 +8,7 @@ import Tabs from "@/components/admin/Tabs";
 import GeneralTab from "@/components/admin/edition-detail/GeneralTab";
 import VenueTab from "@/components/admin/edition-detail/VenueTab";
 import TicketingTab from "@/components/admin/edition-detail/TicketingTab";
+import ArrivalsTab from "@/components/admin/edition-detail/ArrivalsTab";
 import CfpTab from "@/components/admin/edition-detail/CfpTab";
 import FeedbackTab from "@/components/admin/edition-detail/FeedbackTab";
 import PhotosTab from "@/components/admin/edition-detail/PhotosTab";
@@ -47,6 +48,7 @@ const TABS = [
   { key: "venue", label: "Lieu" },
   { key: "schedule", label: "Programme" },
   { key: "ticketing", label: "Billetterie" },
+  { key: "arrivals", label: "Arrivées" },
   // "Sponsoring" configures the tiers offered (#320); "Sponsors" lists the
   // companies actually signed for the edition (#389). Neighbouring, distinct.
   { key: "sponsoring", label: "Sponsoring" },
@@ -133,6 +135,7 @@ export default function EditionDetailPage() {
         {activeTab === "ticketing" && (
           <TicketingTab editionId={edition.id} />
         )}
+        {activeTab === "arrivals" && <ArrivalsTab editionId={edition.id} />}
         {activeTab === "sponsoring" && (
           <SponsoringTab editionId={edition.id} />
         )}

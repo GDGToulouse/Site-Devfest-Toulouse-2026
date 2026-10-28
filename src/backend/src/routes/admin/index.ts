@@ -6,6 +6,7 @@ import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
 import adminEditionRoutes from "./editions.js";
 import adminTicketRoutes from "./tickets.js";
+import adminAttendeeRoutes from "./attendees.js";
 import adminSettingsRoutes from "./settings.js";
 import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
@@ -81,6 +82,12 @@ export default async function adminRoutes(app: FastifyInstance) {
     adminApp.addHook("preHandler", requireAdminRole);
     await adminApp.register(adminCacheRoutes);
     await adminApp.register(adminTicketRoutes);
+    // Attendees are personal data imported from Billetweb (#638): a person's
+    // action, never an agent's.
+    await adminApp.register(async (attendeesApp) => {
+      attendeesApp.addHook("preHandler", refuseAgents);
+      await attendeesApp.register(adminAttendeeRoutes);
+    });
     await adminApp.register(adminSettingsRoutes);
     // Accounts and keys stay a person's decision, never an AI agent's (#514).
     await adminApp.register(async (credentialsApp) => {

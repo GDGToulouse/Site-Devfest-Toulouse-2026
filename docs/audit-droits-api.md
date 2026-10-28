@@ -91,6 +91,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/articles/:id/translate-fields` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/attendees/import/:editionId` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/attendees/summary/:editionId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/audit` | ADMIN |
 | POST | `/api/admin/cache/purge` | ADMIN |
 | GET | `/api/admin/categories` | Équipe (ADMIN, EDITOR) |
@@ -232,6 +234,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/tickets/:id` | ADMIN |
 | PUT | `/api/admin/tickets/:id` | ADMIN |
 | GET | `/api/admin/tickets/billetweb/events` | ADMIN |
+| DELETE | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
+| GET | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
 | POST | `/api/admin/tickets/import/billetweb` | ADMIN |
 | POST | `/api/admin/translate` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/translate/stats` | Équipe (ADMIN, EDITOR) |

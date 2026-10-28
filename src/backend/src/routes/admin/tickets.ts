@@ -4,6 +4,7 @@ import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
 import { revalidateBilletterie } from "../../lib/revalidate.js";
 import { notDeleted, notFound, softDeleteData } from "../../lib/admin-helpers.js";
+import { BILLETWEB_API, getBilletwebParams } from "../../lib/billetweb.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 const TICKET_STATUSES: TicketStatus[] = ["AVAILABLE", "SOLD_OUT", "COMING_SOON"];
@@ -23,8 +24,6 @@ interface TicketTierBody {
   isOutsideFlow?: boolean;
   editionId: number;
 }
-
-const BILLETWEB_API = "https://www.billetweb.fr/api";
 
 const editionIdParams = {
   type: "object",
@@ -67,13 +66,6 @@ async function fetchBilletwebSoldOut(
     // Availability is best-effort; leave the map empty on network errors.
   }
   return map;
-}
-
-function getBilletwebParams(): URLSearchParams | null {
-  const user = process.env.BILLETWEB_USER;
-  const key = process.env.BILLETWEB_KEY;
-  if (!user || !key) return null;
-  return new URLSearchParams({ user, key, version: "1" });
 }
 
 function unixToDate(ts: unknown): Date | null {
