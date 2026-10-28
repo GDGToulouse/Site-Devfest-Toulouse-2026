@@ -7,6 +7,7 @@ import adminArticleRoutes from "./articles.js";
 import adminEditionRoutes from "./editions.js";
 import adminTicketRoutes from "./tickets.js";
 import adminAttendeeRoutes from "./attendees.js";
+import adminBadgeRoutes from "./badges.js";
 import adminSettingsRoutes from "./settings.js";
 import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
@@ -87,6 +88,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     await adminApp.register(async (attendeesApp) => {
       attendeesApp.addHook("preHandler", refuseAgents);
       await attendeesApp.register(adminAttendeeRoutes);
+      await attendeesApp.register(adminBadgeRoutes);
     });
     await adminApp.register(adminSettingsRoutes);
     // Accounts and keys stay a person's decision, never an AI agent's (#514).

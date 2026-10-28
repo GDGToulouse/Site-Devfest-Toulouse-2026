@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminFetch } from "@/lib/admin-api";
+import { adminFetch, humanError } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
+import BadgesSection from "@/components/admin/edition-detail/BadgesSection";
 
 interface TierCount {
   ticketTierId: number;
@@ -63,15 +64,13 @@ export default function ArrivalsTab({ editionId }: { editionId: number }) {
     setIsImporting(true);
     setImportError(null);
     setReport(null);
-    const { data, status, error } = await adminFetch<ImportReport>(`/attendees/import/${editionId}`, {
-      method: "POST",
-    });
+    const result = await adminFetch<ImportReport>(`/attendees/import/${editionId}`, { method: "POST" });
     setIsImporting(false);
-    if (status === 201 && data) {
-      setReport(data);
+    if (result.status === 201 && result.data) {
+      setReport(result.data);
       loadSummary();
     } else {
-      setImportError(error || "L'import des participants a échoué. Réessayez dans une minute.");
+      setImportError(humanError(result, "L'import des participants a échoué. Réessayez dans une minute."));
     }
   }
 
@@ -164,6 +163,8 @@ export default function ArrivalsTab({ editionId }: { editionId: number }) {
           </table>
         </div>
       )}
+
+      <BadgesSection editionId={editionId} syncedAt={summary.syncedAt} />
     </div>
   );
 }
