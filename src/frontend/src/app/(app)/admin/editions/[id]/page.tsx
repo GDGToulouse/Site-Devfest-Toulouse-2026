@@ -41,6 +41,9 @@ interface EditionData {
   talksCount: number;
   sponsorsCount: number;
   categoriesCount: number;
+  // Sponsor guests ship asleep for 2026 (#727): their tab and places hide
+  // until the backend runs with SPONSOR_GUESTS_ENABLED.
+  isSponsorGuestsEnabled: boolean;
 }
 
 const TABS = [
@@ -122,7 +125,7 @@ export default function EditionDetailPage() {
       />
 
       <div className="bg-blanc rounded-xl shadow-card p-6">
-        <Tabs tabs={TABS} activeTab={activeTab} onTabChange={handleTabChange} />
+        <Tabs tabs={edition.isSponsorGuestsEnabled ? TABS : TABS.filter((t) => t.key !== "sponsor-guests")} activeTab={activeTab} onTabChange={handleTabChange} />
 
         {activeTab === "general" && (
           <GeneralTab edition={edition} onSaved={loadEdition} />
@@ -137,12 +140,12 @@ export default function EditionDetailPage() {
           <TicketingTab editionId={edition.id} />
         )}
         {activeTab === "sponsoring" && (
-          <SponsoringTab editionId={edition.id} />
+          <SponsoringTab editionId={edition.id} showGuestPlaces={edition.isSponsorGuestsEnabled} />
         )}
         {activeTab === "sponsors" && (
           <EditionSponsorsTab editionId={edition.id} />
         )}
-        {activeTab === "sponsor-guests" && <SponsorGuestsTab editionId={edition.id} />}
+        {activeTab === "sponsor-guests" && edition.isSponsorGuestsEnabled && <SponsorGuestsTab editionId={edition.id} />}
         {activeTab === "cfp" && (
           <CfpTab />
         )}

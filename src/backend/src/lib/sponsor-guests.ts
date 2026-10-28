@@ -1,3 +1,5 @@
+import type { FastifyReply, FastifyRequest } from "fastify";
+
 import type { Prisma, SponsorGuest } from "../generated/prisma/client.js";
 import { prisma } from "./prisma.js";
 import { EVENT_TIME_ZONE, parseWallTime } from "./zoned-time.js";
@@ -6,6 +8,18 @@ import { EVENT_TIME_ZONE, parseWallTime } from "./zoned-time.js";
 // rules every screen shares — the quota, who fits in it, and when sponsors may
 // still write. Routes for the sponsor space and the back-office both read here,
 // so the two cannot disagree on who is out of quota.
+
+// The feature is built but not used for 2026: it ships asleep, and only an
+// environment that sets SPONSOR_GUESTS_ENABLED=true serves its routes and
+// screens. Read per request, so a test can flip it.
+export function isSponsorGuestsEnabled() {
+  return process.env.SPONSOR_GUESTS_ENABLED === "true";
+}
+
+/** Answers 404 on every route of a plugin while the feature sleeps. */
+export async function requireSponsorGuestsEnabled(_request: FastifyRequest, reply: FastifyReply) {
+  if (!isSponsorGuestsEnabled()) return reply.code(404).send({ error: "not_found" });
+}
 
 export const GUEST_GENDERS = ["FEMALE", "MALE", "UNSPECIFIED"] as const;
 export const GUEST_EXPERIENCES = ["STUDENT", "UNDER_3_YEARS", "FROM_3_TO_7_YEARS", "OVER_7_YEARS"] as const;

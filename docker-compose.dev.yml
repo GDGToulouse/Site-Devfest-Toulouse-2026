@@ -76,6 +76,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - SPONSOR_GUESTS_ENABLED=${SPONSOR_GUESTS_ENABLED:-}
       # Scheduled trash purge (#149). Unset means the endpoint only accepts an
       # ADMIN session — the purge stops running, nothing opens up.
       - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}

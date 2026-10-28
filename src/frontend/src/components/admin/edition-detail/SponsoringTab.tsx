@@ -47,9 +47,10 @@ interface EditionTierLink {
 
 interface SponsoringTabProps {
   editionId: number;
+  showGuestPlaces: boolean;
 }
 
-export default function SponsoringTab({ editionId }: SponsoringTabProps) {
+export default function SponsoringTab({ editionId, showGuestPlaces }: SponsoringTabProps) {
   const [rows, setRows] = useState<EditionTierRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTierId, setSavingTierId] = useState<number | null>(null);
@@ -369,7 +370,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
                   <th className="text-left px-4 py-3 font-medium text-gris">Offre</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Tarif (édition)</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Ordre</th>
-                  <th className="text-left px-4 py-3 font-medium text-gris">Places invités</th>
+                  {showGuestPlaces && <th className="text-left px-4 py-3 font-medium text-gris">Places invités</th>}
                 </tr>
               </thead>
               <tbody>
@@ -410,17 +411,19 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
                         className="w-16 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
                       />
                     </td>
-                    <td className="px-4 py-3">
-                      <input
-                        type="number"
-                        min={0}
-                        value={row.guestPlaces}
-                        onChange={(e) => patchRow(row.tier.id, { guestPlaces: e.target.value })}
-                        onBlur={() => saveRow(row)}
-                        aria-label={`Places invités ${row.tier.nameFr}`}
-                        className="w-20 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
-                      />
-                    </td>
+                    {showGuestPlaces && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.guestPlaces}
+                          onChange={(e) => patchRow(row.tier.id, { guestPlaces: e.target.value })}
+                          onBlur={() => saveRow(row)}
+                          aria-label={`Places invités ${row.tier.nameFr}`}
+                          className="w-20 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

@@ -14,6 +14,7 @@ import {
   rankGuests,
   registrationEditionSelect,
   registrationState,
+  requireSponsorGuestsEnabled,
   type GuestBody,
 } from "../../lib/sponsor-guests.js";
 import { guestCsvTemplate, prepareGuestImport, previewGuestImport } from "../../lib/sponsor-guest-csv.js";
@@ -124,6 +125,8 @@ function squash(value: string) {
 }
 
 export default async function adminSponsorGuestRoutes(app: FastifyInstance) {
+  app.addHook("onRequest", requireSponsorGuestsEnabled);
+
   // GET /api/admin/editions/:id/sponsor-guests — every guest of the
   // edition, with the sponsors' counters and the alerts (#730).
   app.get<{ Params: { id: string }; Querystring: GuestListQuery }>(
