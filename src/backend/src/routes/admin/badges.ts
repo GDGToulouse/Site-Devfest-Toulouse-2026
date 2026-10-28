@@ -59,31 +59,39 @@ async function ticketsToNumber(editionId: number) {
   });
 }
 
-/** Why the numbering cannot run yet, as a reply; null when it can. */
-async function refuseNumbering(reply: FastifyReply, edition: BadgeEdition, count: number) {
+/**
+ * Why the numbering cannot run yet, for a 409; null when it can. A body, not a
+ * sent reply: Fastify's reply is thenable, so an async helper returning it
+ * resolved to undefined once sent, and the freeze carried on behind its own
+ * refusal, freezing an edition over capacity.
+ */
+async function numberingRefusal(
+  edition: BadgeEdition,
+  count: number,
+): Promise<{ error: string; message: string } | null> {
   const withoutTier = await prisma.attendee.count({
     where: { editionId: edition.id, isCancelled: false, ticketTierId: null },
   });
   if (withoutTier > 0) {
-    return reply.status(409).send({
+    return {
       error: "tickets_without_tier",
       message: `${withoutTier} billets n'ont pas de tarif connu : importez les tarifs de l'édition, puis les participants.`,
-    });
+    };
   }
   if (count === 0) {
-    return reply.status(409).send({
+    return {
       error: "nothing_to_number",
       message: "Aucun participant à numéroter : importez d'abord les participants.",
-    });
+    };
   }
   const shortfall = capacityShortfall(count, layoutOf(edition));
   if (shortfall) {
-    return reply.status(409).send({
+    return {
       error: "capacity_exceeded",
       message:
         `${count} badges à numéroter pour ${shortfall.capacity} places : il manque ${shortfall.missingBins} bacs. ` +
         `Passez à ${shortfall.binsPerCounterNeeded} bacs par guichet.`,
-    });
+    };
   }
   return null;
 }
@@ -220,8 +228,8 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           where: inFlow(edition.id),
           select: { ...select, orderDate: true, orderId: true, billetwebId: true },
         });
-        const refusal = await refuseNumbering(reply, edition, rows.length);
-        if (refusal) return refusal;
+        const refusal = await numberingRefusal(edition, rows.length);
+        if (refusal) return reply.status(409).send(refusal);
         badges = assignBadgeNumbers(rows, layoutOf(edition)).map((r) => ({
           ...r,
           badgeNumber: r.number,
@@ -261,8 +269,8 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         return reply.status(409).send({ error: "badges_frozen", message: "Les badges sont déjà partis à l'impression." });
       }
       const tickets = await ticketsToNumber(edition.id);
-      const refusal = await refuseNumbering(reply, edition, tickets.length);
-      if (refusal) return refusal;
+      const refusal = await numberingRefusal(edition, tickets.length);
+      if (refusal) return reply.status(409).send(refusal);
 
       const numbered = assignBadgeNumbers(tickets, layoutOf(edition));
       const frozenAt = new Date();
