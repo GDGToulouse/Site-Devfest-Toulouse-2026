@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vites
 import Fastify, { type FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 
 // #567 — the recap of the audience feedback, sent to each speaker when an
 // admin decides: real votes only, hidden messages left out, a fresh link to
@@ -115,7 +116,10 @@ describe("feedback recap (#567)", () => {
     const dora = await prisma.speaker.findUnique({ where: { id: ids.dora } });
 
     expect(ada?.editToken).not.toBe(`old-ada-${tag}`);
-    expect(mailTo(ADA)!.text).toContain(`/edit/${ada?.editToken}`);
+    // The mail carries the token, the row only its hash (#672).
+    const mailed = mailTo(ADA)!.text.match(/\/edit\/([0-9a-f]{64})/)?.[1];
+    expect(mailed).toBeDefined();
+    expect(ada?.editToken).toBe(hashLinkToken(mailed!));
     expect(dora?.editToken).toBe(`old-dora-${tag}`);
     expect(mailTo(`dora-${tag}@example.com`)!.text).not.toContain("/edit/");
   });

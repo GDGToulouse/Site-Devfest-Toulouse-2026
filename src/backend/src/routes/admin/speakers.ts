@@ -5,7 +5,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 import { revalidateSpeakers } from "../../lib/revalidate.js";
 import { revalidateSpeakerFootprint, speakerFootprint } from "../../lib/page-footprint.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
-import { generateEditToken } from "../../lib/edit-token.js";
+import { generateEditToken, hashLinkToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import { unsafeUrlRefusal } from "../../lib/sanitize.js";
@@ -525,7 +525,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
     await prisma.speaker.update({
       where: { id },
-      data: { editToken: token, editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
+      data: { editToken: hashLinkToken(token), editLinkLocked: false, editTokenSentAt: new Date(), contactEmail: email },
     });
     return { sent: true, email };
   });

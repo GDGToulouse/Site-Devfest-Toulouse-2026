@@ -10,6 +10,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import adminSponsorRoutes from "../routes/admin/sponsors.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 
 // #362 — the organiser side: invite a contact to open an account, and set what
 // they may do. Mounted without the auth guards, like the other admin-* files:
@@ -66,7 +67,10 @@ describe("POST /api/admin/sponsors/:id/contacts/:contactId/invite (#362)", () =>
 
     expect(sendMailMock).toHaveBeenCalledTimes(1);
     const stored = await prisma.sponsorContact.findUniqueOrThrow({ where: { id: contact.id } });
-    expect(stored.invitationToken).toBeTruthy();
+    // Only the hash of the mailed token is kept (#672).
+    const mailed = (sendMailMock.mock.calls[0][0] as { text: string }).text.match(/\/sponsor\/invitation\/([0-9a-f]{64})/)?.[1];
+    expect(mailed).toBeDefined();
+    expect(stored.invitationToken).toBe(hashLinkToken(mailed!));
     expect(stored.invitationSentAt).not.toBeNull();
   });
 

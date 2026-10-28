@@ -7,7 +7,7 @@ import sponsorInvitationRoutes from "../routes/sponsor-invitation.js";
 import { prisma } from "../lib/prisma.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { hasPendingInvitation } from "../lib/sponsor-invitation.js";
-import { INVITATION_TTL_DAYS } from "../lib/edit-token.js";
+import { hashLinkToken, INVITATION_TTL_DAYS } from "../lib/edit-token.js";
 import { auth } from "../lib/auth.js";
 
 // #362 — accepting an invitation binds an account to a company. The rules that
@@ -46,7 +46,7 @@ async function createSponsorWithInvitation(name: string, email: string, sentAt =
       sponsorId: sponsor.id,
       email,
       accessRole: "RESPONSABLE",
-      invitationToken: token,
+      invitationToken: hashLinkToken(token),
       invitationSentAt: sentAt,
     },
   });

@@ -7,6 +7,7 @@ import editRoutes from "../routes/edit.js";
 import adminImportRoutes from "../routes/admin/import.js";
 import maintenanceRoutes from "../routes/maintenance.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { auth } from "../lib/auth.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { requireAdmin } from "../lib/admin-guard.js";
@@ -147,12 +148,13 @@ describe("request context (#513)", () => {
   });
 
   it("should attribute an edit link to the speaker holding it, without an account", async () => {
+    const token = `ctx-${stamp()}`;
     const speaker = await prisma.speaker.create({
-      data: { name: "Lin Link", slug: `lin-link-${stamp()}`, editToken: `ctx-${stamp()}` },
+      data: { name: "Lin Link", slug: `lin-link-${stamp()}`, editToken: hashLinkToken(token) },
     });
     created.speakerIds.push(speaker.id);
 
-    const res = await app.inject({ method: "GET", url: `/api/edit/${speaker.editToken}` });
+    const res = await app.inject({ method: "GET", url: `/api/edit/${token}` });
 
     expect(res.statusCode).toBe(200);
     expect(seen.get(String(res.headers["x-test-request"]))).toMatchObject({
