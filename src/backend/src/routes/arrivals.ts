@@ -8,6 +8,8 @@ import { maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-
 import { canAccessArrivals, findCurrentEdition, findPendingArrivalsInvitation } from "../lib/arrivals-access.js";
 import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
 import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadge } from "../lib/badge-state.js";
+import { buildOfflineTable, scanTicket, searchAttendees } from "../lib/arrivals-scan.js";
+import { requestCheckIn } from "../lib/billetweb-checkin.js";
 import type { BadgeState } from "../generated/prisma/client.js";
 
 // The volunteers' side of the arrivals permission (#640): accepting an
@@ -73,7 +75,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
         if (!reply.raw.destroyed) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       };
       const unsubscribe = subscribeToArrivals(editionId, (event) => {
-        if (isLive) send(event.type, event.badge);
+        if (isLive) send(event.type, event.data);
         else queued.push(event);
       });
 
@@ -99,7 +101,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       reply.raw.write(`retry: ${STREAM_RETRY_MS}\n\n`);
       send("snapshot", snapshot);
       isLive = true;
-      for (const event of queued) send(event.type, event.badge);
+      for (const event of queued) send(event.type, event.data);
 
       const heartbeat = setInterval(() => send("ping", { at: Date.now() }), STREAM_HEARTBEAT_MS);
       // The response's close, not the request's: the request one fires once
@@ -156,6 +158,82 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       });
       if (!result) return reply.code(404).send({ error: "Not found" });
       return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/scan — the entrance (#642): a code read by
+  // the camera or typed, or an attendee picked from a name search. Answers
+  // what to tell the person; the check-in on Billetweb follows on its own.
+  app.post<{ Params: { editionId: number }; Body: { code?: string; attendeeId?: number } }>(
+    "/arrivals/:editionId/scan",
+    {
+      schema: {
+        params: editionParamsSchema,
+        body: {
+          type: "object",
+          additionalProperties: false,
+          minProperties: 1,
+          maxProperties: 1,
+          properties: {
+            code: { type: "string", minLength: 1, maxLength: 200 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      const { code, attendeeId } = request.body;
+      const target = code !== undefined ? { barcode: code.trim() } : { attendeeId: attendeeId! };
+      const { outcome, isFirstScan } = await scanTicket(editionId, target, {
+        id: ctx.user.id,
+        label: ctx.user.name || ctx.user.email,
+      });
+      if (isFirstScan) requestCheckIn(editionId, request.log);
+      return outcome;
+    },
+  );
+
+  // GET /api/arrivals/:editionId/search?q= — for whoever comes without their
+  // confirmation (RG-ARR-31).
+  app.get<{ Params: { editionId: number }; Querystring: { q: string } }>(
+    "/arrivals/:editionId/search",
+    {
+      schema: {
+        params: editionParamsSchema,
+        querystring: {
+          type: "object",
+          required: ["q"],
+          properties: { q: { type: "string", minLength: 2, maxLength: 100 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      return searchAttendees(editionId, request.query.q);
+    },
+  );
+
+  // GET /api/arrivals/:editionId/offline-table — what a Scan phone keeps for
+  // when the backend is gone (RG-ARR-64, RG-ARR-65).
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/offline-table",
+    { schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const table = await buildOfflineTable(editionId);
+      if (!table) return reply.code(404).send({ error: "Not found" });
+      return table;
     },
   );
 

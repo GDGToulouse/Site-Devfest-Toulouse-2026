@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { applyBadge, binOf, counterLoads, counterOf, fromSnapshot, type LiveBadge } from "./arrivals-live";
+import { applyBadge, applyHelp, binOf, counterLoads, counterOf, fromSnapshot, type LiveBadge } from "./arrivals-live";
 
 const badge = (id: number, number: number, state: LiveBadge["state"], version: number): LiveBadge => ({
   id,
@@ -13,7 +13,7 @@ const badge = (id: number, number: number, state: LiveBadge["state"], version: n
 });
 
 const snapshot = (badges: LiveBadge[]) =>
-  fromSnapshot({ layout: { counters: 3, binsPerCounter: 2 }, frozenAt: null, badges });
+  fromSnapshot({ layout: { counters: 3, binsPerCounter: 2 }, frozenAt: null, badges, help: [] });
 
 describe("the live state of the arrivals screens (#641)", () => {
   it("should apply a move newer than what the screen holds", () => {
@@ -47,6 +47,14 @@ describe("the live state of the arrivals screens (#641)", () => {
 
     expect([...before.badges.keys()]).toEqual([1, 2]);
     expect([...after.badges.keys()]).toEqual([3]);
+  });
+
+  it("should list a ticket sent to the help desk once, however often it is announced", () => {
+    const entry = { id: 9, firstName: "Paul", lastName: "Test", company: null, tierName: null, scannedAt: "2026-11-19T08:00:00Z" };
+
+    const state = applyHelp(applyHelp(snapshot([]), entry), entry);
+
+    expect(state.help).toEqual([entry]);
   });
 
   it("should read the counter and the bin from the badge number", () => {

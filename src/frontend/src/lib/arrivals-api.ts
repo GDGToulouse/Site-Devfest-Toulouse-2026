@@ -2,6 +2,9 @@
 // the signed-in account may open the event-day screens. Same-origin calls,
 // relayed to the backend by next.config.ts.
 
+import type { LiveBadge } from "@/lib/arrivals-live";
+import type { OfflineTable } from "@/lib/arrivals-offline";
+
 export interface ArrivalsResult<T> {
   data: T | null;
   // 0: the request never reached the backend.
@@ -44,4 +47,59 @@ export function acceptArrivalsInvitation(token: string) {
 
 export function getArrivalsCurrent() {
   return call<ArrivalsCurrent>("/api/arrivals/current");
+}
+
+// The entrance (#642).
+
+export interface ScanAttendee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+  tierName: string | null;
+}
+
+export interface FirstScan {
+  at: string;
+  by: string | null;
+}
+
+export type ScanOutcome =
+  | { result: "unknown" }
+  | { result: "cancelled"; attendee: ScanAttendee }
+  | { result: "dedicated"; attendee: ScanAttendee; alreadyScanned: FirstScan | null }
+  | { result: "help"; attendee: ScanAttendee; alreadyScanned: FirstScan | null }
+  | { result: "badge"; attendee: ScanAttendee; badge: LiveBadge; alreadyScanned: FirstScan | null };
+
+export interface SearchHit extends ScanAttendee {
+  badgeNumber: number | null;
+  isCancelled: boolean;
+  isDedicated: boolean;
+  scannedAt: string | null;
+}
+
+/**
+ * How long a scan waits for the backend before the phone answers from its
+ * own table (RG-ARR-64): the person is standing there, and a stalled link
+ * otherwise hangs for as long as the browser cares to wait.
+ */
+const SCAN_TIMEOUT_MS = 4_000;
+
+export function scanTicket(editionId: number, target: { code: string } | { attendeeId: number }) {
+  return call<ScanOutcome>(`/api/arrivals/${editionId}/scan`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(target),
+    signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
+  });
+}
+
+export function searchAttendees(editionId: number, query: string) {
+  return call<SearchHit[]>(`/api/arrivals/${editionId}/search?q=${encodeURIComponent(query)}`, {
+    signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
+  });
+}
+
+export function getOfflineTable(editionId: number) {
+  return call<OfflineTable>(`/api/arrivals/${editionId}/offline-table`);
 }
