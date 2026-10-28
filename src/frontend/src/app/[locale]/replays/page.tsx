@@ -5,6 +5,7 @@ import { getCurrentEdition, getReplays, getReplayFilters } from "@/lib/api";
 import Breadcrumb from "@/components/Breadcrumb";
 import ReplayCard from "@/components/replays/ReplayCard";
 import ReplayFiltersBar from "@/components/replays/ReplayFiltersBar";
+import { parseEditionYear } from "@/lib/edition-year";
 import type { TalkFormat } from "@/lib/types";
 import { pageMetadata } from "@/lib/page-metadata";
 
@@ -42,7 +43,8 @@ export default async function ReplaysPage({
   const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
   const current = {
     q: first(sp.q),
-    year: first(sp.year),
+    // Not a year: no filter, rather than a backend 400 shown as a 500 (#703).
+    year: parseEditionYear(first(sp.year)) === null ? "" : first(sp.year),
     format: first(sp.format),
     category: first(sp.category),
   };
