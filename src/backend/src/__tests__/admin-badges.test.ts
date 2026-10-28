@@ -124,6 +124,10 @@ async function writeAndWait() {
   await vi.waitFor(async () => expect((await status()).json().isWriting).toBe(false));
   return res;
 }
+// A refused freeze used to carry on after its 409 and freeze the edition a
+// moment later: the reply was gone before the damage was done. Long enough
+// for that tail to land, as measured when it did.
+const settle = () => new Promise((resolve) => setTimeout(resolve, 500));
 const numbers = async () =>
   (await prisma.attendee.findMany({ where: { editionId }, orderBy: { billetwebId: "asc" } })).map((a) => [
     a.billetwebId,
@@ -136,6 +140,7 @@ describe("Badge numbering and freeze (#639)", () => {
     await seed(101);
 
     const res = await freeze();
+    await settle();
 
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ error: "capacity_exceeded" });
@@ -181,6 +186,8 @@ describe("Badge numbering and freeze (#639)", () => {
     await prisma.attendee.create({ data: attendee(2, { ticketTierId: null, billetwebTicketId: "t9" }) });
 
     expect((await freeze()).json()).toMatchObject({ error: "tickets_without_tier" });
+    await settle();
+    expect((await prisma.edition.findUnique({ where: { id: editionId } }))?.badgesFrozenAt).toBeNull();
   });
 
   it("should leave a ticket imported after the freeze without a number, and renumber nothing", async () => {
