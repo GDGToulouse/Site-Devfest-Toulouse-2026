@@ -32,7 +32,15 @@ let editionId: number;
 let otherEditionId: number;
 const userIds: string[] = [];
 let stamp = 0;
-const uniqueEmail = (label: string) => `${label}-${Date.now()}-${stamp++}@example.org`;
+// Every address this file hands out: the accounts opened through its
+// invitations are cleaned up by these, never by a pattern that would also
+// catch the local demo volunteers.
+const usedEmails: string[] = [];
+const uniqueEmail = (label: string) => {
+  const email = `${label}-${Date.now()}-${stamp++}@example.org`;
+  usedEmails.push(email);
+  return email;
+};
 
 async function createAccount(email: string, role: "ADMIN" | "EDITOR" | "SPONSOR" | "GUEST", emailVerified = true) {
   const user = await prisma.user.create({ data: { email, name: email, role, emailVerified } });
@@ -74,7 +82,7 @@ beforeAll(async () => {
 afterAll(async () => {
   await app.close();
   if (editionId !== undefined) await prisma.edition.deleteMany({ where: { id: { in: [editionId, otherEditionId] } } });
-  const invited = await prisma.user.findMany({ where: { email: { endsWith: "@example.org" }, role: "GUEST" }, select: { id: true } });
+  const invited = await prisma.user.findMany({ where: { email: { in: usedEmails } }, select: { id: true } });
   const ids = [...userIds, ...invited.map((u) => u.id)];
   if (ids.length) {
     await prisma.apiKey.deleteMany({ where: { userId: { in: ids } } });
