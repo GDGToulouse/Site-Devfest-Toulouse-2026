@@ -59,6 +59,14 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
+    // Sign-up answers the same 200, without a session, whether the address
+    // already has an account, was refused, or got one (#673): otherwise the
+    // endpoint tells anyone who is registered. It also means a password signs
+    // in only an account whose mailbox is proven (emailVerified). Who gets
+    // verified: seed and back-office accounts at creation, invitation and
+    // OAuth sign-ups, any account on its first magic link. No verification
+    // email is configured: a magic link is the way in for an unverified one.
+    requireEmailVerification: true,
     // A reset is what someone does once they fear their account was taken:
     // the sessions opened before it must not survive it (#658).
     revokeSessionsOnPasswordReset: true,
