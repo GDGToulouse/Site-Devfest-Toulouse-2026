@@ -17,7 +17,7 @@ const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
   // /uploads/, an SVG carrying <script> executes in our origin. It is allowed
   // again since #346, but only because storeImageBuffer strips scripts,
-  // handlers and remote references before writing, and index.ts serves .svg
+  // handlers and remote references before writing, and upload-headers.ts serves .svg
   // under a sandbox CSP. Removing either of those brings the hole back.
   "image/jpeg", "image/png", "image/webp", "image/gif",
   "image/svg+xml",
