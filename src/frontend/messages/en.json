@@ -353,6 +353,9 @@
       "reset": "Reset",
       "sessions": "session(s)",
       "noResults": "No session matches your search."
+    },
+    "slot": {
+      "relayedIn": "Live relay: {rooms}"
     }
   },
   "speakers": {
