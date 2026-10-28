@@ -25,20 +25,17 @@ import {
   faCircleQuestion,
   faBriefcase,
   faBars,
+  faIdBadge,
 } from "@fortawesome/free-solid-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 import { adminNavGroups, type AdminNavItem, type AdminRole } from "./nav-items";
+import type { CurrentEdition } from "./current-edition";
 
 interface AdminUser {
   email: string;
   name: string | null;
   role: AdminRole;
-}
-
-interface CurrentEdition {
-  id: number;
-  year: number;
 }
 
 interface AdminSidebarProps {
@@ -69,6 +66,7 @@ const iconMap: Record<string, IconDefinition> = {
   question: faCircleQuestion,
   briefcase: faBriefcase,
   bars: faBars,
+  "id-badge": faIdBadge,
 };
 
 interface HealthInfo {

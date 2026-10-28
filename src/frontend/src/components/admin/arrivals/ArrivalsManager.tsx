@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
-import BadgesSection from "@/components/admin/edition-detail/BadgesSection";
+import BadgesSection from "@/components/admin/arrivals/BadgesSection";
 
 interface TierCount {
   ticketTierId: number;
@@ -45,7 +45,7 @@ function formatDateTime(iso: string): string {
 
 // The attendees of the edition, imported from its Billetweb event (#638). Counts
 // only: the import is checked here, people are looked up on the arrivals screens.
-export default function ArrivalsTab({ editionId }: { editionId: number }) {
+export default function ArrivalsManager({ editionId }: { editionId: number }) {
   const [summary, setSummary] = useState<AttendeeSummary | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [report, setReport] = useState<ImportReport | null>(null);
