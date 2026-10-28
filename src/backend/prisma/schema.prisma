@@ -552,12 +552,42 @@ model Attendee {
   // until a retry succeeds.
   badgeWrittenAt    DateTime?
   badgeWriteError   String?
+  // Where the badge is on event day (RG-ARR-40). The version grows with each
+  // transition: a screen keeps the highest it has seen, so a stream event and
+  // a snapshot crossing each other cannot roll a card back (RG-ARR-61, #641).
+  badgeState        BadgeState  @default(PRINTED)
+  badgeStateVersion Int         @default(0)
+  badgeTransitions  BadgeTransition[]
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 
   @@unique([editionId, billetwebId])
   @@unique([editionId, badgeNumber])
   @@index([editionId, barcode])
+}
+
+enum BadgeState {
+  PRINTED
+  TO_FETCH
+  READY
+  DELIVERED
+}
+
+// Every move of a badge, with when and by whom (RG-ARR-40): the "already
+// scanned" alert reads the first scan here (RG-ARR-34). The label survives the
+// account, so the history still names who did it.
+model BadgeTransition {
+  id         Int        @id @default(autoincrement())
+  attendeeId Int
+  attendee   Attendee   @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  fromState  BadgeState
+  toState    BadgeState
+  userId     String?
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userLabel  String
+  createdAt  DateTime   @default(now())
+
+  @@index([attendeeId])
 }
 
 // The "arrivals" permission of one edition (RG-ARR-22, #640): opens the event-
@@ -713,6 +743,7 @@ model User {
   // no back-office UserRole — its rights live entirely on these contacts.
   sponsorContacts SponsorContact[]
   arrivalsAccess  ArrivalsAccess[]
+  badgeTransitions BadgeTransition[]
   auditLogs       AuditLog[]
 
   oauthClients       OauthClient[]

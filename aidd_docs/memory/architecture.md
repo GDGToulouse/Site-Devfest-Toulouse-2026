@@ -25,7 +25,9 @@ flowchart LR
 - Le frontend joint le backend par `BACKEND_URL` (`http://backend:4000` en local), figé dans `routes-manifest.json` **au build** : le changer exige un redéploiement sans cache
 - `fetchAPI` (`src/frontend/src/lib/api.ts`) sépare « absent » (404 → `null`) et « cassé » (`BackendUnavailableError`). Les confondre a mis en cache un 404 pendant une heure sur une ressource qui existait (#345) — détail dans `.claude/rules/error-handling.md`
 - Sponsors et speakers sont des entités partagées entre éditions ; ce qu'une édition a affiché est figé sur la participation (#129, #351, #375)
-- Les tâches planifiées tournent dans le processus backend (`node-cron`, `src/backend/src/lib/scheduler.ts`) : correct tant qu'il n'y a qu'un réplica
+- Les tâches planifiées tournent dans le processus backend (`node-cron`, `src/backend/src/lib/scheduler.ts`) : correct tant qu'il n'y a qu'un réplica. Même hypothèse pour le flux temps réel de l'accueil (#641) : Server-Sent Events diffusés en mémoire (`lib/arrivals-stream.ts`) ; un second réplica exigerait `LISTEN/NOTIFY`
+- Flux SSE (`GET /api/arrivals/:editionId/stream`) : la réponse est détournée (`reply.hijack()`), donc ni compression ni en-têtes de helmet ; un ping toutes les 15 s garde la connexion sous le délai d'inactivité de 30 s du relais de Next. Chaque (re)connexion commence par l'état complet, et chaque badge porte une version que l'écran ne fait jamais reculer
+- Zone `/arrivees` : seule partie du site avec un service worker (`public/arrivees-sw.js`, portée `/arrivees`, #641), enregistré en build de production seulement. Il garde l'application, jamais `/api`. Le vérifier exige un `next start` : sous `next dev` il se désinscrit
 - SEO : Schema.org (Event, Organization, Person, Article), Open Graph, images OG dynamiques ; les métadonnées d'une page passent par `pageMetadata()` (`src/frontend/src/lib/page-metadata.ts`)
 - Objectifs non négociables : Lighthouse ≥ 90, Core Web Vitals, WCAG 2.1 AA — `docs/objectifs-techniques.md`
 

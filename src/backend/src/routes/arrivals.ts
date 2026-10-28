@@ -6,16 +6,36 @@ import { auth } from "../lib/auth.js";
 import { getAuthContext } from "../lib/auth-context.js";
 import { maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
 import { canAccessArrivals, findCurrentEdition, findPendingArrivalsInvitation } from "../lib/arrivals-access.js";
+import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
+import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadge } from "../lib/badge-state.js";
+import type { BadgeState } from "../generated/prisma/client.js";
 
 // The volunteers' side of the arrivals permission (#640): accepting an
 // invitation, and knowing whether the signed-in account may open the event-day
 // screens. Built like the sponsor invitation (routes/sponsor-invitation.ts),
-// whose comments explain each guard.
+// whose comments explain each guard. Then the screens' live state (#641): one
+// event stream per screen, and the moves of the badges.
+
+/**
+ * A ping on an idle stream. Under the relays' idle cut (30 s for Next's
+ * rewrite proxy, measured on #639) and frequent enough for a screen to notice
+ * a silent break within a few beats (RG-ARR-60).
+ */
+export const STREAM_HEARTBEAT_MS = 15_000;
+
+/** How long the browser waits before reconnecting after a break. */
+const STREAM_RETRY_MS = 2_000;
 
 const tokenParamsSchema = {
   type: "object",
   required: ["token"],
   properties: { token: { type: "string" } },
+} as const;
+
+const editionParamsSchema = {
+  type: "object",
+  required: ["editionId"],
+  properties: { editionId: { type: "integer", minimum: 1 } },
 } as const;
 
 export default async function arrivalsRoutes(app: FastifyInstance) {
@@ -31,6 +51,113 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       hasAccess: await canAccessArrivals(ctx.user, edition.id),
     };
   });
+
+  // GET /api/arrivals/:editionId/stream — Server-Sent Events: the full state
+  // first, on every (re)connection (RG-ARR-61), then each badge that moves,
+  // and a ping when nothing does.
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/stream",
+    { schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      // Subscribe before reading: a move committed while the snapshot loads is
+      // queued, not lost. Sent after it, it may repeat what the snapshot
+      // already holds; the version on each badge lets the screen skip it.
+      const queued: ArrivalsEvent[] = [];
+      let isLive = false;
+      const send = (event: string, data: unknown) => {
+        if (!reply.raw.destroyed) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+      const unsubscribe = subscribeToArrivals(editionId, (event) => {
+        if (isLive) send(event.type, event.badge);
+        else queued.push(event);
+      });
+
+      const snapshot = await loadArrivalsSnapshot(editionId).catch((err: unknown) => {
+        unsubscribe();
+        throw err;
+      });
+      if (!snapshot) {
+        unsubscribe();
+        return reply.code(404).send({ error: "Not found" });
+      }
+
+      // From here the response is ours, outside Fastify's reply cycle: no
+      // compression (it would hold events back until a buffer fills), no
+      // serializer. `no-transform` and X-Accel-Buffering ask the relays the same.
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      reply.raw.write(`retry: ${STREAM_RETRY_MS}\n\n`);
+      send("snapshot", snapshot);
+      isLive = true;
+      for (const event of queued) send(event.type, event.badge);
+
+      const heartbeat = setInterval(() => send("ping", { at: Date.now() }), STREAM_HEARTBEAT_MS);
+      // The response's close, not the request's: the request one fires once
+      // its (empty) body is read, long before the screen goes away.
+      reply.raw.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+      });
+    },
+  );
+
+  // POST /api/arrivals/:editionId/badges/:attendeeId/move — a counter touching
+  // a card (RG-ARR-43), or an admin taking one back (RG-ARR-46). Answers the
+  // badge as it stands, applied or not: a move that lost the race is not an
+  // error, the screen just catches up (RG-ARR-44).
+  app.post<{ Params: { editionId: number; attendeeId: number }; Body: { from: BadgeState; to: BadgeState } }>(
+    "/arrivals/:editionId/badges/:attendeeId/move",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["editionId", "attendeeId"],
+          properties: {
+            editionId: { type: "integer", minimum: 1 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["from", "to"],
+          additionalProperties: false,
+          properties: {
+            from: { type: "string", enum: [...BADGE_STATES] },
+            to: { type: "string", enum: [...BADGE_STATES] },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const { from, to } = request.body;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      const isAllowed = isCounterMove(from, to) || (ctx.user.role === "ADMIN" && isStepBack(from, to));
+      if (!isAllowed) {
+        return reply.code(400).send({ error: "move_not_allowed", message: "Ce passage n'est pas possible depuis cet écran." });
+      }
+
+      const result = await moveBadge(editionId, attendeeId, from, to, {
+        id: ctx.user.id,
+        label: ctx.user.name || ctx.user.email,
+      });
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      return result;
+    },
+  );
 
   // GET /api/arrivals-invitation/:token — which edition, and which mailbox.
   app.get<{ Params: { token: string } }>(

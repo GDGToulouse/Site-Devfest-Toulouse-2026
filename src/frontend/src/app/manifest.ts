@@ -1,10 +1,11 @@
 import type { MetadataRoute } from "next";
 
-import { getIdentitySettings } from "@/lib/api";
+import { manifestIcons } from "@/lib/manifest-icons";
 
 // Basic web app manifest (#234): enables "Add to Home Screen" on Android and,
 // with the layout's theme-color, a branded mobile toolbar. Not a full PWA —
-// no service worker, no offline mode.
+// no service worker, no offline mode. The event-day zone has its own, which
+// is one (arrivees/manifest.webmanifest, #641).
 //
 // Icons reuse the admin-configurable favicons (identity_favicon_png_192/512),
 // falling back to the bundled logo so the manifest is always valid.
@@ -21,34 +22,6 @@ import { getIdentitySettings } from "@/lib/api";
 // design work — the bundled asset is a wide black wordmark — and the admin
 // favicon fields are where it belongs once it exists.
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
-  const identity = await getIdentitySettings();
-
-  const icons: MetadataRoute.Manifest["icons"] = [];
-  if (identity.identity_favicon_png_192) {
-    icons.push({
-      src: identity.identity_favicon_png_192,
-      sizes: "192x192",
-      type: "image/png",
-      purpose: "any",
-    });
-  }
-  if (identity.identity_favicon_png_512) {
-    icons.push({
-      src: identity.identity_favicon_png_512,
-      sizes: "512x512",
-      type: "image/png",
-      purpose: "any",
-    });
-  }
-  if (icons.length === 0) {
-    icons.push({
-      src: "/images/logo-devfest-96.png",
-      sizes: "96x96",
-      type: "image/png",
-      purpose: "any",
-    });
-  }
-
   return {
     name: "DevFest Toulouse",
     short_name: "DevFest TLS",
@@ -58,6 +31,6 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
     display: "standalone",
     background_color: "#ffffff",
     theme_color: "#109E6E",
-    icons,
+    icons: await manifestIcons(),
   };
 }

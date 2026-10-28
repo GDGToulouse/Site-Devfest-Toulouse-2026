@@ -371,6 +371,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
 | POST | `/api/sponsor-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule |
 | GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
+| GET | `/api/arrivals/:editionId/stream` | Contrôlé dans la route : flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals) |
+| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN |
 | GET | `/api/arrivals-invitation/:token` | Public |
 | POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
 | POST | `/api/arrivals-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule |
