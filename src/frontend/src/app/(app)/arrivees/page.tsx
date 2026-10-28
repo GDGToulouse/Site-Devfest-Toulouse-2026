@@ -6,10 +6,12 @@ import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/admin-api";
 import { ARRIVALS_SPACE } from "@/lib/account-spaces";
 import { getArrivalsCurrent, type ArrivalsCurrent } from "@/lib/arrivals-api";
+import { recallArrivalsEdition, rememberArrivalsEdition } from "@/lib/arrivals-station";
+import ArrivalsWorkspace from "@/components/arrivals/ArrivalsWorkspace";
 
 // The event-day zone (RG-ARR-21, RG-ARR-22, #640): open to the holders of the
-// current edition's arrivals permission, and to admins. The stations (Scan,
-// Guichet, Aide) land here with #641 to #643; this page only lets them in.
+// current edition's arrivals permission, and to admins, who then work in
+// ArrivalsWorkspace (#641).
 
 export default function ArrivalsZonePage() {
   const router = useRouter();
@@ -23,16 +25,26 @@ export default function ArrivalsZonePage() {
         return;
       }
       if (!data) {
-        setLoadError(true);
+        // Backend out of reach (0) or down behind the relay (5xx): reopen the
+        // edition this device was last let into, cut off but usable.
+        const remembered = status === 0 || status >= 500 ? recallArrivalsEdition() : null;
+        if (remembered) setCurrent({ edition: remembered, hasAccess: true });
+        else setLoadError(true);
         return;
       }
+      rememberArrivalsEdition(data.hasAccess ? data.edition : null);
       setCurrent(data);
     });
   }, [router]);
 
   async function handleSignOut() {
+    rememberArrivalsEdition(null);
     await signOut();
     router.replace("/arrivees/connexion");
+  }
+
+  if (current?.edition && current.hasAccess) {
+    return <ArrivalsWorkspace edition={current.edition} onSignOut={handleSignOut} />;
   }
 
   return (
@@ -46,15 +58,6 @@ export default function ArrivalsZonePage() {
           </p>
         ) : !current ? (
           <p className="text-center text-gris">Chargement…</p>
-        ) : current.edition && current.hasAccess ? (
-          <>
-            <p className="text-center text-noir">
-              Vous avez accès à l&apos;accueil du <strong>DevFest Toulouse {current.edition.year}</strong>.
-            </p>
-            <p className="mt-3 text-center text-sm text-gris">
-              Les écrans du jour J (scan, guichets, aide) s&apos;ouvriront ici. Gardez cette adresse : /arrivees.
-            </p>
-          </>
         ) : (
           <>
             <p className="text-center text-noir">

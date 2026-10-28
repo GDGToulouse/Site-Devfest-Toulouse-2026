@@ -217,6 +217,14 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store" },
         ],
       },
+      // The event-day zone (#640) likewise. Its offline copy is the service
+      // worker's (#641), which the Cache API keeps whatever this header says.
+      {
+        source: "/arrivees/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
       // Cache-Control: homepage — short cache (5 min)
       // Both public rules stand aside in draft preview (#618): Next sends that
       // page `private, no-store`, which these rules would otherwise overwrite

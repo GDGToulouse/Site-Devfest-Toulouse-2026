@@ -19,9 +19,11 @@ import { getRequestContext } from "./request-context.js";
 // anonymous votes (#564): hundreds in two days, by nobody the history could
 // name, they would bury the team's edits under browser ids. Attendee rows are
 // imported from Billetweb by the hundred (#638) and hold personal data the log
-// would keep past its 18-month retention.
+// would keep past its 18-month retention. BadgeTransition is already a history
+// of its own (#641), several thousand lines on event day.
 const EXCLUDED_MODELS = new Set([
   "Attendee",
+  "BadgeTransition",
   "AuditLog",
   "Session",
   "Account",
