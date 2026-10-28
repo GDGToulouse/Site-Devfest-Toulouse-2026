@@ -127,6 +127,9 @@ model Edition {
   // The name is kept so the back-office shows the link without calling Billetweb.
   billetwebEventId        String?
   billetwebEventName      String?
+  // When the attendees were last imported from that event (#638): the next
+  // import only asks Billetweb for what changed since.
+  attendeesSyncedAt       DateTime?
   // Opens the audience feedback before the event day so the team can try it,
   // production included (#566). Only before the day; the votes cast meanwhile
   // are marked as tests and deleted when it goes off, by hand or at midnight
@@ -140,6 +143,7 @@ model Edition {
   deletedAt               DateTime?
 
   ticketTiers     TicketTier[]
+  attendees       Attendee[]
   articles        Article[]
   keyFigures      KeyFigure[]
   // The edition's photo gallery (#112), a curated selection.
@@ -491,10 +495,47 @@ model TicketTier {
 
   editionId Int
   edition   Edition @relation(fields: [editionId], references: [id])
+  attendees Attendee[]
 
   @@unique([editionId, sortOrder])
   @@unique([editionId, billetwebTicketId])
   @@index([deletedAt])
+}
+
+// --- Arrivals ---
+
+// One Billetweb ticket of an edition (RG-ARR-12, RG-ARR-13, #638). Imported, never
+// typed: Billetweb owns every field here. A refunded or cancelled ticket is kept
+// and marked, since its badge may already be printed. Kept out of the history
+// (lib/audit.ts): an import writes hundreds of rows of personal data, which the
+// log would then keep past their retention.
+model Attendee {
+  id                Int         @id @default(autoincrement())
+  editionId         Int
+  edition           Edition     @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  // Billetweb's ticket id (`id` in /attendees), the key an import matches on.
+  billetwebId       String
+  barcode           String
+  firstName         String
+  lastName          String
+  // Never sent to the arrivals screens: it only serves to tell the attendees
+  // about the next edition (RG-ARR-13).
+  email             String?
+  company           String?
+  // The tier as Billetweb names it; `ticketTier` is null until that tier is
+  // imported (#637), or if it was created by hand.
+  billetwebTicketId String
+  ticketTierId      Int?
+  ticketTier        TicketTier? @relation(fields: [ticketTierId], references: [id], onDelete: SetNull)
+  category          String?
+  orderId           String
+  orderDate         DateTime
+  isCancelled       Boolean     @default(false)
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([editionId, billetwebId])
+  @@index([editionId, barcode])
 }
 
 // --- Contact ---
