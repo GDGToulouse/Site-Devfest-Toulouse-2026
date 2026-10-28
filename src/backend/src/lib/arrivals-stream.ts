@@ -1,10 +1,10 @@
-import type { LiveBadge } from "./badge-state.js";
+import type { HelpEntry, LiveBadge } from "./badge-state.js";
 
 // The fan-out behind the arrivals screens' stream (RG-ARR-60, #641). In memory,
 // like the scheduler: right while the backend runs as a single replica. A
 // second one would need Postgres LISTEN/NOTIFY here, the only shared channel.
 
-export type ArrivalsEvent = { type: "badge"; badge: LiveBadge };
+export type ArrivalsEvent = { type: "badge"; data: LiveBadge } | { type: "help"; data: HelpEntry };
 
 type Listener = (event: ArrivalsEvent) => void;
 

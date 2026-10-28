@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 
-import { applyBadge, fromSnapshot, type ArrivalsSnapshot, type LiveBadge, type LiveState } from "@/lib/arrivals-live";
+import {
+  applyBadge,
+  applyHelp,
+  fromSnapshot,
+  type ArrivalsSnapshot,
+  type HelpEntry,
+  type LiveBadge,
+  type LiveState,
+} from "@/lib/arrivals-live";
 
 // The event-day screens' link to the backend (RG-ARR-60, RG-ARR-61, #641).
 // EventSource reconnects on its own after most breaks, but not all: it gives
@@ -59,6 +67,11 @@ export function useArrivalsStream(editionId: number | null): { live: LiveState |
         heard();
         const badge = JSON.parse((e as MessageEvent<string>).data) as LiveBadge;
         setLive((state) => (state ? applyBadge(state, badge) : state));
+      });
+      current.addEventListener("help", (e) => {
+        heard();
+        const entry = JSON.parse((e as MessageEvent<string>).data) as HelpEntry;
+        setLive((state) => (state ? applyHelp(state, entry) : state));
       });
       current.addEventListener("ping", heard);
       current.onerror = () => {

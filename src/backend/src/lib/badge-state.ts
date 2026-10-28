@@ -21,7 +21,7 @@ export interface LiveBadge {
   company: string | null;
 }
 
-const LIVE_BADGE_SELECT = {
+export const LIVE_BADGE_SELECT = {
   id: true,
   badgeNumber: true,
   badgeState: true,
@@ -41,7 +41,7 @@ type LiveBadgeRow = {
   company: string | null;
 };
 
-function toLiveBadge(row: LiveBadgeRow): LiveBadge {
+export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
   return {
     id: row.id,
     // Only numbered badges are selected: the dedicated flow never moves.
@@ -70,11 +70,63 @@ export function isStepBack(from: BadgeState, to: BadgeState): boolean {
   return order(from) - order(to) === 1;
 }
 
+/**
+ * A scanned ticket with no number, sent to the help desk (RG-ARR-33): bought
+ * after the freeze, or in a tier the site does not know. Its own list, since
+ * it has no badge to move.
+ */
+export interface HelpEntry {
+  id: number;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+  tierName: string | null;
+  scannedAt: Date;
+}
+
+export const HELP_ENTRY_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  company: true,
+  scannedAt: true,
+  ticketTier: { select: { nameFr: true } },
+} as const;
+
+export function toHelpEntry(row: {
+  id: number;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+  scannedAt: Date | null;
+  ticketTier: { nameFr: string } | null;
+}): HelpEntry {
+  return {
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    company: row.company,
+    tierName: row.ticketTier?.nameFr ?? null,
+    // Only scanned rows are selected.
+    scannedAt: row.scannedAt ?? new Date(0),
+  };
+}
+
+/** The tickets that belong at the help desk once scanned: no number, not the dedicated flow. */
+export const helpDeskTickets = (editionId: number) => ({
+  editionId,
+  isCancelled: false,
+  badgeNumber: null,
+  OR: [{ ticketTierId: null }, { ticketTier: { isOutsideFlow: false } }],
+});
+
 export interface ArrivalsSnapshot {
   layout: { counters: number; binsPerCounter: number };
   frozenAt: Date | null;
   /** Every badge that left Imprimé: the rest is implied. */
   badges: LiveBadge[];
+  /** Scanned tickets without a number, oldest first. */
+  help: HelpEntry[];
 }
 
 /**
@@ -92,10 +144,16 @@ export async function loadArrivalsSnapshot(editionId: number): Promise<ArrivalsS
     select: LIVE_BADGE_SELECT,
     orderBy: { badgeNumber: "asc" },
   });
+  const help = await prisma.attendee.findMany({
+    where: { ...helpDeskTickets(editionId), scannedAt: { not: null } },
+    select: HELP_ENTRY_SELECT,
+    orderBy: { scannedAt: "asc" },
+  });
   return {
     layout: { counters: edition.badgeCounters, binsPerCounter: edition.badgeBinsPerCounter },
     frozenAt: edition.badgesFrozenAt,
     badges: rows.map(toLiveBadge),
+    help: help.map(toHelpEntry),
   };
 }
 
@@ -131,6 +189,6 @@ export async function moveBadge(
     return row && { applied: moved.count === 1, badge: toLiveBadge(row) };
   });
   // After the commit: a screen must never see a move that could still roll back.
-  if (result?.applied) publishArrivals(editionId, { type: "badge", badge: result.badge });
+  if (result?.applied) publishArrivals(editionId, { type: "badge", data: result.badge });
   return result;
 }

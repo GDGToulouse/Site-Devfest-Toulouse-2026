@@ -4,13 +4,14 @@ import { useEffect, useState } from "react";
 
 import ConnectionIndicator from "@/components/arrivals/ConnectionIndicator";
 import StationPicker from "@/components/arrivals/StationPicker";
+import ScanStation from "@/components/arrivals/ScanStation";
 import { counterLoads } from "@/lib/arrivals-live";
 import { readStation, saveStation, stationLabel, type Station } from "@/lib/arrivals-station";
 import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 
 // The event-day zone once the volunteer is let in (#641): the station this
 // device works as, the link to the live state, and what the stations share.
-// The Scan, Guichet and Aide screens themselves come with #642, #643 and #713.
+// Scan has its screen (#642); Guichet and Aide come with #643 and #713.
 export default function ArrivalsWorkspace({
   edition,
   onSignOut,
@@ -50,7 +51,10 @@ export default function ArrivalsWorkspace({
           </div>
         )}
 
-        {!live || station === undefined ? (
+        {station?.kind === "scan" ? (
+          // Without the live state too: the degraded mode is for when it is gone.
+          <ScanStation editionId={edition.id} live={live} status={status} />
+        ) : !live || station === undefined ? (
           status !== "disconnected" && <p className="text-center text-gris">Chargement…</p>
         ) : station === null ? (
           <div className="rounded-3xl bg-blanc p-6 shadow-card">
@@ -88,15 +92,17 @@ export default function ArrivalsWorkspace({
                 L&apos;écran de ce poste arrive bientôt. Ces chiffres se mettent à jour seuls.
               </p>
             </section>
-
-            <button
-              type="button"
-              onClick={() => pick(null)}
-              className="mt-4 w-full rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-sm font-medium text-noir hover:border-bleu"
-            >
-              Changer de poste
-            </button>
           </>
+        )}
+
+        {station && (
+          <button
+            type="button"
+            onClick={() => pick(null)}
+            className="mt-6 w-full rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-sm font-medium text-noir hover:border-bleu"
+          >
+            Changer de poste
+          </button>
         )}
 
         <button

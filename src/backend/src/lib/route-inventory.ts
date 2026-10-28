@@ -57,6 +57,18 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN",
     anonymous: [400, 401],
   },
+  "POST /api/arrivals/:editionId/scan": {
+    why: "scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "GET /api/arrivals/:editionId/search": {
+    why: "recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "GET /api/arrivals/:editionId/offline-table": {
+    why: "table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
   "POST /api/arrivals-invitation/:token/accept": {
     why: "jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre",
     anonymous: [404],

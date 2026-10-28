@@ -558,6 +558,15 @@ model Attendee {
   badgeState        BadgeState  @default(PRINTED)
   badgeStateVersion Int         @default(0)
   badgeTransitions  BadgeTransition[]
+  // The first scan at the entrance, whatever the ticket's flow: what the
+  // "already scanned" alert shows (RG-ARR-34). A label, not a user: it must
+  // still name the volunteer once the account is gone.
+  scannedAt         DateTime?
+  scannedByLabel    String?
+  // When Billetweb acknowledged the check-in (RG-ARR-37). Scanned without it:
+  // still to send; the error stays until a retry succeeds.
+  checkedInAt       DateTime?
+  checkInError      String?
   createdAt         DateTime    @default(now())
   updatedAt         DateTime    @updatedAt
 

@@ -7,6 +7,7 @@ import { AUDIT_RETENTION_MONTHS, purgeExpiredAuditLog } from "./audit-purge.js";
 import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 import { applyScheduledStatus } from "./edition-status-schedule.js";
 import { purgeExpiredTrash } from "./trash-purge.js";
+import { editionsWithPendingCheckIns, requestCheckIn } from "./billetweb-checkin.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
@@ -21,6 +22,9 @@ const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // midnight would otherwise skip the day's switch. Not all day long, so a team
 // that moves the status back by hand on a trigger day is not overruled.
 const STATUS_SCHEDULE_CRON = "0,15,30,45 0 * * *";
+// Every minute: the check-ins Billetweb missed are retried while the entrance
+// keeps scanning (RG-ARR-37, #642). Idle the rest of the year, one query.
+const CHECK_IN_RETRY_CRON = "* * * * *";
 const TIMEZONE = "Europe/Paris";
 
 /**
@@ -133,8 +137,30 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "edition-status-schedule", timezone: TIMEZONE, noOverlap: true },
   );
 
+  cron.schedule(
+    CHECK_IN_RETRY_CRON,
+    async () => {
+      try {
+        for (const editionId of await editionsWithPendingCheckIns()) requestCheckIn(editionId, log);
+      } catch (err) {
+        log.error({ err }, "Billetweb check-in retry failed");
+      }
+    },
+    { name: "billetweb-check-in-retry", timezone: TIMEZONE, noOverlap: true },
+  );
+
   log.info(
-    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, TRASH_PURGE_CRON, FEEDBACK_TEST_MODE_CRON, STATUS_SCHEDULE_CRON], timezone: TIMEZONE },
+    {
+      cron: [
+        FEATURED_ROTATION_CRON,
+        AUDIT_PURGE_CRON,
+        TRASH_PURGE_CRON,
+        FEEDBACK_TEST_MODE_CRON,
+        STATUS_SCHEDULE_CRON,
+        CHECK_IN_RETRY_CRON,
+      ],
+      timezone: TIMEZONE,
+    },
     "Scheduled tasks started",
   );
 }

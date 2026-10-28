@@ -9,8 +9,11 @@ import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { prisma } from "../lib/prisma.js";
 
 // The arrivals screens' live state (#641): the stream, the moves, the
-// resynchronization. This file owns the edition year 1646.
+// resynchronization. This file owns the edition years 1646 and 1648.
 const YEAR = 1646;
+// Under 2016, like every test edition: getSeededEdition() takes the newest
+// from 2016 on, and other files would pick this one up as it gets deleted.
+const OTHER_YEAR = 1648;
 
 let app: FastifyInstance;
 let baseUrl: string;
@@ -203,7 +206,7 @@ describe("The arrivals stream (#641)", () => {
 
   it("should not move a badge of another edition through this one", async () => {
     const volunteer = await createAccount("GUEST", true);
-    const other = await prisma.edition.create({ data: { year: YEAR + 1000 } });
+    const other = await prisma.edition.create({ data: { year: OTHER_YEAR } });
     try {
       const foreign = await prisma.attendee.create({
         data: {

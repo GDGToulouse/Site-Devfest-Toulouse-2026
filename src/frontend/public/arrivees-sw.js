@@ -10,8 +10,11 @@
 //
 // Bump CACHE_NAME to drop everything kept by an earlier version.
 
-const CACHE_NAME = "arrivees-v1";
+const CACHE_NAME = "arrivees-v2";
 const SHELL_URL = "/arrivees";
+// The barcode reader of iOS phones (#642): needed by the Scan screen offline,
+// and fetched only when a scan starts otherwise.
+const PRECACHE_URLS = [SHELL_URL, "/arrivees-zxing/zxing_reader.wasm"];
 
 self.addEventListener("install", (event) => {
   // The shell, at least: a phone that installed the app before ever loading
@@ -20,8 +23,7 @@ self.addEventListener("install", (event) => {
   event.waitUntil(
     caches
       .open(CACHE_NAME)
-      .then((cache) => cache.add(SHELL_URL))
-      .catch(() => undefined),
+      .then((cache) => Promise.all(PRECACHE_URLS.map((url) => cache.add(url).catch(() => undefined)))),
   );
   self.skipWaiting();
 });

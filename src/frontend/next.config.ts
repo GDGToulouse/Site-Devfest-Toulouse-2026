@@ -293,7 +293,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
+              // 'wasm-unsafe-eval' lets the Scan screen compile its barcode
+              // reader (zxing-wasm, #642, served from our origin). It allows
+              // WebAssembly only, not eval().
+              `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               // blob: is required by the admin image picker (#371): the preview
@@ -306,6 +309,17 @@ const nextConfig: NextConfig = {
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
             ].join("; "),
+          },
+        ],
+      },
+      // The Scan screen reads tickets with the camera (#642): the one place the
+      // site may ask for it. Listed after the rule above, which it overrides.
+      {
+        source: "/arrivees/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=()",
           },
         ],
       },

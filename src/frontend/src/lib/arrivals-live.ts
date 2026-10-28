@@ -19,10 +19,21 @@ export interface BadgeLayout {
   binsPerCounter: number;
 }
 
+/** A scanned ticket without a number, waiting at the help desk (#642). */
+export interface HelpEntry {
+  id: number;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+  tierName: string | null;
+  scannedAt: string;
+}
+
 export interface ArrivalsSnapshot {
   layout: BadgeLayout;
   frozenAt: string | null;
   badges: LiveBadge[];
+  help: HelpEntry[];
 }
 
 export interface LiveState {
@@ -30,6 +41,8 @@ export interface LiveState {
   frozenAt: string | null;
   /** Badges that left Imprimé, by attendee id. */
   badges: Map<number, LiveBadge>;
+  /** Oldest first. */
+  help: HelpEntry[];
 }
 
 /** A snapshot replaces everything: it is the server's word after a break (RG-ARR-61). */
@@ -38,7 +51,14 @@ export function fromSnapshot(snapshot: ArrivalsSnapshot): LiveState {
     layout: snapshot.layout,
     frozenAt: snapshot.frozenAt,
     badges: new Map(snapshot.badges.map((badge) => [badge.id, badge])),
+    help: snapshot.help,
   };
+}
+
+/** A ticket sent to the help desk; one the screen already lists is not added twice. */
+export function applyHelp(state: LiveState, entry: HelpEntry): LiveState {
+  if (state.help.some((h) => h.id === entry.id)) return state;
+  return { ...state, help: [...state.help, entry] };
 }
 
 /**
@@ -58,6 +78,29 @@ export function applyBadge(state: LiveState, badge: LiveBadge): LiveState {
 // Counter × 1000 + bin × 100 + rank (RG-ARR-15).
 export const counterOf = (badgeNumber: number) => Math.floor(badgeNumber / 1000);
 export const binOf = (badgeNumber: number) => Math.floor((badgeNumber % 1000) / 100);
+
+/**
+ * Each bin's colour, so a volunteer spots theirs at a glance (RG-ARR-42).
+ * Bins are numbered from 1; up to MAX_BINS_PER_COUNTER (10) on the backend.
+ */
+const BIN_COLORS = [
+  "bg-malachite",
+  "bg-bleu",
+  "bg-terre-cuite",
+  "bg-rose",
+  "bg-bleu-2",
+  "bg-vert-2",
+  "bg-orange",
+  "bg-bismarck",
+  "bg-emeraude",
+  "bg-noir",
+];
+
+export const binColor = (bin: number) => BIN_COLORS[(bin - 1 + BIN_COLORS.length) % BIN_COLORS.length];
+
+/** Waiting badges above which a counter turns orange, then red, on the Scan phones (RG-ARR-36). */
+export const LOAD_WARNING = 10;
+export const LOAD_CRITICAL = 20;
 
 export interface CounterLoad {
   counter: number;
