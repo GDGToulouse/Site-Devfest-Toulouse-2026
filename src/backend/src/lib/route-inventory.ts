@@ -45,6 +45,18 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule",
     anonymous: [400, 404],
   },
+  "GET /api/arrivals/current": {
+    why: "dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même",
+    anonymous: [401],
+  },
+  "POST /api/arrivals-invitation/:token/accept": {
+    why: "jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre",
+    anonymous: [404],
+  },
+  "POST /api/arrivals-invitation/:token/sign-up": {
+    why: "jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule",
+    anonymous: [400, 404],
+  },
   "POST /api/contact/send": { why: "formulaire de contact public : tout le monde peut écrire, débit limité" },
   "POST /api/talks/:slug/feedback": {
     why: "avis du public (#564) : anonyme, un par navigateur et par session, ouvert le jour J et le lendemain, débit limité",

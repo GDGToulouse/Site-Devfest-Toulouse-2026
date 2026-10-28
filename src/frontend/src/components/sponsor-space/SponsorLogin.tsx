@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { signInWithSocial, signInWithEmail } from "@/lib/admin-api";
 import { requestMagicLink, requestSponsorPasswordReset, signUpWithInvitation } from "@/lib/sponsor-api";
 import SponsorFeedback from "@/components/sponsor-space/SponsorFeedback";
+import { SPONSOR_SPACE, type AccountSpace } from "@/lib/account-spaces";
 
 // Sign-in for a sponsor (#362). Deliberately not the admin screen: a sponsor
 // account holds no back-office role, and landing on a page titled "DevFest
@@ -20,14 +21,19 @@ interface Providers {
 // password opens the account through the token, for the invited address
 // whatever is typed (#658): the form shows that address, masked as the page
 // received it, instead of asking for one.
+//
+// The volunteers' zone (#640) signs in here too: `space` gives its words and
+// addresses.
 export default function SponsorLogin({
   callbackURL,
   invitationToken,
   emailHint,
+  space = SPONSOR_SPACE,
 }: {
   callbackURL: string;
   invitationToken?: string;
   emailHint?: string;
+  space?: AccountSpace;
 }) {
   const mode = invitationToken ? "signup" : "signin";
   const [email, setEmail] = useState("");
@@ -53,7 +59,7 @@ export default function SponsorLogin({
     // sign-in only authenticates an existing account; someone arriving from an
     // invitation has none yet and needs sign-up (#362).
     const result = invitationToken
-      ? await signUpWithInvitation(invitationToken, password)
+      ? await signUpWithInvitation(invitationToken, password, space.invitationApi)
       : await signInWithEmail(email, password);
     if (result.success) {
       window.location.href = callbackURL;
@@ -84,7 +90,7 @@ export default function SponsorLogin({
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    await requestSponsorPasswordReset(email.trim());
+    await requestSponsorPasswordReset(email.trim(), space.resetPath);
     // Same message whether or not an account exists, as for the magic link.
     setResetSent(true);
     setIsLoading(false);
@@ -103,7 +109,7 @@ export default function SponsorLogin({
 
   if (linkSent) {
     return (
-      <Shell mode={mode}>
+      <Shell mode={mode} space={space}>
         {/* This replaces the form rather than sitting beside it, so nothing
             about the swap is announced on its own (#427). */}
         <p role="status" aria-live="polite" className="text-center text-noir">
@@ -123,7 +129,7 @@ export default function SponsorLogin({
 
   if (isForgot) {
     return (
-      <Shell mode={mode}>
+      <Shell mode={mode} space={space}>
         {resetSent ? (
           <p role="status" aria-live="polite" className="text-center text-noir">
             Si un compte existe pour <strong>{email.trim()}</strong>, un lien pour choisir un nouveau mot de
@@ -169,7 +175,7 @@ export default function SponsorLogin({
   }
 
   return (
-    <Shell mode={mode}>
+    <Shell mode={mode} space={space}>
       {(providers?.google || providers?.github) && (
         <div className="space-y-3">
           {providers.google && (
@@ -273,12 +279,12 @@ export default function SponsorLogin({
   );
 }
 
-function Shell({ children, mode }: { children: React.ReactNode; mode: "signin" | "signup" }) {
+function Shell({ children, mode, space }: { children: React.ReactNode; mode: "signin" | "signup"; space: AccountSpace }) {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-blanc-casse px-6 py-10">
       <div className="w-full max-w-md rounded-3xl bg-blanc p-8 shadow-card">
         <h1 className="mb-2 text-center text-2xl font-bold text-noir">
-          {mode === "signup" ? "Créer votre compte partenaire" : "Espace partenaire"}
+          {mode === "signup" ? space.signupTitle : space.name}
         </h1>
         <p className="mb-6 text-center text-sm text-gris">DevFest Toulouse</p>
         {children}

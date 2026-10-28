@@ -98,6 +98,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/badges/:editionId/pdf` | ADMIN ; refusé aux agents IA |
 | POST | `/api/admin/badges/:editionId/freeze` | ADMIN ; refusé aux agents IA |
 | POST | `/api/admin/badges/:editionId/billetweb` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/arrivals-access/:editionId` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/invite` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/:accessId/resend` | ADMIN ; refusé aux agents IA |
+| DELETE | `/api/admin/arrivals-access/:editionId/:accessId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/audit` | ADMIN |
 | POST | `/api/admin/cache/purge` | ADMIN |
 | GET | `/api/admin/categories` | Équipe (ADMIN, EDITOR) |
@@ -366,6 +370,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsor-invitation/:token` | Public |
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
 | POST | `/api/sponsor-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule |
+| GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
+| GET | `/api/arrivals-invitation/:token` | Public |
+| POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
+| POST | `/api/arrivals-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule |
 | GET | `/api/sponsors` | Public |
 | GET | `/api/sponsors/:slug` | Public |
 | GET | `/api/sponsors/hall-of-fame` | Public |

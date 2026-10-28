@@ -14,7 +14,7 @@ interface UserListQuery {
   page?: string;
   limit?: string;
   search?: string;
-  role?: "ADMIN" | "EDITOR" | "SPONSOR";
+  role?: "ADMIN" | "EDITOR" | "SPONSOR" | "GUEST";
 }
 
 interface CreateUserBody {
@@ -69,7 +69,7 @@ export default async function adminUserRoutes(app: FastifyInstance) {
           page: { type: "string", pattern: "^[0-9]+$" },
           limit: { type: "string", pattern: "^[0-9]+$" },
           search: { type: "string", maxLength: 200 },
-          role: { type: "string", enum: ["ADMIN", "EDITOR", "SPONSOR"] },
+          role: { type: "string", enum: ["ADMIN", "EDITOR", "SPONSOR", "GUEST"] },
         },
       },
     },

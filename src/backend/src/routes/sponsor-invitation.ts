@@ -5,7 +5,7 @@ import { APIError } from "better-auth/api";
 
 import { auth } from "../lib/auth.js";
 import { getAuthContext } from "../lib/auth-context.js";
-import { findPendingInvitation, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
+import { findPendingInvitation, maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
 
 // Accepting an invitation to a sponsor space (#362).
 //
@@ -112,14 +112,4 @@ export default async function sponsorInvitationRoutes(app: FastifyInstance) {
 
     return { sponsorId: contact.sponsorId, sponsorSlug: contact.sponsor.slug, accessRole: contact.accessRole };
   });
-}
-
-// "contact@societe.fr" -> "c•••••t@societe.fr". Enough for the invited person
-// to recognise their own mailbox, not enough for a stranger to learn it.
-function maskEmail(email: string): string {
-  const [local, domain] = email.split("@");
-  if (!domain) return "•••";
-  const head = local.slice(0, 1);
-  const tail = local.length > 1 ? local.slice(-1) : "";
-  return `${head}•••••${tail}@${domain}`;
 }

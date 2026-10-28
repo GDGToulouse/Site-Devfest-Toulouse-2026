@@ -19,6 +19,17 @@ export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// "contact@societe.fr" -> "c•••••t@societe.fr". Enough for the invited person
+// to recognise their own mailbox, not enough for a stranger to learn it. Shared
+// with the volunteers' invitations (#640).
+export function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "•••";
+  const head = local.slice(0, 1);
+  const tail = local.length > 1 ? local.slice(-1) : "";
+  return `${head}•••••${tail}@${domain}`;
+}
+
 // A pending invitation is one that was sent, has not expired, and has not been
 // accepted yet. Accepted invitations stop opening the sign-up door: the account
 // exists by then, so a second use would be a replay.
@@ -40,7 +51,8 @@ export async function findPendingInvitation(token: string) {
 // space once the real person accepts (#658). The account is created either by
 // an identity provider, which has proven the mailbox, or through the invitation
 // token, which reached it: the sign-up route runs better-auth inside this scope
-// for the invited address, and the sign-up hook reads it.
+// for the invited address, and the sign-up hook reads it. The volunteers'
+// invitation (#640) uses the same scope.
 const tokenProvenSignUp = new AsyncLocalStorage<string>();
 
 export function signUpWithInvitation<T>(email: string, fn: () => Promise<T>): Promise<T> {
