@@ -88,6 +88,25 @@ describe("Sign-up answers the same whether the address has an account (#673)", (
     const res = await auth.api.signInEmail({ body: { email, password: "owner1234!test" }, asResponse: true });
     expect(res.status).toBe(403);
   });
+
+  // The reset link went to the mailbox: following it proves the mailbox, so the
+  // new password must sign in, not be refused as unverified.
+  it("verifies the account whose password is reset", async () => {
+    const email = uniqueEmail("reset");
+    const user = await createAccount(email, { emailVerified: false, password: "owner1234!test" });
+    const token = `reset-${Date.now()}`;
+    const ctx = await auth.$context;
+    await ctx.internalAdapter.createVerificationValue({
+      identifier: `reset-password:${token}`,
+      value: user.id,
+      expiresAt: new Date(Date.now() + 60_000),
+    });
+
+    await auth.api.resetPassword({ body: { token, newPassword: "renewed1234!test" } });
+
+    const res = await auth.api.signInEmail({ body: { email, password: "renewed1234!test" }, asResponse: true });
+    expect(res.status).toBe(200);
+  });
 });
 
 // An address in ADMIN_EMAILS is a target: whoever registers it first with a

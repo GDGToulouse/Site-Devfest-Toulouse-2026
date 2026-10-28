@@ -70,6 +70,12 @@ export const auth = betterAuth({
     // A reset is what someone does once they fear their account was taken:
     // the sessions opened before it must not survive it (#658).
     revokeSessionsOnPasswordReset: true,
+    // The reset link reached the mailbox, which proves it: without this, the
+    // new password of an unverified account would be refused at sign-in
+    // (requireEmailVerification), and its owner left with the magic link only.
+    onPasswordReset: async ({ user }) => {
+      if (!user.emailVerified) await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
+    },
     // The link points to a frontend page, not to better-auth's own callback
     // (an API route, not navigable), and to the admin or the partner space
     // depending on the account's role (#411).
