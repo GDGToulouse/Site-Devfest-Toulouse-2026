@@ -21,23 +21,32 @@ export default function ServiceWorkerRegistration() {
       return;
     }
 
+    // What this visit loaded before the worker was in control.
+    function sendLoadedUrls(worker: ServiceWorker | null | undefined) {
+      const urls = [
+        window.location.pathname,
+        ...performance
+          .getEntriesByType("resource")
+          .map((entry) => entry.name)
+          .filter((url) => url.startsWith(`${window.location.origin}/_next/static/`)),
+      ];
+      worker?.postMessage({ type: "cache-urls", urls });
+    }
+
+    // A new version of the worker drops the old one's cache when it takes
+    // over: the list goes to it again, or a phone updated on the morning and
+    // cut off right after would be left with the bare shell.
+    const handleControllerChange = () => sendLoadedUrls(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
+
     navigator.serviceWorker
       .register(WORKER_URL, { scope: "/arrivees" })
       .then(() => navigator.serviceWorker.ready)
-      .then((registration) => {
-        // What this visit loaded before the worker was in control.
-        const urls = [
-          window.location.pathname,
-          ...performance
-            .getEntriesByType("resource")
-            .map((entry) => entry.name)
-            .filter((url) => url.startsWith(`${window.location.origin}/_next/static/`)),
-        ];
-        registration.active?.postMessage({ type: "cache-urls", urls });
-      })
+      .then((registration) => sendLoadedUrls(registration.active))
       .catch(() => {
         // No worker, no offline copy: the zone still works online.
       });
+    return () => navigator.serviceWorker.removeEventListener("controllerchange", handleControllerChange);
   }, []);
 
   return null;
