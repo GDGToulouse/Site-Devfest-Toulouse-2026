@@ -8,6 +8,7 @@ import adminEditionRoutes from "./editions.js";
 import adminTicketRoutes from "./tickets.js";
 import adminAttendeeRoutes from "./attendees.js";
 import adminBadgeRoutes from "./badges.js";
+import adminArrivalsAccessRoutes from "./arrivals-access.js";
 import adminSettingsRoutes from "./settings.js";
 import adminPageRoutes from "./pages.js";
 import adminContactRoutes from "./contact.js";
@@ -89,6 +90,8 @@ export default async function adminRoutes(app: FastifyInstance) {
       attendeesApp.addHook("preHandler", refuseAgents);
       await attendeesApp.register(adminAttendeeRoutes);
       await attendeesApp.register(adminBadgeRoutes);
+      // Who may open the event-day screens (#640): an admin's call, not an agent's.
+      await attendeesApp.register(adminArrivalsAccessRoutes);
     });
     await adminApp.register(adminSettingsRoutes);
     // Accounts and keys stay a person's decision, never an AI agent's (#514).

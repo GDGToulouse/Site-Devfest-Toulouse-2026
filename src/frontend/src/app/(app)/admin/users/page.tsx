@@ -9,7 +9,7 @@ import FormField from "@/components/admin/FormField";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
-type UserRole = "ADMIN" | "EDITOR" | "SPONSOR";
+type UserRole = "ADMIN" | "EDITOR" | "SPONSOR" | "GUEST";
 
 interface AdminUser {
   id: string;
@@ -29,6 +29,8 @@ const ROLE_BADGES: Record<UserRole, { label: string; variant: "green" | "blue" |
   ADMIN: { label: "Administrateur", variant: "green" },
   EDITOR: { label: "Éditeur", variant: "blue" },
   SPONSOR: { label: "Sponsor", variant: "gray" },
+  // An event-day volunteer (#640): access per edition, from Jour J › Arrivées.
+  GUEST: { label: "Bénévole", variant: "gray" },
 };
 
 interface UserPage {
@@ -198,6 +200,7 @@ export default function UsersAdminPage() {
           <option value="ADMIN">Administrateurs</option>
           <option value="EDITOR">Éditeurs</option>
           <option value="SPONSOR">Sponsors</option>
+          <option value="GUEST">Bénévoles</option>
         </select>
         <span className="text-sm text-gris" aria-live="polite">
           {list.total} utilisateur{list.total > 1 ? "s" : ""}
@@ -232,6 +235,13 @@ export default function UsersAdminPage() {
                       autoFocus
                       className="rounded border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-1 focus:ring-malachite/50"
                     >
+                      {/* A volunteer may join the team (#640): shown as is,
+                          never chosen, since GUEST comes from an invitation. */}
+                      {editingRôle.role === "GUEST" && (
+                        <option value="GUEST" disabled>
+                          Bénévole
+                        </option>
+                      )}
                       <option value="ADMIN">Administrateur</option>
                       <option value="EDITOR">Éditeur</option>
                     </select>

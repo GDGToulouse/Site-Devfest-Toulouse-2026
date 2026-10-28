@@ -158,10 +158,10 @@ export function changeSponsorPassword(currentPassword: string, newPassword: stri
 // The emailed link is built by the backend from the account's role, so a
 // sponsor lands on /sponsor/reset-password whatever redirectTo says (#411).
 // Callers show the same message whether or not the address has an account.
-export function requestSponsorPasswordReset(email: string) {
+export function requestSponsorPasswordReset(email: string, resetPath = "/sponsor/reset-password") {
   return call<unknown>("/api/auth/request-password-reset", {
     method: "POST",
-    body: JSON.stringify({ email, redirectTo: `${window.location.origin}/sponsor/reset-password` }),
+    body: JSON.stringify({ email, redirectTo: `${window.location.origin}${resetPath}` }),
   });
 }
 
@@ -268,13 +268,15 @@ export async function uploadSponsorFile(
 //
 // Through the invitation's token, not better-auth's sign-up: the token proves
 // the mailbox, and the account is created for the invited address, whatever
-// the form says (#658). The answer carries the new session's cookie.
+// the form says (#658). The answer carries the new session's cookie. The
+// volunteers' invitation (#640) works the same, under its own route.
 export async function signUpWithInvitation(
   token: string,
   password: string,
+  invitationApi: "sponsor-invitation" | "arrivals-invitation" = "sponsor-invitation",
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`/api/sponsor-invitation/${encodeURIComponent(token)}/sign-up`, {
+    const res = await fetch(`/api/${invitationApi}/${encodeURIComponent(token)}/sign-up`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },

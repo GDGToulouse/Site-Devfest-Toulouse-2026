@@ -48,6 +48,9 @@ enum UserRole {
   // stored without falling back to EDITOR, which requireAnyAuthenticated lets
   // through (#362). A sponsor's rights come from SponsorContact.accessRole.
   SPONSOR
+  // A volunteer on the event day (RG-ARR-21, #640): public content only, like
+  // SPONSOR. Their arrivals rights come from ArrivalsAccess, per edition.
+  GUEST
 }
 
 // What a person may do on ONE sponsor's space (#362). Deliberately not part of
@@ -154,6 +157,7 @@ model Edition {
 
   ticketTiers     TicketTier[]
   attendees       Attendee[]
+  arrivalsAccess  ArrivalsAccess[]
   articles        Article[]
   keyFigures      KeyFigure[]
   // The edition's photo gallery (#112), a curated selection.
@@ -556,6 +560,29 @@ model Attendee {
   @@index([editionId, barcode])
 }
 
+// The "arrivals" permission of one edition (RG-ARR-22, #640): opens the event-
+// day screens to its holder, whatever their role, and lapses with the edition.
+// Granted once `userId` is set: at once for an address that already has an
+// account, at acceptance for an invited one. ADMIN gets in without a row.
+model ArrivalsAccess {
+  id                   Int       @id @default(autoincrement())
+  editionId            Int
+  edition              Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  // Normalized (lib/sponsor-invitation.ts): one row per person and edition.
+  email                String
+  userId               String?
+  user                 User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Same lifecycle as a sponsor invitation: 7 days, single use, cleared on use.
+  invitationToken      String?   @unique
+  invitationSentAt     DateTime?
+  invitationAcceptedAt DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  @@unique([editionId, email])
+  @@index([userId])
+}
+
 // --- Contact ---
 
 model ContactCategory {
@@ -685,6 +712,7 @@ model User {
   // The sponsor spaces this account may act on (#362). A sponsor account holds
   // no back-office UserRole — its rights live entirely on these contacts.
   sponsorContacts SponsorContact[]
+  arrivalsAccess  ArrivalsAccess[]
   auditLogs       AuditLog[]
 
   oauthClients       OauthClient[]

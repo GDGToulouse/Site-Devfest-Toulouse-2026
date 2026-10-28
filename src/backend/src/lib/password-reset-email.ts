@@ -18,10 +18,16 @@ export async function sendPasswordResetEmail({
   token: string;
 }) {
   const stored = await prisma.user.findUnique({ where: { id: user.id }, select: { role: true } });
-  const isSponsor = stored?.role === "SPONSOR";
+  // A volunteer (#640) resets from the arrivals zone, the only one they use.
+  const target =
+    stored?.role === "SPONSOR"
+      ? { path: "sponsor", where: "de votre espace partenaire DevFest Toulouse" }
+      : stored?.role === "GUEST"
+        ? { path: "arrivees", where: "de votre compte de bénévole DevFest Toulouse" }
+        : { path: "admin", where: "du back-office DevFest Toulouse" };
 
-  const resetUrl = `${baseUrl}/${isSponsor ? "sponsor" : "admin"}/reset-password?token=${token}`;
-  const where = isSponsor ? "de votre espace partenaire DevFest Toulouse" : "du back-office DevFest Toulouse";
+  const resetUrl = `${baseUrl}/${target.path}/reset-password?token=${token}`;
+  const where = target.where;
 
   await sendEmail({
     to: [user.email],

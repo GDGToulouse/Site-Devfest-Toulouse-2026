@@ -105,6 +105,15 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/sponsor-invitation/:path*`,
       },
       {
+        // The volunteers' event-day zone and its invitations (#640).
+        source: "/api/arrivals/:path*",
+        destination: `${backendUrl}/api/arrivals/:path*`,
+      },
+      {
+        source: "/api/arrivals-invitation/:path*",
+        destination: `${backendUrl}/api/arrivals-invitation/:path*`,
+      },
+      {
         source: "/api/talks/:path*",
         destination: `${backendUrl}/api/talks/:path*`,
       },

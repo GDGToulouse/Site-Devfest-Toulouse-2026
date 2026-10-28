@@ -15,6 +15,7 @@ import { sendEmail } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
 import { sendPasswordResetEmail } from "./password-reset-email.js";
 import { hasPendingInvitation, isTokenProvenSignUp, normalizeEmail } from "./sponsor-invitation.js";
+import { hasPendingArrivalsInvitation } from "./arrivals-access.js";
 import { trustedOriginsFor } from "./trusted-origins.js";
 import { MAGIC_LINK_TTL_MINUTES, MAGIC_LINK_TTL_SECONDS } from "./edit-token.js";
 
@@ -176,7 +177,7 @@ export const auth = betterAuth({
         before: async (user) => {
           // Sign-up stays closed (#362): an account is created only for an
           // allow-listed admin, or for someone holding a live invitation to a
-          // sponsor space.
+          // sponsor space or to an edition's arrivals (#640).
           //
           // This check belongs here rather than after the fact: rejecting later
           // would leave an orphan User behind on every failed attempt — and for
@@ -197,6 +198,11 @@ export const auth = betterAuth({
             // default is EDITOR, which requireAnyAuthenticated lets through —
             // leaving it would hand /api/admin/* to every sponsor.
             return { data: { ...user, role: "SPONSOR", emailVerified: true } };
+          }
+          // Volunteers invited to the event day (#640): GUEST, explicit for the
+          // same reason, through the same mailbox proof.
+          if (isMailboxProven && (await hasPendingArrivalsInvitation(user.email))) {
+            return { data: { ...user, role: "GUEST", emailVerified: true } };
           }
 
           throw new APIError("FORBIDDEN", {
