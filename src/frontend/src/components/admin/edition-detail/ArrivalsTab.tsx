@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
+import BadgesSection from "@/components/admin/edition-detail/BadgesSection";
 
 interface TierCount {
   ticketTierId: number;
@@ -162,6 +163,8 @@ export default function ArrivalsTab({ editionId }: { editionId: number }) {
           </table>
         </div>
       )}
+
+      <BadgesSection editionId={editionId} syncedAt={summary.syncedAt} />
     </div>
   );
 }
