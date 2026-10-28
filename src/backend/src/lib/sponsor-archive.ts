@@ -81,3 +81,16 @@ export function archivedTier(participation: FrozenTier & { tier: LiveTier }) {
     color: participation.tierColor ?? tier.color,
   };
 }
+
+// Which editions a tier edit follows on (#693). The freeze protects the
+// archive; the edition being prepared or run must instead show the catalogue as
+// it reads now, or a renamed tier keeps its old label on the sponsors that had
+// it before the rename. An edition is over when it is older than the featured
+// one, or when it says so itself (SEE_YOU_NEXT_YEAR): the featured edition
+// stays featured for weeks after the event, and is archive by then.
+export function tierEditScope(featuredYear: number) {
+  return {
+    live: { year: { gte: featuredYear }, status: { not: "SEE_YOU_NEXT_YEAR" as const } },
+    over: { OR: [{ year: { lt: featuredYear } }, { status: "SEE_YOU_NEXT_YEAR" as const }] },
+  };
+}
