@@ -183,7 +183,9 @@ export function getSponsorPrivate(sponsorId: number) {
 }
 
 export function saveSponsorProfile(sponsorId: number, body: Record<string, unknown>) {
-  return call<{ saved: boolean }>(`/api/sponsor-space/${sponsorId}`, {
+  // `logoUrl` is the value stored, when the body carried one: an address given
+  // for the logo comes back as its imported /uploads/ copy (#687).
+  return call<{ saved: boolean; logoUrl?: string | null }>(`/api/sponsor-space/${sponsorId}`, {
     method: "PUT",
     body: JSON.stringify(body),
   });
