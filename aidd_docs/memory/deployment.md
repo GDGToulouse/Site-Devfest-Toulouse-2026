@@ -3,7 +3,7 @@
 ## Pipeline
 
 - GitHub Actions pour la vérification (`.github/workflows/`), Coolify pour le déploiement, sur un VPS OVH
-- CI sur push `main`, `dev`, `dev-*` et sur PR vers `main` / `dev` : garde-fou de version, lint + tests + build frontend, typecheck + migrations + seed + tests backend
+- CI sur push `main`, `dev`, `dev-*` et sur PR vers `main` / `dev` : garde-fou de version, audit des dépendances de production (`pnpm audit --prod`, bloquant dès `high`, exceptions par GHSA justifiées dans chaque `package.json`, #695), lint + tests + build frontend, typecheck + migrations + seed + tests backend
 - Lighthouse CI sur PR vers `main` / `dev`
 - Coolify redéploie **automatiquement** sur push `dev-j` et `dev` ; **jamais** sur push `main`
 

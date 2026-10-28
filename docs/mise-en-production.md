@@ -74,6 +74,26 @@ git diff origin/main..origin/dev -- src/backend/prisma/migrations/
 - **Rotation** : après tout doute de fuite (secret affiché en clair, poussé par
   erreur), le régénérer (`openssl rand -hex 32`) et le remplacer dans Coolify.
 
+### Dépendances vulnérables (#695)
+
+Avant le tag, sur la branche de promotion :
+
+```bash
+node scripts/check-audit-ignores.mjs        # chaque exception a sa raison
+pnpm --dir src/frontend audit --prod
+pnpm --dir src/backend audit --prod
+pnpm --dir src/frontend outdated --prod
+pnpm --dir src/backend outdated --prod
+```
+
+- Un avis `high` ou `critical` sur une dépendance de production **bloque** la release,
+  comme le job CI `Dependencies — Audit`. On monte la dépendance, ou, si l'avis n'est pas
+  atteignable en production, on l'ignore par son GHSA dans `pnpm.auditConfig.ignoreGhsas`
+  du `package.json` de l'application, raison et date sous `pnpm.auditConfig["//"]`.
+- `outdated` informe seulement : relever les dépendances en retard d'une version majeure.
+- Le résultat va dans le body de la PR de promotion (section `## Dépendances`) : avis
+  restants, exceptions et leur justification, retards d'une majeure.
+
 ---
 
 ## 1. Choisir le numéro de version et le bumper
