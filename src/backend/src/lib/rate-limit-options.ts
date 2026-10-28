@@ -1,6 +1,6 @@
 import { createHash, timingSafeEqual } from "node:crypto";
 
-import type { FastifyRequest } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 
 /** Prefix `@fastify/static` serves the uploaded files under. */
 export const UPLOADS_PREFIX = "/uploads/";
@@ -26,8 +26,16 @@ function isUpload(request: FastifyRequest) {
   return request.url.startsWith(UPLOADS_PREFIX);
 }
 
-/** Sign-in, sign-up, password reset: per IP and per minute. */
-export const AUTH_RATE_LIMIT_MAX = 10;
+/**
+ * Sign-in, sign-up, password reset: per IP and per minute. 60, not the 10 it
+ * was: on event day some forty volunteers reach us through the venue's wifi,
+ * one address for all, and the morning briefing ends with "sign in now"
+ * (#642). Guessing one account's password is held by the budget below.
+ */
+export const AUTH_RATE_LIMIT_MAX = 60;
+
+/** The same, per IP and per account named in the request: what holds a password guesser. */
+export const AUTH_ACCOUNT_RATE_LIMIT_MAX = 10;
 
 /**
  * The MCP connector's OAuth endpoints and discovery documents (#514), per IP
@@ -50,6 +58,53 @@ export const authRateLimit = {
   timeWindow: "1 minute",
   max: (request: FastifyRequest) => (isOAuthRequest(request.url) ? OAUTH_RATE_LIMIT_MAX : AUTH_RATE_LIMIT_MAX),
   keyGenerator: (request: FastifyRequest) => (isOAuthRequest(request.url) ? `oauth:${request.ip}` : `auth:${request.ip}`),
+};
+
+function accountNamed(request: FastifyRequest): string | null {
+  const email = (request.body as { email?: unknown } | null | undefined)?.email;
+  return typeof email === "string" && email.trim() !== "" ? email.trim().toLowerCase() : null;
+}
+
+/**
+ * Per IP and per account (#642): a request that names an account (sign-in,
+ * magic link, password reset) counts against that account from that address.
+ * Requests naming no account pass: the per-IP budget already caps them.
+ *
+ * A preHandler, since the body is parsed by then, and built on
+ * `createRateLimit`: the plugin's own `rateLimit()` handler skips a request
+ * the route's limiter has already counted, so a second budget on the same
+ * route never fired.
+ */
+export function authAccountRateLimit(app: FastifyInstance) {
+  const check = app.createRateLimit({
+    timeWindow: "1 minute",
+    max: AUTH_ACCOUNT_RATE_LIMIT_MAX,
+    allowList: (request: FastifyRequest) => accountNamed(request) === null,
+    keyGenerator: (request: FastifyRequest) => `auth-account:${request.ip}:${accountNamed(request)}`,
+  });
+  return async (request: FastifyRequest, reply: FastifyReply) => {
+    const result = await check(request);
+    if (result.isAllowed || !result.isExceeded) return;
+    reply.header("retry-after", result.ttlInSeconds);
+    return reply.code(429).send({
+      error: "Too Many Requests",
+      message: "Trop de tentatives pour ce compte : réessayez dans une minute.",
+    });
+  };
+}
+
+/**
+ * The event-day screens, per IP and per minute (#642). Their own bucket: the
+ * Scan phones, the counter laptops and the help desk all sit behind the
+ * venue's single address, and 200 for the lot would run out at the morning
+ * peak. Every route behind it requires a session, most the arrivals permission.
+ */
+export const ARRIVALS_RATE_LIMIT_MAX = 1_000;
+
+export const arrivalsRateLimit = {
+  timeWindow: "1 minute",
+  max: ARRIVALS_RATE_LIMIT_MAX,
+  keyGenerator: (request: FastifyRequest) => `arrivals:${request.ip}`,
 };
 
 /** Header the frontend's server-side calls carry (#689). Lower-case: Node's. */
