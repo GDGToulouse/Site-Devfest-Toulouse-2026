@@ -16,6 +16,7 @@ const { prisma } = await import("../lib/prisma.js");
 const { UPLOADS_DIR } = await import("../lib/image-store.js");
 const { RemoteFetchError } = await import("../lib/safe-fetch.js");
 const { getSeededEdition } = await import("./edition-test-helpers.js");
+const { hashLinkToken } = await import("../lib/edit-token.js");
 
 // #687 — a photo pasted as a URL in the edit link was saved as that URL: the
 // share card only embeds /uploads/ images, and the third-party host can change
@@ -37,7 +38,7 @@ beforeAll(async () => {
     data: {
       name: "Photo Import Speaker",
       slug: `photo-import-speaker-${Date.now()}`,
-      editToken: TOKEN,
+      editToken: hashLinkToken(TOKEN),
       editTokenSentAt: new Date(),
       editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
     },
