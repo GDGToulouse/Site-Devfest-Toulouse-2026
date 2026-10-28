@@ -89,3 +89,34 @@ describe("Sign-up answers the same whether the address has an account (#673)", (
     expect(res.status).toBe(403);
   });
 });
+
+// An address in ADMIN_EMAILS is a target: whoever registers it first with a
+// password of their own would wait for the owner to verify the mailbox and
+// inherit the account. Only an identity provider's proof opens it.
+describe("An ADMIN_EMAILS address needs a proven mailbox (#674)", () => {
+  it("creates nothing on a plain password sign-up", async () => {
+    const res = await signUp(ADMIN_ADDRESS);
+
+    // The same answer as any refused address: nothing to learn from it.
+    expect(shape(res)).toEqual(shape(await signUp(uniqueEmail("refused"))));
+    expect(await prisma.user.count({ where: { email: ADMIN_ADDRESS } })).toBe(0);
+  });
+
+  it("refuses an identity provider that did not verify the address", async () => {
+    const ctx = await auth.$context;
+    // No endpoint context: the call stands for the OAuth callback itself.
+    await expect(
+      ctx.internalAdapter.createUser({ email: ADMIN_ADDRESS, name: "Unproven", emailVerified: false }, undefined as never),
+    ).rejects.toThrow();
+    expect(await prisma.user.count({ where: { email: ADMIN_ADDRESS } })).toBe(0);
+  });
+
+  it("lets an identity provider that verified it open the account, as ADMIN", async () => {
+    const ctx = await auth.$context;
+    await ctx.internalAdapter.createUser({ email: ADMIN_ADDRESS, name: "First Admin", emailVerified: true }, undefined as never);
+
+    const user = await prisma.user.findUniqueOrThrow({ where: { email: ADMIN_ADDRESS } });
+    expect(user.role).toBe("ADMIN");
+    expect(user.emailVerified).toBe(true);
+  });
+});

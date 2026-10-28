@@ -79,7 +79,8 @@ export const auth = betterAuth({
     // Implicit sign-up stays enabled so an allow-listed admin can sign in via
     // OAuth on their very first visit (no prior email/password account needed).
     // Access is still gated: the databaseHooks.user.create.before hook below
-    // rejects any email that is not in ADMIN_EMAILS.
+    // rejects any email that is not in ADMIN_EMAILS or invited, and one the
+    // provider has not verified.
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || "",
@@ -194,7 +195,18 @@ export const auth = betterAuth({
               message: "Inscription sur invitation uniquement. Contactez un administrateur.",
             });
           }
-          if (isAdminEmail(user.email)) return;
+          // An allow-listed admin must prove the mailbox as well (#674), and only
+          // an identity provider can: a password sign-up would let whoever
+          // registers the address first, with a password of their own, inherit
+          // the account once its owner verifies it. The seed provisions these
+          // accounts itself, verified, so the first admin signs in by magic
+          // link, password reset or OAuth.
+          if (isAdminEmail(user.email)) {
+            if (user.emailVerified === true) return { data: { ...user, role: "ADMIN" } };
+            throw new APIError("FORBIDDEN", {
+              message: "Inscription sur invitation uniquement. Contactez un administrateur.",
+            });
+          }
 
           // The mailbox must be proven too (#658): by the identity provider
           // (emailVerified, which a sign-up body cannot set) or by the token,

@@ -28,8 +28,9 @@ le seed de base les laisse de côté depuis #433 (`skipAccountEmails`). Avant ce
 les créait le premier avec un mot de passe **aléatoire**, et `seed-dev.ts` trouvait alors les
 comptes déjà là — le mot de passe documenté n'était donc jamais posé, dès la toute première
 installation. Toute autre adresse listée dans `ADMIN_EMAILS` reste provisionnée par
-`prisma/seed.ts`, avec un mot de passe aléatoire qui n'est **pas** affiché : se connecter par
-lien magique, OAuth ou « Mot de passe oublié ».
+`prisma/seed.ts`, adresse vérifiée et sans mot de passe (#674) : se connecter par lien
+magique, OAuth ou « Mot de passe oublié ». Les deux seeds écrivent leurs comptes vérifiés : un
+mot de passe ne connecte qu'un compte dont l'adresse est vérifiée (#673).
 
 ## Seed
 
