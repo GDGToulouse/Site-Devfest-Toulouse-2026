@@ -29,7 +29,7 @@ Ce document explique comment ajouter un nouvel environnement (`dev-x`, `beta`, `
 - Type : **Docker Compose** (Build Pack).
 - Source : repo Git du projet, branche cible (`main`, `dev`, `dev-j`, …).
 - Compose file :
-  - **dev / dev-{initiale}** → `docker-compose.dev.yml` (mode dev, MailHog, seed-dev avec comptes test)
+  - **dev / dev-{initiale}** → `docker-compose.dev.yml` (mode dev, Mailpit, seed-dev avec comptes test)
   - **beta / production** → `docker-compose.prod.yml` (mode prod, Postfix, seed minimal)
 
 ## 2. Domains

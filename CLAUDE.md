@@ -52,7 +52,7 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 | `api-publique.md` | API REST publique (OpenAPI/Swagger) |
 | `audit-droits-api.md` | Qui peut appeler chaque route, constats de l'audit avant le connecteur MCP (#514) |
 | `variables-environnement.md` | Variables d'environnement |
-| `comptes-dev-local.md` | Comptes de test, MailHog |
+| `comptes-dev-local.md` | Comptes de test, Mailpit |
 | `priorisation-developpement.md` | Lots de développement, rétroplanning 2026 |
 | `mise-en-production.md` | Procédure de déploiement en production |
 | `deployer-nouvel-environnement.md` | Ajouter un environnement (`dev-x`, beta, prod) |

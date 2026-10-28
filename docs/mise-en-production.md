@@ -335,7 +335,7 @@ plus souvent après un déploiement (idéalement dans un navigateur, sur le doma
 - [ ] **Login admin** `/admin` : connexion OK, dashboard s'affiche.
 - [ ] **Billetterie** `/fr/billetterie` : les tarifs s'affichent avec le bon statut.
 - [ ] **Article** : une page d'actualité s'ouvre et affiche son contenu.
-- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté MailHog/Postfix).
+- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté Mailpit/Postfix).
 - [ ] **Images** : logos et images d'articles se chargent (pas de 404 sur `/uploads/`).
 
 ---

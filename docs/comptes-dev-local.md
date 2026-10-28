@@ -58,7 +58,7 @@ existants au lieu de les sauter.
 4. Entrer l'email et le mot de passe du tableau ci-dessus
 5. Cliquer **« Se connecter »**
 
-> Si les mots de passe n'ont pas pu être provisionnés par le seed (tables Better Auth pas encore créées), utiliser le flow **« Mot de passe oublié ? »** → MailHog (http://localhost:8025) pour en définir un.
+> Si les mots de passe n'ont pas pu être provisionnés par le seed (tables Better Auth pas encore créées), utiliser le flow **« Mot de passe oublié ? »** → Mailpit (http://localhost:8025) pour en définir un.
 
 ## Environnement déployé (dev-j)
 
@@ -73,8 +73,9 @@ même pour tous, au lieu des mots de passe documentés. La règle tient dans
 | n'importe lequel | présent (12 caractères minimum) | `DEV_SEED_PASSWORD` |
 | autre que `local` (`dev-j`…) | absent | aucun : le seed échoue et le backend ne démarre pas |
 
-Le MailHog de ces environnements est protégé par authentification HTTP : `MAILHOG_USER` et
-`MAILHOG_PASSWORD`, sans lesquelles il refuse de démarrer. Le MailHog local reste ouvert.
+Le Mailpit de ces environnements est protégé par authentification HTTP : `MAILHOG_USER` et
+`MAILHOG_PASSWORD` (noms hérités de MailHog, gardés pour les variables Coolify), sans lesquelles
+il refuse de démarrer. Le Mailpit local reste ouvert.
 
 Les mots de passe ne sont plus écrits dans la sortie du seed : les journaux de Coolify les
 gardaient.
@@ -87,11 +88,13 @@ Si vous avez configuré les credentials OAuth dans `.env` :
 2. Cliquer **Google** ou **GitHub**
 3. Se connecter avec un compte dont l'email correspond à un des emails autorisés
 
-## MailHog
+## Mailpit
 
-Tous les emails (vérification, réinitialisation) sont capturés par MailHog :
+Tous les emails (vérification, réinitialisation) sont capturés par Mailpit, qui a remplacé
+MailHog (#679). Le service s'appelle toujours `mailhog` dans les compose (`SMTP_HOST=mailhog`) :
 
 - Interface web : http://localhost:8025
+- API : `http://localhost:8025/api/v1/messages` (l'`/api/v2/messages` de MailHog n'existe plus)
 - SMTP : `localhost:1025`
 
 ## Réinitialisation complète
