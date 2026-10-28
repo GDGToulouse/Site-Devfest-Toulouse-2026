@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { notDeleted, visibleCategory } from "../lib/admin-helpers.js";
+import { visibleParticipation, visibleTalk } from "../lib/talk-status.js";
 
 // A talk of the featured edition, shared by the public route and the team's
 // draft preview (#618): `includeDrafts` lifts the publication filters on the
@@ -11,7 +12,9 @@ export async function findFeaturedTalkPage(
   slug: string,
   { includeDrafts = false } = {},
 ) {
-  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  // The preview never shows a cancelled talk or a withdrawn speaker (#726).
+  const published = visibleTalk(includeDrafts);
+  const participating = visibleParticipation(includeDrafts);
   const talk = await prisma.talk.findFirst({
     where: {
       editionId: edition.id,
@@ -28,7 +31,7 @@ export async function findFeaturedTalkPage(
         // participation, so the filter goes through it.
         where: {
           ...notDeleted,
-          editions: { some: { editionId: edition.id, ...published } },
+          editions: { some: { editionId: edition.id, ...participating } },
         },
         select: { slug: true, name: true, photoUrl: true, company: true },
         orderBy: { name: "asc" },

@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { visibleParticipation } from "../lib/talk-status.js";
 import { archivedLogoUrl, archivedTier, getEditionSponsorWall } from "../lib/sponsor-archive.js";
 import { mostRecent } from "../lib/lastmod.js";
 
@@ -56,7 +57,7 @@ export async function findSponsorPage(slug: string, { includeDrafts = false } = 
         orderBy: { edition: { year: "desc" } },
       },
       speakers: {
-        where: { ...published, speaker: notDeleted },
+        where: { ...visibleParticipation(includeDrafts), speaker: notDeleted },
         select: { speaker: { select: { slug: true, name: true, photoUrl: true, company: true } } },
         orderBy: { speaker: { name: "asc" } },
       },

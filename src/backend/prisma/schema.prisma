@@ -33,6 +33,26 @@ enum PublicationStatus {
   PUBLISHED
 }
 
+// A talk's own workflow (#726). CANCELLED is not "not ready yet": the session
+// will not take place. Hidden from the site like a draft, but kept apart in the
+// admin so nobody republishes it while finishing what looks like a draft, and
+// left out of the room clash check. Its slot and room stay, as a record of what
+// was planned and so that restoring it puts it back where it was.
+enum TalkStatus {
+  DRAFT
+  PUBLISHED
+  CANCELLED
+}
+
+// A speaker's participation in one edition (#726). WITHDRAWN is the speaker
+// who pulled out: hidden like a draft for that year only, the other years of a
+// returning speaker are untouched (#351).
+enum SpeakerEditionStatus {
+  DRAFT
+  PUBLISHED
+  WITHDRAWN
+}
+
 // Drives what /devenir-sponsor displays for the featured edition.
 enum SponsorPageStatus {
   PRE_ANNOUNCEMENT // Before the announcement: short message + CTA to a temporary external form (e.g. Google Form)
@@ -1033,12 +1053,12 @@ model Speaker {
 // carried explicitly: their editions cannot be derived from their sessions.
 // Pure join row — the trash operates on the Speaker identity, so no soft delete.
 model SpeakerEdition {
-  id                Int               @id @default(autoincrement())
+  id                Int                  @id @default(autoincrement())
   // Shown in the homepage "featured speakers" section (RG-202), per edition.
-  isFeatured        Boolean           @default(false)
-  publicationStatus PublicationStatus @default(DRAFT)
-  createdAt         DateTime          @default(now())
-  updatedAt         DateTime          @updatedAt
+  isFeatured        Boolean              @default(false)
+  publicationStatus SpeakerEditionStatus @default(DRAFT)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   speakerId Int
   speaker   Speaker @relation(fields: [speakerId], references: [id], onDelete: Cascade)
@@ -1079,7 +1099,7 @@ model Talk {
   // Optional replay / recording URL (e.g. YouTube). Used for past editions
   // (issue #63) and future ones once recordings are available.
   videoUrl          String?
-  publicationStatus PublicationStatus @default(DRAFT)
+  publicationStatus TalkStatus        @default(DRAFT)
 
   // Whether the speaker may edit this talk's title and description from their
   // magic link (#289). Read-only by default: the organizers open editing talk
