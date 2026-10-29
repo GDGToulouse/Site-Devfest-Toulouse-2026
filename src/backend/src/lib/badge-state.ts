@@ -22,6 +22,8 @@ export interface LiveBadge {
   byLabel: boolean;
   /** Scanned during an outage, sent afterwards: maybe handed over by hand already (RG-ARR-67). */
   scannedOffline: boolean;
+  /** When the person was scanned: orders À chercher, a card sent back included (#643). */
+  scannedAt: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -35,6 +37,7 @@ export const LIVE_BADGE_SELECT = {
   badgeStateAt: true,
   labelDeliveredAt: true,
   scannedOffline: true,
+  scannedAt: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -48,6 +51,7 @@ type LiveBadgeRow = {
   badgeStateAt: Date | null;
   labelDeliveredAt: Date | null;
   scannedOffline: boolean;
+  scannedAt: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -63,6 +67,7 @@ export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
     since: row.badgeStateAt,
     byLabel: row.labelDeliveredAt !== null,
     scannedOffline: row.scannedOffline,
+    scannedAt: row.scannedAt,
     firstName: row.firstName,
     lastName: row.lastName,
     company: row.company,
