@@ -1,8 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import Fastify from "fastify";
+import { PDFDocument } from "pdf-lib";
 import adminAttendeeRoutes from "../routes/admin/attendees.js";
 import adminBadgeRoutes from "../routes/admin/badges.js";
 import { prisma } from "../lib/prisma.js";
+import { Prisma } from "../generated/prisma/client.js";
 
 // Badge numbering, freeze and the number written back to Billetweb (#639).
 // This file owns the edition year 1643.
@@ -72,6 +74,8 @@ beforeEach(async () => {
         badgesFrozenAt: null,
         badgeCounters: 4,
         badgeBinsPerCounter: 3,
+        badgesPerBin: 100,
+        badgeDesign: Prisma.DbNull,
         billetwebBadgeFieldId: null,
       },
     });
@@ -176,9 +180,40 @@ describe("Badge numbering and freeze (#639)", () => {
     const settings = await call("PUT", `/api/admin/badges/${editionId}/settings`, {
       counters: 3,
       binsPerCounter: 3,
+      badgesPerBin: 100,
       billetwebBadgeFieldId: null,
     });
     expect(settings.statusCode).toBe(409);
+  });
+
+  it("should change the bin size after the freeze only on an explicit confirmation", async () => {
+    await seed(2);
+    await freeze();
+    const resize = (confirm?: boolean) =>
+      call("PUT", `/api/admin/badges/${editionId}/settings`, {
+        counters: 4,
+        binsPerCounter: 3,
+        badgesPerBin: 50,
+        billetwebBadgeFieldId: null,
+        ...(confirm === undefined ? {} : { confirm }),
+      });
+
+    const unconfirmed = await resize();
+    const confirmed = await resize(true);
+
+    expect([unconfirmed.statusCode, unconfirmed.json().error]).toEqual([409, "confirm_required"]);
+    expect(confirmed.statusCode).toBe(200);
+    expect((await status()).json()).toMatchObject({ badgesPerBin: 50, capacity: 600 });
+  });
+
+  it("should refuse to number beyond bins smaller than 100", async () => {
+    await prisma.edition.update({ where: { id: editionId }, data: { badgeCounters: 1, badgeBinsPerCounter: 1, badgesPerBin: 50 } });
+    await seed(51);
+
+    const res = await freeze();
+    await settle();
+
+    expect(res.json()).toMatchObject({ error: "capacity_exceeded" });
   });
 
   it("should refuse to number while a ticket's tier is unknown", async () => {
@@ -221,6 +256,64 @@ describe("Badge numbering and freeze (#639)", () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers["content-type"]).toBe("application/pdf");
     expect(res.rawPayload.subarray(0, 5).toString()).toBe("%PDF-");
+  });
+});
+
+describe("Badge design and preview (#639, #749)", () => {
+  const pageCount = async (bytes: Buffer) => (await PDFDocument.load(bytes)).getPageCount();
+  const design = (overrides: Record<string, unknown> = {}) => ({
+    qrContent: "VCARD",
+    types: Object.fromEntries(
+      ["PARTICIPANT", "SPEAKER", "VOLUNTEER", "CONTRACTOR"].map((t) => [t, { background: null, color: "#683D91" }]),
+    ),
+    ...overrides,
+  });
+
+  it("should preview one badge of each type, numbering untouched", async () => {
+    await seed(2);
+
+    const res = await call("GET", `/api/admin/badges/${editionId}/preview`);
+
+    expect(res.headers["content-type"]).toBe("application/pdf");
+    expect(await pageCount(res.rawPayload)).toBe(4);
+    expect(await prisma.attendee.count({ where: { editionId, badgeNumber: { not: null } } })).toBe(0);
+  });
+
+  it("should store the design and each outside-flow tier's badge", async () => {
+    const res = await call("PUT", `/api/admin/badges/${editionId}/design`, {
+      design: design(),
+      tierTypes: [{ tierId: outsideTierId, badgeType: "VOLUNTEER" }],
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect((await status()).json()).toMatchObject({
+      design: { qrContent: "VCARD" },
+      outsideTiers: [{ id: outsideTierId, badgeType: "VOLUNTEER", isGuessed: false }],
+    });
+  });
+
+  it("should refuse a background that is not a file of the media library", async () => {
+    const res = await call("PUT", `/api/admin/badges/${editionId}/design`, {
+      design: design({
+        types: {
+          ...design().types,
+          SPEAKER: { background: "https://example.org/fond.png", color: "#683D91" },
+        },
+      }),
+      tierTypes: [],
+    });
+
+    expect([res.statusCode, res.json().error]).toEqual([400, "invalid_design"]);
+  });
+
+  it("should print the dedicated flow's badges after the participants, without a number", async () => {
+    await seed(2);
+    await prisma.attendee.create({ data: attendee(3, { ticketTierId: outsideTierId, billetwebTicketId: "t2" }) });
+
+    const res = await call("GET", `/api/admin/badges/${editionId}/pdf`);
+
+    // Two bins with a separator and a badge each, then the speakers' separator and badge.
+    expect(await pageCount(res.rawPayload)).toBe(6);
   });
 });
 

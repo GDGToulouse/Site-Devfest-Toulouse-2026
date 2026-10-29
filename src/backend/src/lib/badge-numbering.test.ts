@@ -7,7 +7,7 @@ import {
   type NumberableTicket,
 } from "./badge-numbering.js";
 
-const FOUR_BY_THREE = { counters: 4, binsPerCounter: 3 };
+const FOUR_BY_THREE = { counters: 4, binsPerCounter: 3, badgesPerBin: 100 };
 
 function ticket(i: number, overrides: Partial<NumberableTicket> = {}): NumberableTicket {
   return {
@@ -31,7 +31,7 @@ describe("badgeSlot (#639)", () => {
   });
 
   it("should follow other layouts than 4 × 3", () => {
-    expect(badgeSlot(7, { counters: 3, binsPerCounter: 4 })).toEqual({ number: 1200, counter: 1, bin: 2, rank: 0 });
+    expect(badgeSlot(7, { counters: 3, binsPerCounter: 4, badgesPerBin: 100 })).toEqual({ number: 1200, counter: 1, bin: 2, rank: 0 });
   });
 
   it("should read a number back into its counter, bin and rank", () => {
@@ -79,5 +79,20 @@ describe("capacityShortfall (#639)", () => {
 
   it("should refuse one ticket more, with a bin missing at every counter", () => {
     expect(capacityShortfall(1201, FOUR_BY_THREE)).toEqual({ capacity: 1200, missingBins: 4, binsPerCounterNeeded: 4 });
+  });
+
+  it("should count with the bins' own size when they hold fewer than 100 badges", () => {
+    const smallBins = { ...FOUR_BY_THREE, badgesPerBin: 80 };
+
+    expect(capacityShortfall(960, smallBins)).toBeNull();
+    expect(capacityShortfall(961, smallBins)).toEqual({ capacity: 960, missingBins: 4, binsPerCounterNeeded: 4 });
+  });
+
+  it("should keep the ranks of a smaller bin within its size", () => {
+    const smallBins = { ...FOUR_BY_THREE, badgesPerBin: 80 };
+
+    const ranks = assignBadgeNumbers(tickets(960), smallBins).map((t) => t.rank);
+
+    expect(Math.max(...ranks)).toBe(79);
   });
 });

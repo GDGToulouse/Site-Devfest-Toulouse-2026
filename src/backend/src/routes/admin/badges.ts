@@ -3,15 +3,24 @@ import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
 import { BILLETWEB_API, getBilletwebParams } from "../../lib/billetweb.js";
 import {
-  BADGES_PER_BIN,
+  MAX_BADGES_PER_BIN,
   MAX_BINS_PER_COUNTER,
   MAX_COUNTERS,
+  MIN_BADGES_PER_BIN,
+  NUMBERS_PER_BIN,
   assignBadgeNumbers,
   badgeCapacity,
   capacityShortfall,
   type BadgeLayout,
 } from "../../lib/badge-numbering.js";
 import { renderBadgePdf, type PrintedBadge } from "../../lib/badge-pdf.js";
+import {
+  BADGE_TYPES,
+  badgeDesignSchema,
+  badgeTypeOf,
+  readBadgeDesign,
+} from "../../lib/badge-design.js";
+import type { BadgeType } from "../../generated/prisma/client.js";
 
 const editionIdParams = {
   type: "object",
@@ -42,6 +51,8 @@ async function findEdition(editionId: number) {
       billetwebEventId: true,
       badgeCounters: true,
       badgeBinsPerCounter: true,
+      badgesPerBin: true,
+      badgeDesign: true,
       badgesFrozenAt: true,
       billetwebBadgeFieldId: true,
     },
@@ -50,7 +61,41 @@ async function findEdition(editionId: number) {
 
 type BadgeEdition = NonNullable<Awaited<ReturnType<typeof findEdition>>>;
 
-const layoutOf = (e: BadgeEdition): BadgeLayout => ({ counters: e.badgeCounters, binsPerCounter: e.badgeBinsPerCounter });
+const layoutOf = (e: BadgeEdition): BadgeLayout => ({
+  counters: e.badgeCounters,
+  binsPerCounter: e.badgeBinsPerCounter,
+  badgesPerBin: e.badgesPerBin,
+});
+
+// What a printed badge needs of an attendee, its tier deciding its type.
+const PRINT_SELECT = {
+  firstName: true,
+  lastName: true,
+  company: true,
+  barcode: true,
+  ticketTier: { select: { isOutsideFlow: true, badgeType: true, nameFr: true } },
+} as const;
+
+// Sample people for the preview (#749): the longest names and companies the
+// layout must hold, accents, and a badge without company. Fictional.
+const PREVIEW_PEOPLE: Record<BadgeType, Omit<PrintedBadge, "type" | "badgeNumber">> = {
+  PARTICIPANT: {
+    firstName: "Marie-Charlotte",
+    lastName: "Vandenberghe-Delacroix",
+    company: "Capitole Cloud Engineering & Data",
+    barcode: "1234567890",
+  },
+  SPEAKER: { firstName: "Hélène", lastName: "Ó Súilleabháin", company: null, barcode: "1234567891" },
+  VOLUNTEER: { firstName: "Léa", lastName: "Martin", company: "GDG Toulouse", barcode: "1234567892" },
+  CONTRACTOR: { firstName: "Jean-Baptiste", lastName: "Dupont", company: "Traiteur du Capitole", barcode: "1234567893" },
+};
+
+const pdfReply = (reply: FastifyReply, pdf: Uint8Array, filename: string) =>
+  reply
+    .header("Content-Type", "application/pdf")
+    .header("Content-Disposition", `attachment; filename="${filename}"`)
+    .header("Cache-Control", "no-store")
+    .send(Buffer.from(pdf));
 
 async function ticketsToNumber(editionId: number) {
   return prisma.attendee.findMany({
@@ -130,14 +175,28 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
 
       const binCounts = new Map<number, number>();
       for (const a of numbered) {
-        const bin = Math.floor((a.badgeNumber as number) / BADGES_PER_BIN);
+        const bin = Math.floor((a.badgeNumber as number) / NUMBERS_PER_BIN);
         binCounts.set(bin, (binCounts.get(bin) ?? 0) + 1);
       }
       const frozen = edition.badgesFrozenAt !== null;
       const shortfall = frozen ? null : capacityShortfall(numbered.length, layout);
+      // The outside-flow tiers, and the badge each prints (#639).
+      const outsideTiers = await prisma.ticketTier.findMany({
+        where: { editionId: edition.id, isOutsideFlow: true, ...notDeleted },
+        select: { id: true, nameFr: true, isOutsideFlow: true, badgeType: true },
+        orderBy: { sortOrder: "asc" },
+      });
       return {
         counters: layout.counters,
         binsPerCounter: layout.binsPerCounter,
+        badgesPerBin: layout.badgesPerBin,
+        design: readBadgeDesign(edition.badgeDesign),
+        outsideTiers: outsideTiers.map((t) => ({
+          id: t.id,
+          name: t.nameFr,
+          badgeType: badgeTypeOf(t),
+          isGuessed: t.badgeType === null,
+        })),
         capacity: badgeCapacity(layout),
         frozenAt: edition.badgesFrozenAt,
         billetwebBadgeFieldId: edition.billetwebBadgeFieldId,
@@ -160,11 +219,19 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
     },
   );
 
-  // PUT /api/admin/badges/:editionId/settings — counters, bins (RG-ARR-17) and
-  // the Billetweb field. The layout is locked by the freeze; the field is not.
+  // PUT /api/admin/badges/:editionId/settings — counters, bins and their size
+  // (RG-ARR-17), and the Billetweb field. Counters and bins are locked by the
+  // freeze. The bin size is not, but changing it once the badges are numbered
+  // asks for `confirm`: the bins already filled keep their size.
   app.put<{
     Params: { editionId: string };
-    Body: { counters: number; binsPerCounter: number; billetwebBadgeFieldId: string | null };
+    Body: {
+      counters: number;
+      binsPerCounter: number;
+      badgesPerBin: number;
+      billetwebBadgeFieldId: string | null;
+      confirm?: boolean;
+    };
   }>(
     "/badges/:editionId/settings",
     {
@@ -172,12 +239,14 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         params: editionIdParams,
         body: {
           type: "object",
-          required: ["counters", "binsPerCounter", "billetwebBadgeFieldId"],
+          required: ["counters", "binsPerCounter", "badgesPerBin", "billetwebBadgeFieldId"],
           additionalProperties: false,
           properties: {
             counters: { type: "integer", minimum: 1, maximum: MAX_COUNTERS },
             binsPerCounter: { type: "integer", minimum: 1, maximum: MAX_BINS_PER_COUNTER },
+            badgesPerBin: { type: "integer", minimum: MIN_BADGES_PER_BIN, maximum: MAX_BADGES_PER_BIN },
             billetwebBadgeFieldId: { type: ["string", "null"], pattern: "^[0-9]+$" },
+            confirm: { type: "boolean" },
           },
         },
       },
@@ -185,7 +254,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
-      const { counters, binsPerCounter, billetwebBadgeFieldId } = request.body;
+      const { counters, binsPerCounter, badgesPerBin, billetwebBadgeFieldId, confirm } = request.body;
       const isLayoutChanged = counters !== edition.badgeCounters || binsPerCounter !== edition.badgeBinsPerCounter;
       if (edition.badgesFrozenAt && isLayoutChanged) {
         return reply.status(409).send({
@@ -193,16 +262,101 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           message: "Les badges sont partis à l'impression : guichets et bacs ne changent plus.",
         });
       }
+      if (edition.badgesFrozenAt && badgesPerBin !== edition.badgesPerBin && confirm !== true) {
+        return reply.status(409).send({
+          error: "confirm_required",
+          message: "Les badges sont déjà numérotés : confirmez le changement de taille des bacs.",
+        });
+      }
       await prisma.edition.update({
         where: { id: edition.id },
-        data: { badgeCounters: counters, badgeBinsPerCounter: binsPerCounter, billetwebBadgeFieldId },
+        data: { badgeCounters: counters, badgeBinsPerCounter: binsPerCounter, badgesPerBin, billetwebBadgeFieldId },
       });
-      return { counters, binsPerCounter, billetwebBadgeFieldId };
+      return { counters, binsPerCounter, badgesPerBin, billetwebBadgeFieldId };
+    },
+  );
+
+  // PUT /api/admin/badges/:editionId/design — each type's background and
+  // colour, the QR code's content, and the badge of each outside-flow tier
+  // (#639). The look only: allowed after the freeze too.
+  app.put<{
+    Params: { editionId: string };
+    Body: { design: unknown; tierTypes: Array<{ tierId: number; badgeType: BadgeType }> };
+  }>(
+    "/badges/:editionId/design",
+    {
+      schema: {
+        params: editionIdParams,
+        body: {
+          type: "object",
+          required: ["design", "tierTypes"],
+          additionalProperties: false,
+          properties: {
+            design: { type: "object" },
+            tierTypes: {
+              type: "array",
+              maxItems: 100,
+              items: {
+                type: "object",
+                required: ["tierId", "badgeType"],
+                additionalProperties: false,
+                properties: {
+                  tierId: { type: "integer", minimum: 1 },
+                  badgeType: { type: "string", enum: BADGE_TYPES.filter((t) => t !== "PARTICIPANT") },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      const parsed = badgeDesignSchema.safeParse(request.body.design);
+      if (!parsed.success) {
+        return reply.status(400).send({
+          error: "invalid_design",
+          message: "Réglage invalide : un fond doit être un fichier de la médiathèque (PNG, JPG, SVG ou PDF), une couleur au format #RRGGBB.",
+        });
+      }
+      await prisma.$transaction([
+        prisma.edition.update({ where: { id: edition.id }, data: { badgeDesign: parsed.data } }),
+        ...request.body.tierTypes.map(({ tierId, badgeType }) =>
+          prisma.ticketTier.updateMany({
+            where: { id: tierId, editionId: edition.id, isOutsideFlow: true },
+            data: { badgeType },
+          }),
+        ),
+      ]);
+      return { design: parsed.data };
+    },
+  );
+
+  // GET /api/admin/badges/:editionId/preview — one badge of each type on
+  // sample people (#749): the look checked before printing, numbering untouched.
+  app.get<{ Params: { editionId: string } }>(
+    "/badges/:editionId/preview",
+    { schema: { params: editionIdParams } },
+    async (request, reply) => {
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      const samples: PrintedBadge[] = BADGE_TYPES.map((type) => ({
+        ...PREVIEW_PEOPLE[type],
+        type,
+        badgeNumber: type === "PARTICIPANT" ? 2147 : null,
+      }));
+      const pdf = await renderBadgePdf(edition.year, samples, readBadgeDesign(edition.badgeDesign), {
+        badgesPerBin: edition.badgesPerBin,
+        separators: false,
+      });
+      return pdfReply(reply, pdf, `badges-${edition.year}-exemples.pdf`);
     },
   );
 
   // GET /api/admin/badges/:editionId/pdf — the print file (RG-ARR-19): the
-  // numbering it would freeze before the freeze, the frozen one after.
+  // numbering it would freeze before the freeze, the frozen one after; then
+  // the dedicated flow's badges, which carry no number.
   app.get<{ Params: { editionId: string } }>(
     "/badges/:editionId/pdf",
     { schema: { params: editionIdParams } },
@@ -210,40 +364,39 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
 
-      const select = {
-        firstName: true,
-        lastName: true,
-        company: true,
-        ticketTier: { select: { nameFr: true } },
-      } as const;
-      let badges: PrintedBadge[];
+      let participants: PrintedBadge[];
       if (edition.badgesFrozenAt) {
         const rows = await prisma.attendee.findMany({
           where: { editionId: edition.id, badgeNumber: { not: null } },
-          select: { ...select, badgeNumber: true },
+          select: { ...PRINT_SELECT, badgeNumber: true },
         });
-        badges = rows.map((r) => ({ ...r, badgeNumber: r.badgeNumber as number, tierName: r.ticketTier?.nameFr ?? null }));
+        participants = rows.map((r) => ({ ...r, type: "PARTICIPANT", badgeNumber: r.badgeNumber }));
       } else {
         const rows = await prisma.attendee.findMany({
           where: inFlow(edition.id),
-          select: { ...select, orderDate: true, orderId: true, billetwebId: true },
+          select: { ...PRINT_SELECT, orderDate: true, orderId: true, billetwebId: true },
         });
         const refusal = await numberingRefusal(edition, rows.length);
         if (refusal) return reply.status(409).send(refusal);
-        badges = assignBadgeNumbers(rows, layoutOf(edition)).map((r) => ({
+        participants = assignBadgeNumbers(rows, layoutOf(edition)).map((r) => ({
           ...r,
+          type: "PARTICIPANT",
           badgeNumber: r.number,
-          tierName: r.ticketTier?.nameFr ?? null,
         }));
       }
+      const dedicated = await prisma.attendee.findMany({
+        where: { editionId: edition.id, isCancelled: false, ticketTier: { isOutsideFlow: true } },
+        select: PRINT_SELECT,
+      });
+      const badges: PrintedBadge[] = [
+        ...participants,
+        ...dedicated.map((r) => ({ ...r, type: badgeTypeOf(r.ticketTier), badgeNumber: null })),
+      ];
 
-      const pdf = await renderBadgePdf(edition.year, badges);
-      const suffix = edition.badgesFrozenAt ? "" : "-apercu";
-      return reply
-        .header("Content-Type", "application/pdf")
-        .header("Content-Disposition", `attachment; filename="badges-${edition.year}${suffix}.pdf"`)
-        .header("Cache-Control", "no-store")
-        .send(Buffer.from(pdf));
+      const pdf = await renderBadgePdf(edition.year, badges, readBadgeDesign(edition.badgeDesign), {
+        badgesPerBin: edition.badgesPerBin,
+      });
+      return pdfReply(reply, pdf, `badges-${edition.year}${edition.badgesFrozenAt ? "" : "-apercu"}.pdf`);
     },
   );
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
+import BadgeDesignSection, { type BadgeDesign, type OutsideTier } from "@/components/admin/arrivals/BadgeDesignSection";
 
 interface BinCount {
   counter: number;
@@ -14,6 +15,9 @@ interface BinCount {
 interface BadgeStatus {
   counters: number;
   binsPerCounter: number;
+  badgesPerBin: number;
+  design: BadgeDesign;
+  outsideTiers: OutsideTier[];
   capacity: number;
   frozenAt: string | null;
   billetwebBadgeFieldId: string | null;
@@ -50,11 +54,15 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   const [status, setStatus] = useState<BadgeStatus | null>(null);
   const [counters, setCounters] = useState("4");
   const [binsPerCounter, setBinsPerCounter] = useState("3");
+  const [badgesPerBin, setBadgesPerBin] = useState("100");
   const [fieldId, setFieldId] = useState("");
   const [settingsFeedback, setSettingsFeedback] = useState<SaveState>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isResizeConfirmOpen, setIsResizeConfirmOpen] = useState(false);
+  // Remounts the design form on each load, so it starts from what is stored.
+  const [loadCount, setLoadCount] = useState(0);
 
   async function loadStatus() {
     const { data } = await adminFetch<BadgeStatus>(`/badges/${editionId}`);
@@ -62,7 +70,9 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
     setStatus(data);
     setCounters(String(data.counters));
     setBinsPerCounter(String(data.binsPerCounter));
+    setBadgesPerBin(String(data.badgesPerBin));
     setFieldId(data.billetwebBadgeFieldId ?? "");
+    setLoadCount((n) => n + 1);
   }
 
   // Reloaded after each attendee import: it changes what there is to number.
@@ -76,15 +86,25 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
     return () => clearTimeout(timer);
   }, [status]);
 
-  async function handleSaveSettings(e: React.FormEvent) {
+  function handleSaveSettings(e: React.FormEvent) {
     e.preventDefault();
+    // Once the badges are numbered, a new bin size changes what each bin is
+    // supposed to hold: confirmed first, as the backend requires.
+    if (status?.frozenAt && Number(badgesPerBin) !== status.badgesPerBin) setIsResizeConfirmOpen(true);
+    else saveSettings(false);
+  }
+
+  async function saveSettings(confirm: boolean) {
+    setIsResizeConfirmOpen(false);
     setSettingsFeedback(null);
     const result = await adminFetch(`/badges/${editionId}/settings`, {
       method: "PUT",
       body: JSON.stringify({
         counters: Number(counters),
         binsPerCounter: Number(binsPerCounter),
+        badgesPerBin: Number(badgesPerBin),
         billetwebBadgeFieldId: fieldId.trim() || null,
+        ...(confirm ? { confirm: true } : {}),
       }),
     });
     if (result.status === 200) {
@@ -97,11 +117,11 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
 
   // Fetched rather than linked: a refusal (capacity, unknown tier) comes back as
   // a message on this screen instead of raw JSON in a new tab.
-  async function handleDownload() {
+  async function handleDownload(kind: "pdf" | "preview") {
     setActionError(null);
     setIsBusy(true);
     try {
-      const res = await fetch(`/api/admin/badges/${editionId}/pdf`, { credentials: "include" });
+      const res = await fetch(`/api/admin/badges/${editionId}/${kind}`, { credentials: "include" });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setActionError(body?.message || "Le PDF n'a pas pu être généré.");
@@ -186,7 +206,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           />
         </label>
         <label className="text-sm text-gris">
-          Bacs de 100 par guichet
+          Bacs par guichet
           <input
             type="number"
             min={1}
@@ -194,6 +214,17 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
             value={binsPerCounter}
             onChange={(e) => setBinsPerCounter(e.target.value)}
             disabled={isFrozen}
+            className={`${inputClass} block mt-1`}
+          />
+        </label>
+        <label className="text-sm text-gris">
+          Badges par bac
+          <input
+            type="number"
+            min={10}
+            max={100}
+            value={badgesPerBin}
+            onChange={(e) => setBadgesPerBin(e.target.value)}
             className={`${inputClass} block mt-1`}
           />
         </label>
@@ -259,7 +290,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
                     <td key={bin} className="px-4 py-3 text-right text-noir">
                       {binCount(counter, bin)}
                       <span className="block text-xs text-gris">
-                        {counter * 1000 + bin * 100} à {counter * 1000 + bin * 100 + 99}
+                        {counter * 1000 + bin * 100} à {counter * 1000 + bin * 100 + status.badgesPerBin - 1}
                       </span>
                     </td>
                   ))}
@@ -287,11 +318,18 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
 
       <div className="flex flex-wrap gap-3">
         <button
-          onClick={handleDownload}
+          onClick={() => handleDownload("preview")}
+          disabled={isBusy}
+          className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+        >
+          Aperçu : un badge de chaque type
+        </button>
+        <button
+          onClick={() => handleDownload("pdf")}
           disabled={isBusy || (!isFrozen && isBlocked)}
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
-          {isFrozen ? "Télécharger le PDF d'impression" : "Télécharger l'aperçu PDF"}
+          {isFrozen ? "Télécharger le PDF d'impression" : "Télécharger tous les badges (provisoire)"}
         </button>
         {!isFrozen && (
           <button
@@ -322,6 +360,23 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         variant="danger"
         onConfirm={handleFreeze}
         onCancel={() => setIsConfirmOpen(false)}
+      />
+      <ConfirmDialog
+        isOpen={isResizeConfirmOpen}
+        title="Changer la taille des bacs ?"
+        message={`Les badges sont déjà numérotés et imprimés pour des bacs de ${status.badgesPerBin}. Les numéros ne bougent pas : seuls la capacité affichée et les intercalaires changent. Vérifiez que les bacs du lieu correspondent avant de confirmer.`}
+        confirmLabel={`Passer à ${badgesPerBin} par bac`}
+        variant="danger"
+        onConfirm={() => saveSettings(true)}
+        onCancel={() => setIsResizeConfirmOpen(false)}
+      />
+
+      <BadgeDesignSection
+        key={loadCount}
+        editionId={editionId}
+        design={status.design}
+        outsideTiers={status.outsideTiers}
+        onSaved={loadStatus}
       />
     </section>
   );
