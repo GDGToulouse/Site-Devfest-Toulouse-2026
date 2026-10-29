@@ -12,6 +12,7 @@ import {
 import { sniffMime } from "../lib/file-sniff.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { rememberOriginalName } from "../lib/file-metadata.js";
+import { importImageField, sendImportRefusal, UrlImportError } from "../lib/url-import.js";
 import { sendEmail, escapeHtml } from "../lib/email.js";
 import { emailButton, emailHeading } from "../lib/email-template.js";
 import { getCfpNotificationEmail } from "../lib/cfp-settings.js";
@@ -351,6 +352,23 @@ export default async function editRoutes(app: FastifyInstance) {
     }
 
     const body = request.body as SpeakerEditBody;
+    // A photo given by its address is imported, and its /uploads/ path saved
+    // (#687): the share card only embeds local images, and a third-party host
+    // can change or drop the file. Same limits as the upload above.
+    if (body.photoUrl !== undefined) {
+      try {
+        body.photoUrl = await importImageField(body.photoUrl, entity.photoUrl, {
+          maxBytes: UPLOAD_MAX_SIZE,
+          allowedMimes: UPLOAD_MIMES,
+          unsupportedMessage: "Ce fichier n'est pas une image JPEG, PNG, WebP ou GIF.",
+          log: request.log,
+        });
+      } catch (err) {
+        if (err instanceof UrlImportError) return sendImportRefusal(reply, err, "photoUrl");
+        throw err;
+      }
+    }
+
     // A field absent from the body is left untouched; an empty string clears it.
     const before = await speakerFootprint([entity.id]);
     await prisma.speaker.update({
@@ -370,7 +388,7 @@ export default async function editRoutes(app: FastifyInstance) {
     // which show their company (#633).
     await revalidateSpeakerFootprint(before, [entity.id]);
 
-    return { saved: true };
+    return { saved: true, ...(body.photoUrl !== undefined && { photoUrl: body.photoUrl || null }) };
   });
 
   // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
