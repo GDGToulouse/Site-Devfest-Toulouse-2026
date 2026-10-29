@@ -17,6 +17,8 @@ interface TierCount {
 interface AttendeeSummary {
   billetwebEventId: string | null;
   syncedAt: string | null;
+  /** Data deleted 18 months after the event (RG-ARR-66): no import any more. */
+  purgedAt: string | null;
   expected: number;
   cancelled: number;
   outsideFlow: number;
@@ -86,7 +88,7 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
         <h3 className="text-lg font-bold text-noir">Participants</h3>
         <button
           onClick={handleImport}
-          disabled={!isLinked || isImporting}
+          disabled={!isLinked || isImporting || summary.purgedAt !== null}
           className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
         >
           {isImporting ? "Import en cours…" : "Importer depuis Billetweb"}
@@ -94,7 +96,9 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
       </div>
 
       <p className="text-sm text-gris mb-4">
-        {!isLinked
+        {summary.purgedAt
+          ? `Données des participants supprimées le ${formatDateTime(summary.purgedAt)}, 18 mois après l'événement.`
+          : !isLinked
           ? "L'édition n'est liée à aucun événement Billetweb : importez d'abord ses tarifs, onglet Billetterie."
           : summary.syncedAt
             ? `Dernier import le ${formatDateTime(summary.syncedAt)}. Le suivant ne reprend que ce qui a changé depuis.`

@@ -8,6 +8,7 @@ import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 import { applyScheduledStatus } from "./edition-status-schedule.js";
 import { purgeExpiredTrash } from "./trash-purge.js";
 import { editionsWithPendingCheckIns, requestCheckIn } from "./billetweb-checkin.js";
+import { ATTENDEE_RETENTION_MONTHS, purgeExpiredAttendees } from "./attendee-retention.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
@@ -16,6 +17,8 @@ const AUDIT_PURGE_CRON = "0 3 * * *";
 // 4 AM Paris time, after the audit purge: the quietest hour, and the last of the
 // nightly clean-ups.
 const TRASH_PURGE_CRON = "0 4 * * *";
+// 3:30 AM Paris time, between the other nightly clean-ups (RG-ARR-66).
+const ATTENDEE_PURGE_CRON = "30 3 * * *";
 // Midnight Paris time, when the event day starts and real votes open (#566).
 const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // Every quarter of an hour past midnight, Paris time (#585): a redeploy at
@@ -102,6 +105,21 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
   // several replicas: the purge is idempotent, a second run finds nothing.
   cron.schedule(TRASH_PURGE_CRON, () => runTrashPurge(log), { name: "trash-purge", timezone: TIMEZONE, noOverlap: true });
 
+  // Attendees are deleted 18 months after their event (RG-ARR-66). Daily, so
+  // a missed run costs a day; idempotent, an edition is purged once.
+  cron.schedule(
+    ATTENDEE_PURGE_CRON,
+    async () => {
+      try {
+        const purged = await runInContext(systemContext("Purge des participants"), async () => await purgeExpiredAttendees());
+        if (purged.length > 0) log.info({ purged, retentionMonths: ATTENDEE_RETENTION_MONTHS }, "Attendees purged");
+      } catch (err) {
+        log.error({ err }, "Attendee purge failed");
+      }
+    },
+    { name: "attendee-purge", timezone: TIMEZONE, noOverlap: true },
+  );
+
   // A feedback test mode left on is switched off when real voting opens, and
   // the votes of the trial go with it (#566). Every night, not only on the
   // day: a run missed at midnight (a redeploy) is caught by the next. Votes
@@ -154,6 +172,7 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
       cron: [
         FEATURED_ROTATION_CRON,
         AUDIT_PURGE_CRON,
+        ATTENDEE_PURGE_CRON,
         TRASH_PURGE_CRON,
         FEEDBACK_TEST_MODE_CRON,
         STATUS_SCHEDULE_CRON,

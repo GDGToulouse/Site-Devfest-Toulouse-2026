@@ -133,6 +133,9 @@ model Edition {
   // When the attendees were last imported from that event (#638): the next
   // import only asks Billetweb for what changed since.
   attendeesSyncedAt       DateTime?
+  // When the attendees' data was deleted, 18 months after the event
+  // (RG-ARR-66): from then on, no import brings it back.
+  attendeesPurgedAt       DateTime?
   // How the printed badges are stored at the venue (RG-ARR-17, #639): counters
   // times bins of 100. Editable until the numbering is frozen.
   badgeCounters           Int               @default(4)
