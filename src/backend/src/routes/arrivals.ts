@@ -10,6 +10,7 @@ import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.
 import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadge } from "../lib/badge-state.js";
 import { buildOfflineTable, scanTicket, searchAttendees } from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
+import { deliverLabel, printLabel, type LabelRefusal } from "../lib/help-desk.js";
 import { arrivalsRateLimit } from "../lib/rate-limit-options.js";
 import type { BadgeState } from "../generated/prisma/client.js";
 
@@ -40,6 +41,28 @@ const editionParamsSchema = {
   required: ["editionId"],
   properties: { editionId: { type: "integer", minimum: 1 } },
 } as const;
+
+const attendeeParamsSchema = {
+  type: "object",
+  required: ["editionId", "attendeeId"],
+  properties: {
+    editionId: { type: "integer", minimum: 1 },
+    attendeeId: { type: "integer", minimum: 1 },
+  },
+} as const;
+
+const actorOf = (user: { id: string; name: string | null; email: string }) => ({
+  id: user.id,
+  label: user.name || user.email,
+});
+
+const LABEL_REFUSALS: Record<LabelRefusal, string> = {
+  cancelled: "Ce billet est annulé : pas d'étiquette.",
+  dedicated: "Ce billet passe par l'accueil dédié, qui a ses propres badges.",
+  not_printed: "Imprimez l'étiquette avant de la remettre.",
+};
+
+const labelRefusal = (refused: LabelRefusal) => ({ error: refused, message: LABEL_REFUSALS[refused] });
 
 // The event-day screens' own budget (rate-limit-options.ts): the whole venue
 // shares one address. The invitation routes keep the general API budget.
@@ -229,6 +252,44 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
       if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
       return searchAttendees(editionId, request.query.q);
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/label — the help desk
+  // prints a label (RG-ARR-51): the trace first, then the text to print. A
+  // reprint is the same call (RG-ARR-54).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/label",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      const result = await printLabel(editionId, attendeeId, actorOf(ctx.user));
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
+      return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/label/delivered — the
+  // label is in the person's hands (RG-ARR-52).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/label/delivered",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      const result = await deliverLabel(editionId, attendeeId, actorOf(ctx.user));
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
+      if (result.isFirstScan) requestCheckIn(editionId, request.log);
+      return { delivered: true };
     },
   );
 

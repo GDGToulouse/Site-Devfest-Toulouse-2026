@@ -19,6 +19,7 @@ const badge = (id: number, number: number, state: LiveBadge["state"], version: n
   state,
   version,
   since,
+  byLabel: false,
   firstName: "Camille",
   lastName: "Test",
   company: null,
@@ -62,11 +63,43 @@ describe("the live state of the arrivals screens (#641)", () => {
   });
 
   it("should list a ticket sent to the help desk once, however often it is announced", () => {
-    const entry = { id: 9, firstName: "Paul", lastName: "Test", company: null, tierName: null, scannedAt: "2026-11-19T08:00:00Z" };
+    const entry = {
+      id: 9,
+      firstName: "Paul",
+      lastName: "Test",
+      company: null,
+      tierName: null,
+      scannedAt: "2026-11-19T08:00:00Z",
+      labelDeliveredAt: null,
+    };
 
     const state = applyHelp(applyHelp(snapshot([]), entry), entry);
 
     expect(state.help).toEqual([entry]);
+  });
+
+  it("should mark a help desk ticket done in place once its label is handed over (#713)", () => {
+    const entry = {
+      id: 9,
+      firstName: "Paul",
+      lastName: "Test",
+      company: null,
+      tierName: null,
+      scannedAt: "2026-11-19T08:00:00Z",
+      labelDeliveredAt: null,
+    };
+    const done = { ...entry, labelDeliveredAt: "2026-11-19T08:05:00Z" };
+
+    const state = applyHelp(applyHelp(snapshot([]), entry), done);
+
+    expect(state.help).toEqual([done]);
+  });
+
+  it("should take a badge handed over as a label off its counter's board and loads (#713)", () => {
+    const state = snapshot([{ ...badge(1, 1001, "DELIVERED", 2), byLabel: true }, badge(2, 1002, "DELIVERED", 2)]);
+
+    expect(counterBoard(state, 1, null).delivered.map((b) => b.number)).toEqual([1002]);
+    expect(counterLoads(state)[0].delivered).toBe(1);
   });
 
   it("should read the counter and the bin from the badge number", () => {

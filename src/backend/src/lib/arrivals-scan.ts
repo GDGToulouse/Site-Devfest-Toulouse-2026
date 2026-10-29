@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "./prisma.js";
 import { publishArrivals } from "./arrivals-stream.js";
 import { HELP_ENTRY_SELECT, LIVE_BADGE_SELECT, moveBadge, toHelpEntry, toLiveBadge, type LiveBadge } from "./badge-state.js";
+import type { BadgeState } from "../generated/prisma/client.js";
 
 // The entrance (RG-ARR-30 to RG-ARR-35, #642): a ticket read or picked by
 // name becomes an answer to say out loud — a number and a counter, or where
@@ -104,9 +105,14 @@ export async function scanTicket(
 
 export interface SearchHit extends ScanAttendee {
   badgeNumber: number | null;
+  /** Meaningful with a number only (RG-ARR-50). */
+  badgeState: BadgeState;
   isCancelled: boolean;
   isDedicated: boolean;
   scannedAt: Date | null;
+  /** The help desk's labels (#713): how many printed, and whether one was handed over. */
+  labelCount: number;
+  labelDeliveredAt: Date | null;
 }
 
 /** Results one search returns: the volunteer narrows down by typing more. */
@@ -137,8 +143,11 @@ export async function searchAttendees(editionId: number, query: string): Promise
       lastName: true,
       company: true,
       badgeNumber: true,
+      badgeState: true,
       isCancelled: true,
       scannedAt: true,
+      labelDeliveredAt: true,
+      _count: { select: { badgeLabels: true } },
       ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
     },
   });
@@ -156,9 +165,12 @@ export async function searchAttendees(editionId: number, query: string): Promise
       company: row.company,
       tierName: row.ticketTier?.nameFr ?? null,
       badgeNumber: row.badgeNumber,
+      badgeState: row.badgeState,
       isCancelled: row.isCancelled,
       isDedicated: row.ticketTier?.isOutsideFlow ?? false,
       scannedAt: row.scannedAt,
+      labelCount: row._count.badgeLabels,
+      labelDeliveredAt: row.labelDeliveredAt,
     }));
 }
 

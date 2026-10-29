@@ -24,6 +24,7 @@ import { getRequestContext } from "./request-context.js";
 const EXCLUDED_MODELS = new Set([
   "Attendee",
   "BadgeTransition",
+  "BadgeLabel",
   "AuditLog",
   "Session",
   "Account",

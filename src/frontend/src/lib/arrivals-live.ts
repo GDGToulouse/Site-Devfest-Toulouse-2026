@@ -11,6 +11,8 @@ export interface LiveBadge {
   version: number;
   /** When it reached `state`, ISO. */
   since: string | null;
+  /** Handed over as a label at the help desk: off its counter's screen (#713). */
+  byLabel: boolean;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -29,6 +31,8 @@ export interface HelpEntry {
   company: string | null;
   tierName: string | null;
   scannedAt: string;
+  /** Label handed over: done, off the "to handle" list (#713). */
+  labelDeliveredAt: string | null;
 }
 
 export interface ArrivalsSnapshot {
@@ -57,10 +61,14 @@ export function fromSnapshot(snapshot: ArrivalsSnapshot): LiveState {
   };
 }
 
-/** A ticket sent to the help desk; one the screen already lists is not added twice. */
+/**
+ * A ticket sent to the help desk, or handed its label: one the screen already
+ * lists is updated in place, never added twice.
+ */
 export function applyHelp(state: LiveState, entry: HelpEntry): LiveState {
-  if (state.help.some((h) => h.id === entry.id)) return state;
-  return { ...state, help: [...state.help, entry] };
+  const index = state.help.findIndex((h) => h.id === entry.id);
+  if (index < 0) return { ...state, help: [...state.help, entry] };
+  return { ...state, help: state.help.map((h, i) => (i === index ? entry : h)) };
 }
 
 /**
@@ -138,7 +146,8 @@ export function counterBoard(state: LiveState, counter: number, bin: number | nu
     toFetchByBin: Array.from({ length: state.layout.binsPerCounter }, () => 0),
   };
   for (const badge of state.badges.values()) {
-    if (counterOf(badge.number) !== counter) continue;
+    // A label from the help desk is not the counter's to hand over (RG-ARR-52).
+    if (counterOf(badge.number) !== counter || badge.byLabel) continue;
     const badgeBin = binOf(badge.number);
     if (badge.state === "TO_FETCH" && badgeBin < board.toFetchByBin.length) board.toFetchByBin[badgeBin]++;
     if (bin !== null && badgeBin !== bin) continue;
@@ -162,7 +171,8 @@ export function counterLoads(state: LiveState): CounterLoad[] {
   }));
   for (const badge of state.badges.values()) {
     const load = loads[counterOf(badge.number) - 1];
-    if (!load) continue;
+    // Labels are counted apart (RG-ARR-52).
+    if (!load || badge.byLabel) continue;
     if (badge.state === "TO_FETCH") load.toFetch++;
     else if (badge.state === "READY") load.ready++;
     else if (badge.state === "DELIVERED") load.delivered++;

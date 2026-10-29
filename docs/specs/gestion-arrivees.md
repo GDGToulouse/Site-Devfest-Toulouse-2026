@@ -131,7 +131,7 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | # | Règle |
 |---|-------|
 | RG-ARR-50 | L'écran Aide cherche par nom ou prénom parmi tous les participants de l'édition, flux dédié compris, et affiche pour chacun son numéro, son guichet et son état (pas encore scanné, à chercher, prêt, distribué), ou « sans badge imprimé », ou « billet annulé ». |
-| RG-ARR-51 | L'aide **imprime une étiquette** pour un participant sans numéro, ou dont le badge est introuvable : prénom, nom, entreprise, sur une étiquette noir et blanc générée en ZPL pour la Zebra ZD421d, à coller sur un badge vierge. Le gabarit suit le format du rouleau (question ouverte). |
+| RG-ARR-51 | L'aide **imprime une étiquette** pour un participant sans numéro, ou dont le badge est introuvable : prénom, nom, entreprise, sur une étiquette noir et blanc imprimée par le pilote de la Zebra ZD421d (ZPL par Browser Print plus tard, si l'essai le justifie), à coller sur un badge vierge. Le gabarit suit le format du rouleau, choisi sur le poste. |
 | RG-ARR-52 | Imprimer une étiquette puis la remettre fait passer le participant en **Distribué**. Un badge numéroté qui était À chercher ou Prêt quitte alors l'écran de son guichet. Le suivi compte les étiquettes à part. |
 | RG-ARR-53 | Un participant sans numéro scanné dans la file apparaît dans la liste « à traiter » de l'écran Aide, en temps réel. |
 | RG-ARR-54 | Une réimpression est possible (étiquette ratée) ; chaque impression est tracée (heure, bénévole). |
@@ -261,9 +261,11 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
   bufferise pas le flux et ne coupe pas les connexions longues.
 - **Lecture des codes** : `BarcodeDetector` n'existe pas sur Safari iOS, il faut une
   bibliothèque (QR et code-barres). La caméra exige HTTPS.
-- **Imprimante** : un navigateur n'envoie pas de ZPL seul à une Zebra. Trois voies : Zebra
-  Browser Print installé sur le poste de l'aide, imprimante en réseau jointe par le backend, ou
-  image imprimée par le pilote (question ouverte).
+- **Imprimante** : un navigateur n'envoie pas de ZPL seul à une Zebra. Décidé le 29/10 :
+  l'étiquette est une page au format du rouleau, imprimée par le **pilote** Zebra du portable de
+  l'aide (rien d'autre à installer) ; Zebra Browser Print (ZPL brut) viendra ensuite si l'essai
+  sur la vraie imprimante le justifie. L'imprimante en réseau jointe par le backend est exclue :
+  le VPS ne voit pas le réseau du lieu. Le poste Aide doit donc être un portable.
 - **Billetweb** : clé d'API **lecture et écriture** pour `update_product` et `check` (la clé
   actuelle sert à lire). `attendees` est limité à 10 appels par minute.
 - **Volumes** : une journée, ~1 500 participants dont ~1 200 par les guichets, pic d'arrivée sur
@@ -297,7 +299,7 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 | 5 | #641 | Flux temps réel, indicateur de connexion, PWA | Socle des écrans |
 | 6 | #642 | Écran Scan : caméra, recherche, guichet et charge des guichets, compostage Billetweb, mode dégradé | |
 | 7 | #643 | Écran Guichet (kanban) — remplace « Distribution par centaines » et « Badges manuels » | |
-| 8 | #713 | Guichet d'aide : recherche, étiquette ZPL, impression sur la Zebra | Dépend de la question sur l'impression |
+| 8 | #713 | Guichet d'aide : recherche, étiquette, impression sur la Zebra par son pilote | |
 | 9 | #644 | Écran de suivi par guichet | |
 | 10 | #645 | File d'attente hors ligne | Optionnelle |
 
@@ -307,8 +309,10 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
    le flux dédié retiré ? Au-delà, un 4ᵉ bac par guichet (RG-ARR-17).
 2. **Mobilier** : 3 meubles guichet et 1 meuble bas pour 4 guichets plus l'aide. Le meuble bas
    irait à l'aide, plus accessible en fauteuil.
-3. **Impression des étiquettes** : Zebra Browser Print, imprimante en réseau ou pilote ?
-4. **Format des étiquettes** : 10 × 10 ou 10 × 15 cm, à mesurer sur le rouleau.
+3. ~~**Impression des étiquettes**~~ : tranchée (pilote d'abord, cf. Contraintes). Reste
+   l'essai sur la vraie Zebra.
+4. **Format des étiquettes** : 10 × 10 ou 10 × 15 cm, à mesurer sur le rouleau. Les deux sont
+   prêts, choisis sur le poste Aide (#713).
 5. **Maquette du badge** : fournie par l'équipe, pas encore disponible. Bloque le rendu du PDF,
    pas la numérotation.
 6. **Conservation 18 mois** (RG-ARR-66) : toujours sans réponse explicite.

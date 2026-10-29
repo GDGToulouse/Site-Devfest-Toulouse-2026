@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 
 import ConnectionIndicator from "@/components/arrivals/ConnectionIndicator";
 import CounterBoard from "@/components/arrivals/CounterBoard";
+import HelpStation from "@/components/arrivals/HelpStation";
 import StationPicker from "@/components/arrivals/StationPicker";
 import ScanStation from "@/components/arrivals/ScanStation";
-import { counterLoads } from "@/lib/arrivals-live";
 import { readStation, saveStation, stationLabel, type Station } from "@/lib/arrivals-station";
 import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 
 // The event-day zone once the volunteer is let in (#641): the station this
 // device works as, the link to the live state, and what the stations share.
-// Scan has its screen (#642), Guichet too (#643); Aide comes with #713.
+// Each station has its screen: Scan (#642), Guichet (#643), Aide (#713).
 export default function ArrivalsWorkspace({
   edition,
   canStepBack,
@@ -39,7 +39,8 @@ export default function ArrivalsWorkspace({
   }
 
   return (
-    <div className="min-h-dvh bg-blanc-casse pb-10">
+    // Never on paper: the help desk's label prints alone (BadgeLabel.tsx).
+    <div className="no-print min-h-dvh bg-blanc-casse pb-10">
       <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-gris/20 bg-blanc px-4 py-3">
         <div className="min-w-0">
           <p className="text-xs text-gris">Accueil DevFest {edition.year}</p>
@@ -65,7 +66,9 @@ export default function ArrivalsWorkspace({
           <div className="rounded-3xl bg-blanc p-6 shadow-card">
             <StationPicker layout={live.layout} onPick={pick} />
           </div>
-        ) : station.kind === "counter" ? (
+        ) : station.kind === "help" ? (
+          <HelpStation edition={edition} live={live} />
+        ) : (
           <CounterBoard
             editionId={edition.id}
             counter={station.counter}
@@ -74,39 +77,6 @@ export default function ArrivalsWorkspace({
             canStepBack={canStepBack}
             onMoved={applyMoved}
           />
-        ) : (
-          <>
-            <section className="rounded-3xl bg-blanc p-6 shadow-card" aria-labelledby="counters-title">
-              <h2 id="counters-title" className="mb-4 text-lg font-bold text-noir">
-                Charge des guichets
-              </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gris/20 text-gris">
-                      <th className="py-2 text-left font-medium">Guichet</th>
-                      <th className="py-2 text-right font-medium">À chercher</th>
-                      <th className="py-2 text-right font-medium">Prêts</th>
-                      <th className="py-2 text-right font-medium">Distribués</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {counterLoads(live).map((load) => (
-                      <tr key={load.counter} className="border-b border-gris/10 text-noir">
-                        <td className="py-2">Guichet {load.counter}</td>
-                        <td className="py-2 text-right">{load.toFetch}</td>
-                        <td className="py-2 text-right">{load.ready}</td>
-                        <td className="py-2 text-right">{load.delivered}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="mt-4 text-sm text-gris">
-                L&apos;écran de ce poste arrive bientôt. Ces chiffres se mettent à jour seuls.
-              </p>
-            </section>
-          </>
         )}
 
         {station && (

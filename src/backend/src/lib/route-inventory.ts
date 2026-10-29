@@ -65,6 +65,14 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/label": {
+    why: "impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/label/delivered": {
+    why: "étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
   "GET /api/arrivals/:editionId/offline-table": {
     why: "table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition",
     anonymous: [401],

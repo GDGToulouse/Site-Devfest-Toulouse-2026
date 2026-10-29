@@ -18,6 +18,8 @@ export interface LiveBadge {
   version: number;
   /** When it reached `state`: orders the counter's columns (RG-ARR-41). */
   since: Date | null;
+  /** Handed over as a label at the help desk: off its counter's screen (RG-ARR-52). */
+  byLabel: boolean;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -29,6 +31,7 @@ export const LIVE_BADGE_SELECT = {
   badgeState: true,
   badgeStateVersion: true,
   badgeStateAt: true,
+  labelDeliveredAt: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -40,6 +43,7 @@ type LiveBadgeRow = {
   badgeState: BadgeState;
   badgeStateVersion: number;
   badgeStateAt: Date | null;
+  labelDeliveredAt: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -53,6 +57,7 @@ export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
     state: row.badgeState,
     version: row.badgeStateVersion,
     since: row.badgeStateAt,
+    byLabel: row.labelDeliveredAt !== null,
     firstName: row.firstName,
     lastName: row.lastName,
     company: row.company,
@@ -87,6 +92,8 @@ export interface HelpEntry {
   company: string | null;
   tierName: string | null;
   scannedAt: Date;
+  /** Label handed over: off the help desk's "to handle" list (RG-ARR-53). */
+  labelDeliveredAt: Date | null;
 }
 
 export const HELP_ENTRY_SELECT = {
@@ -95,6 +102,7 @@ export const HELP_ENTRY_SELECT = {
   lastName: true,
   company: true,
   scannedAt: true,
+  labelDeliveredAt: true,
   ticketTier: { select: { nameFr: true } },
 } as const;
 
@@ -104,6 +112,7 @@ export function toHelpEntry(row: {
   lastName: string;
   company: string | null;
   scannedAt: Date | null;
+  labelDeliveredAt: Date | null;
   ticketTier: { nameFr: string } | null;
 }): HelpEntry {
   return {
@@ -114,6 +123,7 @@ export function toHelpEntry(row: {
     tierName: row.ticketTier?.nameFr ?? null,
     // Only scanned rows are selected.
     scannedAt: row.scannedAt ?? new Date(0),
+    labelDeliveredAt: row.labelDeliveredAt,
   };
 }
 
@@ -180,7 +190,8 @@ export async function moveBadge(
   const result = await prisma.$transaction(async (tx) => {
     const moved = await tx.attendee.updateMany({
       where: { id: attendeeId, editionId, badgeNumber: { not: null }, badgeState: from },
-      data: { badgeState: to, badgeStateVersion: { increment: 1 }, badgeStateAt: new Date() },
+      // A badge that moves again is back in its counter's hands, label or not.
+      data: { badgeState: to, badgeStateVersion: { increment: 1 }, badgeStateAt: new Date(), labelDeliveredAt: null },
     });
     if (moved.count === 1) {
       await tx.badgeTransition.create({

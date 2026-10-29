@@ -561,6 +561,11 @@ model Attendee {
   // that order, oldest first to fetch, latest first delivered (RG-ARR-41, #643).
   badgeStateAt      DateTime?
   badgeTransitions  BadgeTransition[]
+  // When the help desk handed over a printed label in place of the badge
+  // (RG-ARR-52, #713): the person is Distribué, off their counter's screen,
+  // and counted apart. Cleared if the badge moves again.
+  labelDeliveredAt  DateTime?
+  badgeLabels       BadgeLabel[]
   // The first scan at the entrance, whatever the ticket's flow: what the
   // "already scanned" alert shows (RG-ARR-34). A label, not a user: it must
   // still name the volunteer once the account is gone.
@@ -598,6 +603,20 @@ model BadgeTransition {
   user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   userLabel  String
   createdAt  DateTime   @default(now())
+
+  @@index([attendeeId])
+}
+
+// Each label the help desk printed (RG-ARR-54, #713): a reprint is a row, so
+// the trace stays whole while the counts follow labelDeliveredAt.
+model BadgeLabel {
+  id         Int      @id @default(autoincrement())
+  attendeeId Int
+  attendee   Attendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userLabel  String
+  createdAt  DateTime @default(now())
 
   @@index([attendeeId])
 }
@@ -756,6 +775,7 @@ model User {
   sponsorContacts SponsorContact[]
   arrivalsAccess  ArrivalsAccess[]
   badgeTransitions BadgeTransition[]
+  badgeLabels      BadgeLabel[]
   auditLogs       AuditLog[]
 
   oauthClients       OauthClient[]
