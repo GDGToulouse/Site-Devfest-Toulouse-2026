@@ -33,7 +33,7 @@ flowchart LR
 ## Release
 
 - Promotion `dev` → `main` par PR squashée qui porte le bump SemVer, le CHANGELOG et les `Closes #` ; puis tag `vX.Y.Z` identique à `APP_VERSION` et release GitHub
-- Le tag déclenche `version-backport.yml`, qui ouvre la PR de redescente vers `dev`. Ouverte par `GITHUB_TOKEN`, elle ne déclenche **aucune** CI : « no checks » veut dire absence, pas échec. Le ruleset « Only PR » exige pourtant les trois jobs de CI sur `main` et `dev` (#658) : un admin la merge en cochant « Merge without waiting for requirements to be met » (contournement réservé aux admins, par PR seulement)
+- Le tag déclenche `version-backport.yml`, qui ouvre la PR de redescente vers `dev`. Ouverte par `GITHUB_TOKEN`, elle ne déclenche **aucune** CI : « no checks » veut dire absence, pas échec. Le ruleset « Only PR » exige pourtant les quatre jobs de CI sur `main` et `dev` (#658, audit des dépendances depuis #695) : un admin la merge en cochant « Merge without waiting for requirements to be met » (contournement réservé aux admins, par PR seulement)
 - Les tags `v*` sont protégés (ruleset « Release tags ») : seul un admin les crée, et personne ne les déplace ni ne les supprime
 - Les données ne migrent jamais de la beta vers la prod par défaut : c'est un écrasement complet, à la demande seulement
 - Procédure complète et retour arrière : `docs/mise-en-production.md`, skill `deploy-to-prod`. Pièges Coolify : `docs/coolify-pieges-multi-environnements.md`
