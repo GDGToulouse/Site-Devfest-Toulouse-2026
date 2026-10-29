@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../lib/prisma.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { yearParamsSchema } from "../lib/public-params.js";
 import { buildCalendar, type CalendarEvent } from "../lib/ics.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
@@ -16,11 +17,7 @@ export default async function calendarRoutes(app: FastifyInstance) {
     "/editions/:year/schedule.ics",
     {
       schema: {
-        params: {
-          type: "object",
-          required: ["year"],
-          properties: { year: { type: "string" } },
-        },
+        params: yearParamsSchema(),
         querystring: {
           type: "object",
           properties: { talks: { type: "string" } },
@@ -29,7 +26,6 @@ export default async function calendarRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const yearNum = Number(request.params.year);
-      if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
       const edition = await prisma.edition.findFirst({
         where: { year: yearNum, ...notDeleted },

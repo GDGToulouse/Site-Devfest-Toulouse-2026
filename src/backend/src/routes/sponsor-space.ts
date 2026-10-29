@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { getAuthContext } from "../lib/auth-context.js";
 import { notDeleted, softDeleteData } from "../lib/admin-helpers.js";
 import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
-import { generateInvitationToken } from "../lib/edit-token.js";
+import { generateInvitationToken, hashLinkToken } from "../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { teamInviteRateLimit } from "../lib/rate-limit-options.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
@@ -453,7 +453,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
           email,
           name: request.body.name?.trim() || null,
           accessRole: promoted ?? accessRole,
-          invitationToken: token,
+          invitationToken: hashLinkToken(token),
           invitationSentAt: new Date(),
         },
       });

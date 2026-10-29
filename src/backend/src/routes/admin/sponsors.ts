@@ -14,7 +14,7 @@ import {
 } from "../../lib/sponsor-list.js";
 import { revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
-import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
+import { generateInvitationToken, hashLinkToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
 import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { sanitizeRichHtml, unsafeUrlRefusal } from "../../lib/sanitize.js";
@@ -786,7 +786,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
           name: request.body.name?.trim() || null,
           role: request.body.role?.trim() || null,
           ...(promoted ? { accessRole: promoted } : {}),
-          invitationToken: token,
+          invitationToken: hashLinkToken(token),
           invitationSentAt: new Date(),
         },
       });
@@ -845,7 +845,7 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
       const updated = await prisma.sponsorContact.update({
         where: { id: contact.id },
         data: {
-          invitationToken: token,
+          invitationToken: hashLinkToken(token),
           invitationSentAt: new Date(),
           invitationAcceptedAt: null,
           ...(role ? { accessRole: role } : {}),

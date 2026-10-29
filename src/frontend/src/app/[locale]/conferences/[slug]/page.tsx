@@ -10,6 +10,7 @@ import { buildTalkEventJsonLd, buildVideoJsonLd, canonicalLocaleFor, isCompleteE
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
 import TalkFeedback from "@/components/conferences/TalkFeedback";
+import TalkSlot from "@/components/conferences/TalkSlot";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
 import YouTubeFacade from "@/components/YouTubeFacade";
 import { Link } from "@/i18n/navigation";
@@ -134,6 +135,9 @@ export default async function TalkDetailPage({
         </div>
 
         <h1 className="mt-4 text-3xl lg:text-5xl font-bold text-noir">{title}</h1>
+
+        {/* When and where (#717): nothing until the talk is placed. */}
+        <TalkSlot startsAt={talk.startsAt} endsAt={talk.endsAt} room={talk.room} simulcasts={talk.simulcasts} />
 
         {/* Right under the title: the speaker's QR code lands here on a phone,
             and the form has to be on screen without scrolling (#564). Renders

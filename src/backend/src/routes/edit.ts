@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
+import { hashLinkToken, isEditingFrozen, isEditTokenExpired } from "../lib/edit-token.js";
 import { normalizeLocale } from "../lib/edit-link-email.js";
 import { findUnsafeUrl } from "../lib/sanitize.js";
 import { revalidateSpeakers } from "../lib/revalidate.js";
@@ -129,7 +129,7 @@ function findForbiddenKey(body: Record<string, unknown>): string | null {
 // (#523).
 async function resolveToken(token: string) {
   const speaker = await prisma.speaker.findFirst({
-    where: { editToken: token, ...notDeleted },
+    where: { editToken: hashLinkToken(token), ...notDeleted },
     include: {
       // The 48h freeze (RG-246) keys on an event date, and a global identity no
       // longer has one (#351). The link is sent for the upcoming edition, so the
