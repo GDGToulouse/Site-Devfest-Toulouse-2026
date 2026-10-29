@@ -81,19 +81,21 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
 |---|---|---|---|---|---|---|
-| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`, protégée par mot de passe sur dev-j) |
+| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par Mailpit, service `mailhog` (UI sur `:8025`, protégée par mot de passe sur dev-j) |
 | **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
 
 > ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
 
-### MailHog sur dev-j
+### Mailpit sur dev-j
+
+Mailpit a remplacé MailHog (#679). Les deux variables gardent leur nom `MAILHOG_*`, pour que les valeurs déjà posées dans Coolify restent valables.
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API MailHog. | `julien` |
-| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair : MailHog le hache lui-même (bcrypt) au démarrage. Sans ces deux variables, le conteneur MailHog refuse de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde MailHog sans authentification. | (20+ caractères aléatoires) |
+| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API Mailpit. | `julien` |
+| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair, **sans espace** : Mailpit sépare ses identifiants sur les blancs, et le conteneur refuse de démarrer plutôt que d'ouvrir une interface où personne ne peut entrer. Sans ces deux variables, le conteneur refuse aussi de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde Mailpit sans authentification. | (20+ caractères aléatoires, sans espace) |
 
-> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
+> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` (le service Mailpit) pour ces environnements. La modifier casserait la capture des e-mails.
 
 ## API tierces (backend uniquement)
 

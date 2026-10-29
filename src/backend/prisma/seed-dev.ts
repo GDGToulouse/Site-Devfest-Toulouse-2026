@@ -14,7 +14,7 @@ const DEV_ACCOUNTS = [
 ];
 
 // Sponsor contacts with a password, so the partner space and the SPONSOR rows
-// of /admin/users can be tested without the MailHog invitation round-trip
+// of /admin/users can be tested without the Mailpit invitation round-trip
 // (#500, #411). The first one spans two companies with two access roles: it is
 // the case that exercises the company picker and the multi-company display.
 const DEV_SPONSOR_ACCOUNTS = [

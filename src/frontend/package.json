@@ -37,7 +37,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@next/swc-linux-x64-musl"
-    ]
+    ],
+    "auditConfig": {
+      "//": {},
+      "ignoreGhsas": []
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

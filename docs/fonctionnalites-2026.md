@@ -279,7 +279,7 @@ moyen de révoquer un lien déjà envoyé.
 - **Workflow de première connexion (compte local)** :
   1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS` (Coolify) et redéploie : au démarrage, `prisma/seed.ts` crée le compte, adresse vérifiée et **sans** mot de passe (#658, #674). Il n'y a donc pas de mot de passe initial à transmettre. S'inscrire soi-même par mot de passe avec une adresse de `ADMIN_EMAILS` ne crée rien : rien ne prouverait que la boîte appartient à celui qui s'inscrit.
   2. L'utilisateur accède à la page de login (`/admin`) et clique « Mot de passe oublié ? » (ou se connecte par lien magique).
-  3. Il reçoit un email avec un lien de réinitialisation (via SMTP / MailHog en dev).
+  3. Il reçoit un email avec un lien de réinitialisation (via SMTP / Mailpit en dev).
   4. Il définit son mot de passe (minimum 10 caractères) via ce lien.
   5. Il peut ensuite se connecter avec email + mot de passe.
 - **Workflow de première connexion (OAuth)** :
