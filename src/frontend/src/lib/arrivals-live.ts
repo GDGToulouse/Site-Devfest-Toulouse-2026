@@ -13,6 +13,8 @@ export interface LiveBadge {
   since: string | null;
   /** Handed over as a label at the help desk: off its counter's screen (#713). */
   byLabel: boolean;
+  /** Scanned during an outage, sent afterwards: maybe handed over by hand already (#645). */
+  scannedOffline: boolean;
   firstName: string;
   lastName: string;
   company: string | null;

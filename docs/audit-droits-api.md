@@ -373,8 +373,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
 | GET | `/api/arrivals/:editionId/stream` | Contrôlé dans la route : flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals) |
 | GET | `/api/arrivals/:editionId/tracking` | Contrôlé dans la route : écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas |
-| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN |
+| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne |
 | POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/offline-scans` | Contrôlé dans la route : scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
 | GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition |
 | POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition |
 | POST | `/api/arrivals/:editionId/attendees/:attendeeId/label/delivered` | Contrôlé dans la route : étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition |

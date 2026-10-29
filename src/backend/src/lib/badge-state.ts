@@ -20,6 +20,8 @@ export interface LiveBadge {
   since: Date | null;
   /** Handed over as a label at the help desk: off its counter's screen (RG-ARR-52). */
   byLabel: boolean;
+  /** Scanned during an outage, sent afterwards: maybe handed over by hand already (RG-ARR-67). */
+  scannedOffline: boolean;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -32,6 +34,7 @@ export const LIVE_BADGE_SELECT = {
   badgeStateVersion: true,
   badgeStateAt: true,
   labelDeliveredAt: true,
+  scannedOffline: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -44,6 +47,7 @@ type LiveBadgeRow = {
   badgeStateVersion: number;
   badgeStateAt: Date | null;
   labelDeliveredAt: Date | null;
+  scannedOffline: boolean;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -58,6 +62,7 @@ export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
     version: row.badgeStateVersion,
     since: row.badgeStateAt,
     byLabel: row.labelDeliveredAt !== null,
+    scannedOffline: row.scannedOffline,
     firstName: row.firstName,
     lastName: row.lastName,
     company: row.company,
@@ -74,6 +79,13 @@ const order = (state: BadgeState) => BADGE_STATES.indexOf(state);
 export function isCounterMove(from: BadgeState, to: BadgeState): boolean {
   return from !== "PRINTED" && to !== "PRINTED" && Math.abs(order(from) - order(to)) === 1;
 }
+
+/**
+ * A card scanned during an outage may already be in the person's hands: its
+ * counter marks it delivered in one touch (RG-ARR-67). The move itself checks
+ * the badge was scanned offline (moveBadge's `onlyIfScannedOffline`).
+ */
+export const isHandedOverDuringOutage = (from: BadgeState, to: BadgeState) => from === "TO_FETCH" && to === "DELIVERED";
 
 /** An admin may take any badge one step back (RG-ARR-46). */
 export function isStepBack(from: BadgeState, to: BadgeState): boolean {
@@ -178,7 +190,8 @@ export type MoveResult = { applied: boolean; badge: LiveBadge };
  * Move a badge from `from` to `to`, if it is still in `from`. Returns the badge
  * as it now stands either way, so a screen that lost the race resynchronizes
  * (RG-ARR-44); null when the edition has no such numbered badge. Who may make
- * which move is the caller's to decide.
+ * which move is the caller's to decide. `at` dates a move made earlier, a scan
+ * sent after an outage (#645); `onlyIfScannedOffline` restricts it to such badges.
  */
 export async function moveBadge(
   editionId: number,
@@ -186,16 +199,24 @@ export async function moveBadge(
   from: BadgeState,
   to: BadgeState,
   actor: { id: string; label: string },
+  options: { at?: Date; onlyIfScannedOffline?: boolean } = {},
 ): Promise<MoveResult | null> {
+  const at = options.at ?? new Date();
   const result = await prisma.$transaction(async (tx) => {
     const moved = await tx.attendee.updateMany({
-      where: { id: attendeeId, editionId, badgeNumber: { not: null }, badgeState: from },
+      where: {
+        id: attendeeId,
+        editionId,
+        badgeNumber: { not: null },
+        badgeState: from,
+        ...(options.onlyIfScannedOffline ? { scannedOffline: true } : {}),
+      },
       // A badge that moves again is back in its counter's hands, label or not.
-      data: { badgeState: to, badgeStateVersion: { increment: 1 }, badgeStateAt: new Date(), labelDeliveredAt: null },
+      data: { badgeState: to, badgeStateVersion: { increment: 1 }, badgeStateAt: at, labelDeliveredAt: null },
     });
     if (moved.count === 1) {
       await tx.badgeTransition.create({
-        data: { attendeeId, fromState: from, toState: to, userId: actor.id, userLabel: actor.label },
+        data: { attendeeId, fromState: from, toState: to, userId: actor.id, userLabel: actor.label, createdAt: at },
       });
     }
     const row = await tx.attendee.findFirst({

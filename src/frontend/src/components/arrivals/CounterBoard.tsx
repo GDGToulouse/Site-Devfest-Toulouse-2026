@@ -72,15 +72,18 @@ function Card({
   badge,
   isBusy,
   onTouch,
-  back,
+  actions,
 }: {
   badge: LiveBadge;
   isBusy: boolean;
   onTouch: () => void;
-  back: { label: string; onClick: () => void } | null;
+  /** Secondary gestures beside the card: a symbol, and what it does. */
+  actions: Array<{ symbol: string; label: string; onClick: () => void }>;
 }) {
   const bin = binOf(badge.number);
   const isDone = badge.state === "DELIVERED";
+  // Scanned during an outage: the counter may have handed it over by hand (#645).
+  const isFromOutage = badge.scannedOffline && badge.state === "TO_FETCH";
   return (
     <li className={`flex items-stretch gap-1 ${isDone ? "opacity-60" : ""}`}>
       <button
@@ -101,20 +104,24 @@ function Card({
           <span className="block truncate text-xs text-gris">
             {badge.company ? `${badge.company} · ` : ""}bac {bin}
           </span>
+          {isFromOutage && (
+            <span className="block text-xs font-medium text-orange">Scanné pendant la coupure : déjà remis ?</span>
+          )}
         </span>
       </button>
-      {back && (
+      {actions.map((action) => (
         <button
+          key={action.label}
           type="button"
-          onClick={back.onClick}
+          onClick={action.onClick}
           disabled={isBusy}
-          aria-label={`Badge ${badge.number} : ${back.label}`}
-          title={back.label}
+          aria-label={`Badge ${badge.number} : ${action.label}`}
+          title={action.label}
           className="shrink-0 rounded-xl border border-gris/20 bg-blanc px-2 text-gris hover:border-bleu hover:text-noir disabled:opacity-50"
         >
-          ↩
+          {action.symbol}
         </button>
-      )}
+      ))}
     </li>
   );
 }
@@ -178,7 +185,7 @@ export default function CounterBoard({
     }
   }
 
-  const card = (badge: LiveBadge, back: { label: string; to: BadgeState } | null) => (
+  const card = (badge: LiveBadge, actions: Array<{ symbol: string; label: string; to: BadgeState }>) => (
     <Card
       key={badge.id}
       badge={badge}
@@ -187,9 +194,15 @@ export default function CounterBoard({
         const to = TOUCH[badge.state];
         if (to) void move(badge, to);
       }}
-      back={back && { label: back.label, onClick: () => void move(badge, back.to) }}
+      actions={actions.map((action) => ({ ...action, onClick: () => void move(badge, action.to) }))}
     />
   );
+
+  const toFetchActions = (badge: LiveBadge) => [
+    // Handed over by hand during the outage: straight to Distribué (RG-ARR-67).
+    ...(badge.scannedOffline ? [{ symbol: "✓", label: "déjà remis pendant la coupure", to: "DELIVERED" as const }] : []),
+    ...(canStepBack ? [{ symbol: "↩", label: "remettre en Imprimé", to: "PRINTED" as const }] : []),
+  ];
 
   return (
     <div className="flex flex-col gap-4">
@@ -221,21 +234,20 @@ export default function CounterBoard({
 
       <div className="grid gap-3 md:grid-cols-3">
         <Column title="À chercher" count={String(board.toFetch.length)}>
-          {board.toFetch.map((badge) =>
-            card(badge, canStepBack ? { label: "remettre en Imprimé", to: "PRINTED" } : null),
-          )}
+          {board.toFetch.map((badge) => card(badge, toFetchActions(badge)))}
         </Column>
         <Column title="Prêt" count={String(board.ready.length)}>
-          {board.ready.map((badge) => card(badge, { label: "remettre à chercher", to: "TO_FETCH" }))}
+          {board.ready.map((badge) => card(badge, [{ symbol: "↩", label: "remettre à chercher", to: "TO_FETCH" }]))}
         </Column>
         <Column title="Distribué" count={`${DELIVERED_SHOWN} derniers`}>
-          {board.delivered.map((badge) => card(badge, null))}
+          {board.delivered.map((badge) => card(badge, []))}
         </Column>
       </div>
 
       <p className="text-sm text-gris">
         Touchez une carte pour la faire avancer : À chercher → Prêt → Distribué. Une carte distribuée par erreur revient
-        en Prêt d&apos;un toucher ; ↩ ramène une carte Prête à chercher.
+        en Prêt d&apos;un toucher ; ↩ ramène une carte Prête à chercher. Une carte scannée pendant une coupure de
+        réseau a ✓ : le badge a été remis à la main entre-temps, elle passe directement en Distribué.
       </p>
     </div>
   );

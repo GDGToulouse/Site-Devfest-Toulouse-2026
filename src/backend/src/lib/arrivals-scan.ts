@@ -42,11 +42,16 @@ const SCAN_SELECT = {
  * Scan a ticket, by its code or by the attendee picked in a name search. The
  * first scan is recorded; a later one only reports it (RG-ARR-34), without
  * blocking. `isFirstScan` tells the caller to check the ticket in.
+ *
+ * `offlineAt` replays a scan the phone made during an outage (RG-ARR-67,
+ * #645): recorded at that time and marked offline, and only if nothing
+ * recorded the person since; a replay never moves a badge scanned meanwhile.
  */
 export async function scanTicket(
   editionId: number,
   target: { barcode: string } | { attendeeId: number },
   actor: { id: string; label: string },
+  offlineAt?: Date,
 ): Promise<{ outcome: ScanOutcome; isFirstScan: boolean }> {
   // A code shared by a live and a cancelled ticket (an exchange) means the live one.
   const row = await prisma.attendee.findFirst({
@@ -72,7 +77,7 @@ export async function scanTicket(
     // gets the alert.
     const claimed = await prisma.attendee.updateMany({
       where: { id: row.id, scannedAt: null },
-      data: { scannedAt: new Date(), scannedByLabel: actor.label },
+      data: { scannedAt: offlineAt ?? new Date(), scannedByLabel: actor.label, scannedOffline: offlineAt !== undefined },
     });
     isFirstScan = claimed.count === 1;
     if (!isFirstScan) {
@@ -97,8 +102,8 @@ export async function scanTicket(
   // A badge an admin sent back to Imprimé goes back to its counter on the
   // next scan, alert or not: the person is here.
   let badge = toLiveBadge(row);
-  if (badge.state === "PRINTED") {
-    const moved = await moveBadge(editionId, row.id, "PRINTED", "TO_FETCH", actor);
+  if (badge.state === "PRINTED" && (offlineAt === undefined || isFirstScan)) {
+    const moved = await moveBadge(editionId, row.id, "PRINTED", "TO_FETCH", actor, { at: offlineAt });
     if (moved) badge = moved.badge;
   }
   return { outcome: { result: "badge", attendee, badge, alreadyScanned }, isFirstScan };
@@ -234,4 +239,54 @@ export async function buildOfflineTable(editionId: number): Promise<OfflineTable
   const eventDay = edition.endDate ?? edition.startDate;
   const expiresAt = eventDay ? new Date(eventDay.getTime() + 24 * 60 * 60 * 1000) : null;
   return { editionId, keyLength: OFFLINE_KEY_HEX_LENGTH, expiresAt, entries };
+}
+
+/**
+ * A scan made during an outage, as the phone kept it (RG-ARR-67, #645): the
+ * same digest and value as its table, no name and no code. `id` is the
+ * phone's, so a resent queue is recognized in the answer.
+ */
+export interface OfflineScan {
+  id: string;
+  key: string;
+  /** The badge number the phone showed, or OFFLINE_DEDICATED. */
+  number: number;
+  scannedAt: Date;
+}
+
+export type ReplayResult = "recorded" | "already_scanned" | "unmatched";
+
+/**
+ * Record scans made during an outage. The digest alone may match several
+ * codes; with the number the phone showed it names one ticket, as the table
+ * did. A scan sent twice is recorded once: the second finds it scanned.
+ */
+export async function replayOfflineScans(
+  editionId: number,
+  scans: OfflineScan[],
+  actor: { id: string; label: string },
+): Promise<{ results: Array<{ id: string; result: ReplayResult }>; hasNewScans: boolean }> {
+  const results: Array<{ id: string; result: ReplayResult }> = [];
+  let hasNewScans = false;
+  for (const scan of scans) {
+    const candidates = await prisma.attendee.findMany({
+      where: {
+        editionId,
+        isCancelled: false,
+        ...(scan.number === OFFLINE_DEDICATED ? { ticketTier: { isOutsideFlow: true } } : { badgeNumber: scan.number }),
+      },
+      select: { id: true, barcode: true },
+    });
+    const matches = candidates.filter((c) => offlineKey(editionId, c.barcode) === scan.key);
+    if (matches.length !== 1) {
+      results.push({ id: scan.id, result: "unmatched" });
+      continue;
+    }
+    // Never later than now: a phone's clock may run ahead.
+    const at = new Date(Math.min(scan.scannedAt.getTime(), Date.now()));
+    const { isFirstScan } = await scanTicket(editionId, { attendeeId: matches[0].id }, actor, at);
+    hasNewScans ||= isFirstScan;
+    results.push({ id: scan.id, result: isFirstScan ? "recorded" : "already_scanned" });
+  }
+  return { results, hasNewScans };
 }

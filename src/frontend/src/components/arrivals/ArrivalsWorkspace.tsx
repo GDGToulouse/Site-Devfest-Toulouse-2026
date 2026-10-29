@@ -29,6 +29,7 @@ export default function ArrivalsWorkspace({
   // counter laptop that already knows its counter.
   const [station, setStation] = useState<Station | null | undefined>(undefined);
   const { live, status, applyMoved } = useArrivalsStream(edition.id);
+  const [pendingScans, setPendingScans] = useState(0);
   // A counter's three columns want the laptop's width.
   const isWide = station?.kind === "counter";
 
@@ -49,7 +50,7 @@ export default function ArrivalsWorkspace({
           <p className="text-xs text-gris">Accueil DevFest {edition.year}</p>
           <p className="truncate font-bold text-noir">{station ? stationLabel(station) : "Poste à choisir"}</p>
         </div>
-        <ConnectionIndicator status={status} />
+        <ConnectionIndicator status={status} pendingScans={station?.kind === "scan" ? pendingScans : 0} />
       </header>
 
       <main className={`mx-auto px-4 pt-6 ${isWide ? "max-w-6xl" : "max-w-2xl"}`}>
@@ -62,7 +63,7 @@ export default function ArrivalsWorkspace({
 
         {station?.kind === "scan" ? (
           // Without the live state too: the degraded mode is for when it is gone.
-          <ScanStation editionId={edition.id} live={live} status={status} />
+          <ScanStation editionId={edition.id} live={live} status={status} onPendingChange={setPendingScans} />
         ) : !live || station === undefined ? (
           status !== "disconnected" && <p className="text-center text-gris">Chargement…</p>
         ) : station === null ? (

@@ -3,7 +3,7 @@
 // relayed to the backend by next.config.ts.
 
 import type { BadgeState, LiveBadge } from "@/lib/arrivals-live";
-import type { OfflineTable } from "@/lib/arrivals-offline";
+import type { OfflineTable, QueuedScan } from "@/lib/arrivals-offline";
 
 export interface ArrivalsResult<T> {
   data: T | null;
@@ -122,6 +122,18 @@ export function scanTicket(editionId: number, target: { code: string } | { atten
     body: JSON.stringify(target),
     signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
   });
+}
+
+/** Scans made during an outage, sent once the backend is back (#645). */
+export function sendOfflineScans(editionId: number, scans: QueuedScan[]) {
+  return call<{ results: Array<{ id: string; result: "recorded" | "already_scanned" | "unmatched" }> }>(
+    `/api/arrivals/${editionId}/offline-scans`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scans }),
+    },
+  );
 }
 
 export function searchAttendees(editionId: number, query: string) {

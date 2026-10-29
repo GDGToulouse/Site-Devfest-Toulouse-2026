@@ -62,7 +62,9 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
     return (
       <div className="flex flex-col gap-3">
         <p role="alert" className="rounded-2xl bg-orange/15 p-3 text-center text-sm font-bold text-noir">
-          Mode dégradé : rien n&apos;est enregistré
+          {answer.kind === "badge" || answer.kind === "dedicated"
+            ? "Mode dégradé : scan gardé sur ce téléphone, enregistré au retour du serveur"
+            : "Mode dégradé : rien n'est enregistré"}
         </p>
         {answer.kind === "badge" ? (
           <div className="flex flex-col gap-2 rounded-2xl border-4 border-bleu bg-blanc p-5 text-center">

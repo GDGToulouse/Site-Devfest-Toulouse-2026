@@ -7,8 +7,21 @@ import { getAuthContext } from "../lib/auth-context.js";
 import { maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
 import { canAccessArrivals, findCurrentEdition, findPendingArrivalsInvitation } from "../lib/arrivals-access.js";
 import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
-import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadge } from "../lib/badge-state.js";
-import { buildOfflineTable, scanTicket, searchAttendees } from "../lib/arrivals-scan.js";
+import {
+  BADGE_STATES,
+  isCounterMove,
+  isHandedOverDuringOutage,
+  isStepBack,
+  loadArrivalsSnapshot,
+  moveBadge,
+} from "../lib/badge-state.js";
+import {
+  OFFLINE_KEY_HEX_LENGTH,
+  buildOfflineTable,
+  replayOfflineScans,
+  scanTicket,
+  searchAttendees,
+} from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
 import { deliverLabel, printLabel, type LabelRefusal } from "../lib/help-desk.js";
 import { loadTrackingSummary, type TrackingSummary } from "../lib/arrivals-tracking.js";
@@ -30,6 +43,9 @@ export const STREAM_HEARTBEAT_MS = 15_000;
 
 /** How long the browser waits before reconnecting after a break. */
 const STREAM_RETRY_MS = 2_000;
+
+/** Scans one replay takes: a phone sends its queue in batches of this size. */
+const OFFLINE_REPLAY_MAX = 500;
 
 /** How long the tracking screen's totals may trail an event: one read per burst. */
 const TRACKING_REFRESH_MS = 500;
@@ -239,14 +255,15 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
       if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
 
-      const isAllowed = isCounterMove(from, to) || (ctx.user.role === "ADMIN" && isStepBack(from, to));
+      const isOutageHandOver = isHandedOverDuringOutage(from, to);
+      const isAllowed =
+        isCounterMove(from, to) || isOutageHandOver || (ctx.user.role === "ADMIN" && isStepBack(from, to));
       if (!isAllowed) {
         return reply.code(400).send({ error: "move_not_allowed", message: "Ce passage n'est pas possible depuis cet écran." });
       }
 
-      const result = await moveBadge(editionId, attendeeId, from, to, {
-        id: ctx.user.id,
-        label: ctx.user.name || ctx.user.email,
+      const result = await moveBadge(editionId, attendeeId, from, to, actorOf(ctx.user), {
+        onlyIfScannedOffline: isOutageHandOver,
       });
       if (!result) return reply.code(404).send({ error: "Not found" });
       return result;
@@ -288,6 +305,57 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       });
       if (isFirstScan) requestCheckIn(editionId, request.log);
       return outcome;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/offline-scans — what a Scan phone recorded
+  // during an outage, sent once the backend is back (RG-ARR-67, #645). Answers
+  // each scan, so the phone empties its queue of what was taken.
+  app.post<{
+    Params: { editionId: number };
+    Body: { scans: Array<{ id: string; key: string; number: number; scannedAt: string }> };
+  }>(
+    "/arrivals/:editionId/offline-scans",
+    {
+      config,
+      schema: {
+        params: editionParamsSchema,
+        body: {
+          type: "object",
+          required: ["scans"],
+          additionalProperties: false,
+          properties: {
+            scans: {
+              type: "array",
+              minItems: 1,
+              // A long outage at the peak: some 25 arrivals a minute per phone.
+              maxItems: OFFLINE_REPLAY_MAX,
+              items: {
+                type: "object",
+                required: ["id", "key", "number", "scannedAt"],
+                additionalProperties: false,
+                properties: {
+                  id: { type: "string", minLength: 1, maxLength: 64 },
+                  key: { type: "string", pattern: `^[0-9a-f]{${OFFLINE_KEY_HEX_LENGTH}}$` },
+                  number: { type: "integer", minimum: 0 },
+                  scannedAt: { type: "string", format: "date-time" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+
+      const scans = request.body.scans.map((s) => ({ ...s, scannedAt: new Date(s.scannedAt) }));
+      const { results, hasNewScans } = await replayOfflineScans(editionId, scans, actorOf(ctx.user));
+      if (hasNewScans) requestCheckIn(editionId, request.log);
+      return { results };
     },
   );
 

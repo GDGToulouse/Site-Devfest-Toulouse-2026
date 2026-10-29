@@ -571,6 +571,10 @@ model Attendee {
   // still name the volunteer once the account is gone.
   scannedAt         DateTime?
   scannedByLabel    String?
+  // First scan made during an outage and sent afterwards (RG-ARR-67, #645):
+  // the counter may have handed the badge over by hand meanwhile, so its card
+  // says so and can go straight to Distribué.
+  scannedOffline    Boolean     @default(false)
   // When Billetweb acknowledged the check-in (RG-ARR-37). Scanned without it:
   // still to send; the error stays until a retry succeeds.
   checkedInAt       DateTime?

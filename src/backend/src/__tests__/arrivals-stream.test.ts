@@ -204,7 +204,11 @@ describe("The arrivals stream (#641)", () => {
 
     expect((await move(volunteer.headers, printed.id, "PRINTED", "TO_FETCH")).statusCode).toBe(400);
     expect((await move(volunteer.headers, waiting.id, "TO_FETCH", "PRINTED")).statusCode).toBe(400);
-    expect((await move(volunteer.headers, waiting.id, "TO_FETCH", "DELIVERED")).statusCode).toBe(400);
+    // Skipping Prêt is for a badge scanned during an outage only (#645).
+    expect((await move(volunteer.headers, waiting.id, "TO_FETCH", "DELIVERED")).json()).toMatchObject({
+      applied: false,
+      badge: { state: "TO_FETCH" },
+    });
   });
 
   it("should let an admin take a badge back one step, to Imprimé included", async () => {
