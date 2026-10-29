@@ -14,7 +14,7 @@ const DEV_ACCOUNTS = [
 ];
 
 // Sponsor contacts with a password, so the partner space and the SPONSOR rows
-// of /admin/users can be tested without the MailHog invitation round-trip
+// of /admin/users can be tested without the Mailpit invitation round-trip
 // (#500, #411). The first one spans two companies with two access roles: it is
 // the case that exercises the company picker and the multi-company display.
 const DEV_SPONSOR_ACCOUNTS = [
@@ -471,17 +471,25 @@ async function seedDev() {
   console.log(`Sponsor tiers upserted: ${TIER_CATALOG.length}`);
 
   // --- Which tiers this edition proposes (#317) ---
+  // guestPlaces: the badges of the 2026 sponsor guide (#727).
   const EDITION_TIERS = [
-    { key: "platinum", sortOrder: 1 },
-    { key: "gold", sortOrder: 2 },
-    { key: "discovery", sortOrder: 3 },
-    { key: "soutien-communautes", sortOrder: 4 },
+    { key: "platinum", sortOrder: 1, guestPlaces: 8 },
+    { key: "gold", sortOrder: 2, guestPlaces: 4 },
+    { key: "discovery", sortOrder: 3, guestPlaces: 2 },
+    { key: "soutien-communautes", sortOrder: 4, guestPlaces: 1 },
   ];
   for (const et of EDITION_TIERS) {
     await prisma.editionSponsorTier.upsert({
       where: { editionId_tierId: { editionId: edition.id, tierId: sponsorTiers[et.key].id } },
-      update: { isVisible: true, price: null, sortOrder: et.sortOrder },
-      create: { editionId: edition.id, tierId: sponsorTiers[et.key].id, isVisible: true, price: null, sortOrder: et.sortOrder },
+      update: { isVisible: true, price: null, sortOrder: et.sortOrder, guestPlaces: et.guestPlaces },
+      create: {
+        editionId: edition.id,
+        tierId: sponsorTiers[et.key].id,
+        isVisible: true,
+        price: null,
+        sortOrder: et.sortOrder,
+        guestPlaces: et.guestPlaces,
+      },
     });
   }
   console.log(`Edition sponsor tiers created: ${EDITION_TIERS.length}`);
@@ -1210,35 +1218,19 @@ async function seedDev() {
   console.log(`CFP settings created: ${cfpSettings.length}`);
 
   // --- Dev test accounts (with passwords) ---
+  // Written straight to the database, like the sponsor accounts below:
+  // better-auth's sign-up no longer creates or signs in anyone it answers
+  // (#673). Verified, or the password would not sign them in
+  // (requireEmailVerification) — repaired accounts included.
   for (const account of DEV_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
-    if (existing) {
-      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
-      await applyDevPassword(existing.id, seedPassword ?? account.password);
-      console.log(`Dev account repaired: ${account.email} (${account.role})`);
-      continue;
-    }
-    {
-      try {
-        await auth.api.signUpEmail({
-          body: {
-            name: account.name,
-            email: account.email,
-            password: seedPassword ?? account.password,
-          },
-        });
-        await prisma.user.update({
-          where: { email: account.email },
-          data: { role: account.role, emailVerified: true },
-        });
-        console.log(`Dev account created: ${account.email} (${account.role})`);
-      } catch (err) {
-        await prisma.user.create({
-          data: { email: account.email, name: account.name, role: account.role },
-        });
-        console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
-      }
-    }
+    const user = await prisma.user.upsert({
+      where: { email: account.email },
+      update: { role: account.role, emailVerified: true },
+      create: { email: account.email, name: account.name, role: account.role, emailVerified: true },
+    });
+    await applyDevPassword(user.id, seedPassword ?? account.password);
+    console.log(`Dev account ${existing ? "repaired" : "created"}: ${account.email} (${account.role})`);
   }
 
   // --- Dev sponsor accounts (with passwords) ---

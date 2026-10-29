@@ -5,6 +5,7 @@ import { revalidateTalkFootprint, talkFootprint } from "../../lib/page-footprint
 import { canonicalYouTubeUrl } from "../../lib/youtube.js";
 import { slugify, uniqueSlug } from "../../lib/slug.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
+import { TALK_STATUSES, type TalkStatus } from "../../lib/talk-status.js";
 
 const FORMATS = ["CONFERENCE", "QUICKIE", "KEYNOTE", "WORKSHOP"] as const;
 type TalkFormat = (typeof FORMATS)[number];
@@ -28,7 +29,8 @@ interface TalkCreateBody {
   simulcastRoomIds?: number[];
   startsAt?: string | null;
   endsAt?: string | null;
-  publicationStatus?: "DRAFT" | "PUBLISHED";
+  // CANCELLED (#726) only through an update: a talk is not created cancelled.
+  publicationStatus?: TalkStatus;
   isSpeakerEditable?: boolean;
   // The replay (#636): a YouTube URL, stored in its canonical form; null or ""
   // clears it.
@@ -62,7 +64,7 @@ interface TalkListQuery {
   limit?: string;
   search?: string;
   format?: TalkListFilters["format"];
-  status?: "PUBLISHED" | "DRAFT";
+  status?: TalkStatus;
   categoryId?: string;
   scheduled?: "yes" | "no";
   roomId?: string;
@@ -169,7 +171,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
           limit: { type: "string", pattern: "^[0-9]+$" },
           search: { type: "string", maxLength: 200 },
           format: { type: "string", enum: [...TALK_FORMATS] },
-          status: { type: "string", enum: ["PUBLISHED", "DRAFT"] },
+          status: { type: "string", enum: [...TALK_STATUSES] },
           categoryId: { type: "string", pattern: "^[0-9]+$" },
           scheduled: { type: "string", enum: ["yes", "no"] },
           roomId: { type: "string", pattern: "^[0-9]+$" },
@@ -350,6 +352,9 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
     if (body.level && !LEVELS.includes(body.level)) {
       return reply.code(422).send({ error: `Invalid level. Allowed: ${LEVELS.join(", ")}` });
     }
+    if (body.publicationStatus !== undefined && !TALK_STATUSES.includes(body.publicationStatus)) {
+      return reply.code(400).send({ error: `Invalid publicationStatus. Allowed: ${TALK_STATUSES.join(", ")}` });
+    }
     const video = replayUrl(body.videoUrl);
     if (video === INVALID_REPLAY) return reply.code(400).send(INVALID_REPLAY_ERROR);
 
@@ -441,8 +446,11 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "unsupported action or value" });
     }
 
+    // A cancelled talk caught in the selection stays cancelled (#726): publishing
+    // a batch of drafts must not bring back a session that will not take place.
+    // Restoring one is a deliberate choice, made on its own sheet.
     const { count } = await prisma.talk.updateMany({
-      where: { id: { in: ids }, ...notDeleted },
+      where: { id: { in: ids }, ...notDeleted, publicationStatus: { not: "CANCELLED" } },
       data: { publicationStatus: value },
     });
     // A status flip shows or hides the talk on its pages and its speakers' (#633).

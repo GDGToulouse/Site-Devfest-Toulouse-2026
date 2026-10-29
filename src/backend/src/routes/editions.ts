@@ -2,8 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
+import { visibleParticipation, visibleTalk } from "../lib/talk-status.js";
 import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
 import { editionGallery } from "../lib/edition-photos.js";
+import { yearParamsSchema } from "../lib/public-params.js";
 
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 
@@ -57,7 +59,9 @@ export async function findEditionTalkPage(
   slug: string,
   { includeDrafts = false } = {},
 ) {
-  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  // The preview never shows a cancelled talk or a withdrawn speaker (#726).
+  const published = visibleTalk(includeDrafts);
+  const participating = visibleParticipation(includeDrafts);
   const talk = await prisma.talk.findFirst({
     where: {
       editionId: edition.id,
@@ -72,7 +76,7 @@ export async function findEditionTalkPage(
         // Published *for this edition* (#351), same reasoning as the talk list.
         where: {
           ...notDeleted,
-          editions: { some: { editionId: edition.id, ...published } },
+          editions: { some: { editionId: edition.id, ...participating } },
         },
         select: { slug: true, name: true, photoUrl: true, company: true },
         orderBy: { name: "asc" },
@@ -124,17 +128,10 @@ export default async function editionRoutes(app: FastifyInstance) {
 
   // GET /api/editions/:year — returns full edition data by year
   app.get<{ Params: { year: string } }>("/editions/:year", {
-    schema: {
-      params: {
-        type: "object",
-        required: ["year"],
-        properties: { year: { type: "string" } },
-      },
-    },
+    schema: { params: yearParamsSchema() },
   }, async (request, reply) => {
     const { year } = request.params;
     const yearNum = Number(year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     // findFirst: findUnique cannot carry the deletedAt filter (#147). Both
     // nested levels need their own — the filter does not propagate down an
@@ -195,10 +192,9 @@ export default async function editionRoutes(app: FastifyInstance) {
   // GET /api/editions/:year/speakers — published speakers of any edition by year
   // (issue #63: past editions history, not scoped to the featured edition).
   app.get<{ Params: { year: string } }>("/editions/:year/speakers", {
-    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+    schema: { params: yearParamsSchema() },
   }, async (request, reply) => {
     const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
@@ -220,10 +216,9 @@ export default async function editionRoutes(app: FastifyInstance) {
   // participation (#375) — an archive shows what that year displayed, not what
   // the company logo and the tier catalogue happen to say today.
   app.get<{ Params: { year: string } }>("/editions/:year/sponsors", {
-    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+    schema: { params: yearParamsSchema() },
   }, async (request, reply) => {
     const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
@@ -234,10 +229,9 @@ export default async function editionRoutes(app: FastifyInstance) {
   // GET /api/editions/:year/talks — published talks of any edition by year,
   // with speakers, category and replay video (issue #63).
   app.get<{ Params: { year: string } }>("/editions/:year/talks", {
-    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+    schema: { params: yearParamsSchema() },
   }, async (request, reply) => {
     const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     const edition = await prisma.edition.findFirst({ where: { year: yearNum, ...notDeleted }, select: { id: true } });
     if (!edition) return reply.status(404).send({ error: "Edition not found" });
@@ -294,10 +288,9 @@ export default async function editionRoutes(app: FastifyInstance) {
   // has eight rooms and the 2025 grid used five, so listing them all would draw
   // empty columns.
   app.get<{ Params: { year: string } }>("/editions/:year/schedule", {
-    schema: { params: { type: "object", required: ["year"], properties: { year: { type: "string" } } } },
+    schema: { params: yearParamsSchema() },
   }, async (request, reply) => {
     const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     const edition = await prisma.edition.findFirst({
       where: { year: yearNum, ...notDeleted },
@@ -395,16 +388,9 @@ export default async function editionRoutes(app: FastifyInstance) {
   // a 2019 talk answers 404. The year also disambiguates — Talk.slug is unique
   // per edition, not globally, so a title reused across years would collide.
   app.get<{ Params: { year: string; slug: string } }>("/editions/:year/talks/:slug", {
-    schema: {
-      params: {
-        type: "object",
-        required: ["year", "slug"],
-        properties: { year: { type: "string" }, slug: { type: "string" } },
-      },
-    },
+    schema: { params: yearParamsSchema({ slug: { type: "string" } }) },
   }, async (request, reply) => {
     const yearNum = Number(request.params.year);
-    if (isNaN(yearNum)) return reply.status(400).send({ error: "Invalid year" });
 
     const edition = await prisma.edition.findFirst({
       where: { year: yearNum, ...notDeleted },

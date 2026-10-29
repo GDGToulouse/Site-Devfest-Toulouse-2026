@@ -74,6 +74,26 @@ git diff origin/main..origin/dev -- src/backend/prisma/migrations/
 - **Rotation** : après tout doute de fuite (secret affiché en clair, poussé par
   erreur), le régénérer (`openssl rand -hex 32`) et le remplacer dans Coolify.
 
+### Dépendances vulnérables (#695)
+
+Avant le tag, sur la branche de promotion :
+
+```bash
+node scripts/check-audit-ignores.mjs        # chaque exception a sa raison
+pnpm --dir src/frontend audit --prod
+pnpm --dir src/backend audit --prod
+pnpm --dir src/frontend outdated --prod
+pnpm --dir src/backend outdated --prod
+```
+
+- Un avis `high` ou `critical` sur une dépendance de production **bloque** la release,
+  comme le job CI `Dependencies — Audit`. On monte la dépendance, ou, si l'avis n'est pas
+  atteignable en production, on l'ignore par son GHSA dans `pnpm.auditConfig.ignoreGhsas`
+  du `package.json` de l'application, raison et date sous `pnpm.auditConfig["//"]`.
+- `outdated` informe seulement : relever les dépendances en retard d'une version majeure.
+- Le résultat va dans le body de la PR de promotion (section `## Dépendances`) : avis
+  restants, exceptions et leur justification, retards d'une majeure.
+
 ---
 
 ## 1. Choisir le numéro de version et le bumper
@@ -190,36 +210,52 @@ complète. Spécifique prod :
 joue les migrations au boot ; sans dump préalable, une migration qui corrompt ou
 supprime des données est **irrécupérable**.
 
-Sur le VPS, depuis une copie du dépôt :
+Sans migration, le dump reste conseillé : il prend moins d'une minute.
+
+Le VPS n'a **pas de copie du dépôt** : on lance `pg_dump` directement dans le
+conteneur de la base. Bloc à coller tel quel dans le shell du VPS, en ajustant
+les deux premières lignes :
 
 ```bash
-sudo sh scripts/backup-prod-db.sh
+ENV_URL=https://devfesttoulouse.fr   # beta : https://beta.site.devfesttoulouse.fr
+VERSION=vX.Y.Z                       # la version qu'on s'apprête à déployer
+
+# Le conteneur se trouve par le BASE_URL de son backend, jamais par le hash
+# Coolify, qui change à chaque redéploiement. Le db du même déploiement porte
+# le même suffixe que le backend.
+BACKEND=$(for c in $(sudo docker ps --format '{{.Names}}' | grep '^backend-'); do
+  [ "$(sudo docker exec "$c" printenv BASE_URL 2>/dev/null)" = "$ENV_URL" ] && echo "$c"
+done)
+DB=${BACKEND/backend-/db-}
+echo "Backend : ${BACKEND:-AUCUN}"
+echo "Base    : $(sudo docker ps --format '{{.Names}}' | grep -x "$DB" || echo AUCUNE)"
 ```
 
-Le script trouve le conteneur par son `BASE_URL` — jamais par le hash Coolify,
-qui change à chaque redéploiement — écrit `/root/backups/prod-<horodatage>.sql`,
-et **échoue bruyamment si le marqueur de fin du dump est absent**. Un dump
-tronqué pèse lourd et ne vaut rien ; c'est la seule vérification qui compte.
-
-Il accepte un environnement en argument (`beta`, `dev-j`), ce qui permet de le
-répéter à blanc sans toucher à la prod.
-
-À la main, si le dépôt n'est pas sur la machine :
+**S'arrêter** si une ligne affiche `AUCUN`, ou si `Backend` liste plusieurs
+conteneurs. Sinon :
 
 ```bash
-PROD_DB=<le conteneur db du projet dont le backend porte BASE_URL=https://devfesttoulouse.fr>
-STAMP=$(date +%Y%m%d-%H%M%S)
+DUMP=~/backups/prod-$(date +%Y%m%d-%H%M%S)-avant-$VERSION.sql
+mkdir -p ~/backups
+sudo docker exec "$DB" pg_dump -U devfest -d devfest --no-owner --no-privileges > "$DUMP"
 
-# La redirection doit être DANS le sudo : la sortir échoue en « Permission
-# denied » sur /root, car c'est votre shell qui écrit, pas root.
-sudo sh -c "docker exec $PROD_DB pg_dump -U devfest -d devfest \
-  --no-owner --no-privileges > /root/backups/prod-$STAMP.sql"
-
-sudo grep -c "PostgreSQL database dump complete" /root/backups/prod-$STAMP.sql
+grep -c "PostgreSQL database dump complete" "$DUMP"   # doit afficher 1
+ls -lh "$DUMP"
 ```
+
+Le `grep` est la seule vérification qui compte : un dump tronqué pèse lourd et
+ne vaut rien. S'il n'affiche pas `1`, **ne pas déployer**. Le fichier appartient
+au compte connecté, dans `~/backups/` : la redirection est faite par votre
+shell, pas par `sudo`.
+
+Le nom du conteneur `db` change au redéploiement : pour une restauration,
+relancer le premier bloc après le déploiement pour retrouver le nouveau.
 
 Garder au moins le dernier dump avant chaque déploiement à migration. En cas de
 problème, il sert au rollback (voir section dédiée).
+
+`scripts/backup-prod-db.sh` fait la même chose une fois copié sur le VPS, mais
+écrit dans `/root/backups/`.
 
 ---
 
@@ -299,7 +335,7 @@ plus souvent après un déploiement (idéalement dans un navigateur, sur le doma
 - [ ] **Login admin** `/admin` : connexion OK, dashboard s'affiche.
 - [ ] **Billetterie** `/fr/billetterie` : les tarifs s'affichent avec le bon statut.
 - [ ] **Article** : une page d'actualité s'ouvre et affiche son contenu.
-- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté MailHog/Postfix).
+- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté Mailpit/Postfix).
 - [ ] **Images** : logos et images d'articles se chargent (pas de 404 sur `/uploads/`).
 
 ---
@@ -525,8 +561,8 @@ Redéployer l'ancien code **ne suffit pas** : la base a déjà changé (une colo
 `DROP` est perdue). Il faut **restaurer le dump** pris à l'étape 4.
 
 ```bash
-PROD_DB=<db-prod>
-DUMP=/root/backups/prod-<STAMP>.sql     # le dump d'avant CE déploiement
+PROD_DB=<db-prod>                       # le db actuel : premier bloc de l'étape 4
+DUMP=~/backups/prod-<STAMP>-avant-<VERSION>.sql   # le dump d'avant CE déploiement
 
 # Restauration COMPLÈTE (écrase l'état courant)
 cat "$DUMP" | sudo docker exec -i "$PROD_DB" psql -U devfest -d devfest

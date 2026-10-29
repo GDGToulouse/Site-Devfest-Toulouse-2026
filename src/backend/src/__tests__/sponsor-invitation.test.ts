@@ -7,7 +7,7 @@ import sponsorInvitationRoutes from "../routes/sponsor-invitation.js";
 import { prisma } from "../lib/prisma.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { hasPendingInvitation } from "../lib/sponsor-invitation.js";
-import { INVITATION_TTL_DAYS } from "../lib/edit-token.js";
+import { hashLinkToken, INVITATION_TTL_DAYS } from "../lib/edit-token.js";
 import { auth } from "../lib/auth.js";
 
 // #362 — accepting an invitation binds an account to a company. The rules that
@@ -46,7 +46,7 @@ async function createSponsorWithInvitation(name: string, email: string, sentAt =
       sponsorId: sponsor.id,
       email,
       accessRole: "RESPONSABLE",
-      invitationToken: token,
+      invitationToken: hashLinkToken(token),
       invitationSentAt: sentAt,
     },
   });
@@ -239,9 +239,11 @@ describe("Sign-up through an invitation (#362)", () => {
     const email = `presignup-${Date.now()}@example.org`;
     await createSponsorWithInvitation("Presignup Co", email);
 
+    // Refused without saying so (#673): the answer is a success with no
+    // session, the same as for an address that already has an account.
     await expect(
       auth.api.signUpEmail({ body: { name: "Someone", email, password: "someone1234!test" } }),
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ token: null });
     expect(await prisma.user.count({ where: { email } })).toBe(0);
   });
 
@@ -253,7 +255,7 @@ describe("Sign-up through an invitation (#362)", () => {
       auth.api.signUpEmail({
         body: { name: "Someone", email, password: "someone1234!test", emailVerified: true } as never,
       }),
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ token: null });
     expect(await prisma.user.count({ where: { email } })).toBe(0);
   });
 
@@ -271,6 +273,25 @@ describe("Sign-up through an invitation (#362)", () => {
     expect((await prisma.user.findUniqueOrThrow({ where: { email } })).role).toBe("SPONSOR");
   });
 
+  // better-auth's sign-up keeps quiet about an existing account (#673); the
+  // token holder owns the mailbox, so this route tells them to sign in.
+  it("tells the token holder the address already has an account", async () => {
+    const email = `already-${Date.now()}@example.org`;
+    const { user } = await createAccount(email);
+    const { token } = await createSponsorWithInvitation("Already Co", email);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/sponsor-invitation/${token}/sign-up`,
+      payload: { password: "invited1234!test" },
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toBe("account_exists");
+    expect(res.headers["set-cookie"]).toBeUndefined();
+    expect(await prisma.account.count({ where: { userId: user.id } })).toBe(0);
+  });
+
   it("refuses a sign-up through an unknown token", async () => {
     const res = await app.inject({
       method: "POST",
@@ -286,7 +307,7 @@ describe("Sign-up through an invitation (#362)", () => {
 
     await expect(
       auth.api.signUpEmail({ body: { name: "Nobody", email, password: "nobody1234!test" } }),
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ token: null });
 
     // No orphan row left behind: the hook rejects before the insert, which
     // matters most for OAuth, where the provider would otherwise mint one.

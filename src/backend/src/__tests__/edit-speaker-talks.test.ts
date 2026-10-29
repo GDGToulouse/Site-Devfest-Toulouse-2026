@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 
 // GET /api/edit/:token exposes the speaker's accepted sessions read-only (#229):
@@ -20,7 +21,7 @@ describe("GET /api/edit/:token — speaker sessions (#229)", () => {
       data: {
         name: "Sessions Test Speaker",
         slug: "sessions-test-speaker",
-        editToken: TOKEN,
+        editToken: hashLinkToken(TOKEN),
         editTokenSentAt: new Date(),
         editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },

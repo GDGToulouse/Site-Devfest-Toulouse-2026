@@ -504,6 +504,8 @@ export interface TalkDetail {
   room: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  // Rooms a keynote is relayed to (#456), by their frozen label (#717).
+  simulcasts: { roomId: number | null; room: string | null }[];
   year: number;
   // The replay once filmed (#633): this page stands in for the dated one.
   videoUrl: string | null;
@@ -550,7 +552,8 @@ export interface Talk {
   category: { id: number; nameFr: string; color: string } | null;
   speakerIds: number[];
   speakers: { id: number; name: string }[];
-  publicationStatus: "DRAFT" | "PUBLISHED";
+  // CANCELLED (#726): will not take place, hidden like a draft.
+  publicationStatus: "DRAFT" | "PUBLISHED" | "CANCELLED";
   // Whether the speaker may edit the wording from their magic link (#289).
   isSpeakerEditable: boolean;
   // The replay, a YouTube URL (#636).
@@ -603,7 +606,8 @@ export interface SpeakerEdition {
   id: number;
   year: number;
   isFeatured: boolean;
-  publicationStatus: "DRAFT" | "PUBLISHED";
+  // WITHDRAWN (#726): the speaker pulled out of that year, hidden like a draft.
+  publicationStatus: "DRAFT" | "PUBLISHED" | "WITHDRAWN";
   // The sponsor this person worked for that year (#353).
   sponsorId: number | null;
 }

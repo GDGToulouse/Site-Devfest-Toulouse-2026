@@ -197,6 +197,11 @@ export function sponsorPagePaths(slug: string): string[] {
   return bilingualPaths(`/sponsors/${slug}`);
 }
 
+/** Every company with each year's tier (#611), purged when a tier changes. */
+export function sponsorHallOfFamePaths(): string[] {
+  return bilingualPaths("/sponsors/hall-of-fame");
+}
+
 export function revalidateSponsor(slug: string): Promise<void> {
   return revalidatePaths(sponsorPagePaths(slug));
 }

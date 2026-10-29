@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 
 import { adminFetch, humanError } from "@/lib/admin-api";
-import type { Speaker } from "@/lib/types";
+import type { Speaker, SpeakerEdition } from "@/lib/types";
 import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import EditLinkActions from "@/components/admin/EditLinkActions";
@@ -179,7 +179,7 @@ export default function SpeakerEditorPage() {
 
   async function updateParticipation(
     targetEditionId: number,
-    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
+    patch: { publicationStatus?: SpeakerEdition["publicationStatus"]; isFeatured?: boolean; sponsorId?: number | null },
   ) {
     // The attach endpoint upserts, so it doubles as the update for a
     // participation that already exists.

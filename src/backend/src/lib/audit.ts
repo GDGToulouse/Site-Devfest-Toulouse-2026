@@ -58,6 +58,15 @@ const SECRET_FIELDS = new Set([
 ]);
 const MASKED = "masqué";
 
+// Personal data a visitor wrote, not content the team edits (#665). The history
+// is kept thirteen months and read by every admin: a copy there would outlive
+// the message itself, even once deleted on the person's request. The line keeps
+// which field changed, never its value. These models' lines drop the IP too,
+// the visitor's or the team's: a personal datum no reader of them needs.
+const PERSONAL_FIELDS: Record<string, ReadonlySet<string>> = {
+  ContactMessage: new Set(["firstName", "lastName", "email", "phone", "company", "jobTitle", "message", "webhookError"]),
+};
+
 const PRIMARY_KEY: Record<string, string> = { FileMetadata: "filename" };
 
 // A bulk write past this many rows logs one summary line instead of one line
@@ -121,16 +130,18 @@ function mask(value: unknown): unknown {
   return value === null ? null : MASKED;
 }
 
-/** Field-level difference between two states of a record, secrets masked. */
+/** Field-level difference between two states of a record, secrets and personal data masked. */
 export function diffRows(model: string, before: Row | null, after: Row | null): Changes {
   const changes: Changes = {};
+  const personal = PERSONAL_FIELDS[model];
   const keys = new Set([...Object.keys(before ?? {}), ...Object.keys(after ?? {})]);
   for (const key of keys) {
     if (IGNORED_FIELDS.has(key)) continue;
     const b = normalize(before?.[key]);
     const a = normalize(after?.[key]);
     if (comparable(b) === comparable(a)) continue;
-    changes[key] = SECRET_FIELDS.has(key) ? { before: mask(b), after: mask(a) } : { before: b, after: a };
+    const hidden = SECRET_FIELDS.has(key) || personal?.has(key);
+    changes[key] = hidden ? { before: mask(b), after: mask(a) } : { before: b, after: a };
   }
 
   const noise = NOISE_ONLY_FIELDS[model];
@@ -177,7 +188,7 @@ async function writeEntries(base: PrismaClient, entries: Array<Entry | null>): P
         actorUserId: context?.actor?.userId ?? null,
         actorLabel,
         apiKeyId: context?.apiKeyId ?? null,
-        ip: context?.ip ?? null,
+        ip: PERSONAL_FIELDS[entry.entity] ? null : (context?.ip ?? null),
       })),
     });
   } catch (err) {

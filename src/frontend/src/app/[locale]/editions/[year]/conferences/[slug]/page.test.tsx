@@ -18,14 +18,16 @@ vi.mock("next-intl/server", () => ({
   getTranslations: async () => (key: string) => key,
 }));
 vi.mock("@/i18n/navigation", () => ({ Link: () => null }));
+const getCurrentEdition = vi.fn();
 vi.mock("@/lib/api", () => ({
-  getCurrentEdition: async () => ({ year: 2026 }),
+  getCurrentEdition: () => getCurrentEdition(),
   getEditionByYear: async () => null,
 }));
+vi.mock("@/lib/page-metadata", () => ({ pageMetadata: async () => ({}) }));
 const getEditionTalkPage = vi.fn();
 vi.mock("@/lib/preview", () => ({ getEditionTalkPage: (...args: unknown[]) => getEditionTalkPage(...args) }));
 
-const { default: EditionTalkDetailPage } = await import("./page");
+const { default: EditionTalkDetailPage, generateMetadata } = await import("./page");
 
 function render(year: string, slug: string) {
   return EditionTalkDetailPage({ params: Promise.resolve({ locale: "fr", year, slug }) });
@@ -34,6 +36,7 @@ function render(year: string, slug: string) {
 beforeEach(() => {
   redirect.mockClear();
   getEditionTalkPage.mockReset().mockResolvedValue(null);
+  getCurrentEdition.mockReset().mockResolvedValue({ year: 2026 });
 });
 
 describe("Dated talk page (#633)", () => {
@@ -49,5 +52,19 @@ describe("Dated talk page (#633)", () => {
 
     expect(redirect).not.toHaveBeenCalled();
     expect(getEditionTalkPage).toHaveBeenCalledWith(2019, "un-talk");
+  });
+});
+
+// #703 — the metadata asked the backend for /api/editions/NaN/talks/… before
+// the page could refuse the year, and the 400 it got back became a 500.
+describe("Dated talk page with a year that is not one (#703)", () => {
+  it.each(["abc", "1.5", "0x7E9"])("should 404 on %j without calling the backend", async (year) => {
+    const params = Promise.resolve({ locale: "fr", year, slug: "un-talk" });
+
+    await expect(generateMetadata({ params })).rejects.toThrow("NEXT_NOT_FOUND");
+    await expect(render(year, "un-talk")).rejects.toThrow("NEXT_NOT_FOUND");
+
+    expect(getEditionTalkPage).not.toHaveBeenCalled();
+    expect(getCurrentEdition).not.toHaveBeenCalled();
   });
 });
