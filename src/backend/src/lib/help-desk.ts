@@ -47,6 +47,7 @@ export async function printLabel(
   if (refused) return { refused };
 
   await prisma.badgeLabel.create({ data: { attendeeId, userId: actor.id, userLabel: actor.label } });
+  publishArrivals(editionId, { type: "counts", data: null });
   const printCount = await prisma.badgeLabel.count({ where: { attendeeId } });
   return { label: { firstName: row.firstName, lastName: row.lastName, company: row.company }, printCount };
 }

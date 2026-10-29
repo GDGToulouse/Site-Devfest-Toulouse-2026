@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import { adminFetch } from "@/lib/admin-api";
 import ArrivalsManager from "@/components/admin/arrivals/ArrivalsManager";
@@ -22,11 +23,15 @@ export default function AdminArrivalsPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold text-noir mb-2">Arrivées</h1>
-      <p className="text-gris mb-6">
+      <p className="text-gris mb-2">
         {edition
           ? `DevFest ${edition.year} : participants importés de Billetweb, numérotation et impression des badges.`
           : "Participants importés de Billetweb, numérotation et impression des badges."}
       </p>
+      {/* The day itself is followed on its own screen, made for a big display (#644). */}
+      <Link href="/arrivees/suivi" className="inline-block mb-6 text-sm font-medium text-bleu hover:underline">
+        Écran de suivi du jour J →
+      </Link>
 
       <div className="bg-blanc rounded-xl shadow-card p-6">
         {isLoading ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 import ConnectionIndicator from "@/components/arrivals/ConnectionIndicator";
 import CounterBoard from "@/components/arrivals/CounterBoard";
@@ -16,10 +17,12 @@ import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 export default function ArrivalsWorkspace({
   edition,
   canStepBack,
+  canTrack,
   onSignOut,
 }: {
   edition: { id: number; year: number };
   canStepBack: boolean;
+  canTrack: boolean;
   onSignOut: () => void;
 }) {
   // undefined until the device's memory is read: never offer the picker to a
@@ -87,6 +90,15 @@ export default function ArrivalsWorkspace({
           >
             Changer de poste
           </button>
+        )}
+
+        {canTrack && (
+          <Link
+            href="/arrivees/suivi"
+            className="mt-6 block w-full rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-center text-sm font-medium text-noir hover:border-bleu"
+          >
+            Écran de suivi
+          </Link>
         )}
 
         <button

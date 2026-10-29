@@ -22,6 +22,19 @@ export interface ArrivalsCurrent {
   hasAccess: boolean;
   /** An admin may take a badge back to Imprimé (RG-ARR-46). */
   canStepBack: boolean;
+  /** ADMIN and EDITOR open the tracking screen (RG-ARR-26). */
+  canTrack: boolean;
+}
+
+/** The tracking screen's totals (#644), as the backend computes them. */
+export interface TrackingSummary {
+  expected: number;
+  scanned: number;
+  delivered: number;
+  waiting: number;
+  counters: Array<{ counter: number; numbered: number; toFetch: number; ready: number; delivered: number }>;
+  dedicated: { expected: number; scanned: number };
+  help: { toHandle: number; labelsDelivered: number; labelsPrinted: number };
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<ArrivalsResult<T>> {

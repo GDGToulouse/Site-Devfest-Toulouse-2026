@@ -53,6 +53,10 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals)",
     anonymous: [401],
   },
+  "GET /api/arrivals/:editionId/tracking": {
+    why: "écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas",
+    anonymous: [401],
+  },
   "POST /api/arrivals/:editionId/badges/:attendeeId/move": {
     why: "transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN",
     anonymous: [400, 401],

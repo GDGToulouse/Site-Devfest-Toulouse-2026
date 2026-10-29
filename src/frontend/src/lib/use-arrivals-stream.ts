@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
   applyBadge,
@@ -29,17 +29,23 @@ export const STREAM_RED_AFTER_MS = 8_000;
 /** Delay before a fresh attempt once EventSource has given up. */
 const STREAM_RETRY_MS = 3_000;
 
-export function useArrivalsStream(editionId: number | null): {
-  live: LiveState | null;
-  status: StreamStatus;
-  /** A badge as a move's answer gives it: same version rule as the stream. */
-  applyMoved: (badge: LiveBadge) => void;
-} {
-  const [live, setLive] = useState<LiveState | null>(null);
+type Handlers = Record<string, (data: unknown) => void>;
+
+/**
+ * One server-sent event stream kept alive, for the volunteers' screens and the
+ * team's tracking screen (#644) alike. `firstEvent` is the one each
+ * (re)connection opens with: the link counts as up once it has arrived.
+ */
+export function useEventStream(url: string | null, firstEvent: string, handlers: Handlers): StreamStatus {
   const [status, setStatus] = useState<StreamStatus>("reconnecting");
+  // The latest handlers, without reconnecting when a render makes new ones.
+  const handlersRef = useRef(handlers);
+  useLayoutEffect(() => {
+    handlersRef.current = handlers;
+  });
 
   useEffect(() => {
-    if (editionId === null) return;
+    if (url === null) return;
     let source: EventSource | null = null;
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let lastHeardAt = Date.now();
@@ -60,24 +66,18 @@ export function useArrivalsStream(editionId: number | null): {
       clearTimeout(retryTimer);
       source?.close();
       heard();
-      const current = new EventSource(`/api/arrivals/${editionId}/stream`);
+      const current = new EventSource(url!);
       source = current;
-      current.addEventListener("snapshot", (e) => {
-        heard();
-        lostAt = null;
-        setLive(fromSnapshot(JSON.parse((e as MessageEvent<string>).data) as ArrivalsSnapshot));
-        setStatus("connected");
-      });
-      current.addEventListener("badge", (e) => {
-        heard();
-        const badge = JSON.parse((e as MessageEvent<string>).data) as LiveBadge;
-        setLive((state) => (state ? applyBadge(state, badge) : state));
-      });
-      current.addEventListener("help", (e) => {
-        heard();
-        const entry = JSON.parse((e as MessageEvent<string>).data) as HelpEntry;
-        setLive((state) => (state ? applyHelp(state, entry) : state));
-      });
+      for (const name of Object.keys(handlersRef.current)) {
+        current.addEventListener(name, (e) => {
+          heard();
+          if (name === firstEvent) {
+            lostAt = null;
+            setStatus("connected");
+          }
+          handlersRef.current[name]?.(JSON.parse((e as MessageEvent<string>).data));
+        });
+      }
       current.addEventListener("ping", heard);
       current.onerror = () => {
         markLost();
@@ -112,7 +112,24 @@ export function useArrivalsStream(editionId: number | null): {
       window.removeEventListener("online", handleOnline);
       source?.close();
     };
-  }, [editionId]);
+  }, [url, firstEvent]);
+
+  return status;
+}
+
+export function useArrivalsStream(editionId: number | null): {
+  live: LiveState | null;
+  status: StreamStatus;
+  /** A badge as a move's answer gives it: same version rule as the stream. */
+  applyMoved: (badge: LiveBadge) => void;
+} {
+  const [live, setLive] = useState<LiveState | null>(null);
+
+  const status = useEventStream(editionId === null ? null : `/api/arrivals/${editionId}/stream`, "snapshot", {
+    snapshot: (data) => setLive(fromSnapshot(data as ArrivalsSnapshot)),
+    badge: (data) => setLive((state) => (state ? applyBadge(state, data as LiveBadge) : state)),
+    help: (data) => setLive((state) => (state ? applyHelp(state, data as HelpEntry) : state)),
+  });
 
   const applyMoved = useCallback((badge: LiveBadge) => {
     setLive((state) => (state ? applyBadge(state, badge) : state));
