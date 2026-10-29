@@ -29,6 +29,7 @@
     "@modelcontextprotocol/node": "2.1.1",
     "@modelcontextprotocol/server": "2.3.0",
     "@node-rs/argon2": "^2.0.2",
+    "@pdf-lib/fontkit": "1.1.1",
     "@prisma/adapter-pg": "^7.8.0",
     "@prisma/client": "^7.8.0",
     "@prisma/config": "^7.8.0",
@@ -40,6 +41,7 @@
     "pdf-lib": "1.17.1",
     "pg": "^8.21.0",
     "prisma": "^7.8.0",
+    "qrcode": "1.5.4",
     "sanitize-html": "^2.18.0",
     "sharp": "^0.35.5",
     "zod": "4.6.7"
@@ -68,6 +70,7 @@
     "@types/node": "^25.5.0",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.15.6",
+    "@types/qrcode": "1.5.5",
     "@types/sanitize-html": "^2.16.1",
     "node-html-parser": "^8.0.2",
     "tsx": "^4.23.15",

@@ -137,9 +137,14 @@ model Edition {
   // (RG-ARR-66): from then on, no import brings it back.
   attendeesPurgedAt       DateTime?
   // How the printed badges are stored at the venue (RG-ARR-17, #639): counters
-  // times bins of 100. Editable until the numbering is frozen.
+  // times bins, each bin holding up to 100 badges. Editable until the
+  // numbering is frozen; the bin size after it, on an explicit confirmation.
   badgeCounters           Int               @default(4)
   badgeBinsPerCounter     Int               @default(3)
+  badgesPerBin            Int               @default(100)
+  // The badges' look per type (lib/badge-design.ts): background, colour, and
+  // what the QR code holds. Null until set: the built-in design applies.
+  badgeDesign             Json?
   // Set when the badges go to print (RG-ARR-18): from then on no number moves,
   // and later imports add attendees without one.
   badgesFrozenAt          DateTime?
@@ -505,6 +510,10 @@ model TicketTier {
   // and get no badge number (RG-ARR-14). Set in the back-office only: an
   // import never overwrites it.
   isOutsideFlow     Boolean       @default(false)
+  // Which badge an outside-flow tier prints (#639): speaker, volunteer or
+  // contractor. Null: guessed from the tier's name. A tier through the
+  // counters, sponsors' included, always prints the participant badge.
+  badgeType         BadgeType?
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
   // Soft delete (#146): non-null means the row sits in the trash.
@@ -588,6 +597,13 @@ model Attendee {
   @@unique([editionId, billetwebId])
   @@unique([editionId, badgeNumber])
   @@index([editionId, barcode])
+}
+
+enum BadgeType {
+  PARTICIPANT
+  SPEAKER
+  VOLUNTEER
+  CONTRACTOR
 }
 
 enum BadgeState {

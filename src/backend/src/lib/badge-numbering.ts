@@ -1,14 +1,20 @@
 // Badge numbers (RG-ARR-15 to RG-ARR-17, #639): counter × 1000 + bin × 100 + rank.
 // Pure functions, so two runs before the freeze give the same numbering.
 
-export const BADGES_PER_BIN = 100;
+// The numbers a bin spans in the number itself: the rank takes two digits.
+export const NUMBERS_PER_BIN = 100;
 // One digit each in the number: counters 1 to 9, bins 0 to 9.
 export const MAX_COUNTERS = 9;
 export const MAX_BINS_PER_COUNTER = 10;
+// How many badges a bin holds is the edition's (two rows of 50 in 2026), up
+// to the 100 ranks the number allows.
+export const MIN_BADGES_PER_BIN = 10;
+export const MAX_BADGES_PER_BIN = NUMBERS_PER_BIN;
 
 export interface BadgeLayout {
   counters: number;
   binsPerCounter: number;
+  badgesPerBin: number;
 }
 
 export interface NumberableTicket {
@@ -36,8 +42,8 @@ export function slotOfNumber(number: number): Omit<BadgeSlot, "number"> {
   return { counter: Math.floor(number / 1000), bin: Math.floor(number / 100) % 10, rank: number % 100 };
 }
 
-export function badgeCapacity({ counters, binsPerCounter }: BadgeLayout): number {
-  return counters * binsPerCounter * BADGES_PER_BIN;
+export function badgeCapacity({ counters, binsPerCounter, badgesPerBin }: BadgeLayout): number {
+  return counters * binsPerCounter * badgesPerBin;
 }
 
 /**
@@ -47,7 +53,7 @@ export function badgeCapacity({ counters, binsPerCounter }: BadgeLayout): number
 export function capacityShortfall(count: number, layout: BadgeLayout) {
   const capacity = badgeCapacity(layout);
   if (count <= capacity) return null;
-  const binsPerCounterNeeded = Math.ceil(count / (layout.counters * BADGES_PER_BIN));
+  const binsPerCounterNeeded = Math.ceil(count / (layout.counters * layout.badgesPerBin));
   return {
     capacity,
     missingBins: (binsPerCounterNeeded - layout.binsPerCounter) * layout.counters,
