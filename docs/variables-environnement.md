@@ -191,6 +191,29 @@ ne doit pas casser l'illustration d'une autre.
 
 ---
 
+## Tâche planifiée — durées de conservation des données personnelles (#665, #666)
+
+Aucune variable : les durées sont fixées dans le code, et la page de mentions
+légales doit dire les mêmes (#667).
+
+| Donnée | Durée | Au-delà |
+|---|---|---|
+| Message de contact (nom, prénom, e-mail, téléphone, société, fonction, texte) | **1 an** après l'envoi | Prénom remplacé par « Anonymisé », le reste vidé. La catégorie, la date, l'état lu / non lu et les téléchargements de brochure restent, pour les statistiques |
+| Message libre laissé à un speaker (avis du public) | **1 an** après le message | Texte effacé. Les votes (cases cochées) restent |
+| Historique des modifications (`AuditLog`) | **13 mois** | Ligne supprimée. Pour un message de contact, l'historique ne garde **jamais** les valeurs ni l'IP : seulement le nom des champs modifiés, valeur « masqué » |
+| Corbeille | 30 jours (`TRASH_RETENTION_DAYS`) | Ligne détruite |
+
+L'anonymisation tourne chaque jour à 3 h 30 (heure de Paris), dans une tâche
+`node-cron` du backend (`src/backend/src/lib/personal-data-retention.ts`,
+lancée par `scheduler.ts`). Les messages en corbeille sont anonymisés comme les
+autres. Elle apparaît dans l'historique comme une action du **système**, acteur
+« Anonymisation des données personnelles ». Les logs disent `Personal data
+anonymized` (avec le nombre de messages traités) ou `Personal data anonymization
+failed` ; un échec est rattrapé le lendemain. Idempotente : un message déjà
+anonymisé n'est plus touché.
+
+---
+
 ## Notes
 
 - **Pas de variable pour Sessionize** : l'import est manuel (CSV/JSON) en v1. L'API Sessionize sera ajoutée ultérieurement et nécessitera une clé API supplémentaire.
