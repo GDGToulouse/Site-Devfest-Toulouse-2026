@@ -1,5 +1,6 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { notDeleted } from "./admin-helpers.js";
+import type { TalkStatus } from "./talk-status.js";
 
 // The back-office talk list (#573), on the model of the speakers' (#572):
 // filters, sort and pagination answered by the API. The filters are the
@@ -18,7 +19,7 @@ export interface TalkListFilters {
   search?: string;
   editionId?: number;
   format?: (typeof TALK_FORMATS)[number];
-  status?: "PUBLISHED" | "DRAFT";
+  status?: TalkStatus;
   categoryId?: number;
   scheduled?: "yes" | "no";
   roomId?: number;

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { areOffersVisible } from "../lib/job-offers.js";
 import { notDeleted, parseSocialLinks, visibleCategory } from "../lib/admin-helpers.js";
+import { visibleParticipation, visibleTalk } from "../lib/talk-status.js";
 import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
 import { editionGallery } from "../lib/edition-photos.js";
 import { yearParamsSchema } from "../lib/public-params.js";
@@ -58,7 +59,9 @@ export async function findEditionTalkPage(
   slug: string,
   { includeDrafts = false } = {},
 ) {
-  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  // The preview never shows a cancelled talk or a withdrawn speaker (#726).
+  const published = visibleTalk(includeDrafts);
+  const participating = visibleParticipation(includeDrafts);
   const talk = await prisma.talk.findFirst({
     where: {
       editionId: edition.id,
@@ -73,7 +76,7 @@ export async function findEditionTalkPage(
         // Published *for this edition* (#351), same reasoning as the talk list.
         where: {
           ...notDeleted,
-          editions: { some: { editionId: edition.id, ...published } },
+          editions: { some: { editionId: edition.id, ...participating } },
         },
         select: { slug: true, name: true, photoUrl: true, company: true },
         orderBy: { name: "asc" },

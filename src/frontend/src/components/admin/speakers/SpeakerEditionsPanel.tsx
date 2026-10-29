@@ -4,7 +4,7 @@ import { useState } from "react";
 
 import type { SpeakerEdition } from "@/lib/types";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
-import PublicationSwitch from "@/components/admin/PublicationSwitch";
+import PublicationSwitch, { type ClosedOption, type ParticipationStatus } from "@/components/admin/PublicationSwitch";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ParticipationSponsorSelect from "@/components/admin/speakers/ParticipationSponsorSelect";
 
@@ -24,9 +24,28 @@ interface SpeakerEditionsPanelProps {
   // once, so the panel reports it itself (#632).
   onUpdate: (
     editionId: number,
-    patch: { publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null },
+    patch: { publicationStatus?: ParticipationStatus; isFeatured?: boolean; sponsorId?: number | null },
   ) => Promise<boolean>;
 }
+
+// A speaker who pulled out of a year (#726): off the site for that year like a
+// draft, but not someone still to be announced. Their other years stay.
+function withdrawnOption(speakerName: string, year: number): ClosedOption {
+  return {
+    status: "WITHDRAWN",
+    label: "Retiré",
+    hint: `Retiré : désisté pour ${year}, invisible sur le site pour cette édition. Les autres éditions ne changent pas.`,
+    confirmTitle: `Marquer ${speakerName} comme retiré ?`,
+    confirmMessage: `${speakerName} disparaîtra du site pour ${year} et sera classé à part, hors des brouillons. Ses autres éditions restent en ligne.`,
+    confirmLabel: "Marquer retiré",
+  };
+}
+
+const STATUS_FEEDBACK: Record<ParticipationStatus, string> = {
+  PUBLISHED: "publié, visible sur le site.",
+  DRAFT: "repassé en brouillon, retiré du site.",
+  WITHDRAWN: "marqué retiré, invisible sur le site pour cette édition.",
+};
 
 export default function SpeakerEditionsPanel({
   speakerName,
@@ -54,16 +73,14 @@ export default function SpeakerEditionsPanel({
   }
 
   // Unlike a form, nothing else says the click was saved: say it (#632).
-  async function setStatus(participation: SpeakerEdition, status: "DRAFT" | "PUBLISHED") {
+  async function setStatus(participation: SpeakerEdition, status: ParticipationStatus) {
     setStatusFeedback(null);
     await run(participation.id, async () => {
       const isSaved = await onUpdate(participation.id, { publicationStatus: status });
       setStatusFeedback(
         !isSaved
           ? { kind: "error", text: `${participation.year} : le statut n'a pas pu être changé. Réessayez.` }
-          : status === "PUBLISHED"
-            ? { kind: "ok", text: `${participation.year} : publié, visible sur le site.` }
-            : { kind: "ok", text: `${participation.year} : repassé en brouillon, retiré du site.` },
+          : { kind: "ok", text: `${participation.year} : ${STATUS_FEEDBACK[status]}` },
       );
     });
   }
@@ -94,8 +111,9 @@ export default function SpeakerEditionsPanel({
               <tr key={participation.id} className="border-t border-gris/15">
                 <td className="py-2 font-medium text-noir">{participation.year}</td>
                 <td className="py-2">
-                  <PublicationSwitch
+                  <PublicationSwitch<ParticipationStatus>
                     label={`Statut de la participation ${participation.year}`}
+                    closed={withdrawnOption(speakerName, participation.year)}
                     value={participation.publicationStatus}
                     // Saved on each click: what is shown is what is stored.
                     savedValue={participation.publicationStatus}

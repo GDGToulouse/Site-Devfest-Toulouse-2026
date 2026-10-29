@@ -118,6 +118,9 @@ export function DetailLoading({ error }: { error: boolean }) {
   );
 }
 
-export function statusLabel(status: "PUBLISHED" | "DRAFT"): string {
-  return status === "PUBLISHED" ? "Publié" : "Brouillon";
+const STATUS_LABELS = { PUBLISHED: "Publié", DRAFT: "Brouillon", CANCELLED: "Annulé", WITHDRAWN: "Retiré" };
+
+// CANCELLED is a talk's, WITHDRAWN a speaker's participation (#726).
+export function statusLabel(status: keyof typeof STATUS_LABELS): string {
+  return STATUS_LABELS[status];
 }

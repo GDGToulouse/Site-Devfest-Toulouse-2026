@@ -9,6 +9,7 @@ import { generateEditToken, hashLinkToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import { unsafeUrlRefusal } from "../../lib/sanitize.js";
+import { SPEAKER_EDITION_STATUSES, type SpeakerEditionStatus } from "../../lib/talk-status.js";
 import {
   EDIT_LINK_STATES,
   SPEAKER_MISSING,
@@ -21,6 +22,8 @@ import {
   type SpeakerListFilters,
   type SpeakerMissing,
 } from "../../lib/speaker-list.js";
+
+const INVALID_PARTICIPATION_STATUS = `Invalid publicationStatus. Allowed: ${SPEAKER_EDITION_STATUSES.join(", ")}`;
 
 interface SpeakerCreateBody {
   editionId: number;
@@ -35,7 +38,7 @@ interface SpeakerCreateBody {
   locale?: string;
   isFeatured?: boolean;
   sponsorId?: number | null;
-  publicationStatus?: "DRAFT" | "PUBLISHED";
+  publicationStatus?: SpeakerEditionStatus;
 }
 
 // `editionId` no longer moves the speaker (they belong to several editions
@@ -52,7 +55,7 @@ interface SpeakerListQuery {
   page?: string;
   limit?: string;
   search?: string;
-  status?: "PUBLISHED" | "DRAFT";
+  status?: SpeakerEditionStatus;
   talks?: "with" | "without";
   missing?: string;
   editLink?: (typeof EDIT_LINK_STATES)[number];
@@ -105,7 +108,7 @@ interface SerializableSpeaker {
   editions?: {
     editionId: number;
     isFeatured: boolean;
-    publicationStatus: "DRAFT" | "PUBLISHED";
+    publicationStatus: SpeakerEditionStatus;
     sponsorId: number | null;
     sponsor?: { id: number; name: string } | null;
     edition: { id: number; year: number };
@@ -152,7 +155,7 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
           page: { type: "string", pattern: "^[0-9]+$" },
           limit: { type: "string", pattern: "^[0-9]+$" },
           search: { type: "string", maxLength: 200 },
-          status: { type: "string", enum: ["PUBLISHED", "DRAFT"] },
+          status: { type: "string", enum: [...SPEAKER_EDITION_STATUSES] },
           talks: { type: "string", enum: ["with", "without"] },
           // Comma-separated, e.g. `photo,email`.
           missing: { type: "string", pattern: `^(${SPEAKER_MISSING.join("|")})(,(${SPEAKER_MISSING.join("|")}))*$` },
@@ -295,13 +298,16 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
   // POST /api/admin/speakers/:id/editions — attach an existing person to an
   // edition (#351). This is what the 409 above points the admin to.
-  app.post<{ Params: SpeakerIdParams; Body: { editionId: number; publicationStatus?: "DRAFT" | "PUBLISHED"; isFeatured?: boolean; sponsorId?: number | null } }>(
+  app.post<{ Params: SpeakerIdParams; Body: { editionId: number; publicationStatus?: SpeakerEditionStatus; isFeatured?: boolean; sponsorId?: number | null } }>(
     "/speakers/:id/editions",
     { schema: { params: { type: "object", required: ["id"], properties: { id: { type: "string" } } } } },
     async (request, reply) => {
       const speakerId = Number(request.params.id);
       const { editionId } = request.body;
       if (!editionId) return reply.code(400).send({ error: "editionId is required" });
+      if (request.body.publicationStatus !== undefined && !SPEAKER_EDITION_STATUSES.includes(request.body.publicationStatus)) {
+        return reply.code(400).send({ error: INVALID_PARTICIPATION_STATUS });
+      }
 
       const speaker = await prisma.speaker.findFirst({
         where: { id: speakerId, ...notDeleted },
@@ -376,6 +382,9 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     // These fields reach `href` and `src` on public pages (#223).
     const refusal = unsafeUrlRefusal(body, ["photoUrl"]);
     if (refusal) return reply.code(400).send(refusal);
+    if (body.publicationStatus !== undefined && !SPEAKER_EDITION_STATUSES.includes(body.publicationStatus)) {
+      return reply.code(400).send({ error: INVALID_PARTICIPATION_STATUS });
+    }
     const before = await speakerFootprint([Number(id)]);
 
     const speaker = await prisma.speaker.update({
@@ -461,7 +470,15 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
 
     const before = await speakerFootprint(ids);
     const { count } = await prisma.speakerEdition.updateMany({
-      where: { speakerId: { in: ids }, editionId, speaker: notDeleted },
+      where: {
+        speakerId: { in: ids },
+        editionId,
+        speaker: notDeleted,
+        // A withdrawn participation caught in the selection stays withdrawn
+        // (#726): publishing a batch of drafts must not bring back a speaker
+        // who pulled out. Coming back is decided on the speaker's own sheet.
+        ...(action === "setStatus" && { publicationStatus: { not: "WITHDRAWN" as const } }),
+      },
       data,
     });
     revalidateSpeakers();
