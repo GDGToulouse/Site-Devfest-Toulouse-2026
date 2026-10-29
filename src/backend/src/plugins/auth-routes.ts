@@ -47,6 +47,12 @@ async function forwardToAuth(request: FastifyRequest, reply: FastifyReply) {
   for (const [key, value] of Object.entries(request.headers)) {
     if (value) headers.append(key, Array.isArray(value) ? value.join(", ") : value);
   }
+  // better-auth rate-limits sign-in, magic link and reset per client IP, read
+  // from X-Forwarded-For (#688). Hand it the address Fastify resolved through
+  // TRUST_PROXY_HOPS (#663) instead of the visitor's header: forwarded as is,
+  // a single forged entry picked the counter, and a chain of several made
+  // better-auth give up and share one counter among every visitor.
+  headers.set("x-forwarded-for", request.ip);
 
   // A form arrives as its raw string (see the parser above); JSON was parsed.
   const body = typeof request.body === "string" ? request.body : request.body ? JSON.stringify(request.body) : undefined;
