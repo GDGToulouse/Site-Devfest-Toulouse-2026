@@ -1,6 +1,6 @@
 import { prisma } from "./prisma.js";
 import { notDeleted } from "./admin-helpers.js";
-import { isInvitationExpired } from "./edit-token.js";
+import { hashLinkToken, isInvitationExpired } from "./edit-token.js";
 import { normalizeEmail } from "./sponsor-invitation.js";
 
 // The "arrivals" permission (RG-ARR-21 to RG-ARR-24, #640): who may open the
@@ -37,10 +37,11 @@ export async function canAccessArrivals(user: { id: string; role: string }, edit
   return access !== null;
 }
 
-// Sent, not expired, not accepted, on an edition still out of the bin.
+// Sent, not expired, not accepted, on an edition still out of the bin. The
+// row keeps the token's hash (#672): the link in the mail carries the token.
 export async function findPendingArrivalsInvitation(token: string) {
   const access = await prisma.arrivalsAccess.findUnique({
-    where: { invitationToken: token },
+    where: { invitationToken: hashLinkToken(token) },
     include: { edition: { select: { id: true, year: true, deletedAt: true } } },
   });
   if (!access || access.edition.deletedAt) return null;

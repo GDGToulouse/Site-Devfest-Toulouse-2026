@@ -2,7 +2,8 @@ import type { FastifyInstance } from "fastify";
 
 import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
-import { generateInvitationToken, isInvitationExpired } from "../../lib/edit-token.js";
+// Tokens are stored hashed, like every link token (#672); the mail carries the token.
+import { generateInvitationToken, hashLinkToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { MAX_INVITED_PER_BATCH, parseEmailList } from "../../lib/arrivals-access.js";
 import { sendArrivalsInvitationEmail } from "../../lib/arrivals-invitation-email.js";
 
@@ -136,7 +137,7 @@ export default async function adminArrivalsAccessRoutes(app: FastifyInstance) {
           continue;
         }
         await prisma.arrivalsAccess.create({
-          data: { editionId: edition.id, email, invitationToken: token, invitationSentAt: new Date() },
+          data: { editionId: edition.id, email, invitationToken: hashLinkToken(token), invitationSentAt: new Date() },
         });
         report.invited.push(email);
       }
@@ -167,7 +168,7 @@ export default async function adminArrivalsAccessRoutes(app: FastifyInstance) {
       }
       const updated = await prisma.arrivalsAccess.update({
         where: { id: access.id },
-        data: { invitationToken: token, invitationSentAt: new Date() },
+        data: { invitationToken: hashLinkToken(token), invitationSentAt: new Date() },
       });
       return { id: updated.id, status: statusOf(updated), invitationSentAt: updated.invitationSentAt };
     },

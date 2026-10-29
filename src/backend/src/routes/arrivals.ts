@@ -467,13 +467,25 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       const access = await findPendingArrivalsInvitation(request.params.token);
       if (!access) return reply.code(404).send({ error: "invitation_invalid" });
 
+      // better-auth's sign-up neither signs in nor reports an existing account
+      // any more (#673): as on the sponsor route, this one says so itself — the
+      // token holder owns the mailbox — and signs in afterwards.
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: access.email, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existing) {
+        return reply.code(409).send({
+          error: "account_exists",
+          message: "Un compte existe déjà pour cette adresse : connectez-vous, ou demandez un lien de connexion.",
+        });
+      }
+
       try {
-        const { headers } = await signUpWithInvitation(access.email, () =>
-          auth.api.signUpEmail({
-            body: { email: access.email, password: request.body.password, name: access.email },
-            returnHeaders: true,
-          }),
-        );
+        const { email } = access;
+        const { password } = request.body;
+        await signUpWithInvitation(email, () => auth.api.signUpEmail({ body: { email, password, name: email } }));
+        const { headers } = await auth.api.signInEmail({ body: { email, password }, returnHeaders: true });
         const cookies = headers.getSetCookie();
         if (cookies.length) reply.header("set-cookie", cookies);
         return { success: true };

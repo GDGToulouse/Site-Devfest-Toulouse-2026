@@ -5,11 +5,13 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 // No SMTP in tests: the invitation mail is recorded, and fails on demand.
 const sentTo: string[] = [];
+const sentTokens = new Map<string, string>();
 const failingAddresses = new Set<string>();
 vi.mock("../lib/arrivals-invitation-email.js", () => ({
-  sendArrivalsInvitationEmail: vi.fn(async ({ to }: { to: string }) => {
+  sendArrivalsInvitationEmail: vi.fn(async ({ to, token }: { to: string; token: string }) => {
     if (failingAddresses.has(to)) throw new Error("SMTP down");
     sentTo.push(to);
+    sentTokens.set(to, token);
   }),
 }));
 
@@ -18,7 +20,7 @@ import adminArrivalsAccessRoutes from "../routes/admin/arrivals-access.js";
 import { requireAdmin, requireAdminRole } from "../lib/admin-guard.js";
 import { canAccessArrivals, hasPendingArrivalsInvitation } from "../lib/arrivals-access.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
-import { INVITATION_TTL_DAYS } from "../lib/edit-token.js";
+import { hashLinkToken, INVITATION_TTL_DAYS } from "../lib/edit-token.js";
 import { auth } from "../lib/auth.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -52,10 +54,11 @@ async function createAccount(email: string, role: "ADMIN" | "EDITOR" | "SPONSOR"
   return { user, bearer: key.raw };
 }
 
+// Stored hashed, like every link token (#672): the mail carries the token.
 async function invitation(email: string, sentAt = new Date(), onEdition = () => editionId) {
   const token = `arr-${Date.now()}-${stamp++}`;
   await prisma.arrivalsAccess.create({
-    data: { editionId: onEdition(), email, invitationToken: token, invitationSentAt: sentAt },
+    data: { editionId: onEdition(), email, invitationToken: hashLinkToken(token), invitationSentAt: sentAt },
   });
   return token;
 }
@@ -102,6 +105,9 @@ describe("Volunteer sign-up through an invitation (#640)", () => {
     });
 
     expect(res.statusCode).toBe(200);
+    // Signed in at once: /accept follows with this session. better-auth's
+    // sign-up no longer opens one (#673), the route signs in itself.
+    expect(res.headers["set-cookie"]).toBeDefined();
     const user = await prisma.user.findUniqueOrThrow({ where: { email } });
     userIds.push(user.id);
     // EDITOR here would open the back-office to every volunteer (#362).
@@ -124,10 +130,29 @@ describe("Volunteer sign-up through an invitation (#640)", () => {
     const email = uniqueEmail("presignup");
     await invitation(email);
 
+    // Refused without saying so (#673): a success with no session.
     await expect(
       auth.api.signUpEmail({ body: { name: "Someone", email, password: "someone1234!test" } }),
-    ).rejects.toThrow();
+    ).resolves.toMatchObject({ token: null });
     expect(await prisma.user.count({ where: { email } })).toBe(0);
+  });
+
+  // better-auth's sign-up keeps quiet about an existing account (#673); the
+  // token holder owns the mailbox, so the route tells them to sign in.
+  it("should tell the token holder the address already has an account", async () => {
+    const email = uniqueEmail("already");
+    const { user } = await createAccount(email, "GUEST");
+    const token = await invitation(email);
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/arrivals-invitation/${token}/sign-up`,
+      payload: { password: "volunteer1234!test" },
+    });
+
+    expect([res.statusCode, res.json().error]).toEqual([409, "account_exists"]);
+    expect(res.headers["set-cookie"]).toBeUndefined();
+    expect(await prisma.account.count({ where: { userId: user.id } })).toBe(0);
   });
 
   it("should close the sign-up door once the invitation expires", async () => {
@@ -247,6 +272,20 @@ describe("Inviting volunteers in a batch (#640)", () => {
     expect(await canAccessArrivals(user, editionId)).toBe(true);
     // A failed mail leaves no open invitation behind (#223).
     expect(await prisma.arrivalsAccess.count({ where: { editionId, email: failing } })).toBe(0);
+  });
+
+  // A leaked database must not hand out working invitations (#672): the mail
+  // carries the token, the row keeps its hash, and the link still opens.
+  it("should store the invitation token hashed, the mailed link still opening it", async () => {
+    const email = uniqueEmail("hashed");
+
+    await app.inject({ method: "POST", url: `/api/admin/arrivals-access/${editionId}/invite`, payload: { emails: email } });
+    const mailed = sentTokens.get(email) as string;
+    const row = await prisma.arrivalsAccess.findFirstOrThrow({ where: { editionId, email } });
+    const opened = await app.inject({ method: "GET", url: `/api/arrivals-invitation/${mailed}` });
+
+    expect(row.invitationToken).toBe(hashLinkToken(mailed));
+    expect(opened.statusCode).toBe(200);
   });
 
   it("should report an address already invited instead of inviting it twice", async () => {
