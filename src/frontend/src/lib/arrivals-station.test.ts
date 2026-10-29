@@ -11,6 +11,13 @@ describe("the station a device works as (RG-ARR-25, #641)", () => {
     expect(readStation()).toEqual({ kind: "counter", counter: 2, bin: 3 });
   });
 
+  it("should keep bin 0, the first of a counter (RG-ARR-15)", () => {
+    saveStation({ kind: "counter", counter: 2, bin: 0 });
+
+    expect(readStation()).toEqual({ kind: "counter", counter: 2, bin: 0 });
+    expect(stationLabel({ kind: "counter", counter: 2, bin: 0 })).toBe("Guichet 2 · bac 0");
+  });
+
   it("should forget the station when asked to change", () => {
     saveStation({ kind: "scan" });
     saveStation(null);

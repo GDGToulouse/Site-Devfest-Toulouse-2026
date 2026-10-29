@@ -557,6 +557,9 @@ model Attendee {
   // a snapshot crossing each other cannot roll a card back (RG-ARR-61, #641).
   badgeState        BadgeState  @default(PRINTED)
   badgeStateVersion Int         @default(0)
+  // When the badge reached its current state: the counter's columns run in
+  // that order, oldest first to fetch, latest first delivered (RG-ARR-41, #643).
+  badgeStateAt      DateTime?
   badgeTransitions  BadgeTransition[]
   // The first scan at the entrance, whatever the ticket's flow: what the
   // "already scanned" alert shows (RG-ARR-34). A label, not a user: it must

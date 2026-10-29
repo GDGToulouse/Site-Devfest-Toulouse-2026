@@ -28,7 +28,7 @@ export default function ArrivalsZonePage() {
         // Backend out of reach (0) or down behind the relay (5xx): reopen the
         // edition this device was last let into, cut off but usable.
         const remembered = status === 0 || status >= 500 ? recallArrivalsEdition() : null;
-        if (remembered) setCurrent({ edition: remembered, hasAccess: true });
+        if (remembered) setCurrent({ edition: remembered, hasAccess: true, canStepBack: false });
         else setLoadError(true);
         return;
       }
@@ -44,7 +44,9 @@ export default function ArrivalsZonePage() {
   }
 
   if (current?.edition && current.hasAccess) {
-    return <ArrivalsWorkspace edition={current.edition} onSignOut={handleSignOut} />;
+    return (
+      <ArrivalsWorkspace edition={current.edition} canStepBack={current.canStepBack} onSignOut={handleSignOut} />
+    );
   }
 
   return (

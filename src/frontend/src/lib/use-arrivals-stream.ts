@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import {
   applyBadge,
@@ -29,7 +29,12 @@ export const STREAM_RED_AFTER_MS = 8_000;
 /** Delay before a fresh attempt once EventSource has given up. */
 const STREAM_RETRY_MS = 3_000;
 
-export function useArrivalsStream(editionId: number | null): { live: LiveState | null; status: StreamStatus } {
+export function useArrivalsStream(editionId: number | null): {
+  live: LiveState | null;
+  status: StreamStatus;
+  /** A badge as a move's answer gives it: same version rule as the stream. */
+  applyMoved: (badge: LiveBadge) => void;
+} {
   const [live, setLive] = useState<LiveState | null>(null);
   const [status, setStatus] = useState<StreamStatus>("reconnecting");
 
@@ -109,5 +114,9 @@ export function useArrivalsStream(editionId: number | null): { live: LiveState |
     };
   }, [editionId]);
 
-  return { live, status };
+  const applyMoved = useCallback((badge: LiveBadge) => {
+    setLive((state) => (state ? applyBadge(state, badge) : state));
+  }, []);
+
+  return { live, status, applyMoved };
 }

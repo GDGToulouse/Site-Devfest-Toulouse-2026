@@ -9,6 +9,8 @@ export interface LiveBadge {
   number: number;
   state: BadgeState;
   version: number;
+  /** When it reached `state`, ISO. */
+  since: string | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -81,7 +83,7 @@ export const binOf = (badgeNumber: number) => Math.floor((badgeNumber % 1000) / 
 
 /**
  * Each bin's colour, so a volunteer spots theirs at a glance (RG-ARR-42).
- * Bins are numbered from 1; up to MAX_BINS_PER_COUNTER (10) on the backend.
+ * Bins are numbered from 0 (RG-ARR-15); up to MAX_BINS_PER_COUNTER (10) on the backend.
  */
 const BIN_COLORS = [
   "bg-malachite",
@@ -96,7 +98,7 @@ const BIN_COLORS = [
   "bg-noir",
 ];
 
-export const binColor = (bin: number) => BIN_COLORS[(bin - 1 + BIN_COLORS.length) % BIN_COLORS.length];
+export const binColor = (bin: number) => BIN_COLORS[bin % BIN_COLORS.length];
 
 /** Waiting badges above which a counter turns orange, then red, on the Scan phones (RG-ARR-36). */
 export const LOAD_WARNING = 10;
@@ -107,6 +109,47 @@ export interface CounterLoad {
   toFetch: number;
   ready: number;
   delivered: number;
+}
+
+/** Delivered cards a counter keeps in view: enough to undo a slip (RG-ARR-41). */
+export const DELIVERED_SHOWN = 10;
+
+export interface CounterBoard {
+  /** Oldest first: the first to arrive is the first to fetch. */
+  toFetch: LiveBadge[];
+  /** Oldest first, in the order they were laid on the counter. */
+  ready: LiveBadge[];
+  /** The latest DELIVERED_SHOWN, latest first. */
+  delivered: LiveBadge[];
+  /** Cards to fetch per bin, every bin of the layout listed. */
+  toFetchByBin: number[];
+}
+
+const sinceTime = (badge: LiveBadge) => (badge.since ? Date.parse(badge.since) : 0);
+// Ties (a backfilled date, or none) fall back on the number: stable across screens.
+const bySince = (a: LiveBadge, b: LiveBadge) => sinceTime(a) - sinceTime(b) || a.number - b.number;
+
+/** A counter's kanban (#643), narrowed to one bin for the phone that follows only its own. */
+export function counterBoard(state: LiveState, counter: number, bin: number | null): CounterBoard {
+  const board: CounterBoard = {
+    toFetch: [],
+    ready: [],
+    delivered: [],
+    toFetchByBin: Array.from({ length: state.layout.binsPerCounter }, () => 0),
+  };
+  for (const badge of state.badges.values()) {
+    if (counterOf(badge.number) !== counter) continue;
+    const badgeBin = binOf(badge.number);
+    if (badge.state === "TO_FETCH" && badgeBin < board.toFetchByBin.length) board.toFetchByBin[badgeBin]++;
+    if (bin !== null && badgeBin !== bin) continue;
+    if (badge.state === "TO_FETCH") board.toFetch.push(badge);
+    else if (badge.state === "READY") board.ready.push(badge);
+    else if (badge.state === "DELIVERED") board.delivered.push(badge);
+  }
+  board.toFetch.sort(bySince);
+  board.ready.sort(bySince);
+  board.delivered = board.delivered.sort((a, b) => bySince(b, a)).slice(0, DELIVERED_SHOWN);
+  return board;
 }
 
 /** Each counter's cards by column, every counter of the layout listed. */
