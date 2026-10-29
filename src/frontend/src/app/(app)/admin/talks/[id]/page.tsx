@@ -9,6 +9,7 @@ import TrashButton from "@/components/admin/TrashButton";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import type { Talk, Category, Speaker, AdminVenue } from "@/lib/types";
 import TalkForm, { emptyTalkForm, type TalkFormValue } from "@/components/admin/talks/TalkForm";
+import type { TalkStatus } from "@/components/admin/PublicationSwitch";
 import AuditTrail from "@/components/admin/AuditTrail";
 
 interface TalkData extends Talk {
@@ -29,7 +30,7 @@ export default function TalkEditorPage() {
   const [editionId, setEditionId] = useState<number | null>(null);
   const [editionYear, setEditionYear] = useState<number | null>(null);
   // The talk as last saved: its visual (#116) exists only once it is published.
-  const [saved, setSaved] = useState<{ slug: string; isPublished: boolean } | null>(null);
+  const [saved, setSaved] = useState<{ slug: string; status: TalkStatus } | null>(null);
   const [categories, setCategories] = useState<Category[]>([]);
   const [speakers, setSpeakers] = useState<Speaker[]>([]);
   // The rooms of the edition's venue (#105). Empty until an edition is known.
@@ -76,7 +77,7 @@ export default function TalkEditorPage() {
         });
         setEditionId(data.editionId);
         setEditionYear(data.edition?.year ?? null);
-        setSaved({ slug: data.slug, isPublished: data.publicationStatus === "PUBLISHED" });
+        setSaved({ slug: data.slug, status: data.publicationStatus });
         setIsLoading(false);
       });
     }
@@ -160,7 +161,7 @@ export default function TalkEditorPage() {
       // the editor on the talk, saving then threw them back to the list, and
       // the SaveFeedback below never got the chance to say anything (#412).
       setSaveState({ kind: "ok", text: "Modifications enregistrées." });
-      setSaved((s) => s && { ...s, isPublished: form.publicationStatus === "PUBLISHED" });
+      setSaved((s) => s && { ...s, status: form.publicationStatus });
     }
   }
 
@@ -176,7 +177,7 @@ export default function TalkEditorPage() {
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
         </button>
         <h1 className="text-3xl font-bold text-noir">{isNew ? "Nouvelle conférence" : "Modifier la conférence"}</h1>
-        {saved?.isPublished && editionYear && (
+        {saved?.status === "PUBLISHED" && editionYear && (
           // The social-media visual (#116), as on the speaker sheet.
           <a
             href={`/conferences/${saved.slug}/social-card?year=${editionYear}`}
@@ -190,7 +191,7 @@ export default function TalkEditorPage() {
         {talkId !== null && (
           <TrashButton
             // "Voir le visuel" already pushes the header's right side out.
-            className={saved?.isPublished && editionYear ? "" : undefined}
+            className={saved?.status === "PUBLISHED" && editionYear ? "" : undefined}
             path={`/talks/${talkId}`}
             listHref="/admin/talks"
             title="Supprimer la conférence"
@@ -225,7 +226,7 @@ export default function TalkEditorPage() {
           rooms={rooms}
           saved={
             saved && editionYear
-              ? { slug: saved.slug, year: editionYear, publicationStatus: saved.isPublished ? "PUBLISHED" : "DRAFT" }
+              ? { slug: saved.slug, year: editionYear, publicationStatus: saved.status }
               : null
           }
         />

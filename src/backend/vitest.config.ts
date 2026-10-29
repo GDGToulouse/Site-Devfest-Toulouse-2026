@@ -26,6 +26,10 @@ const testTimeout = 30000;
 // Refuses a bulk delete/update whose filter lost a value to `undefined` (#681).
 const setupFiles = ["src/__tests__/support/setup-prisma-guard.ts"];
 
+// Sponsor guests ship asleep (#727): the suites test the feature awake, and
+// admin-sponsor-guests.test.ts checks it stays shut without the variable.
+const env = { SPONSOR_GUESTS_ENABLED: "true" };
+
 export default defineConfig({
   test: {
     projects: [
@@ -36,6 +40,7 @@ export default defineConfig({
           exclude: [...exclude, ...SEQUENTIAL],
           testTimeout,
           setupFiles,
+          env,
           sequence: { groupOrder: 0 },
         },
       },
@@ -46,6 +51,7 @@ export default defineConfig({
           exclude,
           testTimeout,
           setupFiles,
+          env,
           fileParallelism: false,
           sequence: { groupOrder: 1 },
         },

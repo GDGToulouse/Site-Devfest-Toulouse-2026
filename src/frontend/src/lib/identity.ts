@@ -24,6 +24,7 @@ const DEFAULTS = {
   logoWhite: "/images/logo-devfest-white.svg",
   logoMonochrome: "/images/logo-devfest-96.png",
   logoSquare: "/images/logo-devfest-96.png",
+  // app/favicon.ico, the DevFest icon (#709), served by Next's file convention.
   faviconIco: "/favicon.ico",
 } as const;
 

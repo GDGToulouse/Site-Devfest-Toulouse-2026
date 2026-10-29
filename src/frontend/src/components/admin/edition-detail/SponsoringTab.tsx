@@ -25,14 +25,16 @@ const STATUS_OPTIONS: { value: SponsorPageStatus; label: string; hint: string }[
 ];
 
 // A catalogue tier merged with its (optional) binding to this edition (#320).
-// A single "on /devenir-sponsor" checkbox drives the binding: checking it
-// creates the link (visible), unchecking removes it. Price/order edit inline
-// and save on blur.
+// A single "on /devenir-sponsor" checkbox drives the binding's visibility.
+// Unchecking hides the offer rather than deleting the row: the row also holds
+// the guest places of the sponsors who bought it (#727), which must survive
+// the offer leaving the public page. Price/order/places save on blur.
 interface EditionTierRow {
   tier: AdminSponsorTier;
-  offered: boolean; // a live, visible join row exists for this edition
+  offered: boolean; // a visible join row exists for this edition
   price: string;
   sortOrder: string;
+  guestPlaces: string;
 }
 
 interface EditionTierLink {
@@ -40,13 +42,15 @@ interface EditionTierLink {
   isVisible: boolean;
   price: string | null;
   sortOrder: number;
+  guestPlaces: number;
 }
 
 interface SponsoringTabProps {
   editionId: number;
+  showGuestPlaces: boolean;
 }
 
-export default function SponsoringTab({ editionId }: SponsoringTabProps) {
+export default function SponsoringTab({ editionId, showGuestPlaces }: SponsoringTabProps) {
   const [rows, setRows] = useState<EditionTierRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingTierId, setSavingTierId] = useState<number | null>(null);
@@ -93,9 +97,10 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         const link = byTierId.get(tier.id);
         return {
           tier,
-          offered: !!link,
+          offered: !!link?.isVisible,
           price: link?.price ?? "",
           sortOrder: String(link?.sortOrder ?? 0),
+          guestPlaces: String(link?.guestPlaces ?? 0),
         };
       }),
     );
@@ -120,12 +125,10 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
   async function toggleOffered(row: EditionTierRow) {
     setSavingTierId(row.tier.id);
     setTierError("");
-    const { status } = row.offered
-      ? await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, { method: "DELETE" })
-      : await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
-          method: "PUT",
-          body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
-        });
+    const { status } = await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
+      method: "PUT",
+      body: JSON.stringify({ ...rowBody(row), isVisible: !row.offered }),
+    });
     setSavingTierId(null);
     if (status !== 200 && status !== 204) {
       setTierError("La modification a échoué. Réessayez.");
@@ -134,15 +137,26 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
     patchRow(row.tier.id, { offered: !row.offered });
   }
 
-  // Persist the price/order of an already-published offer, on blur.
+  function rowBody(row: EditionTierRow) {
+    return {
+      isVisible: row.offered,
+      price: row.price || null,
+      sortOrder: Number(row.sortOrder) || 0,
+      guestPlaces: Math.max(0, Math.floor(Number(row.guestPlaces) || 0)),
+    };
+  }
+
+  // Persist the price/order/places of an offer, on blur. Places apply to the
+  // sponsors of the offer even when it is not shown on /devenir-sponsor.
   async function saveRow(row: EditionTierRow) {
-    if (!row.offered) return;
     setSavingTierId(row.tier.id);
-    await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
+    setTierError("");
+    const { status } = await adminFetch(`/editions/${editionId}/sponsor-tiers/${row.tier.id}`, {
       method: "PUT",
-      body: JSON.stringify({ isVisible: true, price: row.price || null, sortOrder: Number(row.sortOrder) || 0 }),
+      body: JSON.stringify(rowBody(row)),
     });
     setSavingTierId(null);
+    if (status !== 200) setTierError("La modification a échoué. Réessayez.");
   }
 
   async function saveSettings() {
@@ -331,7 +345,8 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
         <h3 className="text-lg font-bold text-noir">Offres sur « Devenir sponsor »</h3>
         <p className="text-sm text-gris">
           Cochez les offres du catalogue à publier pour cette édition, et fixez leur tarif et leur ordre
-          d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ».
+          d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ». Les places invités sont
+          le nombre de personnes qu&apos;un sponsor de l&apos;offre peut inscrire, publiée ou non.
         </p>
       </div>
 
@@ -355,6 +370,7 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
                   <th className="text-left px-4 py-3 font-medium text-gris">Offre</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Tarif (édition)</th>
                   <th className="text-left px-4 py-3 font-medium text-gris">Ordre</th>
+                  {showGuestPlaces && <th className="text-left px-4 py-3 font-medium text-gris">Places invités</th>}
                 </tr>
               </thead>
               <tbody>
@@ -395,6 +411,19 @@ export default function SponsoringTab({ editionId }: SponsoringTabProps) {
                         className="w-16 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50 disabled:opacity-40"
                       />
                     </td>
+                    {showGuestPlaces && (
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min={0}
+                          value={row.guestPlaces}
+                          onChange={(e) => patchRow(row.tier.id, { guestPlaces: e.target.value })}
+                          onBlur={() => saveRow(row)}
+                          aria-label={`Places invités ${row.tier.nameFr}`}
+                          className="w-20 rounded-lg border border-gris/30 px-2 py-1 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

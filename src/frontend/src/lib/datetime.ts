@@ -86,6 +86,23 @@ export function formatEventDate(iso: string, locale: string): string {
   }).format(date);
 }
 
+/**
+ * UTC instant → `Jeudi 19 novembre` / `Thursday 19 November`, on the Toulouse
+ * calendar (#717). Capitalised: it opens the "when and where" line of a talk
+ * page, and French writes weekdays in lower case mid-sentence.
+ */
+export function formatEventDay(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const day = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+    timeZone: EVENT_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).format(date);
+  return day.charAt(0).toUpperCase() + day.slice(1);
+}
+
 // `YYYY-MM-DD` of an instant on the event's calendar (en-CA formats that way).
 const eventDayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: EVENT_TIME_ZONE,

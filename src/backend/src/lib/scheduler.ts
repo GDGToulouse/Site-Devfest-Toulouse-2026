@@ -7,6 +7,7 @@ import { AUDIT_RETENTION_MONTHS, purgeExpiredAuditLog } from "./audit-purge.js";
 import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 import { applyScheduledStatus } from "./edition-status-schedule.js";
 import { purgeExpiredTrash } from "./trash-purge.js";
+import { PERSONAL_DATA_RETENTION_MONTHS, anonymizeExpiredPersonalData } from "./personal-data-retention.js";
 import { editionsWithPendingCheckIns, requestCheckIn } from "./billetweb-checkin.js";
 import { ATTENDEE_RETENTION_MONTHS, purgeExpiredAttendees } from "./attendee-retention.js";
 
@@ -14,11 +15,13 @@ import { ATTENDEE_RETENTION_MONTHS, purgeExpiredAttendees } from "./attendee-ret
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
 const FEATURED_ROTATION_CRON = "0 1 * * *";
 const AUDIT_PURGE_CRON = "0 3 * * *";
+// 3:30 AM Paris time, between the two purges.
+const PERSONAL_DATA_CRON = "30 3 * * *";
 // 4 AM Paris time, after the audit purge: the quietest hour, and the last of the
 // nightly clean-ups.
 const TRASH_PURGE_CRON = "0 4 * * *";
-// 3:30 AM Paris time, between the other nightly clean-ups (RG-ARR-66).
-const ATTENDEE_PURGE_CRON = "30 3 * * *";
+// 3:45 AM Paris time, after the personal data's anonymisation (RG-ARR-66).
+const ATTENDEE_PURGE_CRON = "45 3 * * *";
 // Midnight Paris time, when the event day starts and real votes open (#566).
 const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // Every quarter of an hour past midnight, Paris time (#585): a redeploy at
@@ -47,6 +50,22 @@ export async function runTrashPurge(log: Pick<FastifyBaseLogger, "info" | "error
     );
   } catch (err) {
     log.error({ err }, "Trash purge failed");
+  }
+}
+
+/**
+ * Anonymise contact and feedback messages past their retention window (#666).
+ * Never throws, like the trash purge: the next day retries.
+ */
+export async function runPersonalDataAnonymization(log: Pick<FastifyBaseLogger, "info" | "error">): Promise<void> {
+  try {
+    const report = await runInContext(
+      systemContext("Anonymisation des données personnelles"),
+      async () => await anonymizeExpiredPersonalData(),
+    );
+    log.info({ ...report, retentionMonths: PERSONAL_DATA_RETENTION_MONTHS }, "Personal data anonymized");
+  } catch (err) {
+    log.error({ err }, "Personal data anonymization failed");
   }
 }
 
@@ -100,6 +119,14 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     },
     { name: "audit-log-purge", timezone: TIMEZONE, noOverlap: true },
   );
+
+  // Daily, so a message is anonymised the day after its year ends. Idempotent:
+  // a second run, on another replica or after a retry, finds nothing left.
+  cron.schedule(PERSONAL_DATA_CRON, () => runPersonalDataAnonymization(log), {
+    name: "personal-data-anonymization",
+    timezone: TIMEZONE,
+    noOverlap: true,
+  });
 
   // Daily, so an element leaves the trash the day after its window ends. Safe on
   // several replicas: the purge is idempotent, a second run finds nothing.
@@ -172,6 +199,7 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
       cron: [
         FEATURED_ROTATION_CRON,
         AUDIT_PURGE_CRON,
+        PERSONAL_DATA_CRON,
         ATTENDEE_PURGE_CRON,
         TRASH_PURGE_CRON,
         FEEDBACK_TEST_MODE_CRON,

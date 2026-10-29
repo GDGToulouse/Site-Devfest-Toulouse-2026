@@ -2,7 +2,7 @@
 
 import type { TalkFormat, TalkLevel, Category, Speaker } from "@/lib/types";
 import SpeakerPicker from "./SpeakerPicker";
-import PublicationSwitch from "@/components/admin/PublicationSwitch";
+import PublicationSwitch, { type ClosedOption, type TalkStatus } from "@/components/admin/PublicationSwitch";
 
 const FORMATS: { value: TalkFormat; label: string }[] = [
   { value: "CONFERENCE", label: "Conférence (40 min)" },
@@ -30,7 +30,7 @@ export interface TalkFormValue {
   startsAt: string;
   endsAt: string;
   speakerIds: number[];
-  publicationStatus: "DRAFT" | "PUBLISHED";
+  publicationStatus: TalkStatus;
   isSpeakerEditable: boolean;
   // The replay (#636): a YouTube URL, empty when there is none.
   videoUrl: string;
@@ -66,8 +66,20 @@ interface TalkFormProps {
   rooms: { id: number; name: string }[];
   // The talk as stored (#632): taking a live talk off the site asks first, and
   // a draft offers its preview. Absent for a talk not created yet.
-  saved?: { slug: string; year: number; publicationStatus: "DRAFT" | "PUBLISHED" } | null;
+  saved?: { slug: string; year: number; publicationStatus: TalkStatus } | null;
 }
+
+// A session that will not take place (#726): off the site like a draft, but
+// not work in progress. Its slot and room stay, so restoring it puts it back.
+const CANCELLED_TALK: ClosedOption = {
+  status: "CANCELLED",
+  label: "Annulé",
+  hint: "Annulé : invisible sur le site et ignoré par le contrôle des salles. Le créneau et la salle sont conservés : republier la conférence la remet à sa place.",
+  confirmTitle: "Annuler cette conférence ?",
+  confirmMessage:
+    "Elle disparaîtra du site après l'enregistrement et restera classée à part, hors des brouillons. Son créneau et sa salle sont conservés.",
+  confirmLabel: "Marquer annulée",
+};
 
 export default function TalkForm({ value, onChange, categories, speakers, rooms, saved }: TalkFormProps) {
 
@@ -211,10 +223,12 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms,
 
       <div>
         <span className="block text-sm font-medium text-noir mb-1">Statut</span>
-        <PublicationSwitch
+        <PublicationSwitch<TalkStatus>
           label="Statut de la conférence"
           value={value.publicationStatus}
           savedValue={saved?.publicationStatus}
+          // A talk is cancelled once it exists (#726), not created cancelled.
+          closed={saved ? CANCELLED_TALK : undefined}
           unpublishMessage={`Retirer « ${value.title || "cette conférence"} » du site ? Elle n'y sera plus visible après l'enregistrement.`}
           previewHref={
             saved ? `/api/preview?type=talk&year=${saved.year}&slug=${encodeURIComponent(saved.slug)}` : null

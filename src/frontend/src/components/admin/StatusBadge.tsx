@@ -2,7 +2,7 @@
 
 interface StatusBadgeProps {
   status: string;
-  variant?: "green" | "orange" | "gray" | "blue";
+  variant?: "green" | "orange" | "gray" | "blue" | "red";
 }
 
 const variantClasses: Record<string, string> = {
@@ -10,6 +10,7 @@ const variantClasses: Record<string, string> = {
   orange: "bg-terre-cuite/10 text-terre-cuite",
   gray: "bg-gris/10 text-gris",
   blue: "bg-bleu/10 text-bleu",
+  red: "bg-rouge/10 text-rouge",
 };
 
 export default function StatusBadge({ status, variant = "gray" }: StatusBadgeProps) {

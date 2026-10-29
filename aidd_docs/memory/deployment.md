@@ -3,7 +3,7 @@
 ## Pipeline
 
 - GitHub Actions pour la vérification (`.github/workflows/`), Coolify pour le déploiement, sur un VPS OVH
-- CI sur push `main`, `dev`, `dev-*` et sur PR vers `main` / `dev` : garde-fou de version, lint + tests + build frontend, typecheck + migrations + seed + tests backend
+- CI sur push `main`, `dev`, `dev-*` et sur PR vers `main` / `dev` : garde-fou de version, audit des dépendances de production (`pnpm audit --prod`, bloquant dès `high`, exceptions par GHSA justifiées dans chaque `package.json`, #695), lint + tests + build frontend, typecheck + migrations + seed + tests backend
 - Lighthouse CI sur PR vers `main` / `dev`
 - Coolify redéploie **automatiquement** sur push `dev-j` et `dev` ; **jamais** sur push `main`
 
@@ -25,7 +25,7 @@ flowchart LR
 | — | Local | — | `docker-compose.local.yml` |
 
 - Piège de nommage : la branche `dev` déploie la **beta**, pas un environnement de dev
-- Les deux compose Coolify construisent la même image (build + start). Seuls changent le seed (`seed.ts` minimal contre `seed-dev.ts` avec comptes de test), le SMTP (Postfix réel contre MailHog, où les e-mails restent piégés) et `NODE_ENV`
+- Les deux compose Coolify construisent la même image (build + start). Seuls changent le seed (`seed.ts` minimal contre `seed-dev.ts` avec comptes de test), le SMTP (Postfix réel contre Mailpit, où les e-mails restent piégés) et `NODE_ENV`
 - Tous les environnements partagent le VPS : `ENV_NAME` donne à chaque backend un alias réseau unique, sans lequel un frontend peut joindre le backend d'un autre environnement — `docs/deployer-nouvel-environnement.md`
 - En local, toujours passer `-f` : il n'y a pas de `docker-compose.yml`
 - Anciens sites 2016-2025 : hébergement mutualisé OVH, **non renouvelé à l'échéance du 2027-03-01**
@@ -33,7 +33,7 @@ flowchart LR
 ## Release
 
 - Promotion `dev` → `main` par PR squashée qui porte le bump SemVer, le CHANGELOG et les `Closes #` ; puis tag `vX.Y.Z` identique à `APP_VERSION` et release GitHub
-- Le tag déclenche `version-backport.yml`, qui ouvre la PR de redescente vers `dev`. Ouverte par `GITHUB_TOKEN`, elle ne déclenche **aucune** CI : « no checks » veut dire absence, pas échec. Le ruleset « Only PR » exige pourtant les trois jobs de CI sur `main` et `dev` (#658) : un admin la merge en cochant « Merge without waiting for requirements to be met » (contournement réservé aux admins, par PR seulement)
+- Le tag déclenche `version-backport.yml`, qui ouvre la PR de redescente vers `dev`. Ouverte par `GITHUB_TOKEN`, elle ne déclenche **aucune** CI : « no checks » veut dire absence, pas échec. Le ruleset « Only PR » exige pourtant les quatre jobs de CI sur `main` et `dev` (#658, audit des dépendances depuis #695) : un admin la merge en cochant « Merge without waiting for requirements to be met » (contournement réservé aux admins, par PR seulement)
 - Les tags `v*` sont protégés (ruleset « Release tags ») : seul un admin les crée, et personne ne les déplace ni ne les supprime
 - Les données ne migrent jamais de la beta vers la prod par défaut : c'est un écrasement complet, à la demande seulement
 - Procédure complète et retour arrière : `docs/mise-en-production.md`, skill `deploy-to-prod`. Pièges Coolify : `docs/coolify-pieges-multi-environnements.md`

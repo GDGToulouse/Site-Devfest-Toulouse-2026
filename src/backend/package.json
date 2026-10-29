@@ -64,6 +64,10 @@
       "deepmerge-ts": "^8.0.0",
       "mysql2": "^3.23.1",
       "@fastify/busboy": "^3.2.2"
+    },
+    "auditConfig": {
+      "//": {},
+      "ignoreGhsas": []
     }
   },
   "devDependencies": {

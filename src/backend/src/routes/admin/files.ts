@@ -7,7 +7,7 @@ import { originalNamesByUrl, rememberOriginalName } from "../../lib/file-metadat
 import { generateAltText } from "../../lib/alt-text.js";
 import { UPLOADS_DIR, UnsafeSvgError } from "../../lib/image-store.js";
 import { storeUpload, type StoredUpload } from "../../lib/upload-store.js";
-import { fetchRemoteFile, RemoteFetchError } from "../../lib/safe-fetch.js";
+import { importFromUrl, UrlImportError, type UrlImport } from "../../lib/url-import.js";
 import { EXTENSION_BY_MIME, sniffMime, sniffOfficeDocument } from "../../lib/file-sniff.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
@@ -17,7 +17,7 @@ const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
   // /uploads/, an SVG carrying <script> executes in our origin. It is allowed
   // again since #346, but only because storeImageBuffer strips scripts,
-  // handlers and remote references before writing, and index.ts serves .svg
+  // handlers and remote references before writing, and upload-headers.ts serves .svg
   // under a sandbox CSP. Removing either of those brings the hole back.
   "image/jpeg", "image/png", "image/webp", "image/gif",
   "image/svg+xml",
@@ -32,21 +32,6 @@ const ALLOWED_MIMES = [
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 ];
 const MAX_FILE_SIZE = 20_000_000; // 20 MB
-
-// Why an import by URL was refused (#617), in the editor's words: what happened
-// and what to do, not the code (#394).
-const IMPORT_REFUSALS: Record<RemoteFetchError["code"], { status: number; message: string }> = {
-  invalid_url: { status: 400, message: "Cette adresse n'est pas une URL valide." },
-  invalid_protocol: { status: 400, message: "Seules les adresses http:// et https:// sont acceptées." },
-  internal_hostname: { status: 400, message: "Cette adresse pointe vers le réseau interne : elle est refusée." },
-  private_ip: { status: 400, message: "Cette adresse pointe vers un réseau privé : elle est refusée." },
-  too_many_redirects: { status: 400, message: "Cette adresse redirige trop de fois. Donnez l'adresse finale du fichier." },
-  http_error: { status: 502, message: "Le site distant n'a pas fourni le fichier. Vérifiez l'adresse." },
-  too_large: { status: 413, message: "Le fichier dépasse 20 Mo." },
-  timeout: { status: 504, message: "Le site distant n'a pas répondu à temps. Réessayez plus tard." },
-  empty: { status: 502, message: "Le site distant a renvoyé un fichier vide." },
-  network: { status: 502, message: "Le site distant est injoignable. Vérifiez l'adresse." },
-};
 
 interface FileListQuery {
   page?: string;
@@ -171,38 +156,21 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       },
     },
   }, async (request, reply) => {
-    let downloaded: { buffer: Buffer; url: URL };
+    let imported: UrlImport;
     try {
-      downloaded = await fetchRemoteFile(request.body.url.trim(), { maxBytes: MAX_FILE_SIZE });
-    } catch (err) {
-      if (err instanceof RemoteFetchError) {
-        const { status, message } = IMPORT_REFUSALS[err.code];
-        return reply.code(status).send({ error: err.code, message });
-      }
-      throw err;
-    }
-
-    // The bytes say what the file is, not the server's header nor the URL.
-    const mimetype = sniffMime(downloaded.buffer);
-    if (!mimetype || !ALLOWED_MIMES.includes(mimetype)) {
-      return reply.code(400).send({
-        error: "unsupported_type",
-        message: "Ce fichier n'est pas une image (JPEG, PNG, WebP, GIF, SVG, ICO) ni un PDF.",
+      imported = await importFromUrl(request.body.url, {
+        maxBytes: MAX_FILE_SIZE,
+        allowedMimes: ALLOWED_MIMES,
+        unsupportedMessage: "Ce fichier n'est pas une image (JPEG, PNG, WebP, GIF, SVG, ICO) ni un PDF.",
+        log: request.log,
       });
-    }
-
-    let stored: StoredUpload;
-    try {
-      stored = await storeUpload(downloaded.buffer, mimetype, EXTENSION_BY_MIME[mimetype], request.log);
     } catch (err) {
-      if (err instanceof UnsafeSvgError) {
-        return reply.code(400).send({
-          error: "unsafe_svg",
-          message: "Ce SVG ne contient rien d'affichable une fois les scripts retirés.",
-        });
+      if (err instanceof UrlImportError) {
+        return reply.code(err.status).send({ error: err.code, message: err.message });
       }
       throw err;
     }
+    const { stored, mimetype, originalName } = imported;
 
     const alt = request.body.alt?.trim() || null;
     if (alt) {
@@ -212,11 +180,6 @@ export default async function adminFileRoutes(app: FastifyInstance) {
         create: { filename: stored.filename, alt },
       });
     }
-    // The name the file had at its source (#378): the last segment of the path
-    // it was finally served from.
-    const originalName = decodeURIComponent(downloaded.url.pathname.split("/").filter(Boolean).pop() ?? "") || undefined;
-    await rememberOriginalName(`/uploads/${stored.filename}`, originalName);
-
     return reply.code(201).send({
       filename: stored.filename,
       originalName: originalName ?? null,

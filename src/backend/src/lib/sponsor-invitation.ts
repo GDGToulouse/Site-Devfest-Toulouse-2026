@@ -1,7 +1,7 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 
 import { prisma } from "./prisma.js";
-import { isInvitationExpired } from "./edit-token.js";
+import { hashLinkToken, isInvitationExpired } from "./edit-token.js";
 import type { FastifySchemaValidationError } from "fastify";
 import type { SponsorAccessRole } from "./sponsor-guard.js";
 
@@ -35,7 +35,7 @@ export function maskEmail(email: string): string {
 // exists by then, so a second use would be a replay.
 export async function findPendingInvitation(token: string) {
   const contact = await prisma.sponsorContact.findUnique({
-    where: { invitationToken: token },
+    where: { invitationToken: hashLinkToken(token) },
     include: { sponsor: { select: { id: true, name: true, slug: true, deletedAt: true } } },
   });
   if (!contact) return null;

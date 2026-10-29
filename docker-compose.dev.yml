@@ -76,6 +76,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - SPONSOR_GUESTS_ENABLED=${SPONSOR_GUESTS_ENABLED:-}
       # Scheduled trash purge (#149). Unset means the endpoint only accepts an
       # ADMIN session — the purge stops running, nothing opens up.
       - TRASH_PURGE_SECRET=${TRASH_PURGE_SECRET:-}
@@ -129,15 +130,19 @@ services:
       start_period: 30s
       start_interval: 2s
 
+  # Mailpit, which replaced the abandoned MailHog (#679). The service keeps its
+  # old name: Coolify binds dev-j's mail domain to it, and SMTP_HOST points at
+  # it. Pinned by digest, bumped by Dependabot.
   mailhog:
-    image: mailhog/mailhog:latest
+    image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
     container_name: devfest-${ENV_NAME:-local}-mailhog
     # Its UI and API are public behind Traefik and hold every e-mail the
     # environment sends, sign-in links included: HTTP auth is mandatory here
-    # (#658). MailHog wants a `user:bcrypt` file; it is written at start from
-    # two plain variables, hashed by MailHog itself, so no `$` of a bcrypt
-    # hash has to survive Coolify's variable handling. SMTP stays open to the
-    # backend. The local compose keeps MailHog without auth.
+    # (#658). Mailpit takes plain `user:password` credentials, built at start
+    # from the two variables, which keep their MailHog names so the Coolify
+    # values still apply. Mailpit splits credentials on whitespace: a password
+    # holding a space would never match, so it is refused. SMTP stays open to
+    # the backend. The local compose keeps Mailpit without auth.
     environment:
       - MAILHOG_USER=${MAILHOG_USER:-}
       - MAILHOG_PASSWORD=${MAILHOG_PASSWORD:-}
@@ -145,11 +150,25 @@ services:
     command:
       - |
         if [ -z "$$MAILHOG_USER" ] || [ -z "$$MAILHOG_PASSWORD" ]; then
-          echo "MAILHOG_USER and MAILHOG_PASSWORD are required: MailHog will not start unprotected." >&2
+          echo "MAILHOG_USER and MAILHOG_PASSWORD are required: Mailpit will not start unprotected." >&2
           exit 1
         fi
-        printf '%s:%s\n' "$$MAILHOG_USER" "$$(MailHog bcrypt "$$MAILHOG_PASSWORD")" > /tmp/mailhog-auth
-        exec MailHog -auth-file=/tmp/mailhog-auth
+        case "$$MAILHOG_USER$$MAILHOG_PASSWORD" in
+          *[[:space:]]*)
+            echo "MAILHOG_USER and MAILHOG_PASSWORD must not contain whitespace." >&2
+            exit 1
+            ;;
+        esac
+        export MP_UI_AUTH="$$MAILHOG_USER:$$MAILHOG_PASSWORD"
+        exec /mailpit
+    # The image probes itself every 15 s; 30 s like the other services (#704).
+    healthcheck:
+      test: ["CMD", "/mailpit", "readyz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+      start_interval: 1s
     expose:
       - "8025"
     networks:
