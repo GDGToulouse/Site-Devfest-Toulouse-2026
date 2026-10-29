@@ -11,6 +11,8 @@ export type Station =
 const STORAGE_KEY = "devfest-arrivals-station";
 
 const isPositiveInteger = (value: unknown): value is number => Number.isInteger(value) && (value as number) > 0;
+// Bins count from 0 (RG-ARR-15): bin 0 is a bin, not "no bin".
+const isBin = (value: unknown): value is number => Number.isInteger(value) && (value as number) >= 0;
 
 /** What the device remembers, or null: storage can be blocked, stale or hand-edited. */
 export function readStation(): Station | null {
@@ -25,7 +27,7 @@ export function readStation(): Station | null {
     const value = JSON.parse(raw) as Record<string, unknown>;
     if (value.kind === "scan" || value.kind === "help") return { kind: value.kind };
     if (value.kind === "counter" && isPositiveInteger(value.counter)) {
-      return { kind: "counter", counter: value.counter, bin: isPositiveInteger(value.bin) ? value.bin : null };
+      return { kind: "counter", counter: value.counter, bin: isBin(value.bin) ? value.bin : null };
     }
   } catch {
     // Not ours any more: ask again.
@@ -72,5 +74,5 @@ export function recallArrivalsEdition(): { id: number; year: number } | null {
 export function stationLabel(station: Station): string {
   if (station.kind === "scan") return "Scan";
   if (station.kind === "help") return "Aide";
-  return station.bin ? `Guichet ${station.counter} · bac ${station.bin}` : `Guichet ${station.counter}`;
+  return station.bin !== null ? `Guichet ${station.counter} · bac ${station.bin}` : `Guichet ${station.counter}`;
 }

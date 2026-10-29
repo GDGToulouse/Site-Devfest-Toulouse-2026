@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { applyBadge, applyHelp, binOf, counterLoads, counterOf, fromSnapshot, type LiveBadge } from "./arrivals-live";
+import { applyBadge, applyHelp, binColor, binOf, counterLoads, counterOf, fromSnapshot, type LiveBadge } from "./arrivals-live";
 
 const badge = (id: number, number: number, state: LiveBadge["state"], version: number): LiveBadge => ({
   id,
@@ -59,6 +59,13 @@ describe("the live state of the arrivals screens (#641)", () => {
 
   it("should read the counter and the bin from the badge number", () => {
     expect([counterOf(2307), binOf(2307)]).toEqual([2, 3]);
+  });
+
+  it("should give each bin of a counter its own colour, from bin 0", () => {
+    const colours = [binColor(binOf(2047)), binColor(binOf(2147)), binColor(binOf(2247))];
+
+    expect(new Set(colours).size).toBe(3);
+    expect(colours[0]).toBe("bg-malachite");
   });
 
   it("should count each counter's cards by column, idle counters included", () => {

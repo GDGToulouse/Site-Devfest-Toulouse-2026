@@ -81,7 +81,7 @@ export const binOf = (badgeNumber: number) => Math.floor((badgeNumber % 1000) / 
 
 /**
  * Each bin's colour, so a volunteer spots theirs at a glance (RG-ARR-42).
- * Bins are numbered from 1; up to MAX_BINS_PER_COUNTER (10) on the backend.
+ * Bins are numbered from 0 (RG-ARR-15); up to MAX_BINS_PER_COUNTER (10) on the backend.
  */
 const BIN_COLORS = [
   "bg-malachite",
@@ -96,7 +96,7 @@ const BIN_COLORS = [
   "bg-noir",
 ];
 
-export const binColor = (bin: number) => BIN_COLORS[(bin - 1 + BIN_COLORS.length) % BIN_COLORS.length];
+export const binColor = (bin: number) => BIN_COLORS[bin % BIN_COLORS.length];
 
 /** Waiting badges above which a counter turns orange, then red, on the Scan phones (RG-ARR-36). */
 export const LOAD_WARNING = 10;

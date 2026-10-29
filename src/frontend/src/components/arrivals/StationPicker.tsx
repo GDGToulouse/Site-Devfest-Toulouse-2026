@@ -20,7 +20,8 @@ export default function StationPicker({
 }) {
   const [counter, setCounter] = useState<number | null>(null);
   const counters = Array.from({ length: layout.counters }, (_, i) => i + 1);
-  const bins = Array.from({ length: layout.binsPerCounter }, (_, i) => i + 1);
+  // Numbered from 0, as on the badges and the bins themselves (RG-ARR-15).
+  const bins = Array.from({ length: layout.binsPerCounter }, (_, i) => i);
 
   if (counter !== null) {
     return (
