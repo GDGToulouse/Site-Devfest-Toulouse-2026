@@ -136,6 +136,13 @@ export default async function adminAttendeeRoutes(app: FastifyInstance) {
           message: "L'édition n'est liée à aucun événement Billetweb : importez d'abord ses tarifs.",
         });
       }
+      // Deleted at the end of their retention (RG-ARR-66): never fetched again.
+      if (edition.attendeesPurgedAt) {
+        return reply.status(409).send({
+          error: "attendees_purged",
+          message: "Les données des participants de cette édition ont été supprimées au terme de leur conservation.",
+        });
+      }
       const params = getBilletwebParams();
       if (!params) {
         return reply.status(400).send({ error: "Billetweb API credentials not configured" });
@@ -225,7 +232,7 @@ export default async function adminAttendeeRoutes(app: FastifyInstance) {
       const editionId = Number(request.params.editionId);
       const edition = await prisma.edition.findFirst({
         where: { id: editionId, ...notDeleted },
-        select: { billetwebEventId: true, attendeesSyncedAt: true },
+        select: { billetwebEventId: true, attendeesSyncedAt: true, attendeesPurgedAt: true },
       });
       if (!edition) return notFound(reply, "Edition");
 
@@ -259,6 +266,7 @@ export default async function adminAttendeeRoutes(app: FastifyInstance) {
       return {
         billetwebEventId: edition.billetwebEventId,
         syncedAt: edition.attendeesSyncedAt,
+        purgedAt: edition.attendeesPurgedAt,
         expected: sum((t) => t.expected) + countOf(null, false),
         cancelled: sum((t) => t.cancelled) + countOf(null, true),
         outsideFlow: sum((t) => (t.isOutsideFlow ? t.expected : 0)),
