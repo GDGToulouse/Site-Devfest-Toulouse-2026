@@ -86,9 +86,13 @@ export type ScanOutcome =
 
 export interface SearchHit extends ScanAttendee {
   badgeNumber: number | null;
+  /** Meaningful with a number only. */
+  badgeState: BadgeState;
   isCancelled: boolean;
   isDedicated: boolean;
   scannedAt: string | null;
+  labelCount: number;
+  labelDeliveredAt: string | null;
 }
 
 /**
@@ -110,6 +114,27 @@ export function scanTicket(editionId: number, target: { code: string } | { atten
 export function searchAttendees(editionId: number, query: string) {
   return call<SearchHit[]>(`/api/arrivals/${editionId}/search?q=${encodeURIComponent(query)}`, {
     signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),
+  });
+}
+
+// The help desk (#713).
+
+export interface LabelText {
+  firstName: string;
+  lastName: string;
+  company: string | null;
+}
+
+/** Records the print, then gives the text: a reprint is the same call (RG-ARR-54). */
+export function printLabel(editionId: number, attendeeId: number) {
+  return call<{ label: LabelText; printCount: number }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/label`, {
+    method: "POST",
+  });
+}
+
+export function deliverLabel(editionId: number, attendeeId: number) {
+  return call<{ delivered: true }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/label/delivered`, {
+    method: "POST",
   });
 }
 

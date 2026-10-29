@@ -375,6 +375,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN |
 | POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition |
 | GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label/delivered` | Contrôlé dans la route : étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition |
 | GET | `/api/arrivals/:editionId/offline-table` | Contrôlé dans la route : table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
 | GET | `/api/arrivals-invitation/:token` | Public |
 | POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
