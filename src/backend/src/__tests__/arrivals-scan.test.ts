@@ -252,3 +252,82 @@ describe("The degraded-mode table (RG-ARR-64, RG-ARR-65)", () => {
     expect(text).not.toContain(numbered.lastName);
   });
 });
+
+describe("Scans made during an outage, sent afterwards (RG-ARR-67, #645)", () => {
+  const key = (code: string) => createHash("sha256").update(`devfest-arrivals:${editionId}:${code}`).digest("hex").slice(0, 6);
+  // In the past: a time ahead of the server's clock is brought back to now.
+  const OUTAGE = "2026-01-15T08:05:00.000Z";
+  const replay = (scans: Array<{ id: string; key: string; number: number; scannedAt?: string }>) =>
+    app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/offline-scans`,
+      headers,
+      payload: { scans: scans.map((s) => ({ scannedAt: OUTAGE, ...s })) },
+    });
+
+  it("should record each scan at its own time, find the ticket from the digest and the number, and check it in", async () => {
+    const numbered = await createTicket({ number: 3201 });
+    const dedicated = await createTicket({ number: null, tier: "dedicated" });
+
+    const res = await replay([
+      { id: "a", key: key(numbered.barcode), number: 3201 },
+      { id: "b", key: key(dedicated.barcode), number: 0 },
+      { id: "c", key: "abcdef", number: 3202 },
+    ]);
+    await waitForCheckIns();
+
+    expect(res.json().results).toEqual([
+      { id: "a", result: "recorded" },
+      { id: "b", result: "recorded" },
+      { id: "c", result: "unmatched" },
+    ]);
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: numbered.id } });
+    expect(stored).toMatchObject({ badgeState: "TO_FETCH", scannedOffline: true, scannedByLabel: volunteerName });
+    expect(stored.scannedAt?.toISOString()).toBe(OUTAGE);
+    const history = await prisma.badgeTransition.findMany({ where: { attendeeId: numbered.id } });
+    expect(history.map((t) => [t.toState, t.createdAt.toISOString()])).toEqual([["TO_FETCH", OUTAGE]]);
+    expect(checkInCalls.some((c) => c.data.some((t) => t.id === Number(numbered.billetwebId)))).toBe(true);
+  });
+
+  it("should record a scan sent twice only once", async () => {
+    const ticket = await createTicket({ number: 3203 });
+    const scanned = { id: "d", key: key(ticket.barcode), number: 3203 };
+
+    await replay([scanned]);
+    const again = await replay([scanned]);
+
+    expect(again.json().results).toEqual([{ id: "d", result: "already_scanned" }]);
+    expect(await prisma.badgeTransition.count({ where: { attendeeId: ticket.id } })).toBe(1);
+  });
+
+  it("should leave alone a ticket scanned online since, its badge included", async () => {
+    const ticket = await createTicket({ number: 3204 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { badgeState: "DELIVERED", badgeStateVersion: 3 } });
+
+    const res = await replay([{ id: "e", key: key(ticket.barcode), number: 3204 }]);
+
+    expect(res.json().results).toEqual([{ id: "e", result: "already_scanned" }]);
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    expect([stored.badgeState, stored.scannedOffline]).toEqual(["DELIVERED", false]);
+  });
+
+  it("should let the counter mark a badge scanned offline as handed over in one touch, and only such a badge", async () => {
+    const offline = await createTicket({ number: 3205 });
+    const online = await createTicket({ number: 3206 });
+    await replay([{ id: "f", key: key(offline.barcode), number: 3205 }]);
+    await scan({ code: online.barcode });
+    const handOver = (attendeeId: number) =>
+      app.inject({
+        method: "POST",
+        url: `/api/arrivals/${editionId}/badges/${attendeeId}/move`,
+        headers,
+        payload: { from: "TO_FETCH", to: "DELIVERED" },
+      });
+
+    const [fromOutage, fromQueue] = [await handOver(offline.id), await handOver(online.id)];
+
+    expect(fromOutage.json()).toMatchObject({ applied: true, badge: { state: "DELIVERED", scannedOffline: true } });
+    expect(fromQueue.json()).toMatchObject({ applied: false, badge: { state: "TO_FETCH" } });
+  });
+});

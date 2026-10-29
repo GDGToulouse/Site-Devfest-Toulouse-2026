@@ -58,11 +58,15 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     anonymous: [401],
   },
   "POST /api/arrivals/:editionId/badges/:attendeeId/move": {
-    why: "transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN",
+    why: "transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne",
     anonymous: [400, 401],
   },
   "POST /api/arrivals/:editionId/scan": {
     why: "scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/offline-scans": {
+    why: "scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
   "GET /api/arrivals/:editionId/search": {

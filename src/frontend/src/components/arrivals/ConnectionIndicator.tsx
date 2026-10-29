@@ -8,12 +8,24 @@ const STATUS_DISPLAY: Record<StreamStatus, { label: string; dot: string }> = {
   disconnected: { label: "Déconnecté", dot: "bg-rouge" },
 };
 
-export default function ConnectionIndicator({ status }: { status: StreamStatus }) {
+export default function ConnectionIndicator({
+  status,
+  pendingScans = 0,
+}: {
+  status: StreamStatus;
+  /** Scans made during an outage, not sent yet (#645). */
+  pendingScans?: number;
+}) {
   const { label, dot } = STATUS_DISPLAY[status];
   return (
     <p role="status" className="flex items-center gap-2 text-sm font-medium text-noir" data-status={status}>
       <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${dot}`} />
       {label}
+      {pendingScans > 0 && (
+        <span className="rounded-full bg-orange/20 px-2 py-0.5 text-xs">
+          {pendingScans} à envoyer
+        </span>
+      )}
     </p>
   );
 }

@@ -15,9 +15,10 @@ export interface OfflineTable {
 const DEDICATED = 0;
 const AMBIGUOUS = -1;
 
+// `key` is the code's digest: what the scan is queued under, never the code (#645).
 export type OfflineAnswer =
-  | { kind: "badge"; number: number }
-  | { kind: "dedicated" }
+  | { kind: "badge"; number: number; key: string }
+  | { kind: "dedicated"; key: string }
   | { kind: "ambiguous" }
   | { kind: "unknown" };
 
@@ -57,9 +58,68 @@ export async function offlineKey(editionId: number, code: string, keyLength: num
 }
 
 export async function lookupOffline(table: OfflineTable, code: string): Promise<OfflineAnswer> {
-  const value = table.entries[await offlineKey(table.editionId, code, table.keyLength)];
+  const key = await offlineKey(table.editionId, code, table.keyLength);
+  const value = table.entries[key];
   if (value === undefined) return { kind: "unknown" };
-  if (value === DEDICATED) return { kind: "dedicated" };
+  if (value === DEDICATED) return { kind: "dedicated", key };
   if (value === AMBIGUOUS) return { kind: "ambiguous" };
-  return { kind: "badge", number: value };
+  return { kind: "badge", number: value, key };
+}
+
+// The scans made in degraded mode, sent once the backend is back (RG-ARR-67,
+// #645). Same rule as the table (RG-ARR-65): a digest and the number shown,
+// no name, no code. Emptied as the backend takes them.
+
+export interface QueuedScan {
+  /** The phone's own id: the backend answers per scan. */
+  id: string;
+  key: string;
+  /** The number shown, or 0 for the dedicated flow. */
+  number: number;
+  scannedAt: string;
+}
+
+const queueKey = (editionId: number) => `devfest-arrivals-offline-queue-${editionId}`;
+
+export function loadOfflineQueue(editionId: number): QueuedScan[] {
+  try {
+    return JSON.parse(window.localStorage.getItem(queueKey(editionId)) ?? "[]") as QueuedScan[];
+  } catch {
+    return [];
+  }
+}
+
+function storeOfflineQueue(editionId: number, queue: QueuedScan[]): void {
+  try {
+    if (queue.length > 0) window.localStorage.setItem(queueKey(editionId), JSON.stringify(queue));
+    else window.localStorage.removeItem(queueKey(editionId));
+  } catch {
+    // Storage blocked: the scan still answered; only its record is lost.
+  }
+}
+
+/**
+ * Keep a degraded-mode answer to send later. The same ticket read twice
+ * during the outage is kept once, at its first reading. Returns the queue.
+ */
+export function queueOfflineScan(
+  editionId: number,
+  answer: OfflineAnswer,
+  now = new Date(),
+): QueuedScan[] {
+  const queue = loadOfflineQueue(editionId);
+  if (answer.kind !== "badge" && answer.kind !== "dedicated") return queue;
+  const number = answer.kind === "badge" ? answer.number : DEDICATED;
+  if (queue.some((scan) => scan.key === answer.key && scan.number === number)) return queue;
+  const next = [...queue, { id: crypto.randomUUID(), key: answer.key, number, scannedAt: now.toISOString() }];
+  storeOfflineQueue(editionId, next);
+  return next;
+}
+
+/** Drop the scans the backend answered for. Returns what is left. */
+export function dropFromOfflineQueue(editionId: number, ids: string[]): QueuedScan[] {
+  const answered = new Set(ids);
+  const left = loadOfflineQueue(editionId).filter((scan) => !answered.has(scan.id));
+  storeOfflineQueue(editionId, left);
+  return left;
 }

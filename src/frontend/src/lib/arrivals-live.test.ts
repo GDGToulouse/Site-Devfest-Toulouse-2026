@@ -20,6 +20,7 @@ const badge = (id: number, number: number, state: LiveBadge["state"], version: n
   version,
   since,
   byLabel: false,
+  scannedOffline: false,
   firstName: "Camille",
   lastName: "Test",
   company: null,
