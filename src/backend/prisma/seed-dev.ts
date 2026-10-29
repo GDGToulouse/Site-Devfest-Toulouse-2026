@@ -1218,35 +1218,19 @@ async function seedDev() {
   console.log(`CFP settings created: ${cfpSettings.length}`);
 
   // --- Dev test accounts (with passwords) ---
+  // Written straight to the database, like the sponsor accounts below:
+  // better-auth's sign-up no longer creates or signs in anyone it answers
+  // (#673). Verified, or the password would not sign them in
+  // (requireEmailVerification) — repaired accounts included.
   for (const account of DEV_ACCOUNTS) {
     const existing = await prisma.user.findUnique({ where: { email: account.email } });
-    if (existing) {
-      await prisma.user.update({ where: { email: account.email }, data: { role: account.role } });
-      await applyDevPassword(existing.id, seedPassword ?? account.password);
-      console.log(`Dev account repaired: ${account.email} (${account.role})`);
-      continue;
-    }
-    {
-      try {
-        await auth.api.signUpEmail({
-          body: {
-            name: account.name,
-            email: account.email,
-            password: seedPassword ?? account.password,
-          },
-        });
-        await prisma.user.update({
-          where: { email: account.email },
-          data: { role: account.role, emailVerified: true },
-        });
-        console.log(`Dev account created: ${account.email} (${account.role})`);
-      } catch (err) {
-        await prisma.user.create({
-          data: { email: account.email, name: account.name, role: account.role },
-        });
-        console.log(`Dev account created (no password): ${account.email} (${account.role}) — use 'Mot de passe oublié'`);
-      }
-    }
+    const user = await prisma.user.upsert({
+      where: { email: account.email },
+      update: { role: account.role, emailVerified: true },
+      create: { email: account.email, name: account.name, role: account.role, emailVerified: true },
+    });
+    await applyDevPassword(user.id, seedPassword ?? account.password);
+    console.log(`Dev account ${existing ? "repaired" : "created"}: ${account.email} (${account.role})`);
   }
 
   // --- Dev sponsor accounts (with passwords) ---

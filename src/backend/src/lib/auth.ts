@@ -59,9 +59,23 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     minPasswordLength: 10,
+    // Sign-up answers the same 200, without a session, whether the address
+    // already has an account, was refused, or got one (#673): otherwise the
+    // endpoint tells anyone who is registered. It also means a password signs
+    // in only an account whose mailbox is proven (emailVerified). Who gets
+    // verified: seed and back-office accounts at creation, invitation and
+    // OAuth sign-ups, any account on its first magic link. No verification
+    // email is configured: a magic link is the way in for an unverified one.
+    requireEmailVerification: true,
     // A reset is what someone does once they fear their account was taken:
     // the sessions opened before it must not survive it (#658).
     revokeSessionsOnPasswordReset: true,
+    // The reset link reached the mailbox, which proves it: without this, the
+    // new password of an unverified account would be refused at sign-in
+    // (requireEmailVerification), and its owner left with the magic link only.
+    onPasswordReset: async ({ user }) => {
+      if (!user.emailVerified) await prisma.user.update({ where: { id: user.id }, data: { emailVerified: true } });
+    },
     // The link points to a frontend page, not to better-auth's own callback
     // (an API route, not navigable), and to the admin or the partner space
     // depending on the account's role (#411).
@@ -71,7 +85,8 @@ export const auth = betterAuth({
     // Implicit sign-up stays enabled so an allow-listed admin can sign in via
     // OAuth on their very first visit (no prior email/password account needed).
     // Access is still gated: the databaseHooks.user.create.before hook below
-    // rejects any email that is not in ADMIN_EMAILS.
+    // rejects any email that is not in ADMIN_EMAILS or invited, and one the
+    // provider has not verified.
     google: {
       clientId: process.env.OAUTH_GOOGLE_CLIENT_ID || "",
       clientSecret: process.env.OAUTH_GOOGLE_CLIENT_SECRET || "",
@@ -186,7 +201,18 @@ export const auth = betterAuth({
               message: "Inscription sur invitation uniquement. Contactez un administrateur.",
             });
           }
-          if (isAdminEmail(user.email)) return;
+          // An allow-listed admin must prove the mailbox as well (#674), and only
+          // an identity provider can: a password sign-up would let whoever
+          // registers the address first, with a password of their own, inherit
+          // the account once its owner verifies it. The seed provisions these
+          // accounts itself, verified, so the first admin signs in by magic
+          // link, password reset or OAuth.
+          if (isAdminEmail(user.email)) {
+            if (user.emailVerified === true) return { data: { ...user, role: "ADMIN" } };
+            throw new APIError("FORBIDDEN", {
+              message: "Inscription sur invitation uniquement. Contactez un administrateur.",
+            });
+          }
 
           // The mailbox must be proven too (#658): by the identity provider
           // (emailVerified, which a sign-up body cannot set) or by the token,
