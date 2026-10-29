@@ -37,6 +37,9 @@ export async function findFeaturedTalkPage(
       // category cannot be filtered out by the query. `deletedAt` comes along
       // and the serializer below drops it (#147).
       category: { select: { nameFr: true, nameEn: true, color: true, deletedAt: true } },
+      // Rooms a keynote is relayed to (#456), so the page says where else to
+      // watch it (#717).
+      simulcasts: { select: { roomId: true, roomLabel: true }, orderBy: { id: "asc" } },
     },
   });
 
@@ -55,6 +58,8 @@ export async function findFeaturedTalkPage(
     room: talk.roomLabel,
     startsAt: talk.startsAt,
     endsAt: talk.endsAt,
+    // Frozen labels, as on the programme grid (#375).
+    simulcasts: talk.simulcasts.map((s) => ({ roomId: s.roomId, room: s.roomLabel })),
     year: edition.year,
     // The replay, once filmed (#633): the dated address of a featured talk now
     // redirects here, so this page has to show what that one showed.

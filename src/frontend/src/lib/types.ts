@@ -504,6 +504,8 @@ export interface TalkDetail {
   room: string | null;
   startsAt: string | null;
   endsAt: string | null;
+  // Rooms a keynote is relayed to (#456), by their frozen label (#717).
+  simulcasts: { roomId: number | null; room: string | null }[];
   year: number;
   // The replay once filmed (#633): this page stands in for the dated one.
   videoUrl: string | null;
