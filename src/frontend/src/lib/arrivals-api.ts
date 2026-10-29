@@ -2,7 +2,7 @@
 // the signed-in account may open the event-day screens. Same-origin calls,
 // relayed to the backend by next.config.ts.
 
-import type { LiveBadge } from "@/lib/arrivals-live";
+import type { BadgeState, LiveBadge } from "@/lib/arrivals-live";
 import type { OfflineTable } from "@/lib/arrivals-offline";
 
 export interface ArrivalsResult<T> {
@@ -20,6 +20,8 @@ export interface ArrivalsInvitation {
 export interface ArrivalsCurrent {
   edition: { id: number; year: number } | null;
   hasAccess: boolean;
+  /** An admin may take a badge back to Imprimé (RG-ARR-46). */
+  canStepBack: boolean;
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<ArrivalsResult<T>> {
@@ -47,6 +49,17 @@ export function acceptArrivalsInvitation(token: string) {
 
 export function getArrivalsCurrent() {
   return call<ArrivalsCurrent>("/api/arrivals/current");
+}
+
+// A counter touching a card (#643). The answer is the badge as it stands,
+// moved or not: a card that had already moved elsewhere just catches up
+// (RG-ARR-44).
+export function moveBadge(editionId: number, attendeeId: number, from: BadgeState, to: BadgeState) {
+  return call<{ applied: boolean; badge: LiveBadge }>(`/api/arrivals/${editionId}/badges/${attendeeId}/move`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to }),
+  });
 }
 
 // The entrance (#642).

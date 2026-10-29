@@ -185,6 +185,18 @@ describe("The arrivals stream (#641)", () => {
     expect(history[0]).toMatchObject({ userId: counter.user.id, userLabel: counter.user.name });
   });
 
+  it("should date each move, so the counter's columns keep their order (#643)", async () => {
+    const counter = await createAccount("GUEST", true);
+    const badge = await createBadge(1301, "TO_FETCH");
+    const before = Date.now();
+
+    const moved = (await move(counter.headers, badge.id, "TO_FETCH", "READY")).json();
+    const lost = (await move(counter.headers, badge.id, "TO_FETCH", "READY")).json();
+
+    expect(new Date(moved.badge.since).getTime()).toBeGreaterThanOrEqual(before);
+    expect(lost.badge.since).toBe(moved.badge.since);
+  });
+
   it("should keep the scan's move and the return to Imprimé off a volunteer's screen", async () => {
     const volunteer = await createAccount("GUEST", true);
     const printed = await createBadge(1204);
@@ -202,6 +214,17 @@ describe("The arrivals stream (#641)", () => {
     const res = await move(admin.headers, waiting.id, "TO_FETCH", "PRINTED");
 
     expect(res.json()).toMatchObject({ applied: true, badge: { state: "PRINTED" } });
+  });
+
+  it("should offer the step back to an admin's screen only (#643)", async () => {
+    const admin = await createAccount("ADMIN", false);
+    const volunteer = await createAccount("GUEST", true);
+
+    const asAdmin = await app.inject({ method: "GET", url: "/api/arrivals/current", headers: admin.headers });
+    const asVolunteer = await app.inject({ method: "GET", url: "/api/arrivals/current", headers: volunteer.headers });
+
+    expect(asAdmin.json().canStepBack).toBe(true);
+    expect(asVolunteer.json().canStepBack).toBe(false);
   });
 
   it("should not move a badge of another edition through this one", async () => {

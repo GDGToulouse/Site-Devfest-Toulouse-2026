@@ -1,12 +1,24 @@
 import { describe, it, expect } from "vitest";
 
-import { applyBadge, applyHelp, binColor, binOf, counterLoads, counterOf, fromSnapshot, type LiveBadge } from "./arrivals-live";
+import {
+  DELIVERED_SHOWN,
+  applyBadge,
+  applyHelp,
+  binColor,
+  binOf,
+  counterBoard,
+  counterLoads,
+  counterOf,
+  fromSnapshot,
+  type LiveBadge,
+} from "./arrivals-live";
 
-const badge = (id: number, number: number, state: LiveBadge["state"], version: number): LiveBadge => ({
+const badge = (id: number, number: number, state: LiveBadge["state"], version: number, since: string | null = null): LiveBadge => ({
   id,
   number,
   state,
   version,
+  since,
   firstName: "Camille",
   lastName: "Test",
   company: null,
@@ -66,6 +78,45 @@ describe("the live state of the arrivals screens (#641)", () => {
 
     expect(new Set(colours).size).toBe(3);
     expect(colours[0]).toBe("bg-malachite");
+  });
+
+  it("should lay out a counter's kanban: oldest first to fetch and ready, latest first delivered (#643)", () => {
+    const state = snapshot([
+      badge(1, 1101, "TO_FETCH", 1, "2026-11-19T08:05:00Z"),
+      badge(2, 1001, "TO_FETCH", 1, "2026-11-19T08:01:00Z"),
+      badge(3, 2001, "TO_FETCH", 1, "2026-11-19T08:00:00Z"),
+      badge(4, 1002, "READY", 2, "2026-11-19T08:03:00Z"),
+      badge(5, 1003, "DELIVERED", 3, "2026-11-19T08:02:00Z"),
+      badge(6, 1004, "DELIVERED", 3, "2026-11-19T08:04:00Z"),
+    ]);
+
+    const board = counterBoard(state, 1, null);
+
+    expect(board.toFetch.map((b) => b.number)).toEqual([1001, 1101]);
+    expect(board.ready.map((b) => b.number)).toEqual([1002]);
+    expect(board.delivered.map((b) => b.number)).toEqual([1004, 1003]);
+    expect(board.toFetchByBin).toEqual([1, 1]);
+  });
+
+  it("should keep only the latest delivered cards in view", () => {
+    const delivered = Array.from({ length: DELIVERED_SHOWN + 2 }, (_, i) =>
+      badge(i + 1, 1000 + i, "DELIVERED", 3, `2026-11-19T08:${String(10 + i).padStart(2, "0")}:00Z`),
+    );
+
+    const board = counterBoard(snapshot(delivered), 1, null);
+
+    expect(board.delivered).toHaveLength(DELIVERED_SHOWN);
+    expect(board.delivered[0].number).toBe(1000 + DELIVERED_SHOWN + 1);
+  });
+
+  it("should narrow the board to one bin, and still count what waits in the others", () => {
+    const state = snapshot([badge(1, 1001, "TO_FETCH", 1), badge(2, 1101, "TO_FETCH", 1), badge(3, 1102, "READY", 2)]);
+
+    const board = counterBoard(state, 1, 0);
+
+    expect(board.toFetch.map((b) => b.number)).toEqual([1001]);
+    expect(board.ready).toEqual([]);
+    expect(board.toFetchByBin).toEqual([1, 1]);
   });
 
   it("should count each counter's cards by column, idle counters included", () => {

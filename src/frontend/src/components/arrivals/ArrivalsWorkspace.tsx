@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import ConnectionIndicator from "@/components/arrivals/ConnectionIndicator";
+import CounterBoard from "@/components/arrivals/CounterBoard";
 import StationPicker from "@/components/arrivals/StationPicker";
 import ScanStation from "@/components/arrivals/ScanStation";
 import { counterLoads } from "@/lib/arrivals-live";
@@ -11,18 +12,22 @@ import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 
 // The event-day zone once the volunteer is let in (#641): the station this
 // device works as, the link to the live state, and what the stations share.
-// Scan has its screen (#642); Guichet and Aide come with #643 and #713.
+// Scan has its screen (#642), Guichet too (#643); Aide comes with #713.
 export default function ArrivalsWorkspace({
   edition,
+  canStepBack,
   onSignOut,
 }: {
   edition: { id: number; year: number };
+  canStepBack: boolean;
   onSignOut: () => void;
 }) {
   // undefined until the device's memory is read: never offer the picker to a
   // counter laptop that already knows its counter.
   const [station, setStation] = useState<Station | null | undefined>(undefined);
-  const { live, status } = useArrivalsStream(edition.id);
+  const { live, status, applyMoved } = useArrivalsStream(edition.id);
+  // A counter's three columns want the laptop's width.
+  const isWide = station?.kind === "counter";
 
   useEffect(() => {
     setStation(readStation());
@@ -43,7 +48,7 @@ export default function ArrivalsWorkspace({
         <ConnectionIndicator status={status} />
       </header>
 
-      <main className="mx-auto max-w-2xl px-4 pt-6">
+      <main className={`mx-auto px-4 pt-6 ${isWide ? "max-w-6xl" : "max-w-2xl"}`}>
         {status === "disconnected" && (
           <div role="alert" className="mb-4 rounded-2xl bg-rouge/10 p-4 text-sm text-noir">
             Pas de connexion au serveur : ce qui s&apos;affiche peut être périmé. L&apos;écran se remettra à jour seul
@@ -60,6 +65,15 @@ export default function ArrivalsWorkspace({
           <div className="rounded-3xl bg-blanc p-6 shadow-card">
             <StationPicker layout={live.layout} onPick={pick} />
           </div>
+        ) : station.kind === "counter" ? (
+          <CounterBoard
+            editionId={edition.id}
+            counter={station.counter}
+            bin={station.bin}
+            live={live}
+            canStepBack={canStepBack}
+            onMoved={applyMoved}
+          />
         ) : (
           <>
             <section className="rounded-3xl bg-blanc p-6 shadow-card" aria-labelledby="counters-title">

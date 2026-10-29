@@ -16,6 +16,8 @@ export interface LiveBadge {
   number: number;
   state: BadgeState;
   version: number;
+  /** When it reached `state`: orders the counter's columns (RG-ARR-41). */
+  since: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -26,6 +28,7 @@ export const LIVE_BADGE_SELECT = {
   badgeNumber: true,
   badgeState: true,
   badgeStateVersion: true,
+  badgeStateAt: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -36,6 +39,7 @@ type LiveBadgeRow = {
   badgeNumber: number | null;
   badgeState: BadgeState;
   badgeStateVersion: number;
+  badgeStateAt: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -48,6 +52,7 @@ export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
     number: row.badgeNumber ?? 0,
     state: row.badgeState,
     version: row.badgeStateVersion,
+    since: row.badgeStateAt,
     firstName: row.firstName,
     lastName: row.lastName,
     company: row.company,
@@ -175,7 +180,7 @@ export async function moveBadge(
   const result = await prisma.$transaction(async (tx) => {
     const moved = await tx.attendee.updateMany({
       where: { id: attendeeId, editionId, badgeNumber: { not: null }, badgeState: from },
-      data: { badgeState: to, badgeStateVersion: { increment: 1 } },
+      data: { badgeState: to, badgeStateVersion: { increment: 1 }, badgeStateAt: new Date() },
     });
     if (moved.count === 1) {
       await tx.badgeTransition.create({

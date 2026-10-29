@@ -46,16 +46,19 @@ const editionParamsSchema = {
 const config = { rateLimit: arrivalsRateLimit };
 
 export default async function arrivalsRoutes(app: FastifyInstance) {
-  // GET /api/arrivals/current — the edition the screens work on, and whether
-  // the caller may. 401 tells the page to sign in first.
+  // GET /api/arrivals/current — the edition the screens work on, whether the
+  // caller may, and whether they may take a badge back (RG-ARR-46): the
+  // screen offers it, the move route decides. 401 tells the page to sign in.
   app.get("/arrivals/current", { config }, async (request, reply) => {
     const ctx = await getAuthContext(request);
     if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+    const canStepBack = ctx.user.role === "ADMIN";
     const edition = await findCurrentEdition();
-    if (!edition) return { edition: null, hasAccess: false };
+    if (!edition) return { edition: null, hasAccess: false, canStepBack };
     return {
       edition: { id: edition.id, year: edition.year },
       hasAccess: await canAccessArrivals(ctx.user, edition.id),
+      canStepBack,
     };
   });
 
