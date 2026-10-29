@@ -192,7 +192,8 @@ describe("Labels at the help desk (#713)", () => {
     });
 
     const after = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
-    expect(events).toEqual([]);
+    // The reprint only reaches the tracking screen's count (#644).
+    expect(events).toEqual([{ type: "counts", data: null }]);
     expect([after.badgeStateVersion, after.labelDeliveredAt]).toEqual([before.badgeStateVersion, before.labelDeliveredAt]);
   });
 

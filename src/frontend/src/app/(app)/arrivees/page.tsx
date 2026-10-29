@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { signOut } from "@/lib/admin-api";
@@ -28,7 +29,7 @@ export default function ArrivalsZonePage() {
         // Backend out of reach (0) or down behind the relay (5xx): reopen the
         // edition this device was last let into, cut off but usable.
         const remembered = status === 0 || status >= 500 ? recallArrivalsEdition() : null;
-        if (remembered) setCurrent({ edition: remembered, hasAccess: true, canStepBack: false });
+        if (remembered) setCurrent({ edition: remembered, hasAccess: true, canStepBack: false, canTrack: false });
         else setLoadError(true);
         return;
       }
@@ -45,7 +46,12 @@ export default function ArrivalsZonePage() {
 
   if (current?.edition && current.hasAccess) {
     return (
-      <ArrivalsWorkspace edition={current.edition} canStepBack={current.canStepBack} onSignOut={handleSignOut} />
+      <ArrivalsWorkspace
+        edition={current.edition}
+        canStepBack={current.canStepBack}
+        canTrack={current.canTrack}
+        onSignOut={handleSignOut}
+      />
     );
   }
 
@@ -67,9 +73,18 @@ export default function ArrivalsZonePage() {
                 ? `Ce compte n'a pas accès à l'accueil du DevFest Toulouse ${current.edition.year}.`
                 : "Aucune édition n'est en cours."}
             </p>
-            <p className="mt-3 text-center text-sm text-gris">
-              Si vous êtes bénévole, demandez une invitation à l&apos;équipe DevFest.
-            </p>
+            {current.canTrack && current.edition ? (
+              <Link
+                href="/arrivees/suivi"
+                className="mt-4 block rounded-2xl bg-bleu px-4 py-3 text-center font-medium text-blanc hover:bg-bleu/90"
+              >
+                Ouvrir l&apos;écran de suivi
+              </Link>
+            ) : (
+              <p className="mt-3 text-center text-sm text-gris">
+                Si vous êtes bénévole, demandez une invitation à l&apos;équipe DevFest.
+              </p>
+            )}
           </>
         )}
 

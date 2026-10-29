@@ -4,7 +4,12 @@ import type { HelpEntry, LiveBadge } from "./badge-state.js";
 // like the scheduler: right while the backend runs as a single replica. A
 // second one would need Postgres LISTEN/NOTIFY here, the only shared channel.
 
-export type ArrivalsEvent = { type: "badge"; data: LiveBadge } | { type: "help"; data: HelpEntry };
+export type ArrivalsEvent =
+  | { type: "badge"; data: LiveBadge }
+  | { type: "help"; data: HelpEntry }
+  // Something only the tracking screen counts changed (#644): a dedicated-flow
+  // scan, a label printed. Never sent to the volunteers' screens.
+  | { type: "counts"; data: null };
 
 type Listener = (event: ArrivalsEvent) => void;
 

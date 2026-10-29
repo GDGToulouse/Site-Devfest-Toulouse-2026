@@ -11,6 +11,7 @@ import { BADGE_STATES, isCounterMove, isStepBack, loadArrivalsSnapshot, moveBadg
 import { buildOfflineTable, scanTicket, searchAttendees } from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
 import { deliverLabel, printLabel, type LabelRefusal } from "../lib/help-desk.js";
+import { loadTrackingSummary, type TrackingSummary } from "../lib/arrivals-tracking.js";
 import { arrivalsRateLimit } from "../lib/rate-limit-options.js";
 import type { BadgeState } from "../generated/prisma/client.js";
 
@@ -29,6 +30,9 @@ export const STREAM_HEARTBEAT_MS = 15_000;
 
 /** How long the browser waits before reconnecting after a break. */
 const STREAM_RETRY_MS = 2_000;
+
+/** How long the tracking screen's totals may trail an event: one read per burst. */
+const TRACKING_REFRESH_MS = 500;
 
 const tokenParamsSchema = {
   type: "object",
@@ -76,12 +80,15 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     const ctx = await getAuthContext(request);
     if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
     const canStepBack = ctx.user.role === "ADMIN";
+    // The tracking screen's guard, told ahead (RG-ARR-26, #644).
+    const canTrack = ctx.user.role === "ADMIN" || ctx.user.role === "EDITOR";
     const edition = await findCurrentEdition();
-    if (!edition) return { edition: null, hasAccess: false, canStepBack };
+    if (!edition) return { edition: null, hasAccess: false, canStepBack, canTrack };
     return {
       edition: { id: edition.id, year: edition.year },
       hasAccess: await canAccessArrivals(ctx.user, edition.id),
       canStepBack,
+      canTrack,
     };
   });
 
@@ -106,6 +113,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
         if (!reply.raw.destroyed) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
       };
       const unsubscribe = subscribeToArrivals(editionId, (event) => {
+        if (event.type === "counts") return;
         if (isLive) send(event.type, event.data);
         else queued.push(event);
       });
@@ -139,6 +147,58 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       // its (empty) body is read, long before the screen goes away.
       reply.raw.on("close", () => {
         clearInterval(heartbeat);
+        unsubscribe();
+      });
+    },
+  );
+
+  // GET /api/arrivals/:editionId/tracking — the team's tracking screen
+  // (RG-ARR-62, #644): Server-Sent Events of totals, recomputed after what
+  // changes them and on every beat. ADMIN and EDITOR only (RG-ARR-26): the
+  // arrivals permission does not open it.
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/tracking",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      if (ctx.user.role !== "ADMIN" && ctx.user.role !== "EDITOR") return reply.code(403).send({ error: "Forbidden" });
+
+      const first = await loadTrackingSummary(editionId);
+      if (!first) return reply.code(404).send({ error: "Not found" });
+
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      reply.raw.write(`retry: ${STREAM_RETRY_MS}\n\n`);
+      const send = (summary: TrackingSummary) => {
+        if (!reply.raw.destroyed) reply.raw.write(`event: summary\ndata: ${JSON.stringify(summary)}\n\n`);
+      };
+      send(first);
+
+      // A burst of scans recomputes once: the totals trail by a fraction of a
+      // second, and the database is spared one read per event.
+      let pending: ReturnType<typeof setTimeout> | undefined;
+      const refresh = () => {
+        pending ??= setTimeout(() => {
+          pending = undefined;
+          loadTrackingSummary(editionId)
+            .then((summary) => summary && send(summary))
+            .catch((err: unknown) => request.log.error({ err, editionId }, "Tracking summary failed"));
+        }, TRACKING_REFRESH_MS);
+      };
+      const unsubscribe = subscribeToArrivals(editionId, refresh);
+      // Each beat is a fresh total: it also catches what no event announces,
+      // such as an attendee import.
+      const heartbeat = setInterval(refresh, STREAM_HEARTBEAT_MS);
+      reply.raw.on("close", () => {
+        clearInterval(heartbeat);
+        clearTimeout(pending);
         unsubscribe();
       });
     },

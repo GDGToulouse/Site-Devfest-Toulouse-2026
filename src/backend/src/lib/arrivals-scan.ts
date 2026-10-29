@@ -82,6 +82,7 @@ export async function scanTicket(
   }
 
   if (row.ticketTier?.isOutsideFlow) {
+    if (isFirstScan) publishArrivals(editionId, { type: "counts", data: null });
     return { outcome: { result: "dedicated", attendee, alreadyScanned }, isFirstScan };
   }
 
