@@ -15,6 +15,8 @@ export interface LiveBadge {
   byLabel: boolean;
   /** Scanned during an outage, sent afterwards: maybe handed over by hand already (#645). */
   scannedOffline: boolean;
+  /** When the person was scanned, ISO: orders À chercher. */
+  scannedAt: string | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -125,7 +127,7 @@ export interface CounterLoad {
 export const DELIVERED_SHOWN = 10;
 
 export interface CounterBoard {
-  /** Oldest first: the first to arrive is the first to fetch. */
+  /** By scan time, oldest first: the first to arrive is the first to fetch. */
   toFetch: LiveBadge[];
   /** Oldest first, in the order they were laid on the counter. */
   ready: LiveBadge[];
@@ -138,6 +140,10 @@ export interface CounterBoard {
 const sinceTime = (badge: LiveBadge) => (badge.since ? Date.parse(badge.since) : 0);
 // Ties (a backfilled date, or none) fall back on the number: stable across screens.
 const bySince = (a: LiveBadge, b: LiveBadge) => sinceTime(a) - sinceTime(b) || a.number - b.number;
+// À chercher follows the queue: a card sent back from Prêt is almost always a
+// slip, and its person has waited since the scan, not since the slip.
+const scanTime = (badge: LiveBadge) => (badge.scannedAt ? Date.parse(badge.scannedAt) : sinceTime(badge));
+const byScan = (a: LiveBadge, b: LiveBadge) => scanTime(a) - scanTime(b) || a.number - b.number;
 
 /** A counter's kanban (#643), narrowed to one bin for the phone that follows only its own. */
 export function counterBoard(state: LiveState, counter: number, bin: number | null): CounterBoard {
@@ -157,7 +163,7 @@ export function counterBoard(state: LiveState, counter: number, bin: number | nu
     else if (badge.state === "READY") board.ready.push(badge);
     else if (badge.state === "DELIVERED") board.delivered.push(badge);
   }
-  board.toFetch.sort(bySince);
+  board.toFetch.sort(byScan);
   board.ready.sort(bySince);
   board.delivered = board.delivered.sort((a, b) => bySince(b, a)).slice(0, DELIVERED_SHOWN);
   return board;

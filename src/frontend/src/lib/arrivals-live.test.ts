@@ -21,6 +21,7 @@ const badge = (id: number, number: number, state: LiveBadge["state"], version: n
   since,
   byLabel: false,
   scannedOffline: false,
+  scannedAt: null,
   firstName: "Camille",
   lastName: "Test",
   company: null,
@@ -130,6 +131,16 @@ describe("the live state of the arrivals screens (#641)", () => {
     expect(board.ready.map((b) => b.number)).toEqual([1002]);
     expect(board.delivered.map((b) => b.number)).toEqual([1004, 1003]);
     expect(board.toFetchByBin).toEqual([1, 1]);
+  });
+
+  it("should put a card sent back to fetch at its place by scan time, not at the end", () => {
+    const sentBack = {
+      ...badge(1, 1001, "TO_FETCH", 3, "2026-11-19T08:10:00Z"),
+      scannedAt: "2026-11-19T08:00:00Z",
+    };
+    const later = { ...badge(2, 1002, "TO_FETCH", 1, "2026-11-19T08:05:00Z"), scannedAt: "2026-11-19T08:05:00Z" };
+
+    expect(counterBoard(snapshot([later, sentBack]), 1, null).toFetch.map((b) => b.number)).toEqual([1001, 1002]);
   });
 
   it("should keep only the latest delivered cards in view", () => {
