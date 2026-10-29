@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import Fastify, { type FastifyInstance } from "fastify";
 import { randomUUID } from "node:crypto";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import adminFeedbackRoutes from "../routes/admin/feedback.js";
 import editRoutes from "../routes/edit.js";
 
@@ -26,7 +27,7 @@ beforeAll(async () => {
   const edition = await prisma.edition.create({ data: { year: YEAR, startDate: START, endDate: START } });
   editionId = edition.id;
   const speaker = await prisma.speaker.create({
-    data: { slug: `feedback-results-${randomUUID()}`, name: "Ada Results", editToken: TOKEN, editTokenSentAt: new Date() },
+    data: { slug: `feedback-results-${randomUUID()}`, name: "Ada Results", editToken: hashLinkToken(TOKEN), editTokenSentAt: new Date() },
   });
   const talk = await prisma.talk.create({
     data: {
@@ -54,7 +55,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await prisma.edition.deleteMany({ where: { year: YEAR } });
-  await prisma.speaker.deleteMany({ where: { editToken: TOKEN } });
+  await prisma.speaker.deleteMany({ where: { editToken: hashLinkToken(TOKEN) } });
   await app?.close();
 });
 

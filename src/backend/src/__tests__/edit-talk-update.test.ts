@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 
 // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
@@ -35,7 +36,7 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
       data: {
         name: "Talk Update Speaker",
         slug: "talk-update-speaker",
-        editToken: TOKEN,
+        editToken: hashLinkToken(TOKEN),
         editTokenSentAt: new Date(),
         editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },
@@ -46,7 +47,7 @@ describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)"
       data: {
         name: "Other Speaker",
         slug: "talk-update-other-speaker",
-        editToken: OTHER_TOKEN,
+        editToken: hashLinkToken(OTHER_TOKEN),
         editTokenSentAt: new Date(),
         editions: { create: [{ editionId, publicationStatus: "PUBLISHED" }] },
       },

@@ -1008,6 +1008,7 @@ model Speaker {
   // Modification-link token infrastructure (issue #79, RG-242 to RG-251).
   // Stored now to avoid a second migration. editToken is a crypto-random
   // secret; editLinkLocked freezes editing without deleting the token.
+  // Holds the token's SHA-256, never the token itself (#672): hashLinkToken.
   editToken       String?   @unique
   editLinkLocked  Boolean   @default(false)
   editTokenSentAt DateTime?
@@ -1269,7 +1270,7 @@ model SponsorContact {
   // Invitation to create an account, kept apart from editToken (#362): the two
   // differ in lifetime (7 days vs 30) and in consumption (single-use vs not),
   // and the edit link stays in service for speakers. Merging them would make
-  // both expiries hard to follow.
+  // both expiries hard to follow. Holds the token's SHA-256, like editToken (#672).
   invitationToken      String?   @unique
   invitationSentAt     DateTime?
   invitationAcceptedAt DateTime?

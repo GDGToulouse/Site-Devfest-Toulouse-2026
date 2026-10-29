@@ -1,10 +1,20 @@
-import { randomBytes } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 
 // Crypto-random modification-link token: 32 bytes -> 64 hex chars, far above
-// the 32-char minimum (RG-248). Stored on the entity (editToken) so it can be
-// revoked simply by clearing/replacing it (RG-244).
+// the 32-char minimum (RG-248). Its hash is stored on the entity (editToken) so
+// it can be revoked simply by clearing/replacing it (RG-244).
 export function generateEditToken(): string {
   return randomBytes(32).toString("hex");
+}
+
+// What the database keeps of an edit link or an invitation (#672): the token is
+// mailed, only its SHA-256 is stored, and lookups hash the token from the URL.
+// A leaked dump or backup then hands out no working link. No salt or slow hash:
+// the token carries 256 random bits, there is nothing to brute-force. The
+// migration that hashed the links already sent uses Postgres' sha256() on the
+// same UTF-8 bytes — the two must stay identical.
+export function hashLinkToken(token: string): string {
+  return createHash("sha256").update(token, "utf8").digest("hex");
 }
 
 // Modification links are frozen 48h before the event starts (RG-246). Returns

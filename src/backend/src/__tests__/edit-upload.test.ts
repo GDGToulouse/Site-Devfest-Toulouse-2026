@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 
 // A 1x1 transparent PNG — smallest valid raster image sharp will accept.
@@ -34,7 +35,7 @@ describe("POST /api/edit/:token/upload", () => {
       data: {
         name: "Upload Test Speaker",
         slug: `upload-test-speaker-${Date.now()}`,
-        editToken: TOKEN,
+        editToken: hashLinkToken(TOKEN),
         editTokenSentAt: new Date(),
         editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
       },
