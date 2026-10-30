@@ -470,6 +470,28 @@
     "printCommon": "Shared moments",
     "nextSlot": "Next slot · {time}"
   },
+  "programmeText": {
+    "pageTitle": "Programme — plain text",
+    "heading": "DevFest Toulouse {year} programme — plain text",
+    "intro": "The programme room by room, without formatting, to copy titles and names or print one sheet per room. It updates itself.",
+    "empty": "The programme is not published yet.",
+    "room": "Room",
+    "allRooms": "All rooms",
+    "settings": "Display",
+    "settingsTitle": "Choose the information shown",
+    "fields": {
+      "time": "Time",
+      "format": "Format",
+      "category": "Category",
+      "language": "Language",
+      "level": "Level",
+      "notes": "Space for notes"
+    },
+    "copy": "Copy",
+    "copyTitle": "Copy this room's sessions as plain text",
+    "copied": "Copied.",
+    "copyFailed": "Copying did not work. Select the text by hand."
+  },
   "venue": {
     "pageTitle": "Venue & practical info",
     "description": "How to reach DevFest Toulouse, where to park and how to get around.",
