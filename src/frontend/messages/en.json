@@ -473,8 +473,11 @@
   "programmeText": {
     "pageTitle": "Programme — plain text",
     "heading": "DevFest Toulouse {year} programme — plain text",
-    "intro": "The programme room by room, without formatting, to copy titles and names or print one sheet per room. It updates itself.",
+    "intro": "The programme without formatting, by room or by time, to copy titles and names or print one sheet per room. It updates itself.",
     "empty": "The programme is not published yet.",
+    "grouping": "Group",
+    "byRoom": "By room",
+    "byTime": "By time",
     "room": "Room",
     "allRooms": "All rooms",
     "settings": "Display",

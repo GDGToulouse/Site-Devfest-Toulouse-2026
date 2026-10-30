@@ -653,6 +653,11 @@ body {
   .programme-text-item {
     break-inside: avoid;
   }
+  /* By time, a slot's heading left alone at the foot of a page, its sessions
+     on the next one. Seen in the PDF. */
+  .programme-text-slot > div {
+    break-after: avoid;
+  }
   /* Eight sessions of a room on one A4 sheet: at the screen's height, the last
      one of the Amphi spilled onto a second page. Seen in the PDF. */
   .programme-text-notes {
