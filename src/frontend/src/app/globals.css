@@ -644,4 +644,18 @@ body {
   .print-meta {
     font-size: 8.5pt;
   }
+
+  /* The plain view of the programme (#755): one room per sheet, as for the
+     by-room print, and a session never split from its space for notes. */
+  .programme-text-room + .programme-text-room {
+    break-before: page;
+  }
+  .programme-text-item {
+    break-inside: avoid;
+  }
+  /* Eight sessions of a room on one A4 sheet: at the screen's height, the last
+     one of the Amphi spilled onto a second page. Seen in the PDF. */
+  .programme-text-notes {
+    height: 13mm;
+  }
 }
