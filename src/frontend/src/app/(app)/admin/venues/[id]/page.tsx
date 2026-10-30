@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import FormField from "@/components/admin/FormField";
 import RichTextEditor from "@/components/admin/RichTextEditor";
@@ -10,6 +11,27 @@ import LoadingSpinner from "@/components/admin/LoadingSpinner";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import type { AdminVenue, AdminRoom } from "@/lib/types";
+
+// Leaflet renders against the DOM and has no SSR path.
+const VenueLocationPicker = dynamic(() => import("@/components/admin/VenueLocationPicker"), {
+  ssr: false,
+  loading: () => <div className="h-80 w-full animate-pulse rounded-[12px] bg-blanc-casse" />,
+});
+
+// Seven decimals is about a centimetre: a pin dropped by mouse carries fifteen,
+// all noise.
+function formatCoord(value: number): string {
+  return String(Number(value.toFixed(7)));
+}
+
+/** What the map can place: both fields filled with numbers, or nothing. */
+function pinFrom(lat: string, lng: string): { lat: number | null; lng: number | null } {
+  const parsedLat = lat.trim() === "" ? NaN : Number(lat);
+  const parsedLng = lng.trim() === "" ? NaN : Number(lng);
+  return Number.isFinite(parsedLat) && Number.isFinite(parsedLng)
+    ? { lat: parsedLat, lng: parsedLng }
+    : { lat: null, lng: null };
+}
 
 // One venue and its rooms (#105). The practical-info fields (#109) moved here
 // from the edition: they describe the place, not the year, so two editions at
@@ -78,7 +100,7 @@ export default function VenueDetailPage() {
     const lat = parseCoord(form.lat);
     const lng = parseCoord(form.lng);
     if (lat === "invalid" || lng === "invalid") {
-      setFeedback({ kind: "error", text: "Latitude et longitude doivent être des nombres (ex. 43.5497)." });
+      setFeedback({ kind: "error", text: "Latitude et longitude doivent être des nombres (ex. 43.5424)." });
       return;
     }
     // The map needs both or neither — one lone coordinate places nothing.
@@ -198,6 +220,17 @@ export default function VenueDetailPage() {
           <FormField label="Latitude" name="lat" value={form.lat} onChange={(v) => setForm({ ...form, lat: v })} />
           <FormField label="Longitude" name="lng" value={form.lng} onChange={(v) => setForm({ ...form, lng: v })} />
           <FormField label="Lien itinéraire" name="directionsUrl" value={form.directionsUrl} onChange={(v) => setForm({ ...form, directionsUrl: v })} />
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-sm text-gris">
+            L’épingle est celle de la page Lieu. Cliquez sur la carte ou faites glisser l’épingle pour la placer sur l’entrée du
+            lieu ; la latitude et la longitude suivent.
+          </p>
+          <VenueLocationPicker
+            {...pinFrom(form.lat, form.lng)}
+            onPick={(lat, lng) => setForm((current) => ({ ...current, lat: formatCoord(lat), lng: formatCoord(lng) }))}
+          />
         </div>
 
         <RichTextEditor
