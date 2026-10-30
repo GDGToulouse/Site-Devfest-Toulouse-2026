@@ -473,8 +473,11 @@
   "programmeText": {
     "pageTitle": "Programme — version texte",
     "heading": "Programme du DevFest Toulouse {year} — version texte",
-    "intro": "Le programme salle par salle, sans mise en forme, pour copier les titres et les noms ou imprimer une feuille par salle. Il se met à jour tout seul.",
+    "intro": "Le programme sans mise en forme, par salle ou par horaire, pour copier les titres et les noms ou imprimer une feuille par salle. Il se met à jour tout seul.",
     "empty": "Le programme n'est pas encore publié.",
+    "grouping": "Regrouper",
+    "byRoom": "Par salle",
+    "byTime": "Par horaire",
     "room": "Salle",
     "allRooms": "Toutes les salles",
     "settings": "Affichage",
