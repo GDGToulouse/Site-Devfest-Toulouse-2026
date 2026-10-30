@@ -42,3 +42,19 @@ describe("Replays year filter (#703)", () => {
     expect(getReplays).toHaveBeenCalledWith(expect.objectContaining({ year: "2019" }));
   });
 });
+
+// #752 — the same 500 with ?format=FOO: the backend refuses a format that is
+// not a TalkFormat. An unknown one is dropped like an unknown year.
+describe("Replays format filter (#752)", () => {
+  it.each(["FOO", "keynote", "CONFERENCE "])("should drop %j instead of sending it to the backend", async (format) => {
+    await render({ format });
+
+    expect(getReplays).toHaveBeenCalledWith(expect.objectContaining({ format: "" }));
+  });
+
+  it("should keep a known format", async () => {
+    await render({ format: "KEYNOTE" });
+
+    expect(getReplays).toHaveBeenCalledWith(expect.objectContaining({ format: "KEYNOTE" }));
+  });
+});

@@ -345,8 +345,9 @@ export default function SponsoringTab({ editionId, showGuestPlaces }: Sponsoring
         <h3 className="text-lg font-bold text-noir">Offres sur « Devenir sponsor »</h3>
         <p className="text-sm text-gris">
           Cochez les offres du catalogue à publier pour cette édition, et fixez leur tarif et leur ordre
-          d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ». Les places invités sont
-          le nombre de personnes qu&apos;un sponsor de l&apos;offre peut inscrire, publiée ou non.
+          d&apos;affichage. Le catalogue lui-même se gère dans « Offres de sponsoring ».
+          {showGuestPlaces &&
+            " Les places invités sont le nombre de personnes qu'un sponsor de l'offre peut inscrire, publiée ou non."}
         </p>
       </div>
 

@@ -470,6 +470,28 @@
     "printCommon": "Moments communs",
     "nextSlot": "Prochain créneau · {time}"
   },
+  "programmeText": {
+    "pageTitle": "Programme — version texte",
+    "heading": "Programme du DevFest Toulouse {year} — version texte",
+    "intro": "Le programme salle par salle, sans mise en forme, pour copier les titres et les noms ou imprimer une feuille par salle. Il se met à jour tout seul.",
+    "empty": "Le programme n'est pas encore publié.",
+    "room": "Salle",
+    "allRooms": "Toutes les salles",
+    "settings": "Affichage",
+    "settingsTitle": "Choisir les informations affichées",
+    "fields": {
+      "time": "Horaire",
+      "format": "Format",
+      "category": "Catégorie",
+      "language": "Langue",
+      "level": "Niveau",
+      "notes": "Espace pour des notes"
+    },
+    "copy": "Copier",
+    "copyTitle": "Copier les sessions de cette salle en texte brut",
+    "copied": "Copié.",
+    "copyFailed": "La copie n'a pas fonctionné. Sélectionnez le texte à la main."
+  },
   "venue": {
     "pageTitle": "Lieu & infos pratiques",
     "description": "Comment venir au DevFest Toulouse, se garer et s'orienter sur place.",
