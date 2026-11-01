@@ -133,7 +133,7 @@ services:
       - ADMIN_EMAILS=${ADMIN_EMAILS}
       # SMTP relayed through the standalone `postfix` service deployed at
       # the Coolify level (shared by all projects). Reachable via the
-      # `coolify` network — see the `networks:` section below.
+      # `mail` network — see the `networks:` section below.
       - SMTP_HOST=${SMTP_HOST:-postfix}
       - SMTP_PORT=${SMTP_PORT:-25}
       - SMTP_SECURE=${SMTP_SECURE:-false}
@@ -160,25 +160,23 @@ services:
       db:
         condition: service_healthy
     # The backend itself is NOT exposed via Traefik (the frontend proxies
-    # /api/* to it through the Next.js rewrites). It joins the shared
-    # `coolify` network only to reach the standalone `postfix` service
-    # deployed at the Coolify level.
+    # /api/* to it through the Next.js rewrites, over `default`). It stays off
+    # the shared `coolify` network, where every other project's containers sit,
+    # and reaches the standalone `postfix` service through a network of its own
+    # environment, which Postfix joins too (#677). The network is created on the
+    # VPS before the first deploy that names it: Compose refuses to start on a
+    # missing external network (docs/mise-en-production.md, « Réseau du relais
+    # mail »).
     #
-    # The env-scoped alias must sit on `coolify`, not on `default`: `default` is
-    # private to this stack, so an alias there protects nothing. On the shared
-    # network the service would otherwise answer to the bare `backend` name and
-    # collide with every other project's backend (see
-    # docs/coolify-pieges-multi-environnements.md).
-    #
-    # Both networks are declared as mappings with content. A bare `coolify:`
-    # key serialises to `coolify: null`, and Compose then silently skips the
-    # attachment — the container comes up without the shared network and
-    # `postfix` stops resolving, breaking every outgoing email.
+    # Both networks are declared as mappings with content. A bare `mail:` key
+    # serialises to `mail: null`, and Compose then silently skips the
+    # attachment — the container comes up without the network and `postfix`
+    # stops resolving, breaking every outgoing email.
     networks:
       default:
         aliases:
           - devfest-${ENV_NAME:-local}-backend
-      coolify:
+      mail:
         aliases:
           - devfest-${ENV_NAME:-local}-backend
 
@@ -203,6 +201,10 @@ services:
 networks:
   coolify:
     external: true
+  # One per environment, so the beta's backend cannot reach the prod's.
+  mail:
+    external: true
+    name: devfest-mail-${ENV_NAME:-local}
 
 volumes:
   pgdata:
