@@ -6,6 +6,7 @@ import StatusBadge from "@/components/admin/StatusBadge";
 import ListPagination from "@/components/admin/ListPagination";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ContactCategories from "@/components/admin/ContactCategories";
+import { useListParams } from "@/lib/use-list-params";
 
 type WebhookStatus = "not_attempted" | "success" | "failed" | "skipped";
 
@@ -27,6 +28,10 @@ interface Message {
   webhookStatus: WebhookStatus;
   webhookAttemptedAt: string | null;
   webhookError: string | null;
+  quarantinedAt: string | null;
+  releasedAt: string | null;
+  spamScore: number;
+  spamReasons: string[];
 }
 
 interface MessagesResponse {
@@ -34,9 +39,23 @@ interface MessagesResponse {
   total: number;
   page: number;
   totalPages: number;
+  quarantineCount: number;
 }
 
 const PAGE_SIZE = 50;
+
+// What each code of lib/contact-spam.ts means, for whoever decides to release
+// or bin a held message (#767).
+function reasonLabel(reason: string): string {
+  if (reason.startsWith("risky_tld:")) return `Domaine en ${reason.slice("risky_tld:".length)}`;
+  const labels: Record<string, string> = {
+    link_in_identity: "Lien dans le nom, la société ou le poste",
+    external_link: "Lien vers un site extérieur",
+    disposable_email: "Adresse e-mail jetable",
+    site_pitch: "Reprend la description du DevFest",
+  };
+  return labels[reason] ?? reason;
+}
 
 export default function ContactMessagesPage() {
   const [activeTab, setActiveTab] = useState<"messages" | "categories">("messages");
@@ -47,6 +66,12 @@ export default function ContactMessagesPage() {
   const [selected, setSelected] = useState<Message | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Message | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [quarantineCount, setQuarantineCount] = useState(0);
+  // In the URL so the quarantine alert can link straight to the held messages.
+  const { params, update } = useListParams(["filtre"] as const);
+  const isQuarantine = params.filtre === "quarantaine";
+  const [isReleasing, setIsReleasing] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
 
   useEffect(() => {
     getAdminSession().then((session) => {
@@ -67,24 +92,29 @@ export default function ContactMessagesPage() {
 
   async function loadMessages(p = 1) {
     setIsLoading(true);
-    const { data } = await adminFetch<MessagesResponse>(`/contact/messages?page=${p}&limit=${PAGE_SIZE}`);
+    const filter = isQuarantine ? "&filter=quarantine" : "";
+    const { data } = await adminFetch<MessagesResponse>(`/contact/messages?page=${p}&limit=${PAGE_SIZE}${filter}`);
     if (data) {
       setMessages(data.messages);
       setPage(data.page);
       setTotal(data.total);
+      setQuarantineCount(data.quarantineCount);
     }
     setIsLoading(false);
   }
 
   useEffect(() => {
+    setSelected(null);
     loadMessages();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reload when the view changes, nothing else
+  }, [isQuarantine]);
 
   async function markAsRead(msg: Message) {
     setSelected(msg);
     setShowForward(false);
     setForwardSuccess(false);
     setWebhookRetryFeedback(null);
+    setReleaseError(null);
     if (!msg.isRead) {
       await adminFetch(`/contact/messages/${msg.id}/read`, { method: "PUT" });
       setMessages((prev) => prev.map((m) => (m.id === msg.id ? { ...m, isRead: true } : m)));
@@ -97,6 +127,26 @@ export default function ContactMessagesPage() {
     if (selected?.id === deleteTarget.id) setSelected(null);
     setDeleteTarget(null);
     // The last message of a page gone: step back rather than show an empty page.
+    loadMessages(messages.length === 1 && page > 1 ? page - 1 : page);
+  }
+
+  // Sends the team mail, the confirmation and the webhook, as on submission.
+  // A failure stays on screen: a fading error would read as a release.
+  async function handleRelease() {
+    if (!selected) return;
+    setIsReleasing(true);
+    setReleaseError(null);
+    const { status } = await adminFetch(`/contact/messages/${selected.id}/release`, { method: "POST" });
+    setIsReleasing(false);
+    if (status !== 200) {
+      setReleaseError(
+        status === 409
+          ? "Ce message a déjà été libéré. Rechargez la page."
+          : "La libération a échoué. Réessayez dans un instant.",
+      );
+      return;
+    }
+    setSelected(null);
     loadMessages(messages.length === 1 && page > 1 ? page - 1 : page);
   }
 
@@ -185,6 +235,36 @@ export default function ContactMessagesPage() {
       {activeTab === "categories" && <ContactCategories />}
 
       {activeTab === "messages" && <>
+      {/* Held messages (#767) apart from the inbox: nothing of theirs has left. */}
+      <div className="flex gap-2 mb-4" role="group" aria-label="Boîte affichée">
+        <button
+          type="button"
+          onClick={() => update({ filtre: "" })}
+          aria-pressed={!isQuarantine}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
+            !isQuarantine ? "bg-noir text-blanc border-noir" : "border-gris/30 text-gris hover:text-noir"
+          }`}
+        >
+          Reçus
+        </button>
+        <button
+          type="button"
+          onClick={() => update({ filtre: "quarantaine" })}
+          aria-pressed={isQuarantine}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border ${
+            isQuarantine ? "bg-terre-cuite text-blanc border-terre-cuite" : "border-gris/30 text-gris hover:text-noir"
+          }`}
+        >
+          Quarantaine ({quarantineCount})
+        </button>
+      </div>
+      {isQuarantine && (
+        <p className="mb-4 text-sm text-gris">
+          Messages jugés suspects (liens douteux, adresse jetable…). Rien n&apos;est parti : ni e-mail à l&apos;équipe, ni
+          confirmation, ni webhook. Libérez un message légitime, mettez les autres à la corbeille.
+        </p>
+      )}
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 mb-6">
         <input
@@ -254,6 +334,7 @@ export default function ContactMessagesPage() {
                       {msg.message.substring(0, 50)}{msg.message.length > 50 ? "..." : ""}
                     </p>
                     <div className="flex items-center gap-1 mt-1">
+                      {msg.quarantinedAt && <StatusBadge status="Suspect" variant="red" />}
                       {!msg.isRead && <StatusBadge status="Non lu" variant="orange" />}
                       {msg.categoryLabel && <StatusBadge status={msg.categoryLabel} variant="blue" />}
                     </div>
@@ -282,20 +363,69 @@ export default function ContactMessagesPage() {
             <div className="bg-blanc rounded-xl shadow-card p-6 sticky top-8">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-bold text-noir">{selected.firstName} {selected.lastName}</h3>
-                <div className="flex gap-3">
-                  <button onClick={() => setShowForward(!showForward)} className="text-sm text-bleu hover:underline">
-                    Transférer
-                  </button>
-                  {isAdmin && (
-                    <button onClick={() => setDeleteTarget(selected)} className="text-sm text-terre-cuite hover:underline">
-                      Supprimer
+                {selected.quarantinedAt ? (
+                  isAdmin && (
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={handleRelease}
+                        disabled={isReleasing}
+                        className="text-sm px-3 py-1.5 rounded border border-malachite text-malachite hover:bg-malachite/10 disabled:opacity-50"
+                      >
+                        {isReleasing ? "Libération…" : "Libérer"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDeleteTarget(selected)}
+                        className="text-sm px-3 py-1.5 rounded border border-terre-cuite text-terre-cuite hover:bg-terre-cuite/10"
+                      >
+                        Confirmer spam
+                      </button>
+                    </div>
+                  )
+                ) : (
+                  <div className="flex gap-3">
+                    <button onClick={() => setShowForward(!showForward)} className="text-sm text-bleu hover:underline">
+                      Transférer
                     </button>
-                  )}
-                </div>
+                    {isAdmin && (
+                      <button onClick={() => setDeleteTarget(selected)} className="text-sm text-terre-cuite hover:underline">
+                        Supprimer
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
+              {selected.quarantinedAt && (
+                <div className="mb-4 p-4 rounded-lg bg-terre-cuite/10 text-sm">
+                  <p className="font-medium text-noir">Message suspect · score {selected.spamScore}</p>
+                  <ul className="mt-1 list-disc pl-5 text-noir">
+                    {selected.spamReasons.map((reason) => (
+                      <li key={reason}>{reasonLabel(reason)}</li>
+                    ))}
+                  </ul>
+                  <p className="mt-2 text-gris">
+                    Libérer envoie l&apos;e-mail à l&apos;équipe, la confirmation à l&apos;expéditeur et le webhook, comme pour un
+                    message normal.
+                    {!isAdmin && " Seul un administrateur peut libérer ou supprimer ce message."}
+                  </p>
+                  {releaseError && (
+                    <p role="alert" className="mt-2 font-medium text-rouge">{releaseError}</p>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm mb-4">
-                <p><span className="text-gris">Email :</span> <a href={`mailto:${selected.email}`} className="text-bleu hover:underline">{selected.email}</a></p>
+                {/* A held message's address stays plain text: no click on a phisher's address. */}
+                <p>
+                  <span className="text-gris">Email :</span>{" "}
+                  {selected.quarantinedAt ? (
+                    <span className="text-noir">{selected.email}</span>
+                  ) : (
+                    <a href={`mailto:${selected.email}`} className="text-bleu hover:underline">{selected.email}</a>
+                  )}
+                </p>
                 {selected.phone && <p><span className="text-gris">Téléphone :</span> {selected.phone}</p>}
                 {selected.company && <p><span className="text-gris">Entreprise :</span> {selected.company}</p>}
                 {selected.jobTitle && <p><span className="text-gris">Poste :</span> {selected.jobTitle}</p>}
@@ -316,6 +446,7 @@ export default function ContactMessagesPage() {
                     )}
                   </p>
                 )}
+                {!selected.quarantinedAt && <>
                 <p className="sm:col-span-2">
                   <span className="text-gris">Webhook :</span>{" "}
                   {selected.webhookStatus === "success" && (
@@ -368,9 +499,10 @@ export default function ContactMessagesPage() {
                     )}
                   </p>
                 )}
+                </>}
               </div>
 
-              {showForward && (
+              {showForward && !selected.quarantinedAt && (
                 <div className="mb-4 p-4 bg-blanc-casse rounded-lg">
                   <p className="text-sm font-medium text-noir mb-2">Transférer à :</p>
                   <div className="flex gap-2">
@@ -410,7 +542,19 @@ export default function ContactMessagesPage() {
         </div>
       </div>
 
-      <ConfirmDialog isOpen={!!deleteTarget} title="Supprimer le message" message="Supprimer ce message ?" confirmLabel="Supprimer" variant="danger" onConfirm={handleDelete} onCancel={() => setDeleteTarget(null)} />
+      <ConfirmDialog
+        isOpen={!!deleteTarget}
+        title={deleteTarget?.quarantinedAt ? "Confirmer le spam" : "Supprimer le message"}
+        message={
+          deleteTarget?.quarantinedAt
+            ? "Le message part à la corbeille sans rien envoyer, et sera effacé au bout de 30 jours."
+            : "Supprimer ce message ?"
+        }
+        confirmLabel={deleteTarget?.quarantinedAt ? "Mettre à la corbeille" : "Supprimer"}
+        variant="danger"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
       </>}
     </div>
   );

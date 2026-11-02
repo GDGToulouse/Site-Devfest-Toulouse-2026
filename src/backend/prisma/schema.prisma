@@ -592,10 +592,21 @@ model ContactMessage {
   webhookAttemptedAt DateTime?
   webhookError       String?
 
+  // Quarantine (#767): non-null while a suspicious message waits for an
+  // organizer — nothing (mail, confirmation, webhook) has gone out. Released
+  // messages keep their score and reasons, so the rules can be tuned on real
+  // false positives. Reasons are codes from lib/contact-spam.ts, never text
+  // typed by the visitor.
+  quarantinedAt DateTime?
+  releasedAt    DateTime?
+  spamScore     Int       @default(0)
+  spamReasons   String[]  @default([])
+
   categoryId Int?
   category   ContactCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 
   @@index([deletedAt])
+  @@index([quarantinedAt])
 }
 
 // --- Content Pages (CoC, Legal) ---
