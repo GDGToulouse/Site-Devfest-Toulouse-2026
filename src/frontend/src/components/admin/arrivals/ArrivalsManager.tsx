@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
 import BadgesSection from "@/components/admin/arrivals/BadgesSection";
+import StationsSection from "@/components/admin/arrivals/StationsSection";
 import VolunteersSection from "@/components/admin/arrivals/VolunteersSection";
 
 interface TierCount {
@@ -177,6 +178,7 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
           loadSummary();
         }}
       />
+      <StationsSection editionId={editionId} />
       <VolunteersSection editionId={editionId} />
     </div>
   );
