@@ -54,7 +54,16 @@ const inputClass = "w-24 px-3 py-2 rounded-lg border border-gris/30 text-sm";
 
 // Badge numbering, print file and freeze (#639). Until the freeze, everything
 // here is a preview: the numbers are only stored when the badges go to print.
-export default function BadgesSection({ editionId, syncedAt }: { editionId: number; syncedAt: string | null }) {
+export default function BadgesSection({
+  editionId,
+  syncedAt,
+  onAttendeesReset,
+}: {
+  editionId: number;
+  syncedAt: string | null;
+  /** The reset deleted the attendees: the counts above must reload. */
+  onAttendeesReset: () => void;
+}) {
   const [status, setStatus] = useState<BadgeStatus | null>(null);
   const [counters, setCounters] = useState("4");
   const [binsPerCounter, setBinsPerCounter] = useState("3");
@@ -191,6 +200,8 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           kind === "unfreeze" ? "Le gel n'a pas pu être annulé." : "L'accueil n'a pas pu être réinitialisé.",
         ),
       );
+    } else if (kind === "reset") {
+      onAttendeesReset();
     }
     await loadStatus();
     setIsBusy(false);
@@ -410,7 +421,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title="Envoyer les badges à l'impression ?"
-        message={`Les ${status.numbered} numéros actuels deviennent définitifs et sont écrits dans Billetweb. Les participants inscrits ensuite n'auront pas de badge imprimé. Cette action ne se défait pas.`}
+        message={`Les ${status.numbered} numéros actuels deviennent définitifs et sont écrits dans Billetweb. Les participants inscrits ensuite n'auront pas de badge imprimé. Le gel ne s'annule plus dès le premier badge scanné.`}
         confirmLabel="Geler et envoyer"
         variant="danger"
         onConfirm={handleFreeze}
