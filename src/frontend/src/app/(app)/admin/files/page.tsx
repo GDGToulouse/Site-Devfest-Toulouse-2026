@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { useListParams } from "@/lib/use-list-params";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import ListPagination from "@/components/admin/ListPagination";
 import FileDetailsDialog, { type FileTag } from "@/components/admin/FileDetailsDialog";
 import ImportFromUrl from "@/components/admin/ImportFromUrl";
+import FileSearch, { fileSearchParams, parseFileSearch, type FileSearchValue } from "@/components/admin/FileSearch";
 import { describeUsage, type FileUsage } from "@/lib/file-usage";
 
 interface FileInfo {
@@ -39,7 +40,8 @@ interface FilePage {
 }
 
 const PAGE_SIZE = 48;
-const LIST_KEYS = ["type", "tag"] as const;
+// `q` and `in` are the API's own search parameters (#768), so the URL reads the same.
+const LIST_KEYS = ["type", "tag", "q", "in"] as const;
 const EMPTY_PAGE: FilePage = { page: 1, limit: PAGE_SIZE, total: 0, counts: { all: 0, images: 0, documents: 0, unused: 0 }, items: [] };
 
 function formatSize(bytes: number): string {
@@ -86,10 +88,21 @@ export default function FilesAdminPage() {
   // The media library's tags (#373), for the filter; with their file counts.
   const [fileTags, setFileTags] = useState<(FileTag & { fileCount: number })[]>([]);
 
-  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+  const search = useMemo(() => parseFileSearch(params.q, params.in), [params.q, params.in]);
+  const isSearching = search.text !== "";
+
+  const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE), ...fileSearchParams(search) });
   if (filter !== "all") query.set("type", filter);
   if (params.tag) query.set("tag", params.tag);
   const queryString = query.toString();
+
+  const setSearch = useCallback(
+    (next: FileSearchValue) => {
+      const fields = [...(next.alt ? ["alt"] : []), ...(next.tags ? ["tags"] : [])];
+      update({ q: next.text, in: fields.join(",") });
+    },
+    [update],
+  );
 
   const loadFiles = useCallback(async () => {
     const { data } = await adminFetch<FilePage>(`/files?${queryString}`);
@@ -221,7 +234,10 @@ export default function FilesAdminPage() {
         />
       </div>
 
-      {/* By subject (#373): the tag narrows every tab below, counts included. */}
+      {/* By text (#768) and by subject (#373): both narrow every tab below, counts included. */}
+      <div className="mb-3">
+        <FileSearch value={search} onChange={setSearch} />
+      </div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
         <label htmlFor="file-tag-filter" className="text-sm font-medium text-noir">
           Tag
@@ -300,7 +316,12 @@ export default function FilesAdminPage() {
         <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
       )}
 
-      {filtered.length === 0 ? (
+      {filtered.length === 0 && isSearching ? (
+        <p role="status" className="bg-blanc rounded-xl shadow-card p-12 text-center text-gris">
+          Aucun fichier ne correspond à « {search.text} ». Vérifiez l&apos;orthographe, ou cochez « Texte
+          alternatif » ou « Tags » pour chercher plus large.
+        </p>
+      ) : filtered.length === 0 ? (
         <div
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}

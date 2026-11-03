@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 // #372 — a screenshot pasted into the image picker goes down the same path as
 // a dropped file: straight to the preview, where the alt text gets written.
@@ -39,5 +39,19 @@ describe("ImagePickerDialog paste (#372)", () => {
 
     expect(await screen.findByRole("alert")).toHaveTextContent("n'est pas une image acceptée");
     expect(screen.queryByText("brochure.pdf")).not.toBeInTheDocument();
+  });
+});
+
+// #768 — the picker searches the library like the Fichiers page does.
+describe("ImagePickerDialog search (#768)", () => {
+  it("should ask the API for the images matching the typed text", async () => {
+    render(<ImagePickerDialog open onClose={vi.fn()} onSelect={vi.fn()} />);
+
+    fireEvent.change(screen.getByRole("searchbox", { name: "Rechercher un fichier" }), { target: { value: "diagora" } });
+
+    await waitFor(() =>
+      expect(adminFetch).toHaveBeenLastCalledWith("/files?type=images&page=1&limit=24&q=diagora"),
+    );
+    expect(await screen.findByRole("status")).toHaveTextContent("Aucune image ne correspond à « diagora »");
   });
 });

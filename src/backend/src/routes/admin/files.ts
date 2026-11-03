@@ -11,7 +11,12 @@ import { importFromUrl, UrlImportError, type UrlImport } from "../../lib/url-imp
 import { EXTENSION_BY_MIME, sniffMime, sniffOfficeDocument } from "../../lib/file-sniff.js";
 import { TranslationError, sendTranslationError } from "../../lib/translation/errors.js";
 import { listFileReferences, listFileUsages, type FileReferenceUsage } from "../../lib/trash-files.js";
-import { FILE_PAGE_SIZE, pageFiles, type FileListType } from "../../lib/file-list.js";
+import {
+  FILE_PAGE_SIZE,
+  pageFiles,
+  type FileListType,
+  type FileSearchField,
+} from "../../lib/file-list.js";
 
 const ALLOWED_MIMES = [
   // Images. SVG was excluded outright by #306 — served same-origin from
@@ -40,6 +45,9 @@ interface FileListQuery {
   ext?: string;
   // A file tag's slug, or "none" for the untagged files (#373).
   tag?: string;
+  // Text search (#768), and the fields it looks in, comma-separated.
+  q?: string;
+  in?: string;
 }
 
 // What each model is called in the refusal shown to the admin (#486). The
@@ -206,6 +214,8 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           // Comma-separated, e.g. `.pdf` for a picker that only takes PDFs.
           ext: { type: "string", pattern: "^\\.[a-z0-9]+(,\\.[a-z0-9]+)*$" },
           tag: { type: "string", maxLength: 80 },
+          q: { type: "string", maxLength: 100 },
+          in: { type: "string", pattern: "^(name|alt|tags)(,(name|alt|tags))*$" },
         },
       },
     },
@@ -269,6 +279,9 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       type: q.type,
       extensions: q.ext?.split(","),
       tag: q.tag,
+      search: q.q
+        ? { text: q.q, fields: q.in ? (q.in.split(",") as FileSearchField[]) : ["name"] }
+        : undefined,
     });
   });
 
