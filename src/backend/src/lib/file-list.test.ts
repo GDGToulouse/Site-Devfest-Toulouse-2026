@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 
-import { pageFiles } from "./file-list.js";
+import { pageFiles, type FileSearchField } from "./file-list.js";
 
-const file = (name: string, ext: string, isImage: boolean, usages: unknown[] = [], tags: string[] = []) => ({
+const file = (name: string, ext: string, isImage: boolean, usages: { model: string; label?: string }[] = [], tags: string[] = []) => ({
   name,
   filename: `1700000000000-${name}${ext}`,
   originalName: null as string | null,
@@ -66,7 +66,7 @@ describe("pageFiles search (#768)", () => {
     { ...file("plan", ".pdf", false), originalName: "Plan-accès.pdf" },
     { ...file("logo", ".svg", true, [{ model: "Speaker" }]), originalName: "logo.svg", tags: [{ slug: "securite", name: "Sécurité" }] },
   ];
-  const search = (text: string, fields: ("name" | "alt" | "tags")[] = ["name"]) =>
+  const search = (text: string, fields: FileSearchField[] = ["name"]) =>
     pageFiles(SEARCHABLE, { page: 1, limit: 10, search: { text, fields } }).items.map((f) => f.name);
 
   it("finds a file by part of its original name, whatever the case", () => {
@@ -94,6 +94,19 @@ describe("pageFiles search (#768)", () => {
   it("looks in the tags' names only when asked", () => {
     expect(search("securite")).toEqual([]);
     expect(search("securite", ["name", "tags"])).toEqual(["logo"]);
+  });
+
+  // The library card reads "Sponsor · Pictarine (2023)" under a logo named
+  // logo_red.png, and that is what people type.
+  it("finds a file by what uses it, without ticking anything", () => {
+    const library = [
+      { ...file("red", ".png", true, [{ model: "editionSponsor", label: "Pictarine (2023)" }]), originalName: "logo_red.png" },
+      file("other", ".png", true),
+    ];
+
+    const found = pageFiles(library, { page: 1, limit: 10, search: { text: "picta", fields: ["name", "usages"] } });
+
+    expect(found.items.map((f) => f.name)).toEqual(["red"]);
   });
 
   it("matches a file when any chosen field does", () => {
