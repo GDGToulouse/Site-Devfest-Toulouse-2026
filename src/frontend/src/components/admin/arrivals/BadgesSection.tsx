@@ -14,6 +14,13 @@ interface BinCount {
   count: number;
 }
 
+/** One type of the preview file, in page order (two pages each: front, back). */
+interface PreviewPage {
+  type: string;
+  name: string;
+  isNumbered: boolean;
+}
+
 interface BadgeStatus {
   counters: number;
   binsPerCounter: number;
@@ -77,6 +84,8 @@ export default function BadgesSection({
   const [dialog, setDialog] = useState<"unfreeze" | "reset" | null>(null);
   // The two ways back are for admins; the API checks it too.
   const [isAdmin, setIsAdmin] = useState(false);
+  // What the last preview file holds, since a downloaded PDF does not say it (#776).
+  const [previewPages, setPreviewPages] = useState<PreviewPage[] | null>(null);
   // Remounts the design form on each load, so it starts from what is stored.
   const [loadCount, setLoadCount] = useState(0);
 
@@ -146,6 +155,14 @@ export default function BadgesSection({
         const body = await res.json().catch(() => null);
         setActionError(body?.message || "Le PDF n'a pas pu être généré.");
         return;
+      }
+      if (kind === "preview") {
+        try {
+          setPreviewPages(JSON.parse(decodeURIComponent(res.headers.get("X-Badge-Pages") ?? "")));
+        } catch {
+          // The file is still good: only its legend is missing.
+          setPreviewPages(null);
+        }
       }
       const url = URL.createObjectURL(await res.blob());
       const link = document.createElement("a");
@@ -218,7 +235,16 @@ export default function BadgesSection({
   if (!status) return null;
 
   const isFrozen = status.frozenAt !== null;
-  const isBlocked = status.shortfall !== null || status.withoutTier > 0 || status.numbered === 0;
+  // Why the badges cannot be numbered yet, same order as the backend's refusal; shown beside the
+  // buttons it greys out, since a button greyed without a word was taken for a bug (#776).
+  const blockedReason = status.withoutTier > 0
+    ? `${status.withoutTier} billets n'ont pas de tarif connu : importez les tarifs de l'édition, puis les participants.`
+    : status.numbered === 0
+      ? "Aucun participant à numéroter : importez d'abord les participants."
+      : status.shortfall
+        ? `${status.numbered} badges pour ${status.shortfall.capacity} places : il manque ${status.shortfall.missingBins} présentoir${status.shortfall.missingBins > 1 ? "s" : ""}. Passez à ${status.shortfall.binsPerCounterNeeded} présentoirs par guichet.`
+        : null;
+  const isBlocked = blockedReason !== null;
   const pendingWrite = status.numbered - status.cancelledAfterFreeze - status.written;
   const counterNumbers = Array.from({ length: status.counters }, (_, i) => i + 1);
   const binNumbers = Array.from({ length: status.binsPerCounter }, (_, i) => i + 1);
@@ -248,7 +274,7 @@ export default function BadgesSection({
           />
         </label>
         <label className="text-sm text-gris">
-          Bacs par guichet
+          Présentoirs par guichet
           <input
             type="number"
             min={1}
@@ -260,7 +286,7 @@ export default function BadgesSection({
           />
         </label>
         <label className="text-sm text-gris">
-          Badges par bac
+          Badges par présentoir
           <input
             type="number"
             min={10}
@@ -292,17 +318,6 @@ export default function BadgesSection({
         <SaveFeedback state={settingsFeedback} onDismiss={() => setSettingsFeedback(null)} />
       </div>
 
-      {status.shortfall && (
-        <div className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
-          {status.numbered} badges pour {status.shortfall.capacity} places : il manque {status.shortfall.missingBins} bacs.
-          Passez à {status.shortfall.binsPerCounterNeeded} bacs par guichet.
-        </div>
-      )}
-      {!isFrozen && status.withoutTier > 0 && (
-        <div className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
-          Numérotation impossible tant que {status.withoutTier} billets n&apos;ont pas de tarif connu.
-        </div>
-      )}
       {isFrozen && status.withoutNumber > 0 && (
         <div className="p-3 rounded-lg bg-jaune/20 text-noir text-sm mb-4">
           {status.withoutNumber} participants inscrits après l&apos;envoi à l&apos;impression n&apos;ont pas de badge
@@ -313,13 +328,13 @@ export default function BadgesSection({
       {status.bins.length > 0 && (
         <div className="overflow-x-auto rounded-xl border border-gris/20 mb-4">
           <table className="w-full text-sm">
-            <caption className="sr-only">Badges par guichet et par bac</caption>
+            <caption className="sr-only">Badges par guichet et par présentoir</caption>
             <thead>
               <tr className="bg-blanc-casse/60 border-b border-gris/20">
                 <th className="text-left px-4 py-3 font-medium text-gris">Guichet</th>
                 {binNumbers.map((bin) => (
                   <th key={bin} className="text-right px-4 py-3 font-medium text-gris">
-                    Bac {bin}
+                    Présentoir {bin}
                   </th>
                 ))}
               </tr>
@@ -374,13 +389,21 @@ export default function BadgesSection({
           {isFrozen ? "Télécharger le PDF d'impression" : "Télécharger tous les badges (provisoire)"}
         </button>
         {!isFrozen && (
-          <button
-            onClick={() => setIsConfirmOpen(true)}
-            disabled={isBusy || isBlocked}
-            className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
-          >
-            Envoyer à l&apos;impression
-          </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setIsConfirmOpen(true)}
+              disabled={isBusy || isBlocked}
+              aria-describedby={isBlocked ? "freeze-blocked-reason" : undefined}
+              className="px-4 py-2 bg-bleu text-blanc rounded-lg text-sm font-medium hover:bg-bleu/90 disabled:opacity-50"
+            >
+              Envoyer à l&apos;impression
+            </button>
+            {blockedReason && (
+              <p id="freeze-blocked-reason" className="max-w-xl text-sm text-terre-cuite">
+                {blockedReason}
+              </p>
+            )}
+          </div>
         )}
         {isAdmin && isFrozen && (
           <button
@@ -412,6 +435,26 @@ export default function BadgesSection({
         )}
       </div>
       {isBusy && <p className="text-sm text-gris mt-2">En cours…</p>}
+      {previewPages && (
+        <div className="mt-3 text-sm text-noir">
+          <p className="text-gris">
+            Le dernier aperçu téléchargé compte {previewPages.length * 2} pages, recto puis verso de chaque type :
+          </p>
+          <ol className="mt-1 list-none space-y-0.5">
+            {previewPages.map((page, i) => (
+              <li key={page.type}>
+                <span className="font-mono tabular-nums">
+                  Pages {i * 2 + 1}-{i * 2 + 2}
+                </span>{" "}
+                : <strong>{page.name}</strong>
+                <span className="text-gris">
+                  {page.isNumbered ? ", numéroté (exemple fictif)" : ", sans numéro : accueil dédié"}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
       {isFrozen && status.scanned > 0 && (
         <p className="text-sm text-gris mt-2">
           {status.scanned} badges déjà scannés ou remis : les numéros imprimés font foi, le gel ne s&apos;annule plus.
@@ -447,9 +490,9 @@ export default function BadgesSection({
       />
       <ConfirmDialog
         isOpen={isResizeConfirmOpen}
-        title="Changer la taille des bacs ?"
-        message={`Les badges sont déjà numérotés et imprimés pour des bacs de ${status.badgesPerBin}. Les numéros ne bougent pas : seuls la capacité affichée et les intercalaires changent. Vérifiez que les bacs du lieu correspondent avant de confirmer.`}
-        confirmLabel={`Passer à ${badgesPerBin} par bac`}
+        title="Changer la taille des présentoirs ?"
+        message={`Les badges sont déjà numérotés et imprimés pour des présentoirs de ${status.badgesPerBin}. Les numéros ne bougent pas : seuls la capacité affichée et les intercalaires changent. Vérifiez que les présentoirs du lieu correspondent avant de confirmer.`}
+        confirmLabel={`Passer à ${badgesPerBin} par présentoir`}
         variant="danger"
         onConfirm={() => saveSettings(true)}
         onCancel={() => setIsResizeConfirmOpen(false)}

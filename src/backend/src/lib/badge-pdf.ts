@@ -47,7 +47,7 @@ const SEPARATOR_COLOR = DEFAULT_QR_COLOR;
 const BACKGROUND_PIXELS = { width: 1240, height: 1748 };
 
 const ASSETS = new URL("../../assets/", import.meta.url);
-const OTHER_TYPES_ORDER: BadgeType[] = ["STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"];
+export const OTHER_TYPES_ORDER: BadgeType[] = ["STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"];
 // The company's font: CC Sign Language in the design (licence pending), Google
 // Sans Bold meanwhile. Swap this one file to change it.
 const BOLD_FONT_FILE = "fonts/GoogleSans-Bold.ttf";
@@ -366,7 +366,7 @@ export async function renderBadgePdf(
       const lastNumber = counter * 1000 + bin * 100 + options.badgesPerBin;
       addSeparator([
         { text: `Guichet ${counter}`, size: 36 },
-        { text: `Bac ${bin}`, size: 36 },
+        { text: `Présentoir ${bin}`, size: 36 },
         { text: `Badges ${formatBadgeNumber(lastNumber - options.badgesPerBin + 1)} à ${formatBadgeNumber(lastNumber)}`, size: 16 },
         { text: `${countByBin.get(currentBin)} badges`, size: 14 },
       ]);

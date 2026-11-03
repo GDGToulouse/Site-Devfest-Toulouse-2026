@@ -159,7 +159,7 @@ describe("Badge numbering and freeze (#639)", () => {
 
     expect(res.statusCode).toBe(409);
     expect(res.json()).toMatchObject({ error: "capacity_exceeded" });
-    expect(res.json().message).toContain("il manque 1 bacs");
+    expect(res.json().message).toContain("il manque 1 présentoir.");
     expect(await prisma.attendee.count({ where: { editionId, badgeNumber: { not: null } } })).toBe(0);
     expect((await prisma.edition.findUnique({ where: { id: editionId } }))?.badgesFrozenAt).toBeNull();
   });
@@ -291,6 +291,14 @@ describe("Badge design and preview (#639, #749)", () => {
 
     expect(res.headers["content-type"]).toBe("application/pdf");
     expect(await pageCount(res.rawPayload)).toBe(12);
+    expect(JSON.parse(decodeURIComponent(res.headers["x-badge-pages"] as string))).toEqual([
+      { type: "PARTICIPANT", name: "Participant", isNumbered: true },
+      { type: "SPONSOR", name: "Sponsor", isNumbered: true },
+      { type: "STAFF", name: "Staff", isNumbered: false },
+      { type: "SPEAKER", name: "Speaker", isNumbered: false },
+      { type: "VOLUNTEER", name: "Bénévole", isNumbered: false },
+      { type: "CONTRACTOR", name: "Prestataire", isNumbered: false },
+    ]);
     expect(await prisma.attendee.count({ where: { editionId, badgeNumber: { not: null } } })).toBe(0);
   });
 
