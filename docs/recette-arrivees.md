@@ -113,7 +113,7 @@ Dans la section **Badges** :
 
 1. **Guichets**, **Présentoirs par guichet**, **Badges par présentoir** (de 10 à 99), puis **Enregistrer**.
    Le tableau montre combien de badges tombent dans chaque présentoir et la plage de numéros de chaque
-   présentoir (guichet 2, présentoir 1 : « 2 1 01 à 2 1 99 » pour des présentoirs de 99). Guichets, présentoirs et rangs se comptent à partir de 1.
+   présentoir (guichet 2, présentoir 1 : « 2 1 00 à 2 1 99 » pour des présentoirs de 100). Guichets et présentoirs se comptent à partir de 1, le rang à partir de 00.
 2. Mettez volontairement trop peu de présentoirs : un message dit combien il en manque et bloque
    l'envoi à l'impression.
 3. **Apparence des badges** :

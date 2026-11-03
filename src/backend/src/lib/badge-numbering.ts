@@ -1,6 +1,7 @@
 // Badge numbers (RG-ARR-15 to RG-ARR-17, #639, #774): counter × 1000 + bin × 100
-// + rank, all three counted from 1. Pure functions, so two runs before the
-// freeze give the same numbering.
+// + rank. Counters and bins count from 1, the place in the bin from 00: the
+// team numbers its stands 00 to 99, so a bin holds 100 badges. Pure functions,
+// so two runs before the freeze give the same numbering.
 
 // The numbers a bin spans in the number itself: the rank takes two digits.
 export const NUMBERS_PER_BIN = 100;
@@ -8,9 +9,9 @@ export const NUMBERS_PER_BIN = 100;
 export const MAX_COUNTERS = 9;
 export const MAX_BINS_PER_COUNTER = 9;
 // How many badges a bin holds is the edition's (two rows of 50 in 2026), up
-// to the 99 ranks the number allows (1 to 99).
+// to the 100 places the number allows (00 to 99).
 export const MIN_BADGES_PER_BIN = 10;
-export const MAX_BADGES_PER_BIN = NUMBERS_PER_BIN - 1;
+export const MAX_BADGES_PER_BIN = NUMBERS_PER_BIN;
 
 export interface BadgeLayout {
   counters: number;
@@ -35,7 +36,7 @@ export interface BadgeSlot {
 export function badgeSlot(n: number, { counters, binsPerCounter }: BadgeLayout): BadgeSlot {
   const counter = ((n - 1) % counters) + 1;
   const bin = (Math.floor((n - 1) / counters) % binsPerCounter) + 1;
-  const rank = Math.floor((n - 1) / (counters * binsPerCounter)) + 1;
+  const rank = Math.floor((n - 1) / (counters * binsPerCounter));
   return { number: counter * 1000 + bin * 100 + rank, counter, bin, rank };
 }
 

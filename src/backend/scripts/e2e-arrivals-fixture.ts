@@ -34,7 +34,7 @@ interface FixtureAttendee {
 }
 
 // One ticket per scenario: a scan changes the ticket it reads, so two tests
-// never share one. Counters and bins count from 1: 1101 is counter 1, bin 1, rank 1.
+// never share one. Counters and bins count from 1, places from 00: 1101 is counter 1, bin 1, place 01.
 const ATTENDEES: FixtureAttendee[] = [
   { key: "camera", firstName: "Camille", lastName: "Testcamera", company: "Atelier Test", tier: "normal", number: 1101 },
   { key: "search", firstName: "Dominique", lastName: "Testrecherche", company: "Atelier Test", tier: "normal", number: 2101 },
