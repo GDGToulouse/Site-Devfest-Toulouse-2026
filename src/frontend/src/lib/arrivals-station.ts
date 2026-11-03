@@ -1,45 +1,38 @@
-// The station a device works as on event day (RG-ARR-25, #641): Scan, a
-// counter (and optionally one of its bins), or Aide. Kept on the device, not
-// the account: the counter's laptop reopens on its counter, whoever takes over
-// (RG-ARR-45).
+// The station a screen works as on event day (RG-ARR-25, #641): Scan, a
+// counter (and optionally one of its bins), or Aide. The address is the source
+// of truth since #775 (RG-ARR-70): a link names its station, so it can be given
+// away, and "Changer de poste" is simply the way back to /arrivees.
 
 export type Station =
   | { kind: "scan" }
   | { kind: "counter"; counter: number; bin: number | null }
   | { kind: "help" };
 
-const STORAGE_KEY = "devfest-arrivals-station";
-
 const isPositiveInteger = (value: unknown): value is number => Number.isInteger(value) && (value as number) > 0;
 
-/** What the device remembers, or null: storage can be blocked, stale or hand-edited. */
-export function readStation(): Station | null {
-  let raw: string | null;
-  try {
-    raw = window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-  if (!raw) return null;
-  try {
-    const value = JSON.parse(raw) as Record<string, unknown>;
-    if (value.kind === "scan" || value.kind === "help") return { kind: value.kind };
-    if (value.kind === "counter" && isPositiveInteger(value.counter)) {
-      return { kind: "counter", counter: value.counter, bin: isPositiveInteger(value.bin) ? value.bin : null };
-    }
-  } catch {
-    // Not ours any more: ask again.
-  }
-  return null;
+/** The address of a station's screen. The word is "présentoir" in addresses (#775). */
+export function stationPath(station: Station): string {
+  if (station.kind === "scan") return "/arrivees/scan";
+  if (station.kind === "help") return "/arrivees/aide";
+  const counter = `/arrivees/guichet/${station.counter}`;
+  return station.bin === null ? counter : `${counter}/presentoir/${station.bin}`;
 }
 
-export function saveStation(station: Station | null): void {
-  try {
-    if (station) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(station));
-    else window.localStorage.removeItem(STORAGE_KEY);
-  } catch {
-    // Private browsing: the choice holds until the page closes.
-  }
+/** A counter or bin number from the address, or null when it is not a number from 1 to 9. */
+export function parseStationNumber(value: string | undefined): number | null {
+  if (value === undefined || !/^[1-9]$/.test(value)) return null;
+  return Number(value);
+}
+
+/** Whether the station exists in this layout: an address can name a counter the edition does not have. */
+export function isStationInLayout(station: Station, layout: { counters: number; binsPerCounter: number }): boolean {
+  if (station.kind !== "counter") return true;
+  return station.counter <= layout.counters && (station.bin === null || station.bin <= layout.binsPerCounter);
+}
+
+export function isSameStation(a: Station, b: Station): boolean {
+  if (a.kind !== "counter" || b.kind !== "counter") return a.kind === b.kind;
+  return a.counter === b.counter && a.bin === b.bin;
 }
 
 const EDITION_KEY = "devfest-arrivals-edition";

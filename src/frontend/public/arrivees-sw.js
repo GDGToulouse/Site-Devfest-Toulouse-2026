@@ -10,11 +10,14 @@
 //
 // Bump CACHE_NAME to drop everything kept by an earlier version.
 
-const CACHE_NAME = "arrivees-v2";
+const CACHE_NAME = "arrivees-v3";
 const SHELL_URL = "/arrivees";
-// The barcode reader of iOS phones (#642): needed by the Scan screen offline,
-// and fetched only when a scan starts otherwise.
-const PRECACHE_URLS = [SHELL_URL, "/arrivees-zxing/zxing_reader.wasm"];
+// One address per station since #775: the Scan screen must open offline from
+// its own address, and a counter's or a bin's page is kept on its first visit
+// (a QR code always opens it online first). The barcode reader of iOS phones
+// (#642) is needed by the Scan screen offline, and fetched only when a scan
+// starts otherwise.
+const PRECACHE_URLS = [SHELL_URL, "/arrivees/scan", "/arrivees/aide", "/arrivees-zxing/zxing_reader.wasm"];
 
 self.addEventListener("install", (event) => {
   // The shell, at least: a phone that installed the app before ever loading
@@ -56,6 +59,8 @@ self.addEventListener("message", (event) => {
 function isCacheable(url) {
   if (url.origin !== self.location.origin) return false;
   if (url.pathname.startsWith("/api/")) return false;
+  // A station's QR code carries its secret in the path (#775): never kept.
+  if (url.pathname.startsWith("/arrivees/poste/")) return false;
   // A client-side navigation's payload, tied to one build: offline, Next
   // falls back to a full page load, which the cached page answers.
   if (url.searchParams.has("_rsc")) return false;

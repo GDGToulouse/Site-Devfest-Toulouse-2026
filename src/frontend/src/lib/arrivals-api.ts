@@ -4,12 +4,15 @@
 
 import type { BadgeState, LiveBadge } from "@/lib/arrivals-live";
 import type { OfflineTable, QueuedScan } from "@/lib/arrivals-offline";
+import type { Station } from "@/lib/arrivals-station";
 
 export interface ArrivalsResult<T> {
   data: T | null;
   // 0: the request never reached the backend.
   status: number;
   error?: string;
+  /** The backend's sentence for the person, when it has one (a station link refused, #775). */
+  message?: string;
 }
 
 export interface ArrivalsInvitation {
@@ -24,6 +27,8 @@ export interface ArrivalsCurrent {
   canStepBack: boolean;
   /** ADMIN and EDITOR open the tracking screen (RG-ARR-26). */
   canTrack: boolean;
+  /** Set when the session is a station's (#775): the screen is locked to it. */
+  station: Station | null;
 }
 
 /** The tracking screen's totals (#644), as the backend computes them. */
@@ -41,8 +46,13 @@ async function call<T>(path: string, init: RequestInit = {}): Promise<ArrivalsRe
   try {
     const res = await fetch(path, { credentials: "include", ...init });
     if (!res.ok) {
-      const body = (await res.json().catch(() => null)) as { error?: string } | null;
-      return { data: null, status: res.status, ...(body?.error ? { error: body.error } : {}) };
+      const body = (await res.json().catch(() => null)) as { error?: string; message?: string } | null;
+      return {
+        data: null,
+        status: res.status,
+        ...(body?.error ? { error: body.error } : {}),
+        ...(body?.message ? { message: body.message } : {}),
+      };
     }
     return { data: (await res.json()) as T, status: res.status };
   } catch {
@@ -62,6 +72,15 @@ export function acceptArrivalsInvitation(token: string) {
 
 export function getArrivalsCurrent() {
   return call<ArrivalsCurrent>("/api/arrivals/current");
+}
+
+/** A station's QR code becomes its session: the backend sets the cookie (#775). */
+export function openStationSession(token: string) {
+  return call<{ editionId: number; station: Station; path: string }>("/api/arrivals/station-session", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ token }),
+  });
 }
 
 // A counter touching a card (#643). The answer is the badge as it stands,
