@@ -169,7 +169,14 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
         </div>
       )}
 
-      <BadgesSection editionId={editionId} syncedAt={summary.syncedAt} />
+      <BadgesSection
+        editionId={editionId}
+        syncedAt={summary.syncedAt}
+        onAttendeesReset={() => {
+          setReport(null);
+          loadSummary();
+        }}
+      />
       <VolunteersSection editionId={editionId} />
     </div>
   );

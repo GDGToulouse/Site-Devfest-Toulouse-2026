@@ -5,51 +5,68 @@ import { adminFetch, humanError } from "@/lib/admin-api";
 import ImagePickerDialog from "@/components/admin/ImagePickerDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 
-// The badges' look (#639, #749): one background and one colour per type, the
-// QR code's content, and which badge each dedicated-flow tier prints. The
-// light zone and its layout are the same on every badge.
+// The badges' look (#639, #749, #774): per type a front background, a back
+// background and a text colour; the QR code's colour and content; and which
+// badge each tier prints. The layout is the same on every badge.
 
-export type BadgeType = "PARTICIPANT" | "SPEAKER" | "VOLUNTEER" | "CONTRACTOR";
+export type BadgeType = "PARTICIPANT" | "SPONSOR" | "STAFF" | "SPEAKER" | "VOLUNTEER" | "CONTRACTOR";
 
 export interface BadgeDesign {
   qrContent: "TICKET" | "VCARD";
-  types: Record<BadgeType, { background: string | null; color: string }>;
+  qrColor: string;
+  types: Record<BadgeType, { background: string | null; backBackground: string | null; color: string }>;
 }
 
-export interface OutsideTier {
+export interface TierBadge {
   id: number;
   name: string;
+  isOutsideFlow: boolean;
   badgeType: BadgeType;
   isGuessed: boolean;
 }
 
 const TYPE_NAMES: Record<BadgeType, string> = {
   PARTICIPANT: "Participant",
+  SPONSOR: "Sponsor",
+  STAFF: "Staff",
   SPEAKER: "Speaker",
   VOLUNTEER: "Bénévole",
   CONTRACTOR: "Prestataire",
 };
 
+const COUNTER_HELP = "Passe par les guichets : porte un numéro en haut à droite.";
+const OUTSIDE_HELP = "Sans numéro : accueil dédié.";
 const TYPE_HELP: Record<BadgeType, string> = {
-  PARTICIPANT: "Tous les tarifs des guichets, sponsors compris. Porte le numéro en haut à droite.",
-  SPEAKER: "Sans numéro : accueil dédié.",
-  VOLUNTEER: "Sans numéro : accueil dédié.",
-  CONTRACTOR: "Sans numéro : accueil dédié.",
+  PARTICIPANT: COUNTER_HELP,
+  SPONSOR: COUNTER_HELP,
+  STAFF: `Bénévoles présents toute l'année. ${OUTSIDE_HELP}`,
+  SPEAKER: OUTSIDE_HELP,
+  VOLUNTEER: OUTSIDE_HELP,
+  CONTRACTOR: OUTSIDE_HELP,
 };
 
 const TYPES = Object.keys(TYPE_NAMES) as BadgeType[];
-const OUTSIDE_TYPES = TYPES.filter((t) => t !== "PARTICIPANT");
+const COUNTER_TYPES: BadgeType[] = ["PARTICIPANT", "SPONSOR"];
+const OUTSIDE_TYPES = TYPES.filter((t) => !COUNTER_TYPES.includes(t));
 
-function BackgroundField({ value, onChange }: { value: string | null; onChange: (v: string | null) => void }) {
+function BackgroundField({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string | null;
+  onChange: (v: string | null) => void;
+}) {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   return (
     <div className="flex items-center gap-3">
       {value ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={value} alt="Fond du badge" className="h-16 w-12 object-cover rounded border border-gris/20" />
+        <img src={value} alt={`${label} du badge`} className="h-16 w-12 object-cover rounded border border-gris/20" />
       ) : (
         <span className="h-16 w-12 rounded border border-dashed border-gris/40 text-[10px] text-gris flex items-center justify-center text-center">
-          Fond 2026
+          Fond par défaut
         </span>
       )}
       <button
@@ -57,11 +74,11 @@ function BackgroundField({ value, onChange }: { value: string | null; onChange: 
         onClick={() => setIsPickerOpen(true)}
         className="px-3 py-1.5 text-sm rounded-lg border border-gris/30 text-noir hover:bg-blanc-casse"
       >
-        {value ? "Changer" : "Choisir"}
+        {label} : {value ? "changer" : "choisir"}
       </button>
       {value && (
         <button type="button" onClick={() => onChange(null)} className="text-sm text-terre-cuite hover:underline">
-          Fond par défaut
+          Revenir au défaut
         </button>
       )}
       <ImagePickerDialog
@@ -80,16 +97,16 @@ function BackgroundField({ value, onChange }: { value: string | null; onChange: 
 export default function BadgeDesignSection({
   editionId,
   design: initialDesign,
-  outsideTiers,
+  tiers,
   onSaved,
 }: {
   editionId: number;
   design: BadgeDesign;
-  outsideTiers: OutsideTier[];
+  tiers: TierBadge[];
   onSaved: () => void;
 }) {
   const [design, setDesign] = useState(initialDesign);
-  const [tierTypes, setTierTypes] = useState(() => new Map(outsideTiers.map((t) => [t.id, t.badgeType])));
+  const [tierTypes, setTierTypes] = useState(() => new Map(tiers.map((t) => [t.id, t.badgeType])));
   const [feedback, setFeedback] = useState<SaveState>(null);
 
   const setType = (type: BadgeType, patch: Partial<BadgeDesign["types"][BadgeType]>) =>
@@ -118,10 +135,22 @@ export default function BadgeDesignSection({
       <div>
         <h4 className="font-bold text-noir">Apparence des badges</h4>
         <p className="text-sm text-gris">
-          Format A6. Un fond par type de badge (PNG, JPG, SVG ou PDF de la médiathèque, sans texte dans la zone
-          claire) ; le prénom, le nom, l&apos;entreprise et le QR code s&apos;écrivent dans la couleur choisie.
+          Format A6, recto-verso. Un fond recto et un fond verso par type de badge (PNG, JPG, SVG ou PDF de la
+          médiathèque, sans texte ni QR code d&apos;exemple) ; le prénom, le nom, l&apos;entreprise et le numéro
+          s&apos;écrivent dans la couleur du type, le QR code dans sa propre couleur.
         </p>
       </div>
+
+      <label className="flex items-center gap-2 text-sm text-gris">
+        Couleur du QR code
+        <input
+          type="color"
+          value={design.qrColor}
+          onChange={(e) => setDesign((d) => ({ ...d, qrColor: e.target.value.toUpperCase() }))}
+          className="h-8 w-12 rounded border border-gris/30"
+        />
+        <span className="font-mono text-xs">{design.qrColor}</span>
+      </label>
 
       <label className="block text-sm text-gris">
         Contenu du QR code
@@ -142,7 +171,12 @@ export default function BadgeDesignSection({
               <p className="text-sm font-medium text-noir">{TYPE_NAMES[type]}</p>
               <p className="text-xs text-gris">{TYPE_HELP[type]}</p>
             </div>
-            <BackgroundField value={design.types[type].background} onChange={(background) => setType(type, { background })} />
+            <BackgroundField label="Recto" value={design.types[type].background} onChange={(background) => setType(type, { background })} />
+            <BackgroundField
+              label="Verso"
+              value={design.types[type].backBackground}
+              onChange={(backBackground) => setType(type, { backBackground })}
+            />
             <label className="flex items-center gap-2 text-sm text-gris">
               Couleur du texte
               <input
@@ -157,19 +191,22 @@ export default function BadgeDesignSection({
         ))}
       </ul>
 
-      {outsideTiers.length > 0 && (
+      {tiers.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-noir mb-2">Badge des tarifs de l&apos;accueil dédié</p>
+          <p className="text-sm font-medium text-noir mb-2">Badge de chaque tarif</p>
           <ul className="space-y-2">
-            {outsideTiers.map((tier) => (
+            {tiers.map((tier) => (
               <li key={tier.id} className="flex flex-wrap items-center gap-3 text-sm">
-                <span className="w-48 text-noir">{tier.name}</span>
+                <span className="w-48 text-noir">
+                  {tier.name}
+                  <span className="block text-xs text-gris">{tier.isOutsideFlow ? "Accueil dédié" : "Guichets"}</span>
+                </span>
                 <select
                   value={tierTypes.get(tier.id)}
                   onChange={(e) => setTierTypes((m) => new Map(m).set(tier.id, e.target.value as BadgeType))}
                   className="px-3 py-1.5 rounded-lg border border-gris/30 text-noir"
                 >
-                  {OUTSIDE_TYPES.map((t) => (
+                  {(tier.isOutsideFlow ? OUTSIDE_TYPES : COUNTER_TYPES).map((t) => (
                     <option key={t} value={t}>
                       {TYPE_NAMES[t]}
                     </option>

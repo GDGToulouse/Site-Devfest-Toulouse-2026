@@ -6,6 +6,7 @@ import { moveBadge } from "@/lib/arrivals-api";
 import {
   DELIVERED_SHOWN,
   binColor,
+  formatBadgeNumber,
   binOf,
   counterBoard,
   type BadgeState,
@@ -90,12 +91,12 @@ function Card({
         type="button"
         onClick={onTouch}
         disabled={isBusy}
-        aria-label={`Badge ${badge.number}, ${badge.firstName} ${badge.lastName} : ${TOUCH_WORDS[badge.state]}`}
+        aria-label={`Badge ${formatBadgeNumber(badge.number)}, ${badge.firstName} ${badge.lastName} : ${TOUCH_WORDS[badge.state]}`}
         className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-xl border border-gris/20 bg-blanc py-2 pr-3 text-left hover:border-bleu focus-visible:border-bleu disabled:opacity-50"
       >
         <span aria-hidden="true" className={`w-2 self-stretch ${binColor(bin)}`} />
         <span className={`font-mono font-bold tabular-nums text-noir ${isDone ? "text-lg" : "text-2xl"}`}>
-          {badge.number}
+          {formatBadgeNumber(badge.number)}
         </span>
         <span className="min-w-0">
           <span className="block truncate font-medium text-noir">
@@ -115,7 +116,7 @@ function Card({
           type="button"
           onClick={action.onClick}
           disabled={isBusy}
-          aria-label={`Badge ${badge.number} : ${action.label}`}
+          aria-label={`Badge ${formatBadgeNumber(badge.number)} : ${action.label}`}
           title={action.label}
           className="shrink-0 rounded-xl border border-gris/20 bg-blanc px-2 text-gris hover:border-bleu hover:text-noir disabled:opacity-50"
         >
@@ -181,7 +182,7 @@ export default function CounterBoard({
       onMoved(data.badge);
     } else {
       // Stays until a move goes through: a lost touch must not pass for a done one.
-      setError(`Le badge ${badge.number} n'a pas bougé : vérifiez la connexion, puis touchez la carte à nouveau.`);
+      setError(`Le badge ${formatBadgeNumber(badge.number)} n'a pas bougé : vérifiez la connexion, puis touchez la carte à nouveau.`);
     }
   }
 
@@ -208,15 +209,15 @@ export default function CounterBoard({
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center gap-2 text-sm text-noir">
         <span className="text-gris">À chercher par bac</span>
-        {board.toFetchByBin.map((count, b) => (
+        {board.toFetchByBin.map((count, i) => (
           <span
-            key={b}
+            key={i}
             className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 ${
-              bin === b ? "border-noir" : "border-gris/30"
+              bin === i + 1 ? "border-noir" : "border-gris/30"
             }`}
           >
-            <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(b)}`} />
-            bac {b} : <b className="font-mono tabular-nums">{count}</b>
+            <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(i + 1)}`} />
+            bac {i + 1} : <b className="font-mono tabular-nums">{count}</b>
           </span>
         ))}
       </div>

@@ -1,6 +1,8 @@
 import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
+import { isProductionEnvironment } from "../../lib/environment.js";
 import { BILLETWEB_API, getBilletwebParams } from "../../lib/billetweb.js";
 import {
   MAX_BADGES_PER_BIN,
@@ -18,6 +20,7 @@ import {
   BADGE_TYPES,
   badgeDesignSchema,
   badgeTypeOf,
+  isBadgeTypeAllowed,
   readBadgeDesign,
 } from "../../lib/badge-design.js";
 import type { BadgeType } from "../../generated/prisma/client.js";
@@ -32,6 +35,16 @@ const editionIdParams = {
 // small enough to fail alone (RG-ARR-20).
 const WRITE_BATCH_SIZE = 100;
 const BADGE_FIELD_NAME = /num[ée]ro\s+de\s+badge/i;
+
+// What the admin types to confirm the two ways back (#774): neither is a click.
+const UNFREEZE_WORD = "ANNULER";
+const RESET_WORD = "REINITIALISER";
+
+// A badge that left its bin: the printed numbers are then what the venue holds.
+const movedBadge = (editionId: number) => ({
+  editionId,
+  OR: [{ scannedAt: { not: null } }, { badgeState: { not: "PRINTED" as const } }, { labelDeliveredAt: { not: null } }],
+});
 
 // The tickets that get a number (RG-ARR-14): live, and in a tier that goes
 // through the counters. A ticket whose tier is not imported yet blocks the
@@ -80,15 +93,19 @@ const PRINT_SELECT = {
 // layout must hold, accents, and a badge without company. Fictional.
 const PREVIEW_PEOPLE: Record<BadgeType, Omit<PrintedBadge, "type" | "badgeNumber">> = {
   PARTICIPANT: {
-    firstName: "Marie-Charlotte",
-    lastName: "Vandenberghe-Delacroix",
+    firstName: "Marie-Charlotte-Eugénie",
+    lastName: "Vandenberghe-Delacroix-Montmorency",
     company: "Capitole Cloud Engineering & Data",
     barcode: "1234567890",
   },
+  SPONSOR: { firstName: "Nguyễn", lastName: "Saint-Exupéry", company: "Aéronova Systèmes Embarqués Toulouse", barcode: "1234567894" },
+  STAFF: { firstName: "Camille", lastName: "Durand", company: "GDG Toulouse", barcode: "1234567895" },
   SPEAKER: { firstName: "Hélène", lastName: "Ó Súilleabháin", company: null, barcode: "1234567891" },
   VOLUNTEER: { firstName: "Léa", lastName: "Martin", company: "GDG Toulouse", barcode: "1234567892" },
   CONTRACTOR: { firstName: "Jean-Baptiste", lastName: "Dupont", company: "Traiteur du Capitole", barcode: "1234567893" },
 };
+// Sample numbers of the numbered types: "1 2 25" and "2 1 05" once shown.
+const PREVIEW_NUMBERS: Partial<Record<BadgeType, number>> = { PARTICIPANT: 1225, SPONSOR: 2105 };
 
 const pdfReply = (reply: FastifyReply, pdf: Uint8Array, filename: string) =>
   reply
@@ -180,9 +197,9 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       }
       const frozen = edition.badgesFrozenAt !== null;
       const shortfall = frozen ? null : capacityShortfall(numbered.length, layout);
-      // The outside-flow tiers, and the badge each prints (#639).
-      const outsideTiers = await prisma.ticketTier.findMany({
-        where: { editionId: edition.id, isOutsideFlow: true, ...notDeleted },
+      // Every tier, and the badge each prints (#639, #774).
+      const tiers = await prisma.ticketTier.findMany({
+        where: { editionId: edition.id, ...notDeleted },
         select: { id: true, nameFr: true, isOutsideFlow: true, badgeType: true },
         orderBy: { sortOrder: "asc" },
       });
@@ -191,9 +208,10 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         binsPerCounter: layout.binsPerCounter,
         badgesPerBin: layout.badgesPerBin,
         design: readBadgeDesign(edition.badgeDesign),
-        outsideTiers: outsideTiers.map((t) => ({
+        tiers: tiers.map((t) => ({
           id: t.id,
           name: t.nameFr,
+          isOutsideFlow: t.isOutsideFlow,
           badgeType: badgeTypeOf(t),
           isGuessed: t.badgeType === null,
         })),
@@ -209,9 +227,12 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           : 0,
         cancelledAfterFreeze: numbered.filter((a) => frozen && a.isCancelled).length,
         isWriting: runningWrites.has(edition.id),
+        // Past the first scan the freeze cannot be undone; the reset only exists off production (#774).
+        scanned: frozen ? await prisma.attendee.count({ where: movedBadge(edition.id) }) : 0,
+        isResetAllowed: !isProductionEnvironment(),
         written: numbered.filter((a) => a.badgeWrittenAt).length,
         writeErrors: numbered.filter((a) => !a.badgeWrittenAt && a.badgeWriteError).length,
-        // Over capacity the ranks run past 99 and the bins mean nothing.
+        // Over capacity the ranks run past the bin and the bins mean nothing.
         bins: shortfall ? [] : [...binCounts]
           .sort(([a], [b]) => a - b)
           .map(([bin, count]) => ({ counter: Math.floor(bin / 10), bin: bin % 10, count })),
@@ -277,8 +298,8 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   );
 
   // PUT /api/admin/badges/:editionId/design — each type's background and
-  // colour, the QR code's content, and the badge of each outside-flow tier
-  // (#639). The look only: allowed after the freeze too.
+  // front and back, text colour, the QR code's colour and content, and the
+  // badge of each tier (#639, #774). The look only: allowed after the freeze too.
   app.put<{
     Params: { editionId: string };
     Body: { design: unknown; tierTypes: Array<{ tierId: number; badgeType: BadgeType }> };
@@ -302,7 +323,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
                 additionalProperties: false,
                 properties: {
                   tierId: { type: "integer", minimum: 1 },
-                  badgeType: { type: "string", enum: BADGE_TYPES.filter((t) => t !== "PARTICIPANT") },
+                  badgeType: { type: "string", enum: [...BADGE_TYPES] },
                 },
               },
             },
@@ -320,13 +341,25 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           message: "Réglage invalide : un fond doit être un fichier de la médiathèque (PNG, JPG, SVG ou PDF), une couleur au format #RRGGBB.",
         });
       }
+      // Participant or sponsor through the counters, the four others outside.
+      const tiers = await prisma.ticketTier.findMany({
+        where: { editionId: edition.id, id: { in: request.body.tierTypes.map((t) => t.tierId) } },
+        select: { id: true, isOutsideFlow: true },
+      });
+      const isOutsideById = new Map(tiers.map((t) => [t.id, t.isOutsideFlow]));
+      const mismatch = request.body.tierTypes.find(
+        ({ tierId, badgeType }) => !isOutsideById.has(tierId) || !isBadgeTypeAllowed(isOutsideById.get(tierId) as boolean, badgeType),
+      );
+      if (mismatch) {
+        return reply.status(400).send({
+          error: "invalid_tier_badge_type",
+          message: "Ce type de badge ne va pas avec ce tarif : Participant ou Sponsor aux guichets, Bénévole, Staff, Speaker ou Prestataire hors guichet.",
+        });
+      }
       await prisma.$transaction([
         prisma.edition.update({ where: { id: edition.id }, data: { badgeDesign: parsed.data } }),
         ...request.body.tierTypes.map(({ tierId, badgeType }) =>
-          prisma.ticketTier.updateMany({
-            where: { id: tierId, editionId: edition.id, isOutsideFlow: true },
-            data: { badgeType },
-          }),
+          prisma.ticketTier.update({ where: { id: tierId }, data: { badgeType } }),
         ),
       ]);
       return { design: parsed.data };
@@ -344,7 +377,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       const samples: PrintedBadge[] = BADGE_TYPES.map((type) => ({
         ...PREVIEW_PEOPLE[type],
         type,
-        badgeNumber: type === "PARTICIPANT" ? 2147 : null,
+        badgeNumber: PREVIEW_NUMBERS[type] ?? null,
       }));
       const pdf = await renderBadgePdf(edition.year, samples, readBadgeDesign(edition.badgeDesign), {
         badgesPerBin: edition.badgesPerBin,
@@ -370,7 +403,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           where: { editionId: edition.id, badgeNumber: { not: null } },
           select: { ...PRINT_SELECT, badgeNumber: true },
         });
-        participants = rows.map((r) => ({ ...r, type: "PARTICIPANT", badgeNumber: r.badgeNumber }));
+        participants = rows.map((r) => ({ ...r, type: badgeTypeOf(r.ticketTier), badgeNumber: r.badgeNumber }));
       } else {
         const rows = await prisma.attendee.findMany({
           where: inFlow(edition.id),
@@ -380,7 +413,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         if (refusal) return reply.status(409).send(refusal);
         participants = assignBadgeNumbers(rows, layoutOf(edition)).map((r) => ({
           ...r,
-          type: "PARTICIPANT",
+          type: badgeTypeOf(r.ticketTier),
           badgeNumber: r.number,
         }));
       }
@@ -531,6 +564,109 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  // POST /api/admin/badges/:editionId/unfreeze — takes the freeze back (#774):
+  // numbers and freeze date erased, the Billetweb field blanked in the
+  // background, so the next freeze numbers and writes everything afresh.
+  // Refused once any badge moved: from then on the printed numbers are the truth.
+  app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
+    "/badges/:editionId/unfreeze",
+    {
+      preHandler: [requireAdminRole],
+      schema: {
+        params: editionIdParams,
+        body: {
+          type: "object",
+          required: ["confirm"],
+          additionalProperties: false,
+          properties: { confirm: { const: UNFREEZE_WORD } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      if (!edition.badgesFrozenAt) {
+        return reply.status(409).send({ error: "badges_not_frozen", message: "Les badges ne sont pas gelés." });
+      }
+      if (runningWrites.has(edition.id)) {
+        return reply.status(409).send({ error: "write_running", message: "Une écriture dans Billetweb est en cours : attendez sa fin." });
+      }
+      const scanned = await prisma.attendee.count({ where: movedBadge(edition.id) });
+      if (scanned > 0) {
+        return reply.status(409).send({
+          error: "badges_scanned",
+          message: `${scanned} badges ont déjà été scannés ou remis : les numéros imprimés font foi, le gel ne peut plus être annulé.`,
+        });
+      }
+
+      const written = await prisma.attendee.findMany({
+        where: { editionId: edition.id, badgeWrittenAt: { not: null } },
+        select: { billetwebId: true },
+      });
+      await prisma.$transaction([
+        prisma.edition.update({ where: { id: edition.id }, data: { badgesFrozenAt: null } }),
+        prisma.attendee.updateMany({
+          where: { editionId: edition.id },
+          data: { badgeNumber: null, badgeWrittenAt: null, badgeWriteError: null },
+        }),
+      ]);
+      request.log.info({ editionId: edition.id, userId: request.adminUser?.id, written: written.length }, "Badge freeze cancelled");
+
+      // Blanked after the reply, like the write: 1 200 tickets outlast the proxies' 30 s.
+      const params = getBilletwebParams();
+      const fieldId = edition.billetwebBadgeFieldId;
+      if (written.length === 0 || !edition.billetwebEventId || !params || !fieldId) {
+        return { unfrozen: true, blanking: 0 };
+      }
+      runningWrites.add(edition.id);
+      const url = `${BILLETWEB_API}/event/${encodeURIComponent(edition.billetwebEventId)}/update_product?${params}`;
+      blankBadgeNumbers(request.log, edition.id, url, fieldId, written.map((a) => a.billetwebId))
+        .catch((err) => request.log.error({ err, editionId: edition.id }, "Billetweb badge blanking crashed"))
+        .finally(() => runningWrites.delete(edition.id));
+      return { unfrozen: true, blanking: written.length };
+    },
+  );
+
+  // POST /api/admin/badges/:editionId/reset — "réinitialiser l'accueil" (#774),
+  // off production only: the freeze is taken back whatever the scans, and the
+  // edition's imported attendees go, with their scans, badge states, labels and
+  // history (cascade), so a fresh import starts clean. `attendeesPurgedAt` is
+  // left alone: a reset is not the retention purge (RG-ARR-66).
+  app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
+    "/badges/:editionId/reset",
+    {
+      preHandler: [requireAdminRole],
+      schema: {
+        params: editionIdParams,
+        body: {
+          type: "object",
+          required: ["confirm"],
+          additionalProperties: false,
+          properties: { confirm: { const: RESET_WORD } },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (isProductionEnvironment()) {
+        return reply.status(403).send({
+          error: "reset_forbidden_in_production",
+          message: "La réinitialisation de l'accueil n'existe pas en production.",
+        });
+      }
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      if (runningWrites.has(edition.id)) {
+        return reply.status(409).send({ error: "write_running", message: "Une écriture dans Billetweb est en cours : attendez sa fin." });
+      }
+      const [{ count }] = await prisma.$transaction([
+        prisma.attendee.deleteMany({ where: { editionId: edition.id } }),
+        prisma.edition.update({ where: { id: edition.id }, data: { badgesFrozenAt: null, attendeesSyncedAt: null } }),
+      ]);
+      request.log.warn({ editionId: edition.id, userId: request.adminUser?.id, deleted: count }, "Arrivals reset");
+      return { deleted: count };
+    },
+  );
 }
 
 async function writeBadgeNumbers(
@@ -571,5 +707,25 @@ async function writeBadgeNumbers(
         data: { badgeWriteError: reason },
       });
     }
+  }
+}
+
+// Billetweb has no delete for a ticket field's value: the number is written
+// back as an empty string. A failed batch is logged; the next freeze writes
+// every number again, which overwrites whatever stayed.
+async function blankBadgeNumbers(log: FastifyBaseLogger, editionId: number, url: string, fieldId: string, billetwebIds: string[]) {
+  for (let i = 0; i < billetwebIds.length; i += WRITE_BATCH_SIZE) {
+    const batch = billetwebIds.slice(i, i + WRITE_BATCH_SIZE);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: batch.map((id) => ({ id: Number(id), custom: { [fieldId]: "" } })) }),
+    }).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as Record<string, unknown> | null;
+    const failed = batch.filter((id) => {
+      const entry = body?.[id] as Record<string, unknown> | undefined;
+      return !entry || typeof entry !== "object" || "error" in entry;
+    });
+    if (failed.length > 0) log.warn({ editionId, failed: failed.length }, "Billetweb badge blanking failed");
   }
 }

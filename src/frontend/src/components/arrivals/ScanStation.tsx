@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 import CodeScanner from "@/components/arrivals/CodeScanner";
 import ScanResultCard, { type ScanResult } from "@/components/arrivals/ScanResultCard";
-import { LOAD_CRITICAL, LOAD_WARNING, counterLoads, type LiveState } from "@/lib/arrivals-live";
+import { LOAD_CRITICAL, LOAD_WARNING, counterLoads, formatBadgeNumber, type LiveState } from "@/lib/arrivals-live";
 import { getOfflineTable, scanTicket, searchAttendees, sendOfflineScans, type SearchHit } from "@/lib/arrivals-api";
 import {
   dropFromOfflineQueue,
@@ -295,7 +295,7 @@ export default function ScanStation({
                       : hit.isDedicated
                         ? "accueil dédié"
                         : hit.badgeNumber
-                          ? `badge ${hit.badgeNumber}`
+                          ? `badge ${formatBadgeNumber(hit.badgeNumber)}`
                           : "sans badge imprimé",
                     hit.scannedAt && "déjà scanné",
                   ]

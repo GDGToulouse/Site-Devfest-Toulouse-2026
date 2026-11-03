@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminFetch, humanError } from "@/lib/admin-api";
+import { adminFetch, getAdminSession, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import TypedConfirmDialog from "@/components/admin/TypedConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
-import BadgeDesignSection, { type BadgeDesign, type OutsideTier } from "@/components/admin/arrivals/BadgeDesignSection";
+import { formatBadgeNumber } from "@/lib/arrivals-live";
+import BadgeDesignSection, { type BadgeDesign, type TierBadge } from "@/components/admin/arrivals/BadgeDesignSection";
 
 interface BinCount {
   counter: number;
@@ -17,7 +19,7 @@ interface BadgeStatus {
   binsPerCounter: number;
   badgesPerBin: number;
   design: BadgeDesign;
-  outsideTiers: OutsideTier[];
+  tiers: TierBadge[];
   capacity: number;
   frozenAt: string | null;
   billetwebBadgeFieldId: string | null;
@@ -27,6 +29,8 @@ interface BadgeStatus {
   withoutNumber: number;
   cancelledAfterFreeze: number;
   isWriting: boolean;
+  scanned: number;
+  isResetAllowed: boolean;
   written: number;
   writeErrors: number;
   bins: BinCount[];
@@ -50,17 +54,29 @@ const inputClass = "w-24 px-3 py-2 rounded-lg border border-gris/30 text-sm";
 
 // Badge numbering, print file and freeze (#639). Until the freeze, everything
 // here is a preview: the numbers are only stored when the badges go to print.
-export default function BadgesSection({ editionId, syncedAt }: { editionId: number; syncedAt: string | null }) {
+export default function BadgesSection({
+  editionId,
+  syncedAt,
+  onAttendeesReset,
+}: {
+  editionId: number;
+  syncedAt: string | null;
+  /** The reset deleted the attendees: the counts above must reload. */
+  onAttendeesReset: () => void;
+}) {
   const [status, setStatus] = useState<BadgeStatus | null>(null);
   const [counters, setCounters] = useState("4");
   const [binsPerCounter, setBinsPerCounter] = useState("3");
-  const [badgesPerBin, setBadgesPerBin] = useState("100");
+  const [badgesPerBin, setBadgesPerBin] = useState("99");
   const [fieldId, setFieldId] = useState("");
   const [settingsFeedback, setSettingsFeedback] = useState<SaveState>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isResizeConfirmOpen, setIsResizeConfirmOpen] = useState(false);
+  const [dialog, setDialog] = useState<"unfreeze" | "reset" | null>(null);
+  // The two ways back are for admins; the API checks it too.
+  const [isAdmin, setIsAdmin] = useState(false);
   // Remounts the design form on each load, so it starts from what is stored.
   const [loadCount, setLoadCount] = useState(0);
 
@@ -79,6 +95,10 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   useEffect(() => {
     loadStatus();
   }, [editionId, syncedAt]);
+
+  useEffect(() => {
+    getAdminSession().then((session) => setIsAdmin(session?.role === "ADMIN"));
+  }, []);
 
   useEffect(() => {
     if (!status?.isWriting) return;
@@ -165,6 +185,28 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
     setIsBusy(false);
   }
 
+  async function handleWayBack(kind: "unfreeze" | "reset") {
+    setDialog(null);
+    setActionError(null);
+    setIsBusy(true);
+    const result = await adminFetch(`/badges/${editionId}/${kind}`, {
+      method: "POST",
+      body: JSON.stringify({ confirm: kind === "unfreeze" ? "ANNULER" : "REINITIALISER" }),
+    });
+    if (result.status !== 200) {
+      setActionError(
+        humanError(
+          result,
+          kind === "unfreeze" ? "Le gel n'a pas pu être annulé." : "L'accueil n'a pas pu être réinitialisé.",
+        ),
+      );
+    } else if (kind === "reset") {
+      onAttendeesReset();
+    }
+    await loadStatus();
+    setIsBusy(false);
+  }
+
   async function handleRetryWrite() {
     setActionError(null);
     setIsBusy(true);
@@ -179,7 +221,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   const isBlocked = status.shortfall !== null || status.withoutTier > 0 || status.numbered === 0;
   const pendingWrite = status.numbered - status.cancelledAfterFreeze - status.written;
   const counterNumbers = Array.from({ length: status.counters }, (_, i) => i + 1);
-  const binNumbers = Array.from({ length: status.binsPerCounter }, (_, i) => i);
+  const binNumbers = Array.from({ length: status.binsPerCounter }, (_, i) => i + 1);
   const binCount = (counter: number, bin: number) =>
     status.bins.find((b) => b.counter === counter && b.bin === bin)?.count ?? 0;
 
@@ -210,7 +252,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           <input
             type="number"
             min={1}
-            max={10}
+            max={9}
             value={binsPerCounter}
             onChange={(e) => setBinsPerCounter(e.target.value)}
             disabled={isFrozen}
@@ -222,7 +264,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           <input
             type="number"
             min={10}
-            max={100}
+            max={99}
             value={badgesPerBin}
             onChange={(e) => setBadgesPerBin(e.target.value)}
             className={`${inputClass} block mt-1`}
@@ -290,7 +332,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
                     <td key={bin} className="px-4 py-3 text-right text-noir">
                       {binCount(counter, bin)}
                       <span className="block text-xs text-gris">
-                        {counter * 1000 + bin * 100} à {counter * 1000 + bin * 100 + status.badgesPerBin - 1}
+                        {formatBadgeNumber(counter * 1000 + bin * 100 + 1)} à {formatBadgeNumber(counter * 1000 + bin * 100 + status.badgesPerBin)}
                       </span>
                     </td>
                   ))}
@@ -322,7 +364,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           disabled={isBusy}
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
-          Aperçu : un badge de chaque type
+          Aperçu : recto et verso de chaque type
         </button>
         <button
           onClick={() => handleDownload("pdf")}
@@ -340,6 +382,25 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
             Envoyer à l&apos;impression
           </button>
         )}
+        {isAdmin && isFrozen && (
+          <button
+            onClick={() => setDialog("unfreeze")}
+            disabled={isBusy || status.isWriting || status.scanned > 0}
+            title={status.scanned > 0 ? `${status.scanned} badges déjà scannés ou remis : le gel ne s'annule plus` : undefined}
+            className="px-4 py-2 rounded-lg border border-terre-cuite/50 text-sm text-terre-cuite hover:bg-terre-cuite/10 disabled:opacity-50"
+          >
+            Annuler le gel
+          </button>
+        )}
+        {isAdmin && status.isResetAllowed && (
+          <button
+            onClick={() => setDialog("reset")}
+            disabled={isBusy || status.isWriting}
+            className="px-4 py-2 rounded-lg border border-terre-cuite/50 text-sm text-terre-cuite hover:bg-terre-cuite/10 disabled:opacity-50"
+          >
+            Réinitialiser l&apos;accueil (hors production)
+          </button>
+        )}
         {isFrozen && pendingWrite > 0 && (
           <button
             onClick={handleRetryWrite}
@@ -351,15 +412,38 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         )}
       </div>
       {isBusy && <p className="text-sm text-gris mt-2">En cours…</p>}
+      {isFrozen && status.scanned > 0 && (
+        <p className="text-sm text-gris mt-2">
+          {status.scanned} badges déjà scannés ou remis : les numéros imprimés font foi, le gel ne s&apos;annule plus.
+        </p>
+      )}
 
       <ConfirmDialog
         isOpen={isConfirmOpen}
         title="Envoyer les badges à l'impression ?"
-        message={`Les ${status.numbered} numéros actuels deviennent définitifs et sont écrits dans Billetweb. Les participants inscrits ensuite n'auront pas de badge imprimé. Cette action ne se défait pas.`}
+        message={`Les ${status.numbered} numéros actuels deviennent définitifs et sont écrits dans Billetweb. Les participants inscrits ensuite n'auront pas de badge imprimé. Le gel ne s'annule plus dès le premier badge scanné.`}
         confirmLabel="Geler et envoyer"
         variant="danger"
         onConfirm={handleFreeze}
         onCancel={() => setIsConfirmOpen(false)}
+      />
+      <TypedConfirmDialog
+        isOpen={dialog === "unfreeze"}
+        title="Annuler le gel de la numérotation ?"
+        message="Les numéros sont effacés ici et dans le champ « Numéro de badge » de Billetweb. Les badges déjà imprimés avec ces numéros ne servent plus : le gel suivant renumérote tout."
+        word="ANNULER"
+        confirmLabel="Annuler le gel"
+        onConfirm={() => handleWayBack("unfreeze")}
+        onCancel={() => setDialog(null)}
+      />
+      <TypedConfirmDialog
+        isOpen={dialog === "reset"}
+        title="Réinitialiser l'accueil ?"
+        message="Les participants importés de l'édition, leurs scans, états de badge, étiquettes et historique sont supprimés, et le gel est annulé : on repart d'un import propre. Cette action ne se défait pas."
+        word="REINITIALISER"
+        confirmLabel="Tout effacer"
+        onConfirm={() => handleWayBack("reset")}
+        onCancel={() => setDialog(null)}
       />
       <ConfirmDialog
         isOpen={isResizeConfirmOpen}
@@ -375,7 +459,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         key={loadCount}
         editionId={editionId}
         design={status.design}
-        outsideTiers={status.outsideTiers}
+        tiers={status.tiers}
         onSaved={loadStatus}
       />
     </section>

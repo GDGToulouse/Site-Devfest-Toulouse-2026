@@ -6,35 +6,56 @@ import QRCode from "qrcode";
 import sharp from "sharp";
 
 import type { BadgeType } from "../generated/prisma/client.js";
-import { NUMBERS_PER_BIN, slotOfNumber } from "./badge-numbering.js";
-import { BADGE_TYPE_NAMES, type BadgeDesign } from "./badge-design.js";
+import { NUMBERS_PER_BIN, formatBadgeNumber, slotOfNumber } from "./badge-numbering.js";
+import { BADGE_TYPE_NAMES, DEFAULT_QR_COLOR, builtInBackground, type BadgeDesign } from "./badge-design.js";
 import { UPLOADS_DIR } from "./image-store.js";
 
-// The print file (RG-ARR-19, #639): one A6 page per badge on the type's
-// background, the person written in the light zone every design shares.
-// Participants come first, in number order with a separator page before each
-// bin; then the other badges, by type and name. Positions are fractions of
-// the page, measured on the 2026 working design.
+// The print file (RG-ARR-19, #639, #774): recto-verso, pages alternating. Each
+// badge's front on its type's background is followed by that type's back; each
+// separator by a blank back, so fronts and backs never shift. The numbered
+// badges (participants and sponsors) come first, in number order with a
+// separator before each bin; then the others, by type and name. Positions are
+// points on the designer's V3 file.
 
-const PAGE: [number, number] = [297.64, 419.53];
+const PAGE: [number, number] = [297.638, 419.528];
 const [W, H] = PAGE;
-// The light zone, and the margin kept inside it.
-const ZONE = { left: 0.1412 * W, right: 0.8574 * W, top: H * (1 - 0.189), bottom: H * (1 - 0.5614) };
-const ZONE_PAD = 10;
-const QR = { left: 0.166 * W, top: H * (1 - 0.405), side: 0.176 * W };
-const COMPANY = { left: 0.386 * W, firstBaseline: H * (1 - 0.44) };
-const FIRST_NAME_BASELINE = H * (1 - 0.262);
-// The number's white space, top right: participants only.
-const NUMBER_BOX = { width: 0.3 * W, height: 0.075 * H, right: W - 0.05 * W, top: H * (1 - 0.03) };
+// Measured on the designer's V3 file (#774), PDF origin bottom-left. The light
+// square holding the QR code belongs to the backgrounds; the QR code is
+// centred in it, on the 29 modules' footprint of the design.
+const QR = { left: 114.31, bottom: 140.46, side: 65.9 };
+const QR_SQUARE_TOP = 131.386 + 84.047;
+// The type ribbon's lower edge: the name, company and QR square sit between.
+const RIBBON_BOTTOM = 345;
+const TEXT_MARGIN = 20;
+// Clearance kept to the ribbon and to the QR square, accents included.
+const CLEARANCE = 4;
+const TEXT_TOP = RIBBON_BOTTOM - CLEARANCE;
+const TEXT_BOTTOM = QR_SQUARE_TOP + CLEARANCE;
+const FIRST_NAME = { size: 28, min: 16, maxLines: 2, baseline: 305.77 };
+const LAST_NAME = { size: 24, min: 12, maxLines: 2, baseline: 275.76 };
+const COMPANY = { size: 16, min: 9, maxLines: 3, baseline: 245.4, tracking: 0.05 };
+// Baseline to baseline of two lines of the same text, and the glyphs' reach
+// above and below their baseline (accented capitals, descenders).
+const LINE_PITCH = 1.12;
+const ASCENT = 0.95;
+const DESCENT = 0.25;
+// The number, top right, on numbered badges: right-aligned.
+const NUMBER = { size: 14, baseline: 397.58, right: W - 13.5 };
+// The separators sit on a white page: the design's violet, whatever the text colour.
+const SEPARATOR_COLOR = DEFAULT_QR_COLOR;
 // A6 at 300 dpi, for a vector background turned into an image.
 const BACKGROUND_PIXELS = { width: 1240, height: 1748 };
 
 const ASSETS = new URL("../../assets/", import.meta.url);
-const OTHER_TYPES_ORDER: BadgeType[] = ["SPEAKER", "VOLUNTEER", "CONTRACTOR"];
+const OTHER_TYPES_ORDER: BadgeType[] = ["STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"];
+// The company's font: CC Sign Language in the design (licence pending), Google
+// Sans Bold meanwhile. Swap this one file to change it.
+const BOLD_FONT_FILE = "fonts/GoogleSans-Bold.ttf";
+const COMPANY_FONT_FILE = BOLD_FONT_FILE;
 
 export interface PrintedBadge {
   type: BadgeType;
-  /** Participants only. */
+  /** Badges through the counters (participant, sponsor) only. */
   badgeNumber: number | null;
   firstName: string;
   lastName: string;
@@ -70,8 +91,10 @@ export function fitLines(
   font: PDFFont,
   raw: string,
   width: number,
-  { max, min, maxLines }: { max: number; min: number; maxLines: number },
+  { max, min, maxLines, tracking = 0 }: { max: number; min: number; maxLines: number; tracking?: number },
 ): { lines: string[]; size: number } {
+  // Letter spacing (in em) is part of a line's width.
+  const measure = (t: string, size: number) => font.widthOfTextAtSize(t, size) + tracking * size * Math.max(0, [...t].length - 1);
   const text = printable(font, raw.trim());
   // Break after a space or a hyphen, keeping the hyphen on its line.
   const words = text.split(/(?<=[\s-])/).filter((w) => w.trim().length > 0);
@@ -79,13 +102,13 @@ export function fitLines(
     const lines: string[] = [];
     for (const word of words) {
       const last = lines.at(-1);
-      if (last !== undefined && font.widthOfTextAtSize(last + word, size) <= width) lines[lines.length - 1] = last + word;
+      if (last !== undefined && measure(last + word, size) <= width) lines[lines.length - 1] = last + word;
       else lines.push(word);
     }
     return lines.map((l) => l.trimEnd());
   };
   const fits = (lines: string[], size: number, count: number) =>
-    lines.length <= count && lines.every((l) => font.widthOfTextAtSize(l, size) <= width);
+    lines.length <= count && lines.every((l) => measure(l, size) <= width);
   // Fewer lines first, as long as the text stays near its full size: a name
   // reads better on one line a little smaller than broken in two.
   const preferredMin = Math.max(min, Math.round(max * 0.7));
@@ -103,13 +126,88 @@ export function fitLines(
   // the last one, all of it shrunk to fit.
   const lines = wrap(min);
   const kept = [...lines.slice(0, maxLines - 1), lines.slice(maxLines - 1).join(" ")];
-  const widest = Math.max(...kept.map((l) => font.widthOfTextAtSize(l, min)));
+  const widest = Math.max(...kept.map((l) => measure(l, min)));
   return { lines: kept, size: Math.min(min, (min * width) / widest) };
 }
 
-function drawCentered(page: PDFPage, font: PDFFont, text: string, y: number, size: number, color: RGB, from = 0, to = W) {
-  const width = font.widthOfTextAtSize(text, size);
-  page.drawText(text, { x: from + (to - from - width) / 2, y, size, font, color });
+function drawCentered(page: PDFPage, font: PDFFont, text: string, y: number, size: number, color: RGB) {
+  page.drawText(text, { x: (W - font.widthOfTextAtSize(text, size)) / 2, y, size, font, color });
+}
+
+// Letter-spaced text, one glyph at a time, centred on the page.
+function drawTracked(page: PDFPage, font: PDFFont, text: string, y: number, size: number, tracking: number, color: RGB) {
+  const glyphs = [...text];
+  const width = glyphs.reduce((sum, g) => sum + font.widthOfTextAtSize(g, size), 0) + tracking * size * (glyphs.length - 1);
+  let x = (W - width) / 2;
+  for (const glyph of glyphs) {
+    page.drawText(glyph, { x, y, size, font, color });
+    x += font.widthOfTextAtSize(glyph, size) + tracking * size;
+  }
+}
+
+export interface TextLine {
+  text: string;
+  size: number;
+  y: number;
+  /** Letter spacing, in em. */
+  tracking: number;
+  role: "first" | "last" | "company";
+}
+
+/**
+ * Where the person's lines go: first name, last name, company, centred, between
+ * the type ribbon and the QR square (#774). A short name sits on the designer's
+ * baselines; long ones shrink, wrap, and push the block down, then the whole
+ * block shrinks until it fits between the two, never touching either.
+ */
+export function layoutBadgeText(
+  fonts: Pick<Fonts, "bold" | "company">,
+  badge: Pick<PrintedBadge, "firstName" | "lastName" | "company">,
+): { lines: TextLine[]; top: number; bottom: number } {
+  const width = W - 2 * TEXT_MARGIN;
+  const groups = [
+    { role: "first" as const, font: fonts.bold, text: badge.firstName, spec: FIRST_NAME, tracking: 0 },
+    { role: "last" as const, font: fonts.bold, text: badge.lastName, spec: LAST_NAME, tracking: 0 },
+    ...(badge.company
+      ? [{ role: "company" as const, font: fonts.company, text: badge.company, spec: COMPANY, tracking: COMPANY.tracking }]
+      : []),
+  ];
+  let result: { lines: TextLine[]; top: number; bottom: number } | null = null;
+  for (let scale = 1; scale >= 0.4; scale -= 0.05) {
+    const lines: TextLine[] = [];
+    let y = FIRST_NAME.baseline;
+    groups.forEach((group, g) => {
+      const fitted = fitLines(group.font, group.text, width, {
+        max: group.spec.size * scale,
+        min: Math.max(6, group.spec.min * scale),
+        maxLines: group.spec.maxLines,
+        tracking: group.tracking,
+      });
+      if (g > 0) {
+        // The designer's distance from the group above, scaled with the text.
+        const previous = groups[g - 1].spec;
+        y -= (previous.baseline - group.spec.baseline) * scale;
+      }
+      fitted.lines.forEach((text, i) => {
+        if (i > 0) y -= fitted.size * LINE_PITCH;
+        lines.push({ text, size: fitted.size, y, tracking: group.tracking, role: group.role });
+      });
+    });
+    const first = lines[0];
+    const last = lines[lines.length - 1];
+    let top = first.y + first.size * ASCENT;
+    let bottom = last.y - last.size * DESCENT;
+    // Overflowing the QR square: climb into the room left under the ribbon.
+    if (bottom < TEXT_BOTTOM) {
+      const shift = Math.min(TEXT_BOTTOM - bottom, Math.max(0, TEXT_TOP - top));
+      for (const line of lines) line.y += shift;
+      top += shift;
+      bottom += shift;
+    }
+    result = { lines, top, bottom };
+    if (top <= TEXT_TOP + 0.001 && bottom >= TEXT_BOTTOM - 0.001) break;
+  }
+  return result as { lines: TextLine[]; top: number; bottom: number };
 }
 
 /** vCard 3.0 of the badge: name and company, never the email. */
@@ -137,7 +235,7 @@ function drawQr(page: PDFPage, content: string, color: RGB) {
       if (!isDark && start >= 0) {
         page.drawRectangle({
           x: QR.left + start * cell,
-          y: QR.top - (row + 1) * cell,
+          y: QR.bottom + (modules.size - row - 1) * cell,
           width: (col - start) * cell,
           height: cell,
           color,
@@ -151,12 +249,10 @@ function drawQr(page: PDFPage, content: string, color: RGB) {
 type Background = (page: PDFPage) => void;
 
 /** A background from the media library or the built-in one, drawn full page. */
-async function loadBackground(doc: PDFDocument, uploadPath: string | null): Promise<Background> {
-  const file = uploadPath
-    ? path.join(UPLOADS_DIR, path.basename(uploadPath))
-    : new URL("badges/default-background.png", ASSETS);
+async function loadBackground(doc: PDFDocument, uploadPath: string | null, builtIn: string): Promise<Background> {
+  const file = uploadPath ? path.join(UPLOADS_DIR, path.basename(uploadPath)) : new URL(builtIn, ASSETS);
   const bytes = await readFile(file);
-  const extension = uploadPath ? path.extname(uploadPath).toLowerCase() : ".png";
+  const extension = uploadPath ? path.extname(uploadPath).toLowerCase() : path.extname(builtIn).toLowerCase();
   if (extension === ".pdf") {
     const [embedded] = await doc.embedPdf(bytes, [0]);
     return (page) => page.drawPage(embedded, { x: 0, y: 0, width: W, height: H });
@@ -174,61 +270,31 @@ async function loadBackground(doc: PDFDocument, uploadPath: string | null): Prom
 
 interface Fonts {
   bold: PDFFont;
-  medium: PDFFont;
+  company: PDFFont;
 }
 
-function drawBadge(page: PDFPage, badge: PrintedBadge, fonts: Fonts, color: RGB, qrContent: BadgeDesign["qrContent"]) {
-  const zoneWidth = ZONE.right - ZONE.left - 2 * ZONE_PAD;
-  const first = fitLines(fonts.bold, badge.firstName, zoneWidth, { max: 30, min: 16, maxLines: 2 });
-  // Two lines of first name leave room for one of last name above the QR code.
-  const last = fitLines(fonts.bold, badge.lastName.toUpperCase(), zoneWidth, {
-    max: 24,
-    min: 12,
-    maxLines: first.lines.length > 1 ? 1 : 2,
-  });
-  let y = FIRST_NAME_BASELINE;
-  first.lines.forEach((line, i) => {
-    if (i > 0) y -= first.size * 1.1;
-    drawCentered(page, fonts.bold, line, y, first.size, color, ZONE.left, ZONE.right);
-  });
-  last.lines.forEach((line, i) => {
-    y -= i === 0 ? last.size * 1.2 : last.size * 1.1;
-    drawCentered(page, fonts.bold, line, y, last.size, color, ZONE.left, ZONE.right);
-  });
-
-  drawQr(page, qrContent === "VCARD" ? badgeVCard(badge) : badge.barcode, color);
-
-  if (badge.company) {
-    const company = fitLines(fonts.medium, badge.company, ZONE.right - ZONE_PAD - COMPANY.left, {
-      max: 16,
-      min: 9,
-      maxLines: 3,
-    });
-    company.lines.forEach((line, i) => {
-      page.drawText(line, {
-        x: COMPANY.left,
-        y: COMPANY.firstBaseline - i * company.size * 1.15,
-        size: company.size,
-        font: fonts.medium,
-        color,
-      });
-    });
+function drawBadge(page: PDFPage, badge: PrintedBadge, fonts: Fonts, color: RGB, qrColor: RGB, qrContent: BadgeDesign["qrContent"]) {
+  for (const line of layoutBadgeText(fonts, badge).lines) {
+    if (line.role === "company") drawTracked(page, fonts.company, line.text, line.y, line.size, line.tracking, color);
+    else drawCentered(page, fonts.bold, line.text, line.y, line.size, color);
   }
-
+  drawQr(page, qrContent === "VCARD" ? badgeVCard(badge) : badge.barcode, qrColor);
   if (badge.badgeNumber !== null) {
-    const x = NUMBER_BOX.right - NUMBER_BOX.width;
-    const boxY = NUMBER_BOX.top - NUMBER_BOX.height;
-    page.drawRectangle({ x, y: boxY, width: NUMBER_BOX.width, height: NUMBER_BOX.height, color: rgb(1, 1, 1) });
-    const size = 24;
-    // Capitals and digits stand about 0.7 of the size: centred on that.
-    drawCentered(page, fonts.bold, String(badge.badgeNumber), boxY + (NUMBER_BOX.height - size * 0.7) / 2, size, color, x, NUMBER_BOX.right);
+    const text = formatBadgeNumber(badge.badgeNumber);
+    page.drawText(text, {
+      x: NUMBER.right - fonts.bold.widthOfTextAtSize(text, NUMBER.size),
+      y: NUMBER.baseline,
+      size: NUMBER.size,
+      font: fonts.bold,
+      color,
+    });
   }
 }
 
-function drawSeparator(page: PDFPage, fonts: Fonts, color: RGB, lines: Array<{ text: string; size: number }>) {
+function drawSeparator(page: PDFPage, fonts: Fonts, lines: Array<{ text: string; size: number }>) {
   let y = H / 2 + 60;
   for (const { text, size } of lines) {
-    drawCentered(page, fonts.bold, text, y, size, color);
+    drawCentered(page, fonts.bold, text, y, size, hexToRgb(SEPARATOR_COLOR));
     y -= size * 1.6;
   }
 }
@@ -251,64 +317,75 @@ export async function renderBadgePdf(
   // No ligatures either: pdf-lib measures letter by letter, and Google Sans's
   // "tt" left a gap in "Charlott e".
   const features = { liga: false, clig: false, dlig: false };
+  const bold = await doc.embedFont(await readFile(new URL(BOLD_FONT_FILE, ASSETS)), { features });
   const fonts: Fonts = {
-    bold: await doc.embedFont(await readFile(new URL("fonts/GoogleSans-Bold.ttf", ASSETS)), { features }),
-    medium: await doc.embedFont(await readFile(new URL("fonts/GoogleSans-Medium.ttf", ASSETS)), { features }),
+    bold,
+    company: COMPANY_FONT_FILE === BOLD_FONT_FILE ? bold : await doc.embedFont(await readFile(new URL(COMPANY_FONT_FILE, ASSETS)), { features }),
   };
-  const backgrounds = new Map<BadgeType, Background>();
-  const backgroundOf = async (type: BadgeType) => {
-    let background = backgrounds.get(type);
+  const backgrounds = new Map<string, Background>();
+  const backgroundOf = async (type: BadgeType, side: "front" | "back") => {
+    const key = `${type}/${side}`;
+    let background = backgrounds.get(key);
     if (!background) {
-      background = await loadBackground(doc, design.types[type].background);
-      backgrounds.set(type, background);
+      const own = design.types[type];
+      background = await loadBackground(doc, side === "front" ? own.background : own.backBackground, builtInBackground(type, side));
+      backgrounds.set(key, background);
     }
     return background;
   };
   const colorOf = (type: BadgeType) => hexToRgb(design.types[type].color);
+  const qrColor = hexToRgb(design.qrColor);
   const withSeparators = options.separators ?? true;
 
-  const participants = badges
-    .filter((b) => b.type === "PARTICIPANT" && b.badgeNumber !== null)
+  // A badge's front, then its back; a separator's blank back: the file prints
+  // recto-verso, so every front stays on an odd page.
+  const addBadge = async (badge: PrintedBadge) => {
+    const front = doc.addPage(PAGE);
+    (await backgroundOf(badge.type, "front"))(front);
+    drawBadge(front, badge, fonts, colorOf(badge.type), qrColor, design.qrContent);
+    (await backgroundOf(badge.type, "back"))(doc.addPage(PAGE));
+  };
+  const addSeparator = (lines: Array<{ text: string; size: number }>) => {
+    drawSeparator(doc.addPage(PAGE), fonts, lines);
+    doc.addPage(PAGE);
+  };
+
+  const numbered = badges
+    .filter((b) => b.badgeNumber !== null)
     .sort((a, b) => (a.badgeNumber as number) - (b.badgeNumber as number));
   const binOf = (n: number) => Math.floor(n / NUMBERS_PER_BIN);
   const countByBin = new Map<number, number>();
-  for (const b of participants) countByBin.set(binOf(b.badgeNumber as number), (countByBin.get(binOf(b.badgeNumber as number)) ?? 0) + 1);
+  for (const b of numbered) countByBin.set(binOf(b.badgeNumber as number), (countByBin.get(binOf(b.badgeNumber as number)) ?? 0) + 1);
 
   let currentBin: number | null = null;
-  for (const badge of participants) {
+  for (const badge of numbered) {
     const number = badge.badgeNumber as number;
     if (withSeparators && binOf(number) !== currentBin) {
       currentBin = binOf(number);
       const { counter, bin } = slotOfNumber(number);
-      const firstNumber = counter * 1000 + bin * 100;
-      drawSeparator(doc.addPage(PAGE), fonts, colorOf("PARTICIPANT"), [
+      const lastNumber = counter * 1000 + bin * 100 + options.badgesPerBin;
+      addSeparator([
         { text: `Guichet ${counter}`, size: 36 },
         { text: `Bac ${bin}`, size: 36 },
-        { text: `Badges ${firstNumber} à ${firstNumber + options.badgesPerBin - 1}`, size: 16 },
+        { text: `Badges ${formatBadgeNumber(lastNumber - options.badgesPerBin + 1)} à ${formatBadgeNumber(lastNumber)}`, size: 16 },
         { text: `${countByBin.get(currentBin)} badges`, size: 14 },
       ]);
     }
-    const page = doc.addPage(PAGE);
-    (await backgroundOf("PARTICIPANT"))(page);
-    drawBadge(page, badge, fonts, colorOf("PARTICIPANT"), design.qrContent);
+    await addBadge(badge);
   }
 
   const byName = (a: PrintedBadge, b: PrintedBadge) =>
     a.lastName.localeCompare(b.lastName, "fr") || a.firstName.localeCompare(b.firstName, "fr");
   for (const type of OTHER_TYPES_ORDER) {
-    const ofType = badges.filter((b) => b.type === type).sort(byName);
+    const ofType = badges.filter((b) => b.type === type && b.badgeNumber === null).sort(byName);
     if (ofType.length === 0) continue;
     if (withSeparators) {
-      drawSeparator(doc.addPage(PAGE), fonts, colorOf(type), [
+      addSeparator([
         { text: BADGE_TYPE_NAMES[type], size: 36 },
         { text: `${ofType.length} badges, par nom`, size: 16 },
       ]);
     }
-    for (const badge of ofType) {
-      const page = doc.addPage(PAGE);
-      (await backgroundOf(type))(page);
-      drawBadge(page, { ...badge, badgeNumber: null }, fonts, colorOf(type), design.qrContent);
-    }
+    for (const badge of ofType) await addBadge(badge);
   }
   return doc.save();
 }
