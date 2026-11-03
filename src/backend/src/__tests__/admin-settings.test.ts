@@ -43,4 +43,27 @@ describe("Admin Settings API", () => {
     await app.close();
   });
 
+  // #769 — the key starts with `alert_`, a prefix the general settings did not
+  // accept: the admin saved nothing, said "Modifications enregistrées." anyway,
+  // and 5xx alerts only left through the ALERT_WEBHOOK_URL variable.
+  it("PUT /api/admin/settings/general should store the alert webhook URL", async () => {
+    const app = await buildAdminApp();
+    const before = (await app.inject({ method: "GET", url: "/api/admin/settings/general" })).json();
+
+    await app.inject({
+      method: "PUT",
+      url: "/api/admin/settings/general",
+      payload: { alert_webhook_url: "https://hooks.example.com/alert-769" },
+    });
+    const after = (await app.inject({ method: "GET", url: "/api/admin/settings/general" })).json();
+
+    expect(after.alert_webhook_url).toBe("https://hooks.example.com/alert-769");
+
+    await app.inject({
+      method: "PUT",
+      url: "/api/admin/settings/general",
+      payload: { alert_webhook_url: before.alert_webhook_url ?? "" },
+    });
+    await app.close();
+  });
 });
