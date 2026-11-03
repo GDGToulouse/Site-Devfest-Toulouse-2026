@@ -3,8 +3,9 @@
 // without writing to the real event. The test event is hard-coded on purpose:
 // the API key in use can also write to the real DevFest event.
 //
-// Dry run by default; `--apply` writes. Run inside the backend container:
-//   docker exec devfest-local-backend pnpm exec tsx scripts/seed-billetweb-test-event.ts [--apply]
+// Dry run by default; `--apply` writes; `--empty` deletes every order of the
+// test event first. Run inside the backend container:
+//   docker exec devfest-local-backend pnpm exec tsx scripts/seed-billetweb-test-event.ts [--empty] [--apply]
 const TEST_EVENT_ID = "1492811";
 const API = "https://www.billetweb.fr/api";
 const BATCH_SIZE = 100;
@@ -12,23 +13,25 @@ const SEED = 2026;
 
 // The real 2026 event's tiers (name, price, visibility), read on 2026-10-28. Copied
 // rather than fetched: the key that writes here is restricted to the test event.
-// `count` is how many tickets the test event gets: about 1,500 attendees, ~1,200
-// of them through the badge desks and the rest in the dedicated flow (spec, "Volumes").
+// `count` is how many tickets the test event gets: 1,142, in the 2025 event's
+// proportions (1,154 tickets: 588 Normal, 292 Sponsors, 60 Speaker, 40 Bénévole,
+// 15 Staff, 10 Prestataire). A first draft of 1,500 went beyond the badge desks'
+// capacity and blocked the freeze in acceptance testing.
 const TIERS = [
   { name: "Blind Bird", price: 45, visibility: 0, count: 30 },
   { name: "Early Bird", price: 67.5, visibility: 0, count: 50 },
   { name: "Early Bird - Cloud Toulouse", price: 60, visibility: 3, count: 18 },
-  { name: "Last Bird", price: 90, visibility: 4, count: 180 },
-  { name: "Normal", price: 90, visibility: 0, count: 900 },
-  { name: "Sponsor et partenaire", price: 0, visibility: 3, count: 90 },
-  { name: "Prévente Sponsor", price: 0, visibility: 3, count: 30 },
-  { name: "Bon de Commande", price: 0, visibility: 3, count: 20 },
-  { name: "Speaker", price: 0, visibility: 3, count: 70 },
+  { name: "Last Bird", price: 90, visibility: 4, count: 60 },
+  { name: "Normal", price: 90, visibility: 0, count: 520 },
+  { name: "Sponsor et partenaire", price: 0, visibility: 3, count: 220 },
+  { name: "Prévente Sponsor", price: 0, visibility: 3, count: 60 },
+  { name: "Bon de Commande", price: 0, visibility: 3, count: 43 },
+  { name: "Speaker", price: 0, visibility: 3, count: 60 },
   { name: "Bénévole", price: 0, visibility: 4, count: 40 },
-  { name: "Staff", price: 0, visibility: 4, count: 30 },
+  { name: "Staff", price: 0, visibility: 4, count: 15 },
   { name: "Prestataire", price: 0, visibility: 3, count: 10 },
-  { name: "Invitation Cloud Toulouse", price: 0, visibility: 3, count: 15 },
-  { name: "Invitation Communauté", price: 0, visibility: 3, count: 20 },
+  { name: "Invitation Cloud Toulouse", price: 0, visibility: 3, count: 6 },
+  { name: "Invitation Communauté", price: 0, visibility: 3, count: 10 },
 ];
 
 // Edge cases from the spec: homonyms, accents, hyphens, apostrophes, long names.
@@ -64,6 +67,7 @@ if (!user || !key) {
   process.exit(2);
 }
 const isApply = process.argv.includes("--apply");
+const isEmptying = process.argv.includes("--empty");
 const auth = `user=${encodeURIComponent(user)}&key=${encodeURIComponent(key)}&version=1`;
 
 async function call(method: "GET" | "POST", path: string, body?: unknown): Promise<unknown> {
@@ -91,10 +95,28 @@ function random(): number {
 }
 const pick = <T>(list: T[]): T => list[Math.floor(random() * list.length)];
 
-const [testTickets, testAttendees] = (await Promise.all([
+const [testTickets, existing] = (await Promise.all([
   call("GET", `event/${TEST_EVENT_ID}/tickets`),
   call("GET", `event/${TEST_EVENT_ID}/attendees`),
-])) as [Ticket[], unknown[]];
+])) as [Ticket[], Array<{ order_id: string; disabled: string }>];
+// Deleted orders stay listed with `disabled` other than "0".
+let testAttendees = existing.filter((a) => a.disabled === "0");
+
+if (isEmptying && testAttendees.length > 0) {
+  const orderIds = [...new Set(testAttendees.map((a) => Number(a.order_id)))];
+  process.stdout.write(`Orders to delete: ${orderIds.length} (${testAttendees.length} tickets)\n`);
+  if (!isApply) {
+    process.stdout.write("Dry run: nothing deleted. Rerun with --apply.\n");
+    process.exit(0);
+  }
+  for (let i = 0; i < orderIds.length; i += BATCH_SIZE) {
+    // Integers in a plain list: an `{ id }` object is ignored without error.
+    await call("POST", `event/${TEST_EVENT_ID}/delete_order`, { data: orderIds.slice(i, i + BATCH_SIZE) });
+    process.stdout.write(`  orders ${i + 1}-${Math.min(i + BATCH_SIZE, orderIds.length)} deleted\n`);
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  testAttendees = [];
+}
 
 if (testAttendees.length > 0) {
   process.stderr.write(`The test event already has ${testAttendees.length} attendees: empty it first.\n`);
