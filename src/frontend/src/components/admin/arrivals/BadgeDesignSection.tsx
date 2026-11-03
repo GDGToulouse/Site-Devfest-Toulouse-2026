@@ -46,7 +46,7 @@ const TYPE_HELP: Record<BadgeType, string> = {
 };
 
 const TYPES = Object.keys(TYPE_NAMES) as BadgeType[];
-const COUNTER_TYPES = TYPES.filter((t) => t === "PARTICIPANT" || t === "SPONSOR");
+const COUNTER_TYPES: BadgeType[] = ["PARTICIPANT", "SPONSOR"];
 const OUTSIDE_TYPES = TYPES.filter((t) => !COUNTER_TYPES.includes(t));
 
 function BackgroundField({
