@@ -347,7 +347,8 @@ export default function BadgesSection({
                     <td key={bin} className="px-4 py-3 text-right text-noir">
                       {binCount(counter, bin)}
                       <span className="block text-xs text-gris">
-                        {formatBadgeNumber(counter * 1000 + bin * 100 + 1)} à {formatBadgeNumber(counter * 1000 + bin * 100 + status.badgesPerBin)}
+                        {/* From place 00 (#774): 1 1 00 to 1 1 99 for a bin of 100. */}
+                        {formatBadgeNumber(counter * 1000 + bin * 100)} à {formatBadgeNumber(counter * 1000 + bin * 100 + status.badgesPerBin - 1)}
                       </span>
                     </td>
                   ))}

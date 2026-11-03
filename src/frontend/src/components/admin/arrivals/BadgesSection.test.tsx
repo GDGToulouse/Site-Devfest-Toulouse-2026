@@ -84,6 +84,14 @@ describe("BadgesSection, the reason a freeze is blocked", () => {
   });
 });
 
+describe("BadgesSection, the bins table", () => {
+  it("should show each bin's numbers from its place 00", async () => {
+    renderWith({ badgesPerBin: 100, bins: [{ counter: 1, bin: 1, count: 85 }] });
+
+    expect(await screen.findByText("1 1 00 à 1 1 99")).toBeInTheDocument();
+  });
+});
+
 describe("BadgesSection, the preview legend", () => {
   it("should name the type of each page pair after the preview is downloaded", async () => {
     renderWith({ frozenAt: "2026-11-03T21:25:30.010Z" });

@@ -50,6 +50,12 @@ export function formatBadgeNumber(number: number): string {
   return `${counter} ${bin} ${String(rank).padStart(2, "0")}`;
 }
 
+/** The numbers a bin of that size spans, from its place 00 (1 1 00 to 1 1 99 for 100 badges). */
+export function binRange(counter: number, bin: number, badgesPerBin: number) {
+  const first = counter * 1000 + bin * 100;
+  return { first, last: first + badgesPerBin - 1 };
+}
+
 export function badgeCapacity({ counters, binsPerCounter, badgesPerBin }: BadgeLayout): number {
   return counters * binsPerCounter * badgesPerBin;
 }

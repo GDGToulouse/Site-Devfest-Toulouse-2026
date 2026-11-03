@@ -6,7 +6,7 @@ import QRCode from "qrcode";
 import sharp from "sharp";
 
 import type { BadgeType } from "../generated/prisma/client.js";
-import { NUMBERS_PER_BIN, formatBadgeNumber, slotOfNumber } from "./badge-numbering.js";
+import { NUMBERS_PER_BIN, binRange, formatBadgeNumber, slotOfNumber } from "./badge-numbering.js";
 import { BADGE_TYPE_NAMES, DEFAULT_QR_COLOR, builtInBackground, type BadgeDesign } from "./badge-design.js";
 import { UPLOADS_DIR } from "./image-store.js";
 
@@ -363,11 +363,11 @@ export async function renderBadgePdf(
     if (withSeparators && binOf(number) !== currentBin) {
       currentBin = binOf(number);
       const { counter, bin } = slotOfNumber(number);
-      const lastNumber = counter * 1000 + bin * 100 + options.badgesPerBin;
+      const range = binRange(counter, bin, options.badgesPerBin);
       addSeparator([
         { text: `Guichet ${counter}`, size: 36 },
         { text: `Présentoir ${bin}`, size: 36 },
-        { text: `Badges ${formatBadgeNumber(lastNumber - options.badgesPerBin + 1)} à ${formatBadgeNumber(lastNumber)}`, size: 16 },
+        { text: `Badges ${formatBadgeNumber(range.first)} à ${formatBadgeNumber(range.last)}`, size: 16 },
         { text: `${countByBin.get(currentBin)} badges`, size: 14 },
       ]);
     }
