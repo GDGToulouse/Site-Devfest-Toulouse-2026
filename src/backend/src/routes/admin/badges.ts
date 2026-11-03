@@ -1,6 +1,8 @@
 import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
+import { requireAdminRole } from "../../lib/admin-guard.js";
+import { isProductionEnvironment } from "../../lib/environment.js";
 import { BILLETWEB_API, getBilletwebParams } from "../../lib/billetweb.js";
 import {
   MAX_BADGES_PER_BIN,
@@ -33,6 +35,16 @@ const editionIdParams = {
 // small enough to fail alone (RG-ARR-20).
 const WRITE_BATCH_SIZE = 100;
 const BADGE_FIELD_NAME = /num[ée]ro\s+de\s+badge/i;
+
+// What the admin types to confirm the two ways back (#774): neither is a click.
+const UNFREEZE_WORD = "ANNULER";
+const RESET_WORD = "REINITIALISER";
+
+// A badge that left its bin: the printed numbers are then what the venue holds.
+const movedBadge = (editionId: number) => ({
+  editionId,
+  OR: [{ scannedAt: { not: null } }, { badgeState: { not: "PRINTED" as const } }, { labelDeliveredAt: { not: null } }],
+});
 
 // The tickets that get a number (RG-ARR-14): live, and in a tier that goes
 // through the counters. A ticket whose tier is not imported yet blocks the
@@ -215,6 +227,9 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
           : 0,
         cancelledAfterFreeze: numbered.filter((a) => frozen && a.isCancelled).length,
         isWriting: runningWrites.has(edition.id),
+        // Past the first scan the freeze cannot be undone; the reset only exists off production (#774).
+        scanned: frozen ? await prisma.attendee.count({ where: movedBadge(edition.id) }) : 0,
+        isResetAllowed: !isProductionEnvironment(),
         written: numbered.filter((a) => a.badgeWrittenAt).length,
         writeErrors: numbered.filter((a) => !a.badgeWrittenAt && a.badgeWriteError).length,
         // Over capacity the ranks run past the bin and the bins mean nothing.
@@ -549,6 +564,109 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       }
     },
   );
+
+  // POST /api/admin/badges/:editionId/unfreeze — takes the freeze back (#774):
+  // numbers and freeze date erased, the Billetweb field blanked in the
+  // background, so the next freeze numbers and writes everything afresh.
+  // Refused once any badge moved: from then on the printed numbers are the truth.
+  app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
+    "/badges/:editionId/unfreeze",
+    {
+      preHandler: [requireAdminRole],
+      schema: {
+        params: editionIdParams,
+        body: {
+          type: "object",
+          required: ["confirm"],
+          additionalProperties: false,
+          properties: { confirm: { const: UNFREEZE_WORD } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      if (!edition.badgesFrozenAt) {
+        return reply.status(409).send({ error: "badges_not_frozen", message: "Les badges ne sont pas gelés." });
+      }
+      if (runningWrites.has(edition.id)) {
+        return reply.status(409).send({ error: "write_running", message: "Une écriture dans Billetweb est en cours : attendez sa fin." });
+      }
+      const scanned = await prisma.attendee.count({ where: movedBadge(edition.id) });
+      if (scanned > 0) {
+        return reply.status(409).send({
+          error: "badges_scanned",
+          message: `${scanned} badges ont déjà été scannés ou remis : les numéros imprimés font foi, le gel ne peut plus être annulé.`,
+        });
+      }
+
+      const written = await prisma.attendee.findMany({
+        where: { editionId: edition.id, badgeWrittenAt: { not: null } },
+        select: { billetwebId: true },
+      });
+      await prisma.$transaction([
+        prisma.edition.update({ where: { id: edition.id }, data: { badgesFrozenAt: null } }),
+        prisma.attendee.updateMany({
+          where: { editionId: edition.id },
+          data: { badgeNumber: null, badgeWrittenAt: null, badgeWriteError: null },
+        }),
+      ]);
+      request.log.info({ editionId: edition.id, userId: request.adminUser?.id, written: written.length }, "Badge freeze cancelled");
+
+      // Blanked after the reply, like the write: 1 200 tickets outlast the proxies' 30 s.
+      const params = getBilletwebParams();
+      const fieldId = edition.billetwebBadgeFieldId;
+      if (written.length === 0 || !edition.billetwebEventId || !params || !fieldId) {
+        return { unfrozen: true, blanking: 0 };
+      }
+      runningWrites.add(edition.id);
+      const url = `${BILLETWEB_API}/event/${encodeURIComponent(edition.billetwebEventId)}/update_product?${params}`;
+      blankBadgeNumbers(request.log, edition.id, url, fieldId, written.map((a) => a.billetwebId))
+        .catch((err) => request.log.error({ err, editionId: edition.id }, "Billetweb badge blanking crashed"))
+        .finally(() => runningWrites.delete(edition.id));
+      return { unfrozen: true, blanking: written.length };
+    },
+  );
+
+  // POST /api/admin/badges/:editionId/reset — "réinitialiser l'accueil" (#774),
+  // off production only: the freeze is taken back whatever the scans, and the
+  // edition's imported attendees go, with their scans, badge states, labels and
+  // history (cascade), so a fresh import starts clean. `attendeesPurgedAt` is
+  // left alone: a reset is not the retention purge (RG-ARR-66).
+  app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
+    "/badges/:editionId/reset",
+    {
+      preHandler: [requireAdminRole],
+      schema: {
+        params: editionIdParams,
+        body: {
+          type: "object",
+          required: ["confirm"],
+          additionalProperties: false,
+          properties: { confirm: { const: RESET_WORD } },
+        },
+      },
+    },
+    async (request, reply) => {
+      if (isProductionEnvironment()) {
+        return reply.status(403).send({
+          error: "reset_forbidden_in_production",
+          message: "La réinitialisation de l'accueil n'existe pas en production.",
+        });
+      }
+      const edition = await findEdition(Number(request.params.editionId));
+      if (!edition) return notFound(reply, "Edition");
+      if (runningWrites.has(edition.id)) {
+        return reply.status(409).send({ error: "write_running", message: "Une écriture dans Billetweb est en cours : attendez sa fin." });
+      }
+      const [{ count }] = await prisma.$transaction([
+        prisma.attendee.deleteMany({ where: { editionId: edition.id } }),
+        prisma.edition.update({ where: { id: edition.id }, data: { badgesFrozenAt: null, attendeesSyncedAt: null } }),
+      ]);
+      request.log.warn({ editionId: edition.id, userId: request.adminUser?.id, deleted: count }, "Arrivals reset");
+      return { deleted: count };
+    },
+  );
 }
 
 async function writeBadgeNumbers(
@@ -589,5 +707,25 @@ async function writeBadgeNumbers(
         data: { badgeWriteError: reason },
       });
     }
+  }
+}
+
+// Billetweb has no delete for a ticket field's value: the number is written
+// back as an empty string. A failed batch is logged; the next freeze writes
+// every number again, which overwrites whatever stayed.
+async function blankBadgeNumbers(log: FastifyBaseLogger, editionId: number, url: string, fieldId: string, billetwebIds: string[]) {
+  for (let i = 0; i < billetwebIds.length; i += WRITE_BATCH_SIZE) {
+    const batch = billetwebIds.slice(i, i + WRITE_BATCH_SIZE);
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data: batch.map((id) => ({ id: Number(id), custom: { [fieldId]: "" } })) }),
+    }).catch(() => null);
+    const body = (await res?.json().catch(() => null)) as Record<string, unknown> | null;
+    const failed = batch.filter((id) => {
+      const entry = body?.[id] as Record<string, unknown> | undefined;
+      return !entry || typeof entry !== "object" || "error" in entry;
+    });
+    if (failed.length > 0) log.warn({ editionId, failed: failed.length }, "Billetweb badge blanking failed");
   }
 }

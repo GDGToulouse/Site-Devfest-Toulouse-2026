@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { adminFetch, humanError } from "@/lib/admin-api";
+import { adminFetch, getAdminSession, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import TypedConfirmDialog from "@/components/admin/TypedConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import { formatBadgeNumber } from "@/lib/arrivals-live";
 import BadgeDesignSection, { type BadgeDesign, type TierBadge } from "@/components/admin/arrivals/BadgeDesignSection";
@@ -28,6 +29,8 @@ interface BadgeStatus {
   withoutNumber: number;
   cancelledAfterFreeze: number;
   isWriting: boolean;
+  scanned: number;
+  isResetAllowed: boolean;
   written: number;
   writeErrors: number;
   bins: BinCount[];
@@ -62,6 +65,9 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   const [isBusy, setIsBusy] = useState(false);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isResizeConfirmOpen, setIsResizeConfirmOpen] = useState(false);
+  const [dialog, setDialog] = useState<"unfreeze" | "reset" | null>(null);
+  // The two ways back are for admins; the API checks it too.
+  const [isAdmin, setIsAdmin] = useState(false);
   // Remounts the design form on each load, so it starts from what is stored.
   const [loadCount, setLoadCount] = useState(0);
 
@@ -80,6 +86,10 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   useEffect(() => {
     loadStatus();
   }, [editionId, syncedAt]);
+
+  useEffect(() => {
+    getAdminSession().then((session) => setIsAdmin(session?.role === "ADMIN"));
+  }, []);
 
   useEffect(() => {
     if (!status?.isWriting) return;
@@ -161,6 +171,26 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
       await writeToBilletweb();
     } else {
       setActionError(humanError(result, "La numérotation n'a pas pu être gelée."));
+    }
+    await loadStatus();
+    setIsBusy(false);
+  }
+
+  async function handleWayBack(kind: "unfreeze" | "reset") {
+    setDialog(null);
+    setActionError(null);
+    setIsBusy(true);
+    const result = await adminFetch(`/badges/${editionId}/${kind}`, {
+      method: "POST",
+      body: JSON.stringify({ confirm: kind === "unfreeze" ? "ANNULER" : "REINITIALISER" }),
+    });
+    if (result.status !== 200) {
+      setActionError(
+        humanError(
+          result,
+          kind === "unfreeze" ? "Le gel n'a pas pu être annulé." : "L'accueil n'a pas pu être réinitialisé.",
+        ),
+      );
     }
     await loadStatus();
     setIsBusy(false);
@@ -341,6 +371,25 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
             Envoyer à l&apos;impression
           </button>
         )}
+        {isAdmin && isFrozen && (
+          <button
+            onClick={() => setDialog("unfreeze")}
+            disabled={isBusy || status.isWriting || status.scanned > 0}
+            title={status.scanned > 0 ? `${status.scanned} badges déjà scannés ou remis : le gel ne s'annule plus` : undefined}
+            className="px-4 py-2 rounded-lg border border-terre-cuite/50 text-sm text-terre-cuite hover:bg-terre-cuite/10 disabled:opacity-50"
+          >
+            Annuler le gel
+          </button>
+        )}
+        {isAdmin && status.isResetAllowed && (
+          <button
+            onClick={() => setDialog("reset")}
+            disabled={isBusy || status.isWriting}
+            className="px-4 py-2 rounded-lg border border-terre-cuite/50 text-sm text-terre-cuite hover:bg-terre-cuite/10 disabled:opacity-50"
+          >
+            Réinitialiser l&apos;accueil (hors production)
+          </button>
+        )}
         {isFrozen && pendingWrite > 0 && (
           <button
             onClick={handleRetryWrite}
@@ -352,6 +401,11 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         )}
       </div>
       {isBusy && <p className="text-sm text-gris mt-2">En cours…</p>}
+      {isFrozen && status.scanned > 0 && (
+        <p className="text-sm text-gris mt-2">
+          {status.scanned} badges déjà scannés ou remis : les numéros imprimés font foi, le gel ne s&apos;annule plus.
+        </p>
+      )}
 
       <ConfirmDialog
         isOpen={isConfirmOpen}
@@ -361,6 +415,24 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         variant="danger"
         onConfirm={handleFreeze}
         onCancel={() => setIsConfirmOpen(false)}
+      />
+      <TypedConfirmDialog
+        isOpen={dialog === "unfreeze"}
+        title="Annuler le gel de la numérotation ?"
+        message="Les numéros sont effacés ici et dans le champ « Numéro de badge » de Billetweb. Les badges déjà imprimés avec ces numéros ne servent plus : le gel suivant renumérote tout."
+        word="ANNULER"
+        confirmLabel="Annuler le gel"
+        onConfirm={() => handleWayBack("unfreeze")}
+        onCancel={() => setDialog(null)}
+      />
+      <TypedConfirmDialog
+        isOpen={dialog === "reset"}
+        title="Réinitialiser l'accueil ?"
+        message="Les participants importés de l'édition, leurs scans, états de badge, étiquettes et historique sont supprimés, et le gel est annulé : on repart d'un import propre. Cette action ne se défait pas."
+        word="REINITIALISER"
+        confirmLabel="Tout effacer"
+        onConfirm={() => handleWayBack("reset")}
+        onCancel={() => setDialog(null)}
       />
       <ConfirmDialog
         isOpen={isResizeConfirmOpen}

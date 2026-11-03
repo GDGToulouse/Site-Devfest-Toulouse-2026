@@ -6,8 +6,17 @@ import adminBadgeRoutes from "../routes/admin/badges.js";
 import { prisma } from "../lib/prisma.js";
 import { Prisma } from "../generated/prisma/client.js";
 
-// Badge numbering, freeze and the number written back to Billetweb (#639).
-// This file owns the edition year 1643.
+// Badge numbering, freeze and the number written back to Billetweb (#639), and
+// the two ways back (#774). This file owns the edition year 1643.
+const authContext = vi.hoisted(() => ({
+  current: { user: { id: "test-admin", email: "admin@test.local", name: "Ad", role: "ADMIN" } },
+}));
+
+vi.mock("../lib/auth-context.js", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../lib/auth-context.js")>()),
+  getAuthContext: async () => authContext.current,
+}));
+
 const YEAR = 1643;
 const EVENT = "evt-1643";
 
@@ -62,6 +71,7 @@ beforeAll(async () => {
 });
 
 beforeEach(async () => {
+  authContext.current.user.role = "ADMIN";
   billetwebAttendees = [];
   rejectedIds = new Set();
   writeCalls = [];
@@ -71,6 +81,7 @@ beforeEach(async () => {
       where: { id: editionId },
       data: {
         attendeesSyncedAt: null,
+        attendeesPurgedAt: null,
         badgesFrozenAt: null,
         badgeCounters: 4,
         badgeBinsPerCounter: 3,
@@ -377,5 +388,125 @@ describe("Badge numbers written to Billetweb (#639)", () => {
     expect((await writeAndWait()).json()).toMatchObject({ pending: 1 });
     expect((await status()).json()).toMatchObject({ written: 3, writeErrors: 0 });
     expect(writeCalls).toEqual([[{ id: 1002, custom: { "777": "2101" } }]]);
+  });
+});
+
+describe("Taking the freeze back (#774)", () => {
+  const unfreeze = (confirm = "ANNULER") => call("POST", `/api/admin/badges/${editionId}/unfreeze`, { confirm });
+  const waitIdle = () => vi.waitFor(async () => expect((await status()).json().isWriting).toBe(false));
+  const frozenAt = async () => (await prisma.edition.findUnique({ where: { id: editionId } }))?.badgesFrozenAt;
+
+  it("should erase the numbers and the freeze date, blank the Billetweb field, and allow a new freeze", async () => {
+    await seed(3);
+    await freeze();
+    await writeAndWait();
+    writeCalls = [];
+
+    const res = await unfreeze();
+    await waitIdle();
+
+    expect(res.json()).toEqual({ unfrozen: true, blanking: 3 });
+    expect(await frozenAt()).toBeNull();
+    expect((await numbers()).map(([, n]) => n)).toEqual([null, null, null]);
+    expect(writeCalls.flat().map((d) => d.custom["777"])).toEqual(["", "", ""]);
+    expect((await freeze()).statusCode).toBe(201);
+  });
+
+  it("should refuse once a badge has been scanned, and keep the numbers", async () => {
+    await seed(2);
+    await freeze();
+    await prisma.attendee.updateMany({ where: { editionId, billetwebId: "1001" }, data: { scannedAt: new Date() } });
+
+    const res = await unfreeze();
+
+    expect([res.statusCode, res.json().error]).toEqual([409, "badges_scanned"]);
+    expect(await frozenAt()).not.toBeNull();
+    expect((await numbers()).map(([, n]) => n)).toEqual([1101, 2101]);
+  });
+
+  it("should refuse a badge that moved without a scan, and an edition that is not frozen", async () => {
+    await seed(1);
+    expect((await unfreeze()).json().error).toBe("badges_not_frozen");
+    await freeze();
+    await prisma.attendee.updateMany({ where: { editionId }, data: { badgeState: "READY" } });
+
+    expect((await unfreeze()).json().error).toBe("badges_scanned");
+  });
+
+  it("should be for admins only, and need the typed word", async () => {
+    await seed(1);
+    await freeze();
+
+    authContext.current.user.role = "EDITOR";
+    const asEditor = await unfreeze();
+    authContext.current.user.role = "ADMIN";
+    const wrongWord = await unfreeze("oui");
+
+    expect(asEditor.statusCode).toBe(403);
+    expect(wrongWord.statusCode).toBe(400);
+    expect(await frozenAt()).not.toBeNull();
+  });
+});
+
+describe("Resetting the arrivals (#774)", () => {
+  const reset = (confirm = "REINITIALISER") => call("POST", `/api/admin/badges/${editionId}/reset`, { confirm });
+
+  it("should delete the attendees with their history, and the freeze, without marking the edition purged", async () => {
+    await seed(2);
+    await freeze();
+    const [first] = await prisma.attendee.findMany({ where: { editionId } });
+    await prisma.badgeTransition.create({
+      data: { attendeeId: first.id, fromState: "PRINTED", toState: "TO_FETCH", userLabel: "test" },
+    });
+    await prisma.attendee.update({ where: { id: first.id }, data: { scannedAt: new Date() } });
+    await prisma.edition.update({ where: { id: editionId }, data: { attendeesSyncedAt: new Date() } });
+
+    const res = await reset();
+
+    const edition = await prisma.edition.findUnique({ where: { id: editionId } });
+    expect(res.json()).toEqual({ deleted: 2 });
+    expect(await prisma.attendee.count({ where: { editionId } })).toBe(0);
+    expect(await prisma.badgeTransition.count({ where: { attendeeId: first.id } })).toBe(0);
+    expect([edition?.badgesFrozenAt, edition?.attendeesSyncedAt, edition?.attendeesPurgedAt]).toEqual([null, null, null]);
+  });
+
+  it("should be refused in production, leaving everything in place", async () => {
+    await seed(2);
+    vi.stubEnv("ENV_NAME", "prod");
+
+    const res = await reset();
+    vi.stubEnv("ENV_NAME", "");
+
+    expect([res.statusCode, res.json().error]).toEqual([403, "reset_forbidden_in_production"]);
+    expect(await prisma.attendee.count({ where: { editionId } })).toBe(2);
+    expect((await status()).json().isResetAllowed).toBe(true);
+  });
+
+  it("should be refused for the production address even without an environment name", async () => {
+    await seed(1);
+    const originalBaseUrl = process.env.BASE_URL ?? "";
+    vi.stubEnv("ENV_NAME", "");
+    vi.stubEnv("BASE_URL", "https://devfesttoulouse.fr");
+
+    const res = await reset();
+    const allowed = (await status()).json().isResetAllowed;
+    vi.stubEnv("BASE_URL", originalBaseUrl);
+
+    expect(res.statusCode).toBe(403);
+    expect(allowed).toBe(false);
+    expect(await prisma.attendee.count({ where: { editionId } })).toBe(1);
+  });
+
+  it("should be for admins only, and need the typed word", async () => {
+    await seed(1);
+
+    authContext.current.user.role = "EDITOR";
+    const asEditor = await reset();
+    authContext.current.user.role = "ADMIN";
+    const wrongWord = await reset("oui");
+
+    expect(asEditor.statusCode).toBe(403);
+    expect(wrongWord.statusCode).toBe(400);
+    expect(await prisma.attendee.count({ where: { editionId } })).toBe(1);
   });
 });

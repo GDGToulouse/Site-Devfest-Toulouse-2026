@@ -131,6 +131,12 @@ Dans la section **Badges** :
    avec un intercalaire par bac, suivi des badges de l'accueil dédié. Recto-verso : chaque
    badge est suivi de son verso, chaque intercalaire d'une page blanche.
 
+**Revenir en arrière** (admins) : après l'envoi à l'impression, **Annuler le gel** (taper
+« ANNULER ») efface les numéros ici et dans Billetweb, tant qu'aucun badge n'a été scanné ; ensuite
+le bouton est grisé. **Réinitialiser l'accueil** (taper « REINITIALISER ») n'existe pas en
+production : il supprime les participants importés, leurs scans et l'historique, pour repartir
+d'un import propre.
+
 À vérifier dans les PDF : format A6 ; prénom, nom et entreprise lisibles, y compris les noms
 longs et accentués ; numéro séparé (« 2 1 47 ») en haut à droite sur les badges Participant et Sponsor, absent sur les
 autres ; le QR code se lit avec un téléphone.
