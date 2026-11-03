@@ -11,9 +11,9 @@ const FILE_PAGE_SIZE_MAX = 200;
 
 export type FileListType = "images" | "documents" | "unused";
 
-// Where a text search looks (#768): the name by default, the alt text and the
-// tags' names only when asked.
-export type FileSearchField = "name" | "alt" | "tags";
+// Where a text search looks (#768): the name and what uses the file by default,
+// the alt text and the tags' names only when asked.
+export type FileSearchField = "name" | "usages" | "alt" | "tags";
 
 export interface ListedFile {
   filename: string;
@@ -21,7 +21,7 @@ export interface ListedFile {
   alt: string | null;
   ext: string;
   isImage: boolean;
-  usages: unknown[];
+  usages: { label?: string }[];
   tags: { slug: string; name: string }[];
 }
 
@@ -53,6 +53,9 @@ function matchesSearch(file: ListedFile, search: FileSearch | undefined): boolea
   // The stored name is a timestamp: the original one is what people remember,
   // and only files uploaded before #378 have none.
   if (search.fields.includes("name")) haystacks.push(file.originalName ?? file.filename);
+  // A sponsor logo is often named logo_red.png: its card reads "Pictarine
+  // (2023)", and that is what people type.
+  if (search.fields.includes("usages")) haystacks.push(...file.usages.flatMap((u) => (u.label ? [u.label] : [])));
   if (search.fields.includes("alt") && file.alt) haystacks.push(file.alt);
   if (search.fields.includes("tags")) haystacks.push(...file.tags.map((t) => t.name));
   return haystacks.some((h) => fold(h).includes(needle));

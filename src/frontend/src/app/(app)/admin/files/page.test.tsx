@@ -33,7 +33,7 @@ describe("Admin files search (#768)", () => {
     render(<FilesAdminPage />);
 
     await waitFor(() =>
-      expect(adminFetch).toHaveBeenCalledWith("/files?page=1&limit=48&q=diagora&in=name%2Calt&type=images"),
+      expect(adminFetch).toHaveBeenCalledWith("/files?page=1&limit=48&q=diagora&in=name%2Cusages%2Calt&type=images"),
     );
     expect(screen.getByRole("checkbox", { name: "Texte alternatif" })).toBeChecked();
   });
@@ -54,5 +54,12 @@ describe("Admin files search (#768)", () => {
     render(<FilesAdminPage />);
 
     expect(await screen.findByRole("status")).toHaveTextContent("Aucun fichier ne correspond à « introuvable »");
+  });
+
+  it("does not suggest ticking boxes that are already ticked", async () => {
+    searchParams = new URLSearchParams("q=introuvable&in=name,usages,alt,tags");
+    render(<FilesAdminPage />);
+
+    expect(await screen.findByRole("status")).not.toHaveTextContent("cochez");
   });
 });
