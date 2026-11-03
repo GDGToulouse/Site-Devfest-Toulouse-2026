@@ -11,12 +11,12 @@ describe("fileSearchParams (#768)", () => {
     expect(fileSearchParams({ text: "  ", alt: true, tags: true })).toEqual({});
   });
 
-  it("should search the name alone by default, leaving `in` to the API", () => {
+  it("should search the name and its users by default, leaving `in` to the API", () => {
     expect(fileSearchParams({ text: " diagora ", alt: false, tags: false })).toEqual({ q: "diagora" });
   });
 
-  it("should add the ticked fields to the name", () => {
-    expect(fileSearchParams({ text: "logo", alt: true, tags: true })).toEqual({ q: "logo", in: "name,alt,tags" });
+  it("should add the ticked fields to the default ones", () => {
+    expect(fileSearchParams({ text: "logo", alt: true, tags: true })).toEqual({ q: "logo", in: "name,usages,alt,tags" });
   });
 
   it("should read back what the page keeps in its URL", () => {

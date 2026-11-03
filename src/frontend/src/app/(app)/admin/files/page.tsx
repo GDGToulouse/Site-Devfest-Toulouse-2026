@@ -318,8 +318,10 @@ export default function FilesAdminPage() {
 
       {filtered.length === 0 && isSearching ? (
         <p role="status" className="bg-blanc rounded-xl shadow-card p-12 text-center text-gris">
-          Aucun fichier ne correspond à « {search.text} ». Vérifiez l&apos;orthographe, ou cochez « Texte
-          alternatif » ou « Tags » pour chercher plus large.
+          Aucun fichier ne correspond à « {search.text} ».{" "}
+          {search.alt && search.tags
+            ? "Vérifiez l'orthographe."
+            : "Vérifiez l'orthographe, ou cochez « Texte alternatif » ou « Tags » pour chercher plus large."}
         </p>
       ) : filtered.length === 0 ? (
         <div
