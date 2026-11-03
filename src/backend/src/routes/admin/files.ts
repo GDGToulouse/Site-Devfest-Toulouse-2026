@@ -215,7 +215,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
           ext: { type: "string", pattern: "^\\.[a-z0-9]+(,\\.[a-z0-9]+)*$" },
           tag: { type: "string", maxLength: 80 },
           q: { type: "string", maxLength: 100 },
-          in: { type: "string", pattern: "^(name|alt|tags)(,(name|alt|tags))*$" },
+          in: { type: "string", pattern: "^(name|usages|alt|tags)(,(name|usages|alt|tags))*$" },
         },
       },
     },
@@ -280,7 +280,7 @@ export default async function adminFileRoutes(app: FastifyInstance) {
       extensions: q.ext?.split(","),
       tag: q.tag,
       search: q.q
-        ? { text: q.q, fields: q.in ? (q.in.split(",") as FileSearchField[]) : ["name"] }
+        ? { text: q.q, fields: q.in ? (q.in.split(",") as FileSearchField[]) : ["name", "usages"] }
         : undefined,
     });
   });

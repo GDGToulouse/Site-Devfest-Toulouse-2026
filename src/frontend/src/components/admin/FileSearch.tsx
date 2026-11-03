@@ -3,9 +3,10 @@
 import { useEffect, useId, useState } from "react";
 
 // Finding a file in the library by text (#768), shared by the Fichiers page and
-// both pickers. The name is always searched; the alt text and the tags' names
+// both pickers. The name and what uses the file (a sponsor, a speaker: the line
+// under the thumbnail) are always searched; the alt text and the tags' names
 // only when ticked, since a word in an alt text would otherwise flood a search
-// meant for a file name.
+// meant for a file.
 
 export interface FileSearchValue {
   text: string;
@@ -18,13 +19,16 @@ export const EMPTY_FILE_SEARCH: FileSearchValue = { text: "", alt: false, tags: 
 const SEARCH_DELAY_MS = 300;
 // The backend refuses longer (routes/admin/files.ts).
 const SEARCH_MAX_LENGTH = 100;
+// What the API searches when `in` is left out.
+const DEFAULT_FIELDS = ["name", "usages"];
 
 /** The `q` and `in` query parameters of `GET /api/admin/files`, empty when there is no search. */
 export function fileSearchParams(value: FileSearchValue): Record<string, string> {
   const text = value.text.trim();
   if (!text) return {};
-  const fields = ["name", ...(value.alt ? ["alt"] : []), ...(value.tags ? ["tags"] : [])];
-  return fields.length > 1 ? { q: text, in: fields.join(",") } : { q: text };
+  if (!value.alt && !value.tags) return { q: text };
+  const fields = [...DEFAULT_FIELDS, ...(value.alt ? ["alt"] : []), ...(value.tags ? ["tags"] : [])];
+  return { q: text, in: fields.join(",") };
 }
 
 /** The reverse of fileSearchParams, for a page that keeps its search in the URL. */
@@ -64,7 +68,7 @@ export default function FileSearch({ value, onChange }: FileSearchProps) {
         value={input}
         maxLength={SEARCH_MAX_LENGTH}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Rechercher par nom de fichier…"
+        placeholder="Nom du fichier, sponsor, speaker…"
         className="w-64 max-w-full rounded-lg border border-gris/30 bg-blanc px-3 py-1.5 text-sm text-noir focus:outline-none focus:ring-2 focus:ring-malachite/50"
       />
       <span className="flex items-center gap-4 text-sm text-noir">

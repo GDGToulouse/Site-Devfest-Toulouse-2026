@@ -26,11 +26,15 @@ beforeAll(async () => {
   await prisma.fileMetadata.create({
     data: { filename, originalName: `Hall-Diagora-${stamp}.png`, alt: `Vue aérienne ${stamp}` },
   });
+  await prisma.speaker.create({
+    data: { name: `Searchable Speaker ${stamp}`, slug: `searchable-${stamp}`, photoUrl: `/uploads/${filename}` },
+  });
 });
 
 afterAll(async () => {
   await app.close();
   await fs.promises.unlink(path.join(UPLOADS_DIR, filename)).catch(() => {});
+  await prisma.speaker.deleteMany({ where: { slug: `searchable-${stamp}` } });
   await prisma.fileMetadata.deleteMany({ where: { filename } });
 });
 
@@ -46,6 +50,12 @@ describe("Media library search (#768)", () => {
     expect(names(res)).toEqual([filename]);
   });
 
+  it("should search by default the name of what uses the file", async () => {
+    const res = await list(`q=${encodeURIComponent(`searchable speaker ${stamp}`)}`);
+
+    expect(names(res)).toEqual([filename]);
+  });
+
   it("should search the alt text only when it is asked for", async () => {
     const byName = await list(`q=${encodeURIComponent(`aerienne ${stamp}`)}`);
     const byAlt = await list(`q=${encodeURIComponent(`aerienne ${stamp}`)}&in=name,alt`);
@@ -56,7 +66,7 @@ describe("Media library search (#768)", () => {
 
   it("should refuse a search too long or an unknown field", async () => {
     const tooLong = await list(`q=${"a".repeat(101)}`);
-    const unknownField = await list("q=x&in=name,usages");
+    const unknownField = await list("q=x&in=name,owner");
 
     expect([tooLong.statusCode, unknownField.statusCode]).toEqual([400, 400]);
   });
