@@ -223,7 +223,12 @@ export function readStationCookie(request: FastifyRequest): string | null {
   for (const part of header.split(";")) {
     const separator = part.indexOf("=");
     if (separator > 0 && part.slice(0, separator).trim() === STATION_COOKIE) {
-      return decodeURIComponent(part.slice(separator + 1).trim());
+      // A hand-edited cookie with a stray "%" must read as no session, not as a 500.
+      try {
+        return decodeURIComponent(part.slice(separator + 1).trim());
+      } catch {
+        return null;
+      }
     }
   }
   return null;

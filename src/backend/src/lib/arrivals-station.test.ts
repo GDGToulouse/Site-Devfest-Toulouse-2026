@@ -1,6 +1,25 @@
 import { describe, it, expect } from "vitest";
 
-import { encodeStation, isBadgeInScope, listStations, parseStation, stationName, stationPath, stationWindow } from "./arrivals-station.js";
+import type { FastifyRequest } from "fastify";
+
+import {
+  encodeStation,
+  isBadgeInScope,
+  listStations,
+  parseStation,
+  readStationCookie,
+  stationName,
+  stationPath,
+  stationWindow,
+} from "./arrivals-station.js";
+
+describe("The station cookie", () => {
+  it("should read a malformed cookie as no session, not throw", () => {
+    const request = { headers: { cookie: "other=1; devfest_station=%E0%A4%A" } } as FastifyRequest;
+
+    expect(readStationCookie(request)).toBeNull();
+  });
+});
 
 describe("Station codes", () => {
   it("should round-trip every station of a layout", () => {
