@@ -12,6 +12,16 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.13.1] - 2026-11-03
+
+Correctif : la page des **offres d'emploi des partenaires** répondait une erreur à chaque visite depuis la version 1.12.1.
+
+> Aucune migration. Aucune nouvelle variable d'environnement.
+
+### Corrigé
+
+- **La page des offres d'emploi des partenaires s'affiche de nouveau** : elle répondait une erreur 500 depuis que les pages publiques sont servies du cache (1.12.1). Un test vérifie désormais l'ordre des appels dans toutes les pages publiques (#791).
+
 ## [1.13.0] - 2026-11-03
 
 Le site se prépare au jour J : une conférence peut être **annulée** sans disparaître, sa fiche donne **l'heure et la salle**, et les partenaires (graphiste, régie) disposent d'une **vue brute du programme** à copier-coller. Le formulaire de contact met en **quarantaine les messages de phishing** au lieu de les relayer, et la médiathèque de l'admin se **recherche par nom, texte alternatif ou tag**.
