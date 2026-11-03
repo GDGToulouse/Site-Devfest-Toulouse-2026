@@ -110,25 +110,29 @@ ne connaît pas ».
 
 Dans la section **Badges** :
 
-1. **Guichets**, **Bacs par guichet**, **Badges par bac** (de 10 à 100), puis **Enregistrer**.
+1. **Guichets**, **Bacs par guichet**, **Badges par bac** (de 10 à 99), puis **Enregistrer**.
    Le tableau montre combien de badges tombent dans chaque bac et la plage de numéros de chaque
-   bac (guichet 2, bac 0 : 2000 à 2099 pour des bacs de 100).
+   bac (guichet 2, bac 1 : « 2 1 01 à 2 1 99 » pour des bacs de 99). Guichets, bacs et rangs se comptent à partir de 1.
 2. Mettez volontairement trop peu de bacs : un message dit combien il en manque et bloque
    l'envoi à l'impression.
 3. **Apparence des badges** :
    - **Contenu du QR code** : le code du billet (lisible par l'application de badges Billetweb
      des sponsors, et par notre poste Scan) ou une carte de contact ;
-   - pour chaque type (Participant, Speaker, Bénévole, Prestataire) : un fond pris dans la
-     médiathèque (PNG, JPG, SVG ou PDF) ou le fond 2026 par défaut, et la couleur du texte ;
-   - **Badge des tarifs de l'accueil dédié** : le type de badge de chaque tarif hors flux. Un
-     type « déduit du nom du tarif, à confirmer » est une proposition.
+   - **Couleur du QR code**, séparée de celle du texte ;
+   - pour chaque type (Participant, Sponsor, Staff, Speaker, Bénévole, Prestataire) : un fond
+     recto et un fond verso pris dans la médiathèque (PNG, JPG, SVG ou PDF) ou le fond V3 par
+     défaut, et la couleur du texte ;
+   - **Badge de chaque tarif** : Participant ou Sponsor pour un tarif des guichets, Bénévole,
+     Staff, Speaker ou Prestataire pour un tarif hors flux. Un type « déduit du nom du tarif, à
+     confirmer » est une proposition.
    Puis **Enregistrer l'apparence**.
-4. **Aperçu : un badge de chaque type** : un PDF de quatre pages, une par type.
+4. **Aperçu : recto et verso de chaque type** : un PDF de douze pages, le verso après chaque recto.
 5. **Télécharger tous les badges (provisoire)** : le PDF complet, trié par guichet puis par bac,
-   avec un intercalaire par bac, suivi des badges de l'accueil dédié.
+   avec un intercalaire par bac, suivi des badges de l'accueil dédié. Recto-verso : chaque
+   badge est suivi de son verso, chaque intercalaire d'une page blanche.
 
 À vérifier dans les PDF : format A6 ; prénom, nom et entreprise lisibles, y compris les noms
-longs et accentués ; numéro complet en haut à droite sur les badges Participant, absent sur les
+longs et accentués ; numéro séparé (« 2 1 47 ») en haut à droite sur les badges Participant et Sponsor, absent sur les
 autres ; le QR code se lit avec un téléphone.
 
 ### 4. Envoyer à l'impression (gel) — irréversible
