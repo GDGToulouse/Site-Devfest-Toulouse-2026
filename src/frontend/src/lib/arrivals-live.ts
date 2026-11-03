@@ -89,7 +89,7 @@ export function applyBadge(state: LiveState, badge: LiveBadge): LiveState {
   return { ...state, badges };
 }
 
-// Counter × 1000 + bin × 100 + rank, all counted from 1 (RG-ARR-15, #774).
+// Counter × 1000 + bin × 100 + place: counters and bins from 1, the place from 00 (RG-ARR-15, #774).
 export const counterOf = (badgeNumber: number) => Math.floor(badgeNumber / 1000);
 export const binOf = (badgeNumber: number) => Math.floor((badgeNumber % 1000) / 100);
 

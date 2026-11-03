@@ -74,7 +74,7 @@ export default function BadgesSection({
   const [status, setStatus] = useState<BadgeStatus | null>(null);
   const [counters, setCounters] = useState("4");
   const [binsPerCounter, setBinsPerCounter] = useState("3");
-  const [badgesPerBin, setBadgesPerBin] = useState("99");
+  const [badgesPerBin, setBadgesPerBin] = useState("100");
   const [fieldId, setFieldId] = useState("");
   const [settingsFeedback, setSettingsFeedback] = useState<SaveState>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -290,7 +290,7 @@ export default function BadgesSection({
           <input
             type="number"
             min={10}
-            max={99}
+            max={100}
             value={badgesPerBin}
             onChange={(e) => setBadgesPerBin(e.target.value)}
             className={`${inputClass} block mt-1`}

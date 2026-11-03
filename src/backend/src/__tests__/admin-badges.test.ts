@@ -178,7 +178,7 @@ describe("Badge numbering and freeze (#639)", () => {
 
     expect(res.statusCode).toBe(201);
     expect(await numbers()).toEqual([
-      ["1001", 1101], ["1002", 2101], ["1003", 3101], ["1004", 4101], ["1005", 1201], ["1006", null], ["1007", null],
+      ["1001", 1100], ["1002", 2100], ["1003", 3100], ["1004", 4100], ["1005", 1200], ["1006", null], ["1007", null],
     ]);
     expect((await status()).json().bins).toEqual(preview.bins);
   });
@@ -217,7 +217,7 @@ describe("Badge numbering and freeze (#639)", () => {
     expect((await status()).json()).toMatchObject({ badgesPerBin: 50, capacity: 600 });
   });
 
-  it("should refuse to number beyond bins smaller than 99", async () => {
+  it("should refuse to number beyond bins smaller than 100", async () => {
     await prisma.edition.update({ where: { id: editionId }, data: { badgeCounters: 1, badgeBinsPerCounter: 1, badgesPerBin: 50 } });
     await seed(51);
 
@@ -377,8 +377,8 @@ describe("Badge numbers written to Billetweb (#639)", () => {
     expect((await status()).json()).toMatchObject({ written: 2, writeErrors: 0 });
     expect(writeCalls).toEqual([
       [
-        { id: 1001, custom: { "777": "1101" } },
-        { id: 1002, custom: { "777": "2101" } },
+        { id: 1001, custom: { "777": "1100" } },
+        { id: 1002, custom: { "777": "2100" } },
       ],
     ]);
   });
@@ -395,7 +395,7 @@ describe("Badge numbers written to Billetweb (#639)", () => {
     writeCalls = [];
     expect((await writeAndWait()).json()).toMatchObject({ pending: 1 });
     expect((await status()).json()).toMatchObject({ written: 3, writeErrors: 0 });
-    expect(writeCalls).toEqual([[{ id: 1002, custom: { "777": "2101" } }]]);
+    expect(writeCalls).toEqual([[{ id: 1002, custom: { "777": "2100" } }]]);
   });
 });
 
@@ -429,7 +429,7 @@ describe("Taking the freeze back (#774)", () => {
 
     expect([res.statusCode, res.json().error]).toEqual([409, "badges_scanned"]);
     expect(await frozenAt()).not.toBeNull();
-    expect((await numbers()).map(([, n]) => n)).toEqual([1101, 2101]);
+    expect((await numbers()).map(([, n]) => n)).toEqual([1100, 2100]);
   });
 
   it("should refuse a badge that moved without a scan, and an edition that is not frozen", async () => {

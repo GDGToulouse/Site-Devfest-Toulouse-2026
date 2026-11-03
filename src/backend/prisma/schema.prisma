@@ -157,11 +157,12 @@ model Edition {
   // (RG-ARR-66): from then on, no import brings it back.
   attendeesPurgedAt       DateTime?
   // How the printed badges are stored at the venue (RG-ARR-17, #639): counters
-  // times bins (1 to 9), each bin holding up to 99 badges. Editable until the
-  // numbering is frozen; the bin size after it, on an explicit confirmation.
+  // times bins (1 to 9), each bin holding up to 100 badges (places 00 to 99).
+  // Editable until the numbering is frozen; the bin size after it, on an
+  // explicit confirmation.
   badgeCounters           Int               @default(4)
   badgeBinsPerCounter     Int               @default(3)
-  badgesPerBin            Int               @default(99)
+  badgesPerBin            Int               @default(100)
   // The badges' look per type (lib/badge-design.ts): background, colour, and
   // what the QR code holds. Null until set: the built-in design applies.
   badgeDesign             Json?

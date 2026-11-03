@@ -8,7 +8,7 @@ import {
   type NumberableTicket,
 } from "./badge-numbering.js";
 
-const FOUR_BY_THREE = { counters: 4, binsPerCounter: 3, badgesPerBin: 99 };
+const FOUR_BY_THREE = { counters: 4, binsPerCounter: 3, badgesPerBin: 100 };
 
 function ticket(i: number, overrides: Partial<NumberableTicket> = {}): NumberableTicket {
   return {
@@ -22,17 +22,17 @@ function ticket(i: number, overrides: Partial<NumberableTicket> = {}): Numberabl
 const tickets = (count: number) => Array.from({ length: count }, (_, i) => ticket(i));
 
 describe("badgeSlot (#639, #774)", () => {
-  it("should give the first twelve tickets rank 1 across every counter and bin, all counted from 1", () => {
+  it("should give the first twelve tickets place 00 across every counter and bin, counters and bins from 1", () => {
     const numbers = Array.from({ length: 12 }, (_, i) => badgeSlot(i + 1, FOUR_BY_THREE).number);
-    expect(numbers).toEqual([1101, 2101, 3101, 4101, 1201, 2201, 3201, 4201, 1301, 2301, 3301, 4301]);
+    expect(numbers).toEqual([1100, 2100, 3100, 4100, 1200, 2200, 3200, 4200, 1300, 2300, 3300, 4300]);
   });
 
-  it("should give the 1188th ticket the last slot of the last bin", () => {
-    expect(badgeSlot(1188, FOUR_BY_THREE)).toEqual({ number: 4399, counter: 4, bin: 3, rank: 99 });
+  it("should give the 1200th ticket the last slot of the last bin", () => {
+    expect(badgeSlot(1200, FOUR_BY_THREE)).toEqual({ number: 4399, counter: 4, bin: 3, rank: 99 });
   });
 
   it("should follow other layouts than 4 × 3", () => {
-    expect(badgeSlot(7, { counters: 3, binsPerCounter: 4, badgesPerBin: 99 })).toEqual({ number: 1301, counter: 1, bin: 3, rank: 1 });
+    expect(badgeSlot(7, { counters: 3, binsPerCounter: 4, badgesPerBin: 100 })).toEqual({ number: 1300, counter: 1, bin: 3, rank: 0 });
   });
 
   it("should read a number back into its counter, bin and rank", () => {
@@ -42,15 +42,16 @@ describe("badgeSlot (#639, #774)", () => {
   it("should show the number as counter, bin and a two-digit rank", () => {
     expect(formatBadgeNumber(1225)).toBe("1 2 25");
     expect(formatBadgeNumber(1205)).toBe("1 2 05");
+    expect(formatBadgeNumber(1200)).toBe("1 2 00");
     expect(formatBadgeNumber(4399)).toBe("4 3 99");
   });
 });
 
 describe("assignBadgeNumbers (#639)", () => {
-  it("should fill each of the twelve bins with exactly ranks 1 to 99 for 1188 tickets", () => {
-    const numbers = assignBadgeNumbers(tickets(1188), FOUR_BY_THREE).map((t) => t.number);
+  it("should fill each of the twelve bins with exactly places 00 to 99 for 1200 tickets", () => {
+    const numbers = assignBadgeNumbers(tickets(1200), FOUR_BY_THREE).map((t) => t.number);
     const everySlot = [1, 2, 3, 4].flatMap((counter) =>
-      [1, 2, 3].flatMap((bin) => Array.from({ length: 99 }, (_, i) => counter * 1000 + bin * 100 + i + 1)),
+      [1, 2, 3].flatMap((bin) => Array.from({ length: 100 }, (_, i) => counter * 1000 + bin * 100 + i)),
     );
     expect(numbers.sort((a, b) => a - b)).toEqual(everySlot);
   });
@@ -81,25 +82,25 @@ describe("assignBadgeNumbers (#639)", () => {
 
 describe("capacityShortfall (#639)", () => {
   it("should accept exactly the capacity", () => {
-    expect(capacityShortfall(1188, FOUR_BY_THREE)).toBeNull();
+    expect(capacityShortfall(1200, FOUR_BY_THREE)).toBeNull();
   });
 
   it("should refuse one ticket more, with a bin missing at every counter", () => {
-    expect(capacityShortfall(1189, FOUR_BY_THREE)).toEqual({ capacity: 1188, missingBins: 4, binsPerCounterNeeded: 4 });
+    expect(capacityShortfall(1201, FOUR_BY_THREE)).toEqual({ capacity: 1200, missingBins: 4, binsPerCounterNeeded: 4 });
   });
 
-  it("should count with the bins' own size when they hold fewer than 99 badges", () => {
+  it("should count with the bins' own size when they hold fewer than 100 badges", () => {
     const smallBins = { ...FOUR_BY_THREE, badgesPerBin: 80 };
 
     expect(capacityShortfall(960, smallBins)).toBeNull();
     expect(capacityShortfall(961, smallBins)).toEqual({ capacity: 960, missingBins: 4, binsPerCounterNeeded: 4 });
   });
 
-  it("should keep the ranks of a smaller bin within its size, from 1", () => {
+  it("should keep the ranks of a smaller bin within its size, from 00", () => {
     const smallBins = { ...FOUR_BY_THREE, badgesPerBin: 80 };
 
     const ranks = assignBadgeNumbers(tickets(960), smallBins).map((t) => t.rank);
 
-    expect(Math.max(...ranks)).toBe(80);
+    expect([Math.min(...ranks), Math.max(...ranks)]).toEqual([0, 79]);
   });
 });
