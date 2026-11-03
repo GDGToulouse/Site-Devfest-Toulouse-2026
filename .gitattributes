@@ -1,3 +1,7 @@
 # Shell scripts must keep LF endings even on Windows clones; Docker runs them
 # inside Alpine and CRLF breaks the shebang / `set -e` parsing.
 *.sh text eol=lf
+
+# The badge backgrounds (#774) are uncompressed vector PDFs that git can take
+# for text: an end-of-line conversion would corrupt them on a Windows clone.
+*.pdf binary
