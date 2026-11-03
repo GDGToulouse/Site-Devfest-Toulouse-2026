@@ -44,12 +44,10 @@ test.describe("counter station", () => {
     await expect(delivered).not.toContainText("Charlie Testguichet");
   });
 
-  // Found by this suite: the first touch of the page removes the "Son coupé"
-  // banner (CounterBoard.tsx, useArrivalSignal listens to pointerdown), which
-  // moves the cards up between the finger going down and coming up. The click
-  // then lands on the grid, not on the card: a volunteer's first touch on a
-  // card does nothing. Remove `fixme` once the banner no longer shifts the layout.
-  test.fixme("should move a card on the very first touch of the page", async ({ openStation }) => {
+  // Found by this suite: the "Son coupé" banner used to go on pointerdown and
+  // move the cards before the click, so a volunteer's first touch on a card
+  // did nothing (CounterBoard.tsx).
+  test("should move a card on the very first touch of the page", async ({ openStation }) => {
     const counter = await openStation("c1");
     const scan = await openStation("scan");
     await expect(scan.getByRole("status").filter({ hasText: "Connecté" })).toBeVisible();
@@ -57,10 +55,13 @@ test.describe("counter station", () => {
     await scan.getByRole("button", { name: /Charlie Testguichet/ }).click();
     const card = counter.getByRole("button", { name: /Charlie Testguichet : (passer en Prêt|revenir en Prêt|passer en Distribué)/ });
     await expect(card).toBeVisible();
+    // The card may start in any column, left there by the test before: the
+    // touch counts if the card leaves the one it was in.
+    const nameBefore = (await card.getAttribute("aria-label")) ?? "";
 
     await card.click();
 
-    await expect(counter.getByRole("region", { name: "Prêt" }).getByRole("button", { name: /Charlie Testguichet/ })).toBeVisible();
+    await expect(counter.getByRole("button", { name: nameBefore, exact: true })).toHaveCount(0);
   });
 
   test("should not show another counter's badge", async ({ openStation }) => {
