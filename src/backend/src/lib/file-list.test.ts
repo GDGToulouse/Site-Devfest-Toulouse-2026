@@ -4,10 +4,13 @@ import { pageFiles } from "./file-list.js";
 
 const file = (name: string, ext: string, isImage: boolean, usages: unknown[] = [], tags: string[] = []) => ({
   name,
+  filename: `1700000000000-${name}${ext}`,
+  originalName: null as string | null,
+  alt: null as string | null,
   ext,
   isImage,
   usages,
-  tags: tags.map((slug) => ({ slug })),
+  tags: tags.map((slug) => ({ slug, name: slug })),
 });
 
 const LIBRARY = [
@@ -53,5 +56,65 @@ describe("pageFiles (#416)", () => {
 
   it("caps the page size so a page cannot be the whole library", () => {
     expect(pageFiles(LIBRARY, { page: 1, limit: 100_000 }).limit).toBe(200);
+  });
+});
+
+describe("pageFiles search (#768)", () => {
+  const SEARCHABLE = [
+    { ...file("photo", ".jpg", true), originalName: "Photo-Diagora-2025.jpg", alt: "Le hall du Diagora" },
+    { ...file("old", ".png", true), alt: "Keynote d'ouverture" },
+    { ...file("plan", ".pdf", false), originalName: "Plan-accès.pdf" },
+    { ...file("logo", ".svg", true, [{ model: "Speaker" }]), originalName: "logo.svg", tags: [{ slug: "securite", name: "Sécurité" }] },
+  ];
+  const search = (text: string, fields: ("name" | "alt" | "tags")[] = ["name"]) =>
+    pageFiles(SEARCHABLE, { page: 1, limit: 10, search: { text, fields } }).items.map((f) => f.name);
+
+  it("finds a file by part of its original name, whatever the case", () => {
+    expect(search("diagora")).toEqual(["photo"]);
+  });
+
+  it("ignores accents on either side", () => {
+    expect(search("ACCES")).toEqual(["plan"]);
+    expect(search("accès")).toEqual(["plan"]);
+  });
+
+  it("falls back to the stored name for a file uploaded without one", () => {
+    expect(search("1700000000000-old")).toEqual(["old"]);
+  });
+
+  it("does not look at the stored name when there is an original one", () => {
+    expect(search("1700000000000-photo")).toEqual([]);
+  });
+
+  it("looks in the alt text only when asked", () => {
+    expect(search("keynote")).toEqual([]);
+    expect(search("keynote", ["name", "alt"])).toEqual(["old"]);
+  });
+
+  it("looks in the tags' names only when asked", () => {
+    expect(search("securite")).toEqual([]);
+    expect(search("securite", ["name", "tags"])).toEqual(["logo"]);
+  });
+
+  it("matches a file when any chosen field does", () => {
+    expect(search("diagora", ["name", "alt"])).toEqual(["photo"]);
+  });
+
+  it("treats a blank search as no search", () => {
+    expect(search("   ")).toHaveLength(4);
+  });
+
+  it("combines with the type tab and the tag, and the counts follow the search", () => {
+    const res = pageFiles(SEARCHABLE, {
+      page: 1,
+      limit: 10,
+      type: "images",
+      tag: "securite",
+      search: { text: "logo", fields: ["name"] },
+    });
+    const byText = pageFiles(SEARCHABLE, { page: 1, limit: 10, type: "images", search: { text: "a", fields: ["name"] } });
+
+    expect(res.items.map((f) => f.name)).toEqual(["logo"]);
+    expect(byText.counts).toEqual({ all: 2, images: 1, documents: 1, unused: 2 });
   });
 });
