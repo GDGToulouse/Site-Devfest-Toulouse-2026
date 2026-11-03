@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { LabelPreview, LabelSheet } from "@/components/arrivals/BadgeLabel";
-import { counterOf, type BadgeState, type HelpEntry, type LiveState } from "@/lib/arrivals-live";
+import { counterOf, formatBadgeNumber, type BadgeState, type HelpEntry, type LiveState } from "@/lib/arrivals-live";
 import {
   deliverLabel,
   printLabel,
@@ -70,7 +70,7 @@ function standing(person: SearchHit, state: BadgeState): string {
   if (person.isDedicated) return "Accueil dédié";
   if (person.labelDeliveredAt) return `Étiquette remise à ${formatTime(person.labelDeliveredAt)}`;
   if (person.badgeNumber === null) return "Sans badge imprimé";
-  return `Badge ${person.badgeNumber}, guichet ${counterOf(person.badgeNumber)} : ${STATE_WORDS[state]}`;
+  return `Badge ${formatBadgeNumber(person.badgeNumber)}, guichet ${counterOf(person.badgeNumber)} : ${STATE_WORDS[state]}`;
 }
 
 export default function HelpStation({
@@ -167,7 +167,7 @@ export default function HelpStation({
       return;
     }
     setPerson({ ...person, badgeState: "TO_FETCH", scannedAt: person.scannedAt ?? new Date().toISOString() });
-    setNotice(`Envoyez la personne au guichet ${counterOf(person.badgeNumber)}, badge ${person.badgeNumber}.`);
+    setNotice(`Envoyez la personne au guichet ${counterOf(person.badgeNumber)}, badge ${formatBadgeNumber(person.badgeNumber)}.`);
   }
 
   const canLabel = person !== null && !person.isCancelled && !person.isDedicated;

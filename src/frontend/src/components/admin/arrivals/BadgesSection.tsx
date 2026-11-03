@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
-import BadgeDesignSection, { type BadgeDesign, type OutsideTier } from "@/components/admin/arrivals/BadgeDesignSection";
+import { formatBadgeNumber } from "@/lib/arrivals-live";
+import BadgeDesignSection, { type BadgeDesign, type TierBadge } from "@/components/admin/arrivals/BadgeDesignSection";
 
 interface BinCount {
   counter: number;
@@ -17,7 +18,7 @@ interface BadgeStatus {
   binsPerCounter: number;
   badgesPerBin: number;
   design: BadgeDesign;
-  outsideTiers: OutsideTier[];
+  tiers: TierBadge[];
   capacity: number;
   frozenAt: string | null;
   billetwebBadgeFieldId: string | null;
@@ -54,7 +55,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   const [status, setStatus] = useState<BadgeStatus | null>(null);
   const [counters, setCounters] = useState("4");
   const [binsPerCounter, setBinsPerCounter] = useState("3");
-  const [badgesPerBin, setBadgesPerBin] = useState("100");
+  const [badgesPerBin, setBadgesPerBin] = useState("99");
   const [fieldId, setFieldId] = useState("");
   const [settingsFeedback, setSettingsFeedback] = useState<SaveState>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -179,7 +180,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
   const isBlocked = status.shortfall !== null || status.withoutTier > 0 || status.numbered === 0;
   const pendingWrite = status.numbered - status.cancelledAfterFreeze - status.written;
   const counterNumbers = Array.from({ length: status.counters }, (_, i) => i + 1);
-  const binNumbers = Array.from({ length: status.binsPerCounter }, (_, i) => i);
+  const binNumbers = Array.from({ length: status.binsPerCounter }, (_, i) => i + 1);
   const binCount = (counter: number, bin: number) =>
     status.bins.find((b) => b.counter === counter && b.bin === bin)?.count ?? 0;
 
@@ -210,7 +211,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           <input
             type="number"
             min={1}
-            max={10}
+            max={9}
             value={binsPerCounter}
             onChange={(e) => setBinsPerCounter(e.target.value)}
             disabled={isFrozen}
@@ -222,7 +223,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           <input
             type="number"
             min={10}
-            max={100}
+            max={99}
             value={badgesPerBin}
             onChange={(e) => setBadgesPerBin(e.target.value)}
             className={`${inputClass} block mt-1`}
@@ -290,7 +291,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
                     <td key={bin} className="px-4 py-3 text-right text-noir">
                       {binCount(counter, bin)}
                       <span className="block text-xs text-gris">
-                        {counter * 1000 + bin * 100} à {counter * 1000 + bin * 100 + status.badgesPerBin - 1}
+                        {formatBadgeNumber(counter * 1000 + bin * 100 + 1)} à {formatBadgeNumber(counter * 1000 + bin * 100 + status.badgesPerBin)}
                       </span>
                     </td>
                   ))}
@@ -322,7 +323,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
           disabled={isBusy}
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
-          Aperçu : un badge de chaque type
+          Aperçu : recto et verso de chaque type
         </button>
         <button
           onClick={() => handleDownload("pdf")}
@@ -375,7 +376,7 @@ export default function BadgesSection({ editionId, syncedAt }: { editionId: numb
         key={loadCount}
         editionId={editionId}
         design={status.design}
-        outsideTiers={status.outsideTiers}
+        tiers={status.tiers}
         onSaved={loadStatus}
       />
     </section>

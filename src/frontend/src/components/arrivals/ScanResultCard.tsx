@@ -1,6 +1,6 @@
 import type { ScanOutcome } from "@/lib/arrivals-api";
 import type { OfflineAnswer } from "@/lib/arrivals-offline";
-import { binColor, binOf, counterOf, type BadgeState } from "@/lib/arrivals-live";
+import { binColor, binOf, counterOf, formatBadgeNumber, type BadgeState } from "@/lib/arrivals-live";
 
 // What the Scan volunteer reads out (RG-ARR-32, RG-ARR-33): the number and the
 // counter first, big enough to say aloud from arm's length; then who it is, to
@@ -26,7 +26,7 @@ function BadgeAnswer({ number }: { number: number }) {
   const bin = binOf(number);
   return (
     <>
-      <p className="font-mono text-7xl font-bold leading-none tabular-nums text-noir">{number}</p>
+      <p className="font-mono text-7xl font-bold leading-none tabular-nums text-noir">{formatBadgeNumber(number)}</p>
       <p className="text-3xl font-bold text-terre-cuite">Guichet {counterOf(number)}</p>
       <p className="inline-flex items-center gap-2 self-center rounded-full border border-gris/30 px-3 py-0.5 text-sm text-noir">
         <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(bin)}`} />
@@ -110,7 +110,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
       <strong>Déjà scanné</strong> à {formatTime(outcome.alreadyScanned.at)}
       {outcome.alreadyScanned.by ? ` par ${outcome.alreadyScanned.by}` : ""}
       {outcome.result === "badge" &&
-        ` : badge ${STATE_WORDS[outcome.badge.state]}, guichet ${counterOf(outcome.badge.number)}`}
+        ` : badge ${formatBadgeNumber(outcome.badge.number)} ${STATE_WORDS[outcome.badge.state]}, guichet ${counterOf(outcome.badge.number)}`}
       .
     </p>
   );

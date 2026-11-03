@@ -89,13 +89,17 @@ export function applyBadge(state: LiveState, badge: LiveBadge): LiveState {
   return { ...state, badges };
 }
 
-// Counter × 1000 + bin × 100 + rank (RG-ARR-15).
+// Counter × 1000 + bin × 100 + rank, all counted from 1 (RG-ARR-15, #774).
 export const counterOf = (badgeNumber: number) => Math.floor(badgeNumber / 1000);
 export const binOf = (badgeNumber: number) => Math.floor((badgeNumber % 1000) / 100);
 
+/** The number as shown everywhere: counter, bin, rank on two digits (1225 → "1 2 25"). The backend has its own copy. */
+export const formatBadgeNumber = (badgeNumber: number) =>
+  `${counterOf(badgeNumber)} ${binOf(badgeNumber)} ${String(badgeNumber % 100).padStart(2, "0")}`;
+
 /**
  * Each bin's colour, so a volunteer spots theirs at a glance (RG-ARR-42).
- * Bins are numbered from 0 (RG-ARR-15); up to MAX_BINS_PER_COUNTER (10) on the backend.
+ * Bins are numbered from 1 (RG-ARR-15); up to MAX_BINS_PER_COUNTER (9) on the backend.
  */
 const BIN_COLORS = [
   "bg-malachite",
@@ -110,7 +114,7 @@ const BIN_COLORS = [
   "bg-noir",
 ];
 
-export const binColor = (bin: number) => BIN_COLORS[bin % BIN_COLORS.length];
+export const binColor = (bin: number) => BIN_COLORS[(bin - 1) % BIN_COLORS.length];
 
 /** Waiting badges above which a counter turns orange, then red, on the Scan phones (RG-ARR-36). */
 export const LOAD_WARNING = 10;
@@ -133,7 +137,7 @@ export interface CounterBoard {
   ready: LiveBadge[];
   /** The latest DELIVERED_SHOWN, latest first. */
   delivered: LiveBadge[];
-  /** Cards to fetch per bin, every bin of the layout listed. */
+  /** Cards to fetch per bin (bin 1 first), every bin of the layout listed. */
   toFetchByBin: number[];
 }
 
@@ -157,7 +161,7 @@ export function counterBoard(state: LiveState, counter: number, bin: number | nu
     // A label from the help desk is not the counter's to hand over (RG-ARR-52).
     if (counterOf(badge.number) !== counter || badge.byLabel) continue;
     const badgeBin = binOf(badge.number);
-    if (badge.state === "TO_FETCH" && badgeBin < board.toFetchByBin.length) board.toFetchByBin[badgeBin]++;
+    if (badge.state === "TO_FETCH" && badgeBin <= board.toFetchByBin.length) board.toFetchByBin[badgeBin - 1]++;
     if (bin !== null && badgeBin !== bin) continue;
     if (badge.state === "TO_FETCH") board.toFetch.push(badge);
     else if (badge.state === "READY") board.ready.push(badge);
