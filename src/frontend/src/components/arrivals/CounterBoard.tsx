@@ -51,8 +51,11 @@ function useArrivalSignal() {
       contextRef.current ??= new AudioContext();
       void contextRef.current.resume().then(() => setIsMuted(contextRef.current?.state !== "running"));
     }
-    window.addEventListener("pointerdown", unlock);
-    return () => window.removeEventListener("pointerdown", unlock);
+    // On click, not pointerdown: the "son coupé" banner goes once sound is on,
+    // and gone between finger down and up it moved the cards, so a volunteer's
+    // first touch on a card landed on the grid (#777).
+    window.addEventListener("click", unlock);
+    return () => window.removeEventListener("click", unlock);
   }, []);
 
   useEffect(() => () => void contextRef.current?.close(), []);
