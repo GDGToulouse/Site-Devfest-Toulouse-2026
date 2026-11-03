@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   assignBadgeNumbers,
   badgeSlot,
+  binRange,
   capacityShortfall,
   formatBadgeNumber,
   slotOfNumber,
@@ -44,6 +45,13 @@ describe("badgeSlot (#639, #774)", () => {
     expect(formatBadgeNumber(1205)).toBe("1 2 05");
     expect(formatBadgeNumber(1200)).toBe("1 2 00");
     expect(formatBadgeNumber(4399)).toBe("4 3 99");
+  });
+});
+
+describe("binRange (#774)", () => {
+  it("should span a bin from its place 00 to its size", () => {
+    expect(binRange(1, 1, 100)).toEqual({ first: 1100, last: 1199 });
+    expect(binRange(2, 3, 50)).toEqual({ first: 2300, last: 2349 });
   });
 });
 
