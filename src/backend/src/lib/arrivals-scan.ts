@@ -50,7 +50,7 @@ const SCAN_SELECT = {
 export async function scanTicket(
   editionId: number,
   target: { barcode: string } | { attendeeId: number },
-  actor: { id: string; label: string },
+  actor: { id: string | null; label: string },
   offlineAt?: Date,
 ): Promise<{ outcome: ScanOutcome; isFirstScan: boolean }> {
   // A code shared by a live and a cancelled ticket (an exchange) means the live one.
@@ -264,7 +264,7 @@ export type ReplayResult = "recorded" | "already_scanned" | "unmatched";
 export async function replayOfflineScans(
   editionId: number,
   scans: OfflineScan[],
-  actor: { id: string; label: string },
+  actor: { id: string | null; label: string },
 ): Promise<{ results: Array<{ id: string; result: ReplayResult }>; hasNewScans: boolean }> {
   const results: Array<{ id: string; result: ReplayResult }> = [];
   let hasNewScans = false;
