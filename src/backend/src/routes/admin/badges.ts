@@ -15,9 +15,10 @@ import {
   capacityShortfall,
   type BadgeLayout,
 } from "../../lib/badge-numbering.js";
-import { renderBadgePdf, type PrintedBadge } from "../../lib/badge-pdf.js";
+import { OTHER_TYPES_ORDER, renderBadgePdf, type PrintedBadge } from "../../lib/badge-pdf.js";
 import {
   BADGE_TYPES,
+  BADGE_TYPE_NAMES,
   badgeDesignSchema,
   badgeTypeOf,
   isBadgeTypeAllowed,
@@ -151,8 +152,8 @@ async function numberingRefusal(
     return {
       error: "capacity_exceeded",
       message:
-        `${count} badges à numéroter pour ${shortfall.capacity} places : il manque ${shortfall.missingBins} bacs. ` +
-        `Passez à ${shortfall.binsPerCounterNeeded} bacs par guichet.`,
+        `${count} badges à numéroter pour ${shortfall.capacity} places : il manque ${shortfall.missingBins} présentoir${shortfall.missingBins > 1 ? "s" : ""}. ` +
+        `Passez à ${shortfall.binsPerCounterNeeded} présentoirs par guichet.`,
     };
   }
   return null;
@@ -280,13 +281,13 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       if (edition.badgesFrozenAt && isLayoutChanged) {
         return reply.status(409).send({
           error: "badges_frozen",
-          message: "Les badges sont partis à l'impression : guichets et bacs ne changent plus.",
+          message: "Les badges sont partis à l'impression : guichets et présentoirs ne changent plus.",
         });
       }
       if (edition.badgesFrozenAt && badgesPerBin !== edition.badgesPerBin && confirm !== true) {
         return reply.status(409).send({
           error: "confirm_required",
-          message: "Les badges sont déjà numérotés : confirmez le changement de taille des bacs.",
+          message: "Les badges sont déjà numérotés : confirmez le changement de taille des présentoirs.",
         });
       }
       await prisma.edition.update({
@@ -383,6 +384,11 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         badgesPerBin: edition.badgesPerBin,
         separators: false,
       });
+      // The file is read without the screen: which page is which type travels beside it, so the admin
+      // screen can say it (the unnumbered types were mistaken for a defect, #776).
+      const pageTypes = [...samples.filter((s) => s.badgeNumber !== null).sort((a, b) => (a.badgeNumber as number) - (b.badgeNumber as number)).map((s) => s.type), ...OTHER_TYPES_ORDER];
+      const pages = pageTypes.map((type) => ({ type, name: BADGE_TYPE_NAMES[type], isNumbered: PREVIEW_NUMBERS[type] !== undefined }));
+      reply.header("X-Badge-Pages", encodeURIComponent(JSON.stringify(pages)));
       return pdfReply(reply, pdf, `badges-${edition.year}-exemples.pdf`);
     },
   );

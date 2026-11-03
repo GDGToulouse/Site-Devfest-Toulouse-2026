@@ -42,7 +42,7 @@ describe("the station a screen works as (RG-ARR-25, #641, #775)", () => {
 
   it("should name the station as the volunteers say it", () => {
     expect(stationLabel({ kind: "counter", counter: 2, bin: null })).toBe("Guichet 2");
-    expect(stationLabel({ kind: "counter", counter: 2, bin: 3 })).toBe("Guichet 2 · bac 3");
+    expect(stationLabel({ kind: "counter", counter: 2, bin: 3 })).toBe("Guichet 2 · présentoir 3");
   });
 
   it("should remember the edition it was let into, for when the backend is down", () => {

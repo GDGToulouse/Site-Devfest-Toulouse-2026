@@ -67,12 +67,12 @@ l'écran de suivi. C'est à vérifier aussi.
 | Fonctionnalité | Où | Issue |
 |---|---|---|
 | Import des participants depuis Billetweb, tarifs « hors flux » (accueil dédié) | Admin → Arrivées ; édition → onglet Billetterie | #638 |
-| Numérotation des badges par guichet et par bac, PDF d'impression, gel, écriture du numéro dans Billetweb | Admin → Arrivées → Badges | #639 |
+| Numérotation des badges par guichet et par présentoir, PDF d'impression, gel, écriture du numéro dans Billetweb | Admin → Arrivées → Badges | #639 |
 | Apparence des badges : fond et couleur par type, contenu du QR code, aperçu | Admin → Arrivées → Apparence des badges | #749 |
 | Bénévoles : invitation par liste d'adresses, accès limité à `/arrivees` | Admin → Arrivées → Bénévoles | #640 |
 | Écrans du jour J, flux temps réel, fonctionnement hors ligne | `/arrivees` | #641 |
 | Poste **Scan** : lecture des billets à l'entrée, recherche par nom | `/arrivees` → Scan | #642 |
-| Poste **Guichet** : tableau À chercher → Prêt → Distribué, par guichet ou par bac | `/arrivees` → Guichet N | #643 |
+| Poste **Guichet** : tableau À chercher → Prêt → Distribué, par guichet ou par présentoir | `/arrivees` → Guichet N | #643 |
 | Poste **Aide** : billets sans badge, impression d'une étiquette | `/arrivees` → Aide | #713 |
 | Écran de suivi pour grand écran (admins et éditeurs) | `/arrivees/suivi` | #644 |
 | Scans faits pendant une coupure réseau, renvoyés au retour | `/arrivees` → Scan | #645 |
@@ -111,10 +111,10 @@ ne connaît pas ».
 
 Dans la section **Badges** :
 
-1. **Guichets**, **Bacs par guichet**, **Badges par bac** (de 10 à 99), puis **Enregistrer**.
-   Le tableau montre combien de badges tombent dans chaque bac et la plage de numéros de chaque
-   bac (guichet 2, bac 1 : « 2 1 01 à 2 1 99 » pour des bacs de 99). Guichets, bacs et rangs se comptent à partir de 1.
-2. Mettez volontairement trop peu de bacs : un message dit combien il en manque et bloque
+1. **Guichets**, **Présentoirs par guichet**, **Badges par présentoir** (de 10 à 99), puis **Enregistrer**.
+   Le tableau montre combien de badges tombent dans chaque présentoir et la plage de numéros de chaque
+   présentoir (guichet 2, présentoir 1 : « 2 1 01 à 2 1 99 » pour des présentoirs de 99). Guichets, présentoirs et rangs se comptent à partir de 1.
+2. Mettez volontairement trop peu de présentoirs : un message dit combien il en manque et bloque
    l'envoi à l'impression.
 3. **Apparence des badges** :
    - **Contenu du QR code** : le code du billet (lisible par l'application de badges Billetweb
@@ -128,8 +128,8 @@ Dans la section **Badges** :
      confirmer » est une proposition.
    Puis **Enregistrer l'apparence**.
 4. **Aperçu : recto et verso de chaque type** : un PDF de douze pages, le verso après chaque recto.
-5. **Télécharger tous les badges (provisoire)** : le PDF complet, trié par guichet puis par bac,
-   avec un intercalaire par bac, suivi des badges de l'accueil dédié. Recto-verso : chaque
+5. **Télécharger tous les badges (provisoire)** : le PDF complet, trié par guichet puis par présentoir,
+   avec un intercalaire par présentoir, suivi des badges de l'accueil dédié. Recto-verso : chaque
    badge est suivi de son verso, chaque intercalaire d'une page blanche.
 
 **Revenir en arrière** (admins) : après l'envoi à l'impression, **Annuler le gel** (taper
@@ -149,7 +149,7 @@ le champ « Numéro de badge » des billets de l'événement de test ; la ligne 
 numéros écrits » suit l'avancement.
 
 À vérifier :
-- **Badges par bac** reste modifiable, mais demande maintenant une confirmation ;
+- **Badges par présentoir** reste modifiable, mais demande maintenant une confirmation ;
 - un participant ajouté ensuite dans Billetweb, puis importé, n'a pas de numéro : l'admin
   annonce qu'il passera au guichet d'aide.
 
@@ -194,7 +194,7 @@ bénévoles reste utilisable à côté.
   d'aide, billet annulé, déjà scanné.
 - En bas, la charge de chaque guichet (badges en attente).
 
-**Guichet N** (tout le guichet, ou un seul bac pour le bénévole qui le tient)
+**Guichet N** (tout le guichet, ou un seul présentoir pour le bénévole qui le tient)
 - Un billet scanné apparaît dans **À chercher**, avec un signal sonore (après un premier toucher
   de l'écran : les navigateurs coupent le son avant).
 - Toucher une carte la fait avancer : À chercher → Prêt → Distribué. ↩ la fait reculer.
@@ -203,7 +203,7 @@ bénévoles reste utilisable à côté.
 
 **Aide**
 - Les billets scannés sans badge imprimé arrivent dans **À traiter**.
-- Recherche par nom pour tout autre cas : badge introuvable dans son bac, billet modifié.
+- Recherche par nom pour tout autre cas : badge introuvable dans son présentoir, billet modifié.
 - **Imprimer l'étiquette** ouvre la boîte d'impression du navigateur, au format du rouleau
   choisi ; l'étiquette remise passe le participant en Distribué.
 

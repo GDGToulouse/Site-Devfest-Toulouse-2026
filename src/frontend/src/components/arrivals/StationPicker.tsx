@@ -9,7 +9,7 @@ const CHOICE_CLASS =
   "rounded-2xl border border-gris/30 bg-blanc px-4 py-4 text-left text-noir hover:border-bleu focus-visible:border-bleu";
 
 // The first question of the zone (RG-ARR-25): which station this device is.
-// A counter may narrow to one of its bins, for the volunteer whose phone only
+// A counter may narrow to one of its présentoirs, for the volunteer whose phone only
 // follows their own (RG-ARR-42).
 export default function StationPicker({
   layout,
@@ -27,7 +27,7 @@ export default function StationPicker({
     return (
       <div>
         <h2 className="mb-1 text-lg font-bold text-noir">Guichet {counter}</h2>
-        <p className="mb-4 text-sm text-gris">Tout le guichet, ou seulement votre bac ?</p>
+        <p className="mb-4 text-sm text-gris">Tout le guichet, ou seulement votre présentoir ?</p>
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
@@ -43,7 +43,7 @@ export default function StationPicker({
               onClick={() => onPick({ kind: "counter", counter, bin })}
               className={CHOICE_CLASS}
             >
-              Bac {bin}
+              Présentoir {bin}
             </button>
           ))}
         </div>

@@ -2,14 +2,15 @@ import type { ScanOutcome } from "@/lib/arrivals-api";
 import type { OfflineAnswer } from "@/lib/arrivals-offline";
 import { binColor, binOf, counterOf, formatBadgeNumber, type BadgeState } from "@/lib/arrivals-live";
 
-// What the Scan volunteer reads out (RG-ARR-32, RG-ARR-33): the number and the
-// counter first, big enough to say aloud from arm's length; then who it is, to
-// check. Each way out of the normal path has its own colour and words.
+// What the Scan volunteer reads out (RG-ARR-32, RG-ARR-33): the counter first,
+// since that is where the person is sent (#776), big enough to read at arm's
+// length; then the badge number and who it is, to check. Each way out of the
+// normal path has its own colour and words.
 
 export type ScanResult = { source: "online"; outcome: ScanOutcome } | { source: "offline"; answer: OfflineAnswer };
 
 const STATE_WORDS: Record<BadgeState, string> = {
-  PRINTED: "encore dans son bac",
+  PRINTED: "encore dans son présentoir",
   TO_FETCH: "à chercher",
   READY: "prêt",
   DELIVERED: "déjà distribué",
@@ -26,11 +27,11 @@ function BadgeAnswer({ number }: { number: number }) {
   const bin = binOf(number);
   return (
     <>
-      <p className="font-mono text-7xl font-bold leading-none tabular-nums text-noir">{formatBadgeNumber(number)}</p>
-      <p className="text-3xl font-bold text-terre-cuite">Guichet {counterOf(number)}</p>
+      <p className="text-5xl font-bold leading-none text-terre-cuite sm:text-7xl">Guichet {counterOf(number)}</p>
+      <p className="font-mono text-3xl font-bold leading-none tabular-nums text-noir">{formatBadgeNumber(number)}</p>
       <p className="inline-flex items-center gap-2 self-center rounded-full border border-gris/30 px-3 py-0.5 text-sm text-noir">
         <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(bin)}`} />
-        bac {bin}
+        présentoir {bin}
       </p>
     </>
   );
@@ -69,7 +70,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
         {answer.kind === "badge" ? (
           <div className="flex flex-col gap-2 rounded-2xl border-4 border-bleu bg-blanc p-5 text-center">
             <BadgeAnswer number={answer.number} />
-            <p className="text-sm text-gris">Le guichet cherche le badge dans le bac, d&apos;après le numéro.</p>
+            <p className="text-sm text-gris">Le guichet cherche le badge dans le présentoir, d&apos;après le numéro.</p>
           </div>
         ) : answer.kind === "dedicated" ? (
           <Detour title="Accueil dédié" tone="border-malachite text-malachite">
