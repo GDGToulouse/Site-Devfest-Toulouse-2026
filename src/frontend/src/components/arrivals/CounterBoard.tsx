@@ -17,7 +17,9 @@ import {
 // A counter's screen (RG-ARR-41 to RG-ARR-46, #643): the laptop at the back
 // of the counter, or a volunteer's phone narrowed to their bin. Touching a
 // card moves it one step; every move names where the card starts from, so the
-// laptop and a phone touching the same card move it once (RG-ARR-44).
+// laptop and a phone touching the same card move it once (RG-ARR-44). The
+// number is what the volunteer scans for from a step away, so it takes the card
+// (#776); no instructions are printed on the screen, the gesture is the card.
 
 /** Where a touch on the card sends it (RG-ARR-43). */
 const TOUCH: Partial<Record<BadgeState, BadgeState>> = {
@@ -92,21 +94,25 @@ function Card({
         onClick={onTouch}
         disabled={isBusy}
         aria-label={`Badge ${formatBadgeNumber(badge.number)}, ${badge.firstName} ${badge.lastName} : ${TOUCH_WORDS[badge.state]}`}
-        className="flex min-w-0 flex-1 items-center gap-3 overflow-hidden rounded-xl border border-gris/20 bg-blanc py-2 pr-3 text-left hover:border-bleu focus-visible:border-bleu disabled:opacity-50"
+        className="flex min-w-0 flex-1 items-stretch gap-3 overflow-hidden rounded-xl border border-gris/20 bg-blanc py-3 pr-3 text-left hover:border-bleu focus-visible:border-bleu disabled:opacity-50"
       >
-        <span aria-hidden="true" className={`w-2 self-stretch ${binColor(bin)}`} />
-        <span className={`font-mono font-bold tabular-nums text-noir ${isDone ? "text-lg" : "text-2xl"}`}>
-          {formatBadgeNumber(badge.number)}
-        </span>
+        <span aria-hidden="true" className={`w-3 shrink-0 ${binColor(bin)}`} />
         <span className="min-w-0">
-          <span className="block truncate font-medium text-noir">
+          <span
+            className={`block font-mono font-bold leading-none tabular-nums text-noir ${
+              isDone ? "text-3xl" : "text-5xl 2xl:text-6xl"
+            }`}
+          >
+            {formatBadgeNumber(badge.number)}
+          </span>
+          <span className="mt-2 block truncate text-lg font-medium text-noir">
             {badge.firstName} {badge.lastName}
           </span>
-          <span className="block truncate text-xs text-gris">
-            {badge.company ? `${badge.company} · ` : ""}bac {bin}
+          <span className="block truncate text-sm text-gris">
+            {badge.company ? `${badge.company} · ` : ""}présentoir {bin}
           </span>
           {isFromOutage && (
-            <span className="block text-xs font-medium text-orange">Scanné pendant la coupure : déjà remis ?</span>
+            <span className="block text-sm font-medium text-orange">Scanné pendant la coupure : déjà remis ?</span>
           )}
         </span>
       </button>
@@ -118,7 +124,7 @@ function Card({
           disabled={isBusy}
           aria-label={`Badge ${formatBadgeNumber(badge.number)} : ${action.label}`}
           title={action.label}
-          className="shrink-0 rounded-xl border border-gris/20 bg-blanc px-2 text-gris hover:border-bleu hover:text-noir disabled:opacity-50"
+          className="shrink-0 rounded-xl border border-gris/20 bg-blanc px-3 text-xl text-gris hover:border-bleu hover:text-noir disabled:opacity-50"
         >
           {action.symbol}
         </button>
@@ -130,10 +136,10 @@ function Card({
 function Column({ title, count, children }: { title: string; count: string; children: React.ReactNode }) {
   return (
     <section className="flex min-w-0 flex-col gap-2 rounded-2xl bg-gris/10 p-3" aria-label={title}>
-      <h3 className="flex justify-between text-xs font-medium uppercase tracking-wider text-gris">
+      <h2 className="flex justify-between text-sm font-medium uppercase tracking-wider text-gris">
         <span>{title}</span>
         <span className="font-mono tabular-nums">{count}</span>
-      </h3>
+      </h2>
       <ul className="flex flex-col gap-2">{children}</ul>
     </section>
   );
@@ -207,8 +213,8 @@ export default function CounterBoard({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 text-sm text-noir">
-        <span className="text-gris">À chercher par bac</span>
+      <div className="flex flex-wrap items-center gap-2 text-base text-noir">
+        <span className="text-gris">À chercher par présentoir</span>
         {board.toFetchByBin.map((count, i) => (
           <span
             key={i}
@@ -217,7 +223,7 @@ export default function CounterBoard({
             }`}
           >
             <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(i + 1)}`} />
-            bac {i + 1} : <b className="font-mono tabular-nums">{count}</b>
+            présentoir {i + 1} : <b className="font-mono tabular-nums">{count}</b>
           </span>
         ))}
       </div>
@@ -244,12 +250,6 @@ export default function CounterBoard({
           {board.delivered.map((badge) => card(badge, []))}
         </Column>
       </div>
-
-      <p className="text-sm text-gris">
-        Touchez une carte pour la faire avancer : À chercher → Prêt → Distribué. Une carte distribuée par erreur revient
-        en Prêt d&apos;un toucher ; ↩ ramène une carte Prête à chercher. Une carte scannée pendant une coupure de
-        réseau a ✓ : le badge a été remis à la main entre-temps, elle passe directement en Distribué.
-      </p>
     </div>
   );
 }

@@ -287,7 +287,7 @@ export default function HelpStation({
           {canLabel && (
             <div className="flex flex-col gap-3">
               {person.badgeNumber !== null && !person.labelDeliveredAt && (
-                <p className="text-sm text-gris">Badge introuvable dans son bac ? Imprimez une étiquette.</p>
+                <p className="text-sm text-gris">Badge introuvable dans son présentoir ? Imprimez une étiquette.</p>
               )}
               <LabelPreview text={label ?? person} format={format} year={edition.year} />
               <div className="flex flex-wrap gap-2">

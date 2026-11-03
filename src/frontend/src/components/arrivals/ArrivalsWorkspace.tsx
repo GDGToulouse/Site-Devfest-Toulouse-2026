@@ -13,6 +13,9 @@ import ScanStation from "@/components/arrivals/ScanStation";
 import { isStationInLayout, stationLabel, stationPath, type Station } from "@/lib/arrivals-station";
 import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 
+// Discreet, but a finger-sized target (44 px).
+const FOOTER_LINK = "inline-flex min-h-11 items-center px-3 underline decoration-gris/40 hover:text-noir";
+
 const STATION_ENDED = "Ce poste n'est plus ouvert. Demandez le QR code à jour à l'équipe DevFest.";
 
 // The event-day zone once the volunteer is let in (#641): the station the
@@ -42,7 +45,7 @@ export default function ArrivalsWorkspace({
   const router = useRouter();
   const { live, status, applyMoved } = useArrivalsStream(edition.id);
   const [pendingScans, setPendingScans] = useState(0);
-  // A counter's three columns want the laptop's width.
+  // A counter's three columns take the whole screen: the cards are read from a step away (#776).
   const isWide = station?.kind === "counter";
   const isMissingStation = Boolean(station && live && !isStationInLayout(station, live.layout));
 
@@ -65,12 +68,12 @@ export default function ArrivalsWorkspace({
       <header className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-gris/20 bg-blanc px-4 py-3">
         <div className="min-w-0">
           <p className="text-xs text-gris">Accueil DevFest {edition.year}</p>
-          <p className="truncate font-bold text-noir">{station ? stationLabel(station) : "Poste à choisir"}</p>
+          <h1 className="truncate font-bold text-noir">{station ? stationLabel(station) : "Poste à choisir"}</h1>
         </div>
         <ConnectionIndicator status={status} pendingScans={station?.kind === "scan" ? pendingScans : 0} />
       </header>
 
-      <main className={`mx-auto px-4 pt-6 ${isWide ? "max-w-6xl" : "max-w-2xl"}`}>
+      <main className={`mx-auto px-4 pt-6 ${isWide ? "lg:px-8" : "max-w-2xl"}`}>
         {status === "disconnected" && (
           <div role="alert" className="mb-4 rounded-2xl bg-rouge/10 p-4 text-sm text-noir">
             Pas de connexion au serveur : ce qui s&apos;affiche peut être périmé. L&apos;écran se remettra à jour seul
@@ -104,32 +107,23 @@ export default function ArrivalsWorkspace({
           />
         )}
 
-        {station && !isLocked && (
-          <Link
-            href="/arrivees"
-            className="mt-6 block w-full rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-center text-sm font-medium text-noir hover:border-bleu"
-          >
-            Changer de poste
-          </Link>
-        )}
-
-        {canTrack && !isLocked && (
-          <Link
-            href="/arrivees/suivi"
-            className="mt-6 block w-full rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-center text-sm font-medium text-noir hover:border-bleu"
-          >
-            Écran de suivi
-          </Link>
-        )}
-
+        {/* Out of the foreground: a station has its own address, so these are for the rare move. */}
         {!isLocked && (
-          <button
-            type="button"
-            onClick={onSignOut}
-            className="mt-6 w-full text-sm font-medium text-gris hover:text-noir"
-          >
-            Me déconnecter
-          </button>
+          <nav aria-label="Autres écrans" className="mt-10 flex flex-wrap justify-center gap-x-2 text-sm text-gris">
+            {station && (
+              <Link href="/arrivees" className={FOOTER_LINK}>
+                Changer de poste
+              </Link>
+            )}
+            {canTrack && (
+              <Link href="/arrivees/suivi" className={FOOTER_LINK}>
+                Écran de suivi
+              </Link>
+            )}
+            <button type="button" onClick={onSignOut} className={FOOTER_LINK}>
+              Me déconnecter
+            </button>
+          </nav>
         )}
       </main>
     </div>
