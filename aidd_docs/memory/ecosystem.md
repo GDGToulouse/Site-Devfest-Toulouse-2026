@@ -15,7 +15,7 @@ flowchart LR
   Billetweb["Billetweb · integration.md"]
   OSM["OpenStreetMap · integration.md"]
   Gemini["Google Gemini · integration.md"]
-  SMTP["SMTP, MailHog en local · integration.md"]
+  SMTP["SMTP, Mailpit en local · integration.md"]
   OAuth["OAuth Google et GitHub · auth.md"]
   Webhook["Webhooks contact et alertes · integration.md"]
   Plausible["Plausible · integration.md"]

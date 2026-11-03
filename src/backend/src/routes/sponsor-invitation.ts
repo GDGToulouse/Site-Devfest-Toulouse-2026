@@ -48,6 +48,10 @@ export default async function sponsorInvitationRoutes(app: FastifyInstance) {
   // proves the mailbox, so the address is the invitation's, never the body's,
   // and the account starts verified. Answers with better-auth's own session
   // cookie; binding the account to the company stays /accept's job.
+  //
+  // better-auth's sign-up neither signs in nor reports an existing account any
+  // more (#673): this route says so itself — the token holder owns the
+  // mailbox, there is nothing to hide from them — and signs in afterwards.
   app.post<{ Params: { token: string }; Body: { password: string } }>("/sponsor-invitation/:token/sign-up", {
     schema: {
       params: tokenParamsSchema,
@@ -61,13 +65,24 @@ export default async function sponsorInvitationRoutes(app: FastifyInstance) {
     const contact = await findPendingInvitation(request.params.token);
     if (!contact) return reply.code(404).send({ error: "invitation_invalid" });
 
+    const existing = await prisma.user.findFirst({
+      where: { email: { equals: contact.email.trim(), mode: "insensitive" } },
+      select: { id: true },
+    });
+    if (existing) {
+      return reply.code(409).send({
+        error: "account_exists",
+        message: "Un compte existe déjà pour cette adresse : connectez-vous, ou demandez un lien de connexion.",
+      });
+    }
+
     try {
-      const { headers } = await signUpWithInvitation(contact.email, () =>
-        auth.api.signUpEmail({
-          body: { email: contact.email, password: request.body.password, name: contact.name || contact.email },
-          returnHeaders: true,
-        }),
+      const { email } = contact;
+      const { password } = request.body;
+      await signUpWithInvitation(email, () =>
+        auth.api.signUpEmail({ body: { email, password, name: contact.name || email } }),
       );
+      const { headers } = await auth.api.signInEmail({ body: { email, password }, returnHeaders: true });
       const cookies = headers.getSetCookie();
       if (cookies.length) reply.header("set-cookie", cookies);
       return { success: true };

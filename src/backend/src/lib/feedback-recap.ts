@@ -2,7 +2,7 @@ import { prisma } from "./prisma.js";
 import { notDeleted } from "./admin-helpers.js";
 import { sendEmail, escapeHtml } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
-import { generateEditToken } from "./edit-token.js";
+import { generateEditToken, hashLinkToken } from "./edit-token.js";
 import { normalizeLocale, type ContactLocale } from "./edit-link-email.js";
 import { TALK_FEEDBACK_ITEMS } from "./talk-feedback.js";
 import { resultsForTalks, type TalkResults } from "./talk-feedback-results.js";
@@ -164,7 +164,7 @@ export async function sendFeedbackRecaps(editionId: number): Promise<RecapReport
       continue;
     }
     if (token) {
-      await prisma.speaker.update({ where: { id: recipient.id }, data: { editToken: token, editTokenSentAt: new Date() } });
+      await prisma.speaker.update({ where: { id: recipient.id }, data: { editToken: hashLinkToken(token), editTokenSentAt: new Date() } });
     }
     report.sent.push(recipient.name);
   }

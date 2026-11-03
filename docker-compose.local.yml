@@ -62,6 +62,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - SPONSOR_GUESTS_ENABLED=${SPONSOR_GUESTS_ENABLED:-}
       - REVALIDATE_SECRET=${REVALIDATE_SECRET:-}
       # See the frontend service (#689): requests carrying it are not rate-limited.
       - INTERNAL_API_SECRET=${INTERNAL_API_SECRET:-}
@@ -104,9 +105,11 @@ services:
       timeout: 5s
       retries: 5
 
+  # Mailpit, which replaced the abandoned MailHog (#679); the service and
+  # container keep the old name, which SMTP_HOST points at. UI on :8025.
   mailhog:
     container_name: devfest-local-mailhog
-    image: mailhog/mailhog:latest
+    image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
     ports:
       - "127.0.0.1:1025:1025"
       - "127.0.0.1:8025:8025"

@@ -69,6 +69,31 @@ qui n'ont pas le label : le poser + commenter les commits (voir la règle).
 > simplement restée sur une branche `dev-{initiale}` non encore promue vers `dev`. Elle
 > partira à la release suivante — ne pas la faire figurer dans les `Closes` de cette PR.
 
+### Dépendances vulnérables (#695)
+
+Avant le tag, sur la branche de promotion, auditer les deux applications. Le job CI
+`Dependencies — Audit` fait le même contrôle sur la PR, mais un avis publié depuis le
+dernier passage de la CI ne s'y voit qu'en relançant : l'audit d'ici fait foi.
+
+```bash
+node scripts/check-audit-ignores.mjs        # chaque exception a sa raison
+pnpm --dir src/frontend audit --prod        # bloquant au niveau high
+pnpm --dir src/backend audit --prod
+pnpm --dir src/frontend outdated --prod     # informatif
+pnpm --dir src/backend outdated --prod
+```
+
+- **Avis `high` ou `critical`** → **bloquant**. Monter la dépendance (dans sa plage
+  SemVer si possible), ou, si l'avis n'est pas atteignable en production, l'ignorer par
+  son GHSA dans `pnpm.auditConfig.ignoreGhsas` du `package.json` de l'application, avec
+  la raison et la date sous `pnpm.auditConfig["//"]`. Une exception se décide avec
+  l'utilisateur, jamais seule.
+- **`outdated`** n'informe que : relever les dépendances en retard d'une **version
+  majeure**.
+- **Coller le résultat dans le body de la PR de promotion** (étape 3), section
+  `## Dépendances` : avis restants (modérés compris) et exceptions avec leur
+  justification, dépendances en retard d'une majeure.
+
 ### Fenêtre de déploiement
 
 Rappeler à l'utilisateur : **aucune fonctionnalité en prod à partir de J-3 du
@@ -314,6 +339,7 @@ Ne pas improviser. Voir [`docs/mise-en-production.md`](../../../docs/mise-en-pro
 
 - [ ] Fenêtre de déploiement OK (pas de fonctionnalité à partir de J-3 DevFest, pas de pic), équipe prévenue
 - [ ] Diff réel `main..dev` revu, **migrations Prisma lues** (destructives repérées)
+- [ ] `pnpm audit --prod` sans avis `high`/`critical` non justifié sur les deux applications, rapport audit + `outdated` collé dans la PR de promotion
 - [ ] Bump SemVer choisi et **confirmé**
 - [ ] `APP_VERSION` + 2× `package.json` + `CHANGELOG.md` mis à jour dans la PR de promotion
 - [ ] Issues embarquées listées en `Closes #NN` dans le body de la PR de promotion (validées par l'utilisateur)

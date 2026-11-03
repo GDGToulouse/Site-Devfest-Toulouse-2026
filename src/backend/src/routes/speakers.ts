@@ -2,12 +2,15 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { getFeaturedEdition } from "./editions.js";
 import { notDeleted, parseSocialLinks } from "../lib/admin-helpers.js";
+import { visibleParticipation, visibleTalk } from "../lib/talk-status.js";
 
 // The person's page, shared by the public route and the team's draft preview
 // (#618). `includeDrafts` lifts every publication filter, the trash ones stay:
 // the preview shows the page as it will read once everything is published.
 export async function findSpeakerPage(slug: string, { includeDrafts = false } = {}) {
-  const published = includeDrafts ? {} : ({ publicationStatus: "PUBLISHED" } as const);
+  const published = visibleParticipation(includeDrafts);
+  // The preview never shows a cancelled talk or a withdrawn year (#726).
+  const publishedTalk = visibleTalk(includeDrafts);
   const speaker = await prisma.speaker.findFirst({
     where: {
       slug,
@@ -45,7 +48,7 @@ export async function findSpeakerPage(slug: string, { includeDrafts = false } = 
         orderBy: { edition: { year: "desc" } },
       },
       talks: {
-        where: { ...published, ...notDeleted, edition: notDeleted },
+        where: { ...publishedTalk, ...notDeleted, edition: notDeleted },
         // level/language/category describe the session the same way the talk
         // page does (#359). level is nullable — 42 of the imported talks carry
         // none — so the client must treat it as optional.

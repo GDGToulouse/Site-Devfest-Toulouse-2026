@@ -3,11 +3,12 @@
 ## External services
 
 - **Sessionize** : import du programme depuis l'admin (`src/backend/src/lib/sessionize-import.ts`), par URL d'API ou JSON collé
-- **Billetweb** : billetterie ; l'admin importe les tarifs et lit les disponibilités par l'API (`src/backend/src/routes/admin/tickets.ts`), avec `BILLETWEB_USER` et `BILLETWEB_KEY` — absentes de `.env.example`
+- **Billetweb** : billetterie ; l'admin importe les tarifs et lit les disponibilités par l'API (`src/backend/src/routes/admin/tickets.ts`), avec `BILLETWEB_USER` et `BILLETWEB_KEY` — absentes de `.env.example`. Les invités sponsors (#727-#733, en sommeil sans `SPONSOR_GUESTS_ENABLED=true`, non utilisés en 2026) y deviennent des billets par une action d'admin (`lib/sponsor-guest-billetweb.ts`) : une commande `add_order` par invité, en `invitation`, marquée `site-sponsor-<id>`. Les questions du formulaire se retrouvent par nom, car `add_order` prend des ids. Billetweb fait foi dès que le billet existe : le site ne réécrit jamais un billet, il relit. Écrire exige une clé en lecture **et** écriture
 - **OpenStreetMap** : tuiles de la carte du lieu, via Leaflet (`src/frontend/src/components/venue/`)
 - **Google Gemini** (free tier) : traduction FR ⇄ EN proposée aux éditeurs (`src/backend/src/lib/translation/`) ; en free tier Google peut entraîner ses modèles sur les données envoyées, donc aucune donnée personnelle n'y passe — `docs/traduction-ia.md`
-- **SMTP** : e-mails transactionnels (liens magiques, invitations sponsor, liens de modification) via Nodemailer (`src/backend/src/lib/email.ts`) ; MailHog en local
+- **SMTP** : e-mails transactionnels (liens magiques, invitations sponsor, liens de modification) via Nodemailer (`src/backend/src/lib/email.ts`) ; Mailpit en local et sur `dev-j` (service resté nommé `mailhog`, #679)
 - **Webhooks sortants** : soumissions du formulaire de contact (`contact-webhook.ts`, consommé par n8n/Zapier/Make — le format du payload est un contrat) et alertes sur erreur 5xx (`alert-webhook.ts`, #118). URL stockée dans `SiteSetting`
+- **Quarantaine du formulaire de contact** (#767) : un message dont le score de `lib/contact-spam.ts` atteint le seuil est enregistré, mais rien ne part (ni e-mail, ni confirmation, ni webhook de contact) jusqu'à « Libérer » dans l'admin. Le seul envoi vers l'extérieur est l'alerte `{ text }` sans contenu de `contact-quarantine-alert.ts`, sur son propre réglage `contact_quarantine_webhook_url` (format du webhook entrant Slack), pour ne pas toucher au contrat du webhook de contact. Tout envoi d'un message passe par `deliverContactMessage` (`lib/contact-delivery.ts`), qui refuse un message en quarantaine
 - **Plausible** : mesure d'audience en production, script chargé par `next-plausible` quand `NEXT_PUBLIC_PLAUSIBLE_SRC` est défini
 - **YouTube** : replays en façade (`YouTubeFacade.tsx`), miniatures servies par l'optimiseur d'images Next plutôt que chargées depuis Google
 

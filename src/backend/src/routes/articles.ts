@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
 import { notDeleted } from "../lib/admin-helpers.js";
+import { positiveInt } from "../lib/public-params.js";
 
 function mapArticleSummary(article: {
   id: number;
@@ -34,8 +35,8 @@ export default async function articleRoutes(app: FastifyInstance) {
   app.get<{
     Querystring: { limit?: string; editionId?: string };
   }>("/articles/latest", async (request) => {
-    const limit = Math.min(Number(request.query.limit) || 4, 20);
-    const editionId = request.query.editionId ? Number(request.query.editionId) : null;
+    const limit = Math.min(positiveInt(request.query.limit, 4), 20);
+    const editionId = positiveInt(request.query.editionId, 0) || null;
 
     const where = {
       publicationStatus: "PUBLISHED" as const,
@@ -66,10 +67,10 @@ export default async function articleRoutes(app: FastifyInstance) {
   app.get<{
     Querystring: { page?: string; limit?: string; tag?: string; editionId?: string };
   }>("/articles", async (request) => {
-    const page = Math.max(Number(request.query.page) || 1, 1);
-    const limit = Math.min(Number(request.query.limit) || 12, 50);
+    const page = positiveInt(request.query.page, 1);
+    const limit = Math.min(positiveInt(request.query.limit, 12), 50);
     const tagSlug = request.query.tag;
-    const editionId = Number(request.query.editionId) || undefined;
+    const editionId = positiveInt(request.query.editionId, 0) || undefined;
 
     const where = {
       publicationStatus: "PUBLISHED" as const,

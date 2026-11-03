@@ -5,6 +5,7 @@ import {
   localInputToIso,
   formatEventTime,
   formatEventDuration,
+  formatEventDay,
   daysUntilEvent,
 } from "./datetime";
 
@@ -147,5 +148,30 @@ describe("days until the event (#576)", () => {
 
   it("says nothing for an unparseable date", () => {
     expect(daysUntilEvent("pas une date", new Date())).toBeNull();
+  });
+});
+
+describe("the day a session is given on (#717)", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it("names the weekday and the date, in the reader's language", () => {
+    expect(formatEventDay("2026-11-19T16:30:00.000Z", "fr")).toBe("Jeudi 19 novembre");
+    expect(formatEventDay("2026-11-19T16:30:00.000Z", "en")).toBe("Thursday 19 November");
+  });
+
+  it("names the Toulouse day even when the server runs on UTC", async () => {
+    // 23:30 UTC on the 18th is already the 19th in Toulouse.
+    vi.resetModules();
+    vi.stubEnv("TZ", "UTC");
+    const { formatEventDay: onUtcServer } = await import("./datetime");
+
+    expect(onUtcServer("2026-11-18T23:30:00.000Z", "fr")).toBe("Jeudi 19 novembre");
+  });
+
+  it("treats an unparseable value as empty", () => {
+    expect(formatEventDay("pas une date", "fr")).toBe("");
   });
 });

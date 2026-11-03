@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 
 // Bluesky is part of the shared socialLinks allowlist (#253); an unknown social
@@ -18,7 +19,7 @@ describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
       data: {
         name: "Bluesky Test Speaker",
         slug: `bluesky-test-speaker-${Date.now()}`,
-        editToken: TOKEN,
+        editToken: hashLinkToken(TOKEN),
         editTokenSentAt: new Date(),
         editions: { create: [{ editionId: edition.id, publicationStatus: "PUBLISHED" }] },
       },

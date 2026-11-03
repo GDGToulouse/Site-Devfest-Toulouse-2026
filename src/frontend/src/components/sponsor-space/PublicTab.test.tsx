@@ -32,3 +32,34 @@ describe("PublicTab — description length (#610)", () => {
     expect(saveSponsorProfile).not.toHaveBeenCalled();
   });
 });
+
+// #687 — a logo given by its address is imported by the backend on save.
+describe("PublicTab — logo given by its address (#687)", () => {
+  const withLogo = { ...profile, logoUrl: "https://brand.example.org/logo.png" } as SponsorSpaceProfile;
+
+  it("shows the imported copy once saved", async () => {
+    saveSponsorProfile.mockResolvedValueOnce({ status: 200, data: { saved: true, logoUrl: "/uploads/123-abc.png" } });
+    render(<PublicTab profile={withLogo} canEdit onSaved={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByText("Modifications enregistrées.")).toBeInTheDocument();
+    expect(screen.getByAltText("Aperçu du logo")).toHaveAttribute("src", "/uploads/123-abc.png");
+  });
+
+  it("says why the logo was not imported", async () => {
+    saveSponsorProfile.mockResolvedValueOnce({
+      status: 422,
+      data: null,
+      error: "image_import_failed",
+      message: "Le site distant n'a pas répondu à temps. Réessayez plus tard.",
+    });
+    render(<PublicTab profile={withLogo} canEdit onSaved={() => {}} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Le logo n'a pas été importé : le site distant n'a pas répondu à temps. Réessayez plus tard.",
+    );
+  });
+});

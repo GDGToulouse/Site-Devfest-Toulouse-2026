@@ -78,6 +78,14 @@ const T = {
     uploadError: "Envoi impossible : vérifiez que le fichier est une image de moins de 5 Mo.",
     currentImage: "Aperçu",
     orUrl: "ou collez l'adresse d'une image en ligne",
+    // An address pasted for the photo is imported on save (#687); why it failed.
+    photoImport: {
+      unsupported: "La photo n'a pas été importée : l'adresse ne mène pas à une image JPEG, PNG, WebP ou GIF.",
+      tooLarge: "La photo n'a pas été importée : l'image dépasse 5 Mo.",
+      refused: "La photo n'a pas été importée : cette adresse est refusée. Utilisez une adresse http:// ou https:// publique.",
+      unreachable:
+        "La photo n'a pas été importée : le site qui l'héberge ne l'a pas fournie. Vérifiez l'adresse, ou envoyez le fichier.",
+    },
     rejected:
       "Une valeur est invalide : les liens doivent commencer par http:// ou https://, et les textes rester sous 5 000 caractères.",
     errors: {
@@ -138,6 +146,13 @@ const T = {
     uploadError: "Upload failed: make sure the file is an image under 5 MB.",
     currentImage: "Preview",
     orUrl: "or paste the address of an online image",
+    photoImport: {
+      unsupported: "The photo was not imported: the address does not lead to a JPEG, PNG, WebP or GIF image.",
+      tooLarge: "The photo was not imported: the image is over 5 MB.",
+      refused: "The photo was not imported: this address is refused. Use a public http:// or https:// address.",
+      unreachable:
+        "The photo was not imported: the site hosting it did not provide it. Check the address, or upload the file.",
+    },
     rejected:
       "A value is invalid: links must start with http:// or https://, and text must stay under 5,000 characters.",
     errors: {
@@ -178,6 +193,23 @@ async function readError(res: Response): Promise<{ kind: ErrorKind; locale?: Loc
     // Non-JSON error body — fall through to the generic message.
     return { kind: "blocked" };
   }
+}
+
+// The backend imports a photo given by its address (#687) and says why it could
+// not: the reason maps to the speaker's language, the form stays as typed.
+type PhotoImportProblem = keyof (typeof T)["fr"]["photoImport"];
+const PHOTO_IMPORT_PROBLEMS: Record<string, PhotoImportProblem> = {
+  unsupported_type: "unsupported",
+  unsafe_svg: "unsupported",
+  too_large: "tooLarge",
+  invalid_url: "refused",
+  invalid_protocol: "refused",
+  internal_hostname: "refused",
+  private_ip: "refused",
+};
+
+function photoImportProblem(reason: string | undefined): PhotoImportProblem {
+  return (reason && PHOTO_IMPORT_PROBLEMS[reason]) || "unreachable";
 }
 
 export default function EditByTokenPage({ params }: { params: Promise<{ token: string }> }) {
@@ -239,8 +271,19 @@ export default function EditByTokenPage({ params }: { params: Promise<{ token: s
     setSaving(false);
 
     if (res.ok) {
+      // A photo given by its address comes back as its imported /uploads/ copy.
+      const result = (await res.json().catch(() => ({}))) as { photoUrl?: string | null };
+      if (result.photoUrl !== undefined) setForm((current) => ({ ...current, photoUrl: result.photoUrl ?? "" }));
       setSaved(true);
       return;
+    }
+
+    if (res.status === 422) {
+      const refusal = (await res.json().catch(() => ({}))) as { error?: string; reason?: string };
+      if (refusal.error === "image_import_failed") {
+        setSaveError(t.photoImport[photoImportProblem(refusal.reason)]);
+        return;
+      }
     }
 
     // A rejected value (bad URL, too long) must not wipe the form the user just

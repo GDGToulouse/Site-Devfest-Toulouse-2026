@@ -137,6 +137,11 @@ export default function AdminDashboard() {
           {/* URLs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mt-6">
             <InfoCard label="URL Sponsor" value={featured.sponsorFormUrl} />
+            {/* The plain programme for partners (#755): unlisted on the site,
+                so this is where the team finds the link to send. It always
+                shows the featured edition. Rendered after loading, never on
+                the server, so `window` is there. */}
+            <InfoCard label="Programme pour les partenaires" value={`${window.location.origin}/fr/programme/texte`} />
           </div>
         </section>
       )}

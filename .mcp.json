@@ -42,6 +42,18 @@
         "--isolated",
         "--viewport-size=1280x860"
       ]
+    },
+    "devfest-prod": {
+      "type": "http",
+      "url": "https://devfesttoulouse.fr/api/mcp"
+    },
+    "devfest-beta": {
+      "type": "http",
+      "url": "https://beta.site.devfesttoulouse.fr/api/mcp"
+    },
+    "devfest-dev-j": {
+      "type": "http",
+      "url": "https://dev-j.site.devfesttoulouse.fr/api/mcp"
     }
   }
 }

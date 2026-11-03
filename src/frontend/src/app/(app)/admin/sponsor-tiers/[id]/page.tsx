@@ -127,6 +127,14 @@ export default function SponsorTierEditorPage() {
       </div>
 
       <div className="bg-blanc rounded-xl shadow-card p-6 space-y-4">
+        {/* The name, colour and logo scale are frozen on each participation (#375):
+            an edit follows on the editions not over yet, never on the archive (#693). */}
+        {!isNew && (
+          <p className="text-sm text-gris">
+            Le nom, la couleur et l&apos;échelle du logo s&apos;appliquent aux sponsors de l&apos;édition en cours et des éditions à venir.
+            Les éditions passées gardent l&apos;affichage de leur année.
+          </p>
+        )}
         <SponsorTierForm value={form} onChange={setForm} isNew={isNew} />
 
         {error && <p role="alert" aria-live="assertive" className="text-sm text-terre-cuite">{error}</p>}

@@ -5,6 +5,24 @@ import { useId, useRef, useState } from "react";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 
 export type PublicationStatus = "DRAFT" | "PUBLISHED";
+// A talk can be cancelled and a speaker's participation withdrawn (#726): off
+// the site like a draft, but not work in progress.
+export type TalkStatus = PublicationStatus | "CANCELLED";
+export type ParticipationStatus = PublicationStatus | "WITHDRAWN";
+type ClosedStatus = "CANCELLED" | "WITHDRAWN";
+
+// The third choice of a talk or a participation (#726), and what to say about it.
+export interface ClosedOption {
+  status: ClosedStatus;
+  // "Annulé", "Retirée".
+  label: string;
+  // The consequence, written under the switch while it is the current choice.
+  hint: string;
+  // The question asked before choosing it, and the button that confirms.
+  confirmTitle: string;
+  confirmMessage: string;
+  confirmLabel: string;
+}
 
 // The draft / published control of every editing screen (#632). A checkbox or a
 // badge did not read as "this changes what the site shows": both options are
@@ -12,14 +30,14 @@ export type PublicationStatus = "DRAFT" | "PUBLISHED";
 // taking a live record off the site asks first.
 //
 // A radio group for assistive tech: one tab stop, arrows move the choice.
-interface PublicationSwitchProps {
-  value: PublicationStatus;
-  onChange: (next: PublicationStatus) => void;
+interface PublicationSwitchProps<S extends string> {
+  value: S;
+  onChange: (next: S) => void;
   // Accessible name, with its context: "Statut de la participation 2026".
   label: string;
   // The status as stored. Unpublishing asks for confirmation only when the
   // record is live on the site, not when the editor undoes an unsaved choice.
-  savedValue?: PublicationStatus;
+  savedValue?: S;
   // The question asked before taking the record off the site.
   unpublishMessage?: string;
   // "Publiée" for a question or a page.
@@ -29,12 +47,13 @@ interface PublicationSwitchProps {
   // Replaces the default consequence when the screen can say more (a page's
   // own address, for instance).
   hint?: string;
+  // A third choice, cancelled or withdrawn (#726). Always asked for: it is a
+  // decision about the event, not about the record being ready.
+  closed?: ClosedOption;
   disabled?: boolean;
 }
 
-const OPTIONS: PublicationStatus[] = ["DRAFT", "PUBLISHED"];
-
-export default function PublicationSwitch({
+export default function PublicationSwitch<S extends string = PublicationStatus>({
   value,
   onChange,
   label,
@@ -43,28 +62,40 @@ export default function PublicationSwitch({
   isFeminine = false,
   previewHref,
   hint,
+  closed,
   disabled = false,
-}: PublicationSwitchProps) {
+}: PublicationSwitchProps<S>) {
   const hintId = useId();
-  const [isConfirming, setIsConfirming] = useState(false);
-  const buttons = useRef<Record<PublicationStatus, HTMLButtonElement | null>>({ DRAFT: null, PUBLISHED: null });
+  const [confirming, setConfirming] = useState<"unpublish" | "close" | null>(null);
+  const buttons = useRef<Partial<Record<string, HTMLButtonElement | null>>>({});
+  const options = ["DRAFT", "PUBLISHED", ...(closed ? [closed.status] : [])] as S[];
+  const isClosed = closed !== undefined && value === closed.status;
 
-  const optionLabel = (status: PublicationStatus) =>
-    status === "DRAFT" ? "Brouillon" : isFeminine ? "Publiée" : "Publié";
+  const optionLabel = (status: S) =>
+    status === "DRAFT"
+      ? "Brouillon"
+      : status === "PUBLISHED"
+        ? isFeminine ? "Publiée" : "Publié"
+        : closed?.label ?? status;
 
-  function choose(next: PublicationStatus) {
+  function choose(next: S) {
     if (next === value || disabled) return;
+    if (closed && next === closed.status && savedValue !== closed.status) {
+      setConfirming("close");
+      return;
+    }
     if (next === "DRAFT" && savedValue === "PUBLISHED") {
-      setIsConfirming(true);
+      setConfirming("unpublish");
       return;
     }
     onChange(next);
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLButtonElement>) {
-    if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+    const step = { ArrowLeft: -1, ArrowUp: -1, ArrowRight: 1, ArrowDown: 1 }[event.key];
+    if (!step) return;
     event.preventDefault();
-    const next = value === "DRAFT" ? "PUBLISHED" : "DRAFT";
+    const next = options[(options.indexOf(value) + step + options.length) % options.length];
     buttons.current[next]?.focus();
     choose(next);
   }
@@ -77,7 +108,7 @@ export default function PublicationSwitch({
         aria-describedby={hintId}
         className="inline-flex rounded-lg border border-gris/30 bg-blanc p-0.5"
       >
-        {OPTIONS.map((status) => {
+        {options.map((status) => {
           const isChecked = value === status;
           return (
             <button
@@ -96,7 +127,9 @@ export default function PublicationSwitch({
                 isChecked
                   ? status === "PUBLISHED"
                     ? "bg-malachite text-blanc"
-                    : "bg-gris text-blanc"
+                    : status === "DRAFT"
+                      ? "bg-gris text-blanc"
+                      : "bg-rouge text-blanc"
                   : "text-gris hover:bg-blanc-casse hover:text-noir"
               }`}
             >
@@ -106,7 +139,7 @@ export default function PublicationSwitch({
         })}
       </div>
       <p id={hintId} className="mt-1 text-xs text-gris">
-        {hint ?? (value === "PUBLISHED" ? (
+        {isClosed ? closed.hint : hint ?? (value === "PUBLISHED" ? (
           "Visible sur le site."
         ) : (
           <>
@@ -124,17 +157,31 @@ export default function PublicationSwitch({
       </p>
 
       <ConfirmDialog
-        isOpen={isConfirming}
+        isOpen={confirming === "unpublish"}
         title="Retirer du site ?"
         message={unpublishMessage ?? "Cette fiche ne sera plus visible sur le site."}
         confirmLabel="Retirer du site"
         variant="danger"
         onConfirm={() => {
-          setIsConfirming(false);
-          onChange("DRAFT");
+          setConfirming(null);
+          onChange("DRAFT" as S);
         }}
-        onCancel={() => setIsConfirming(false)}
+        onCancel={() => setConfirming(null)}
       />
+      {closed && (
+        <ConfirmDialog
+          isOpen={confirming === "close"}
+          title={closed.confirmTitle}
+          message={closed.confirmMessage}
+          confirmLabel={closed.confirmLabel}
+          variant="danger"
+          onConfirm={() => {
+            setConfirming(null);
+            onChange(closed.status as S);
+          }}
+          onCancel={() => setConfirming(null)}
+        />
+      )}
     </div>
   );
 }

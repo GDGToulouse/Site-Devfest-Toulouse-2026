@@ -81,19 +81,21 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 
 | Environnement | Compose file | SMTP_HOST | SMTP_PORT | SMTP_SECURE | SMTP_AUTH | Émission réelle ? |
 |---|---|---|---|---|---|---|
-| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par MailHog (UI sur `:8025`, protégée par mot de passe sur dev-j) |
+| **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par Mailpit, service `mailhog` (UI sur `:8025`, protégée par mot de passe sur dev-j) |
 | **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
 
 > ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
 
-### MailHog sur dev-j
+### Mailpit sur dev-j
+
+Mailpit a remplacé MailHog (#679). Les deux variables gardent leur nom `MAILHOG_*`, pour que les valeurs déjà posées dans Coolify restent valables.
 
 | Variable | Obligatoire | Description | Exemple |
 |----------|:-----------:|-------------|---------|
-| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API MailHog. | `julien` |
-| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair : MailHog le hache lui-même (bcrypt) au démarrage. Sans ces deux variables, le conteneur MailHog refuse de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde MailHog sans authentification. | (20+ caractères aléatoires) |
+| `MAILHOG_USER` | oui sur `dev-j` | Identifiant de l'authentification HTTP de l'interface et de l'API Mailpit. | `julien` |
+| `MAILHOG_PASSWORD` | oui sur `dev-j` | Mot de passe en clair, **sans espace** : Mailpit sépare ses identifiants sur les blancs, et le conteneur refuse de démarrer plutôt que d'ouvrir une interface où personne ne peut entrer. Sans ces deux variables, le conteneur refuse aussi de démarrer. Le SMTP (port 1025) reste ouvert au backend. Le compose local garde Mailpit sans authentification. | (20+ caractères aléatoires, sans espace) |
 
-> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` pour ces environnements. La modifier casserait le flow MailHog.
+> ⚠️ **Local / dev-j** : ne **pas** ajouter `SMTP_HOST=postfix` dans Coolify dev-j — la variable d'env n'a pas besoin d'être renseignée, le compose impose déjà `mailhog` (le service Mailpit) pour ces environnements. La modifier casserait la capture des e-mails.
 
 ## API tierces (backend uniquement)
 
@@ -101,6 +103,7 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 |----------|:-----------:|-------------|---------|
 | `BILLETWEB_USER` | non | Identifiant utilisateur API Billetweb (email du compte). Facultatif : l'import manuel des tarifs reste possible sans. | `contact@devfesttoulouse.fr` |
 | `BILLETWEB_KEY` | non | Clé API Billetweb (générée dans le back-office Billetweb > API). | `abc123def456...` |
+| `SPONSOR_GUESTS_ENABLED` | non | `true` réveille les inscriptions des invités sponsors (#727-#733) : leurs routes, l'onglet « Invités sponsors » de l'édition, les places par offre. Absente ou toute autre valeur : la fonctionnalité dort (non utilisée en 2026) et ses routes répondent 404. | `true` |
 
 ---
 
@@ -187,6 +190,29 @@ ne doit pas casser l'illustration d'une autre.
   ne s'ouvre. La purge quotidienne n'en dépend pas.
 - **Un EDITOR ne peut pas** déclencher la purge, même connecté.
 - Les éléments **vivants** ne sont jamais touchés, quel que soit le délai.
+
+---
+
+## Tâche planifiée — durées de conservation des données personnelles (#665, #666)
+
+Aucune variable : les durées sont fixées dans le code, et la page de mentions
+légales doit dire les mêmes (#667).
+
+| Donnée | Durée | Au-delà |
+|---|---|---|
+| Message de contact (nom, prénom, e-mail, téléphone, société, fonction, texte) | **1 an** après l'envoi | Prénom remplacé par « Anonymisé », le reste vidé. La catégorie, la date, l'état lu / non lu et les téléchargements de brochure restent, pour les statistiques |
+| Message libre laissé à un speaker (avis du public) | **1 an** après le message | Texte effacé. Les votes (cases cochées) restent |
+| Historique des modifications (`AuditLog`) | **13 mois** | Ligne supprimée. Pour un message de contact, l'historique ne garde **jamais** les valeurs ni l'IP : seulement le nom des champs modifiés, valeur « masqué » |
+| Corbeille | 30 jours (`TRASH_RETENTION_DAYS`) | Ligne détruite |
+
+L'anonymisation tourne chaque jour à 3 h 30 (heure de Paris), dans une tâche
+`node-cron` du backend (`src/backend/src/lib/personal-data-retention.ts`,
+lancée par `scheduler.ts`). Les messages en corbeille sont anonymisés comme les
+autres. Elle apparaît dans l'historique comme une action du **système**, acteur
+« Anonymisation des données personnelles ». Les logs disent `Personal data
+anonymized` (avec le nombre de messages traités) ou `Personal data anonymization
+failed` ; un échec est rattrapé le lendemain. Idempotente : un message déjà
+anonymisé n'est plus touché.
 
 ---
 

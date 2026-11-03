@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 
 import { getCurrentEdition, getEditionByYear } from "@/lib/api";
+import { parseEditionYear } from "@/lib/edition-year";
 import { getEditionTalkPage } from "@/lib/preview";
 import { localizedField } from "@/lib/i18n-helpers";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -35,7 +36,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, year, slug } = await params;
   setRequestLocale(locale);
-  const talk = await getEditionTalkPage(Number(year), slug);
+  const yearNum = parseEditionYear(year);
+  if (yearNum === null) notFound();
+  const talk = await getEditionTalkPage(yearNum, slug);
 
   if (!talk) return { title: "Session not found" };
 
@@ -59,8 +62,9 @@ export default async function EditionTalkDetailPage({
   const t = await getTranslations("replays");
   const tc = await getTranslations("conferences");
 
-  const yearNum = Number(year);
-  if (!Number.isInteger(yearNum)) notFound();
+  // Not a year: a 404 without asking the backend, which would refuse it (#703).
+  const yearNum = parseEditionYear(year);
+  if (yearNum === null) notFound();
 
   // One page per talk of the featured edition (#633): two pages cached apart
   // drifted, one of them missing a speaker. Temporary on purpose — the

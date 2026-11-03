@@ -74,6 +74,26 @@ git diff origin/main..origin/dev -- src/backend/prisma/migrations/
 - **Rotation** : après tout doute de fuite (secret affiché en clair, poussé par
   erreur), le régénérer (`openssl rand -hex 32`) et le remplacer dans Coolify.
 
+### Dépendances vulnérables (#695)
+
+Avant le tag, sur la branche de promotion :
+
+```bash
+node scripts/check-audit-ignores.mjs        # chaque exception a sa raison
+pnpm --dir src/frontend audit --prod
+pnpm --dir src/backend audit --prod
+pnpm --dir src/frontend outdated --prod
+pnpm --dir src/backend outdated --prod
+```
+
+- Un avis `high` ou `critical` sur une dépendance de production **bloque** la release,
+  comme le job CI `Dependencies — Audit`. On monte la dépendance, ou, si l'avis n'est pas
+  atteignable en production, on l'ignore par son GHSA dans `pnpm.auditConfig.ignoreGhsas`
+  du `package.json` de l'application, raison et date sous `pnpm.auditConfig["//"]`.
+- `outdated` informe seulement : relever les dépendances en retard d'une version majeure.
+- Le résultat va dans le body de la PR de promotion (section `## Dépendances`) : avis
+  restants, exceptions et leur justification, retards d'une majeure.
+
 ---
 
 ## 1. Choisir le numéro de version et le bumper
@@ -190,36 +210,98 @@ complète. Spécifique prod :
 joue les migrations au boot ; sans dump préalable, une migration qui corrompt ou
 supprime des données est **irrécupérable**.
 
-Sur le VPS, depuis une copie du dépôt :
+Sans migration, le dump reste conseillé : il prend moins d'une minute.
+
+Sur le VPS, une fois `devfest-backup` installé (§ « Sauvegardes » ci-dessous) :
 
 ```bash
-sudo sh scripts/backup-prod-db.sh
+sudo devfest-backup prod avant-vX.Y.Z    # la version qu'on s'apprête à déployer
 ```
 
-Le script trouve le conteneur par son `BASE_URL` — jamais par le hash Coolify,
-qui change à chaque redéploiement — écrit `/root/backups/prod-<horodatage>.sql`,
-et **échoue bruyamment si le marqueur de fin du dump est absent**. Un dump
-tronqué pèse lourd et ne vaut rien ; c'est la seule vérification qui compte.
+Il trouve le conteneur de la base, vérifie que le dump est complet, le chiffre,
+le copie sur le Drive et affiche la commande de restauration. Il **s'arrête en
+erreur** sur un dump incomplet : ne pas déployer. Un code de sortie `2` veut dire
+dump local bon, copie hors VPS ratée : on peut déployer, et regarder rclone
+ensuite.
 
-Il accepte un environnement en argument (`beta`, `dev-j`), ce qui permet de le
-répéter à blanc sans toucher à la prod.
-
-À la main, si le dépôt n'est pas sur la machine :
+Pour une restauration, il faut le conteneur `db` **actuel**, dont le nom change
+au redéploiement. Bloc à coller dans le shell du VPS, en ajustant la première
+ligne :
 
 ```bash
-PROD_DB=<le conteneur db du projet dont le backend porte BASE_URL=https://devfesttoulouse.fr>
-STAMP=$(date +%Y%m%d-%H%M%S)
+ENV_URL=https://devfesttoulouse.fr   # beta : https://beta.site.devfesttoulouse.fr
 
-# La redirection doit être DANS le sudo : la sortir échoue en « Permission
-# denied » sur /root, car c'est votre shell qui écrit, pas root.
-sudo sh -c "docker exec $PROD_DB pg_dump -U devfest -d devfest \
-  --no-owner --no-privileges > /root/backups/prod-$STAMP.sql"
-
-sudo grep -c "PostgreSQL database dump complete" /root/backups/prod-$STAMP.sql
+# Le conteneur se trouve par le BASE_URL de son backend, jamais par le hash
+# Coolify, qui change à chaque redéploiement. Le db du même déploiement porte
+# le même suffixe que le backend.
+BACKEND=$(for c in $(sudo docker ps --format '{{.Names}}' | grep '^backend-'); do
+  [ "$(sudo docker exec "$c" printenv BASE_URL 2>/dev/null)" = "$ENV_URL" ] && echo "$c"
+done)
+DB=${BACKEND/backend-/db-}
+echo "Backend : ${BACKEND:-AUCUN}"
+echo "Base    : $(sudo docker ps --format '{{.Names}}' | grep -x "$DB" || echo AUCUNE)"
 ```
 
-Garder au moins le dernier dump avant chaque déploiement à migration. En cas de
-problème, il sert au rollback (voir section dédiée).
+**S'arrêter** si une ligne affiche `AUCUN`, ou si `Backend` liste plusieurs
+conteneurs.
+
+### Sauvegardes (#678)
+
+`scripts/backup-prod-db.sh`, installé sur le VPS sous `/usr/local/sbin/devfest-backup` :
+
+- **chiffre** chaque dump avec [age](https://github.com/FiloSottile/age) pour une
+  clé publique : le VPS ne garde **aucun dump en clair**, et le clair intermédiaire
+  est effacé même sur une erreur ;
+- n'écrit que des fichiers lisibles par root (`umask 077`), dans `/root/backups/` ;
+- garde les `BACKUP_KEEP` derniers dumps de chaque environnement (14 par défaut) ;
+- copie chaque dump sur le Google Drive du GDG par rclone, et y supprime ceux de
+  plus de `BACKUP_REMOTE_KEEP_DAYS` jours (90 par défaut).
+
+La clé privée age est elle-même chiffrée par une **phrase de passe**, à ranger
+dans le gestionnaire de mots de passe de l'équipe : sans elle, aucune sauvegarde
+ne se relit. Sa version chiffrée peut rester sur le VPS, pour restaurer sans rien
+y copier.
+
+**Installation, une fois** (le VPS n'a pas de copie du dépôt) :
+
+1. Copier le script depuis un poste qui a le dépôt :
+   `scp scripts/backup-prod-db.sh <vps>:/tmp/`, puis sur le VPS
+   `sudo install -m 700 /tmp/backup-prod-db.sh /usr/local/sbin/devfest-backup`.
+2. `sudo apt install age rclone`.
+3. Créer la clé, chiffrée par une phrase de passe (age la demande deux fois), et
+   en extraire la clé publique :
+
+   ```bash
+   sudo mkdir -p -m 700 /root/.config/devfest-backup
+   age-keygen | sudo sh -c 'age -p -o /root/.config/devfest-backup/identity.age'
+   ```
+
+   `age-keygen` affiche la clé publique (`Public key: age1…`) sur la sortie
+   d'erreur : la coller dans `/etc/devfest-backup.recipients`. Garder aussi une
+   copie de `identity.age` hors du VPS (gestionnaire de mots de passe) : si le
+   VPS disparaît, c'est elle qui ouvre les copies du Drive.
+4. Créer le remote rclone vers le Drive du GDG avec `sudo rclone config` (type
+   `drive`, accès `drive.file`, « auto config » : **non**). Le VPS n'a pas de
+   navigateur : rclone donne une commande `rclone authorize "drive" …` à lancer
+   sur un poste qui en a un, connecté au compte Google du GDG, puis à recoller le
+   jeton obtenu.
+5. Écrire `/etc/devfest-backup.conf` :
+
+   ```sh
+   BACKUP_RCLONE_REMOTE=gdg-drive:devfest-backups   # <remote>:<dossier>
+   # BACKUP_KEEP=14
+   # BACKUP_REMOTE_KEEP_DAYS=90
+   ```
+
+6. Essai : `sudo devfest-backup prod essai`, puis vérifier le fichier dans le
+   dossier du Drive et le relire (§ Rollback, cas 2).
+7. Une sauvegarde chaque nuit, dans `sudo crontab -e` :
+
+   ```cron
+   30 2 * * * /usr/local/sbin/devfest-backup prod >> /var/log/devfest-backup.log 2>&1
+   ```
+
+Après une modification du script dans le dépôt, refaire l'étape 1.
 
 ---
 
@@ -299,7 +381,7 @@ plus souvent après un déploiement (idéalement dans un navigateur, sur le doma
 - [ ] **Login admin** `/admin` : connexion OK, dashboard s'affiche.
 - [ ] **Billetterie** `/fr/billetterie` : les tarifs s'affichent avec le bon statut.
 - [ ] **Article** : une page d'actualité s'ouvre et affiche son contenu.
-- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté MailHog/Postfix).
+- [ ] **Contact** `/fr/contact` : le formulaire s'envoie (email reçu côté Mailpit/Postfix).
 - [ ] **Images** : logos et images d'articles se chargent (pas de 404 sur `/uploads/`).
 
 ---
@@ -525,11 +607,12 @@ Redéployer l'ancien code **ne suffit pas** : la base a déjà changé (une colo
 `DROP` est perdue). Il faut **restaurer le dump** pris à l'étape 4.
 
 ```bash
-PROD_DB=<db-prod>
-DUMP=/root/backups/prod-<STAMP>.sql     # le dump d'avant CE déploiement
+PROD_DB=<db-prod>                       # le db actuel : bloc de l'étape 4
+DUMP=/root/backups/prod-<STAMP>-avant-<VERSION>.sql.age   # le dump d'avant CE déploiement
 
-# Restauration COMPLÈTE (écrase l'état courant)
-cat "$DUMP" | sudo docker exec -i "$PROD_DB" psql -U devfest -d devfest
+# Restauration COMPLÈTE (écrase l'état courant). age demande la phrase de passe.
+sudo sh -c "age -d -i /root/.config/devfest-backup/identity.age '$DUMP' \
+  | docker exec -i '$PROD_DB' psql -U devfest -d devfest"
 
 # Puis redéployer le code de la version précédente (cas 1)
 ```

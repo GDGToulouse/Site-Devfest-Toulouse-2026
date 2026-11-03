@@ -16,7 +16,7 @@ interface TalkDetail {
   level: string | null;
   language: string | null;
   videoUrl: string | null;
-  publicationStatus: "PUBLISHED" | "DRAFT";
+  publicationStatus: "PUBLISHED" | "DRAFT" | "CANCELLED";
   isSpeakerEditable: boolean;
   startsAt: string | null;
   endsAt: string | null;

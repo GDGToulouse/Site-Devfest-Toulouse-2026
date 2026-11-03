@@ -1,7 +1,15 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
-import { revalidateSponsors } from "../../lib/revalidate.js";
+import {
+  editionPagePaths,
+  revalidatePaths,
+  revalidateSponsors,
+  sponsorHallOfFamePaths,
+  sponsorPagePaths,
+} from "../../lib/revalidate.js";
+import { tierEditScope } from "../../lib/sponsor-archive.js";
+import { getFeaturedEdition } from "../editions.js";
 import { notDeleted, notFound, softDeleteData, parkUniqueValue } from "../../lib/admin-helpers.js";
 
 // CRUD for the global sponsoring-tier catalogue (#318). A tier is shared across
@@ -111,7 +119,37 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
       if (clash) return reply.code(409).send({ error: "key already used" });
     }
 
-    const tier = await prisma.sponsorTier.update({
+    // The participations froze this tier's appearance (#375). The ones of an
+    // edition that is not over follow the edit (#693); the archive keeps what
+    // it showed, including the participations not frozen yet, which would
+    // otherwise read the new values through.
+    const appearanceSent =
+      body.nameFr !== undefined || body.nameEn !== undefined || body.color !== undefined || body.logoScale !== undefined;
+    const featured = appearanceSent ? await getFeaturedEdition() : null;
+    const scope = featured ? tierEditScope(featured.year) : null;
+    const following = scope
+      ? await prisma.editionSponsor.findMany({
+          where: { tierId: id, edition: scope.live },
+          select: { sponsor: { select: { slug: true } }, edition: { select: { year: true } } },
+        })
+      : [];
+    const appearance = {
+      tierNameFr: body.nameFr?.trim() ?? existing.nameFr,
+      tierNameEn: body.nameEn?.trim() ?? existing.nameEn,
+      tierColor: body.color ?? existing.color,
+      tierLogoScale: body.logoScale ?? existing.logoScale,
+    };
+    const freezes = scope
+      ? [
+          prisma.editionSponsor.updateMany({ where: { tierId: id, edition: scope.over, tierNameFr: null }, data: { tierNameFr: existing.nameFr } }),
+          prisma.editionSponsor.updateMany({ where: { tierId: id, edition: scope.over, tierNameEn: null }, data: { tierNameEn: existing.nameEn } }),
+          prisma.editionSponsor.updateMany({ where: { tierId: id, edition: scope.over, tierColor: null }, data: { tierColor: existing.color } }),
+          prisma.editionSponsor.updateMany({ where: { tierId: id, edition: scope.over, tierLogoScale: null }, data: { tierLogoScale: existing.logoScale } }),
+          prisma.editionSponsor.updateMany({ where: { tierId: id, edition: scope.live }, data: appearance }),
+        ]
+      : [];
+
+    const [tier] = await prisma.$transaction([prisma.sponsorTier.update({
       where: { id },
       data: {
         ...(body.key !== undefined && { key: body.key.trim() }),
@@ -129,9 +167,17 @@ export default async function adminSponsorTierRoutes(app: FastifyInstance) {
         ...(body.jobOfferQuota !== undefined && { jobOfferQuota: body.jobOfferQuota }),
         ...(body.allowsPromoIdeas !== undefined && { allowsPromoIdeas: body.allowsPromoIdeas }),
       },
-    });
+    }), ...freezes]);
 
     revalidateSponsors();
+    // Beyond the walls: each following sponsor's page, its edition's page and
+    // the hall of fame show the tier too.
+    if (following.length) {
+      revalidatePaths([...new Set([
+        ...following.flatMap((p) => [...sponsorPagePaths(p.sponsor.slug), ...editionPagePaths(p.edition.year)]),
+        ...sponsorHallOfFamePaths(),
+      ])]);
+    }
     return serialize(tier);
   });
 

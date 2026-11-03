@@ -1,5 +1,6 @@
 import type { Prisma } from "../generated/prisma/client.js";
 import { notDeleted } from "./admin-helpers.js";
+import type { SpeakerEditionStatus } from "./talk-status.js";
 
 // The back-office speaker list (#572): filters, sort and pagination answered by
 // the API, so the page only asks for what it shows. The questions are the ones
@@ -20,7 +21,7 @@ export const SPEAKER_PAGE_SIZE_MAX = 100;
 export interface SpeakerListFilters {
   search?: string;
   editionId?: number;
-  status?: "PUBLISHED" | "DRAFT";
+  status?: SpeakerEditionStatus;
   talks?: "with" | "without";
   missing: SpeakerMissing[];
   editLink?: EditLinkState;
@@ -74,7 +75,7 @@ export function editLinkState(s: { editLinkLocked: boolean; editTokenSentAt: Dat
 interface SortableRow {
   name: string;
   company: string | null;
-  status: "PUBLISHED" | "DRAFT" | null;
+  status: SpeakerEditionStatus | null;
   talkCount: number;
 }
 

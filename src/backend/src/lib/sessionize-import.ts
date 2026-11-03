@@ -526,10 +526,19 @@ export async function importSessionize(
 }
 
 // Two sessions in one room at once is a Sessionize mistake the grid would draw
-// on top of each other (#462); the import says so rather than refusing.
+// on top of each other (#462); the import says so rather than refusing. A
+// cancelled talk keeps its slot as a record (#726) but no longer holds the
+// room: the session that replaced it is not a clash.
 async function warnOnRoomClash(editionId: number, report: ImportReport): Promise<void> {
   const placed = await prisma.talk.findMany({
-    where: { editionId, deletedAt: null, roomId: { not: null }, startsAt: { not: null }, endsAt: { not: null } },
+    where: {
+      editionId,
+      deletedAt: null,
+      publicationStatus: { not: "CANCELLED" },
+      roomId: { not: null },
+      startsAt: { not: null },
+      endsAt: { not: null },
+    },
     select: { slug: true, title: true, roomId: true, roomLabel: true, startsAt: true, endsAt: true },
   });
   const clash = findRoomClash(

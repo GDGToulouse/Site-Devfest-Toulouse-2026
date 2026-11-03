@@ -11,6 +11,7 @@ import {
   getEditionSponsors,
   getEditionTalks,
 } from "@/lib/api";
+import { parseEditionYear } from "@/lib/edition-year";
 import { localizedField } from "@/lib/i18n-helpers";
 import { absoluteUrl, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import { pageMetadata } from "@/lib/page-metadata";
@@ -84,6 +85,7 @@ export function generateStaticParams() {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { locale, year } = await params;
   setRequestLocale(locale);
+  if (parseEditionYear(year) === null) notFound();
   const t = await getTranslations("bilan");
   return {
     // Absolute: the label already carries the brand and the year, so the
@@ -106,16 +108,19 @@ function formatDate(dateStr: string, locale: string): string {
 }
 
 export default async function BilanPage({ params }: PageProps) {
-  const { locale, year } = await params;
+  const { locale, year: segment } = await params;
   setRequestLocale(locale);
+  // Not a year: a 404 without asking the backend, which would refuse it (#703).
+  const year = parseEditionYear(segment);
+  if (year === null) notFound();
   const t = await getTranslations("bilan");
 
   const [edition, allEditions, speakers, talks, sponsors, featured] = await Promise.all([
-    getEditionByYear(Number(year)),
+    getEditionByYear(year),
     getEditions(),
-    getEditionSpeakers(Number(year)),
-    getEditionTalks(Number(year)),
-    getEditionSponsors(Number(year)),
+    getEditionSpeakers(year),
+    getEditionTalks(year),
+    getEditionSponsors(year),
     getCurrentEdition(),
   ]);
   if (!edition) notFound();

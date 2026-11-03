@@ -1,0 +1,106 @@
+# Version updates (#679). Security alerts are on in the repository settings
+# since 2026-10-18; this file adds the routine bumps, grouped so that a week
+# brings a handful of PRs, not one per package.
+#
+# Dependabot reads this file from the default branch only: nothing happens
+# until it reaches `main`.
+#
+# Target: `dev`, the integration branch, not `main` nor a `dev-{initial}`.
+# A PR into `dev` runs the CI and the dependency audit (#695), and its merge
+# deploys the beta, where the bump is seen working before the next release
+# carries it to prod — the beta hotfix path of the branch flow. A personal
+# branch would get no CI (pull_request only fires for `main` and `dev`) and
+# would tie the repository to one developer. After merging, bring `dev` back
+# down to the `dev-{initial}` branches as after a release.
+#
+# Security updates ignore `target-branch` and always open against `main`.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /src/frontend
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    # A release older than a week has had time to be pulled if compromised.
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      frontend-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directory: /src/backend
+    target-branch: dev
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Paris
+    cooldown:
+      default-days: 7
+    open-pull-requests-limit: 3
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      backend-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+      timezone: Europe/Paris
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "ci(deps)"
+    groups:
+      github-actions:
+        patterns: ["*"]
+
+  # The node base image of both Dockerfiles, pinned by digest.
+  - package-ecosystem: docker
+    directories:
+      - /src/frontend
+      - /src/backend
+    target-branch: dev
+    schedule:
+      interval: monthly
+      timezone: Europe/Paris
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(deps)"
+    # A new Node major is a migration, not a bump.
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+    groups:
+      docker-images:
+        patterns: ["*"]
+
+  # Mailpit, Postgres and the local Node image in the compose files.
+  - package-ecosystem: docker-compose
+    directory: /
+    target-branch: dev
+    schedule:
+      interval: monthly
+      timezone: Europe/Paris
+    open-pull-requests-limit: 2
+    commit-message:
+      prefix: "chore(deps)"
+    # A Postgres major cannot read the previous major's data volume: it takes
+    # a dump and restore, never a merged PR.
+    ignore:
+      - dependency-name: postgres
+        update-types: ["version-update:semver-major"]
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
+    groups:
+      compose-images:
+        patterns: ["*"]

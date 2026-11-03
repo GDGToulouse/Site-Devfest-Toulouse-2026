@@ -24,10 +24,10 @@ interface SpeakerDetail {
     id: number;
     year: number;
     isFeatured: boolean;
-    publicationStatus: "PUBLISHED" | "DRAFT";
+    publicationStatus: "PUBLISHED" | "DRAFT" | "WITHDRAWN";
     sponsor?: { id: number; name: string } | null;
   }[];
-  talks: { id: number; slug: string; title: string; publicationStatus: "PUBLISHED" | "DRAFT"; edition: { year: number } }[];
+  talks: { id: number; slug: string; title: string; publicationStatus: "PUBLISHED" | "DRAFT" | "CANCELLED"; edition: { year: number } }[];
 }
 
 export default function SpeakerDetails({ speakerId, onClose }: { speakerId: number | null; onClose: () => void }) {

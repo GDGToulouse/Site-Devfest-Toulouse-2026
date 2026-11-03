@@ -48,6 +48,43 @@ jobs:
             node scripts/check-version-consistency.mjs
           fi
 
+  # Blocks a high or critical advisory on a production dependency (#695): the
+  # October audit (#658) found reachable ones in Next.js, sharp and nodemailer,
+  # and nothing stopped a release from shipping them. `--prod` leaves out the
+  # build, lint and test tooling, which never runs in production.
+  #
+  # An advisory judged unreachable is ignored by its GHSA id in the app's
+  # `package.json`, with its reason and date: see scripts/check-audit-ignores.mjs,
+  # which refuses an ignored id without a reason.
+  #
+  # The audit reads the lockfile only: no install, so no third-party code runs.
+  # A new advisory can turn this job red on a PR that changed nothing: that is
+  # the point, the next release would ship it.
+  audit:
+    name: Dependencies — Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+
+      - name: Every ignored advisory has a reason
+        run: node scripts/check-audit-ignores.mjs
+
+      # One app failing must not hide the other's report.
+      - name: Audit frontend
+        if: ${{ !cancelled() }}
+        working-directory: src/frontend
+        run: pnpm audit --prod --audit-level=high
+      - name: Audit backend
+        if: ${{ !cancelled() }}
+        working-directory: src/backend
+        run: pnpm audit --prod --audit-level=high
+
   frontend:
     name: Frontend — Lint, Test & Build
     runs-on: ubuntu-latest

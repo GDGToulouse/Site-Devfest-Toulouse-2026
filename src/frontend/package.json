@@ -1,6 +1,6 @@
 {
   "name": "devfest-toulouse-frontend",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -37,7 +37,11 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@next/swc-linux-x64-musl"
-    ]
+    ],
+    "auditConfig": {
+      "//": {},
+      "ignoreGhsas": []
+    }
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

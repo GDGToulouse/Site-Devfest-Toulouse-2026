@@ -3,6 +3,8 @@ import type { Prisma } from "../generated/prisma/client.js";
 
 import { prisma } from "../lib/prisma.js";
 import { notDeleted, visibleCategory } from "../lib/admin-helpers.js";
+import { positiveInt, YEAR_DIGITS } from "../lib/public-params.js";
+import { TALK_FORMATS } from "../lib/talk-list.js";
 
 /**
  * Hall of replays (#102) — every filmed talk, all editions at once.
@@ -22,14 +24,22 @@ export default async function replayRoutes(app: FastifyInstance) {
   // GET /api/replays?q=&year=&format=&category=
   app.get<{
     Querystring: { q?: string; year?: string; format?: string; category?: string; limit?: string };
-  }>("/replays", async (request, reply) => {
+  }>("/replays", {
+    // An empty year or format is no filter, as before; anything else must be a
+    // year, or a talk format (#752: Prisma refused an unknown one).
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          year: { type: "string", pattern: `^(${YEAR_DIGITS})?$` },
+          format: { type: "string", enum: ["", ...TALK_FORMATS] },
+        },
+      },
+    },
+  }, async (request) => {
     const { q, year, format, category } = request.query;
 
-    if (year && isNaN(Number(year))) {
-      return reply.status(400).send({ error: "Invalid year" });
-    }
-
-    const limit = Math.min(Number(request.query.limit) || MAX_LIMIT, MAX_LIMIT);
+    const limit = Math.min(positiveInt(request.query.limit, MAX_LIMIT), MAX_LIMIT);
 
     // A replay is a published, non-trashed talk that actually has a video.
     // `not: null` alone would keep rows storing an empty string.

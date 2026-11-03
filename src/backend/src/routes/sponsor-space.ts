@@ -4,7 +4,7 @@ import { prisma } from "../lib/prisma.js";
 import { getAuthContext } from "../lib/auth-context.js";
 import { notDeleted, softDeleteData } from "../lib/admin-helpers.js";
 import { requireSponsorAccess, type SponsorAccessRole } from "../lib/sponsor-guard.js";
-import { generateInvitationToken } from "../lib/edit-token.js";
+import { generateInvitationToken, hashLinkToken } from "../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../lib/sponsor-invitation.js";
 import { teamInviteRateLimit } from "../lib/rate-limit-options.js";
 import { sendSponsorInvitationEmail } from "../lib/edit-link-email.js";
@@ -21,6 +21,7 @@ import {
 import { sniffMime } from "../lib/file-sniff.js";
 import { storeImageBuffer, UnsafeSvgError } from "../lib/image-store.js";
 import { originalNamesByUrl, rememberOriginalName } from "../lib/file-metadata.js";
+import { importImageField, sendImportRefusal, UrlImportError } from "../lib/url-import.js";
 import { revalidateJobOfferPages } from "../lib/revalidate.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -50,6 +51,8 @@ const UPLOAD_MIMES = new Set([
   "image/svg+xml",
   "application/pdf",
 ]);
+// The logo is shown on public pages and share cards: an image, never the PDF.
+const LOGO_MIMES = new Set([...UPLOAD_MIMES].filter((mime) => mime !== "application/pdf"));
 
 // What a sponsor may write about itself. `name`, `slug` and the tier are the
 // organisers' business: renaming the company here would break its slug and its
@@ -307,7 +310,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
 
     const sponsor = await prisma.sponsor.findFirst({
       where: { id: sponsorId, ...notDeleted },
-      select: { id: true, slug: true },
+      select: { id: true, slug: true, logoUrl: true },
     });
     if (!sponsor) return reply.code(404).send({ error: "Sponsor not found" });
 
@@ -325,8 +328,25 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
       return reply.code(422).send({ error: "no_current_participation" });
     }
 
+    // A logo given by its address is imported, and its /uploads/ path saved
+    // (#687): the share card only embeds local images, and a third-party host
+    // can change or drop the file. Same limits as the upload below.
+    if (body.logoUrl !== undefined) {
+      try {
+        body.logoUrl = await importImageField(body.logoUrl, sponsor.logoUrl, {
+          maxBytes: UPLOAD_MAX_SIZE,
+          allowedMimes: LOGO_MIMES,
+          unsupportedMessage: "Ce fichier n'est pas une image JPEG, PNG, WebP, GIF ou SVG.",
+          log: request.log,
+        });
+      } catch (err) {
+        if (err instanceof UrlImportError) return sendImportRefusal(reply, err, "logoUrl");
+        throw err;
+      }
+    }
+
     await applySponsorEdit({ sponsorId, sponsorSlug: sponsor.slug, participation, body });
-    return { saved: true };
+    return { saved: true, ...(body.logoUrl !== undefined && { logoUrl: body.logoUrl || null }) };
   });
 
   // GET /api/sponsor-space/:sponsorId/team — who has access, and as what.
@@ -433,7 +453,7 @@ export default async function sponsorSpaceRoutes(app: FastifyInstance) {
           email,
           name: request.body.name?.trim() || null,
           accessRole: promoted ?? accessRole,
-          invitationToken: token,
+          invitationToken: hashLinkToken(token),
           invitationSentAt: new Date(),
         },
       });

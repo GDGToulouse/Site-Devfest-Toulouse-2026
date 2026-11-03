@@ -66,6 +66,15 @@ describe("scheduled trash purge (#664)", () => {
     expect(log.info).toHaveBeenCalledWith(expect.objectContaining({ purged: 4 }), "Trash purged");
   });
 
+  // #666, registered next to the purges.
+  it("should schedule the personal data anonymisation once a day, on Paris time", () => {
+    startScheduledTasks(log as never);
+    const task = registered.tasks.find((t) => t.options.name === "personal-data-anonymization");
+
+    expect(task?.expression).toBe("30 3 * * *");
+    expect(task?.options.timezone).toBe("Europe/Paris");
+  });
+
   it("should log a failing purge instead of taking the server down", async () => {
     purge.failWith = new Error("database is gone");
 

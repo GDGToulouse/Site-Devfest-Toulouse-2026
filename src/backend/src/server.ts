@@ -34,12 +34,14 @@ import replayRoutes from "./routes/replays.js";
 import editRoutes from "./routes/edit.js";
 import sponsorInvitationRoutes from "./routes/sponsor-invitation.js";
 import sponsorSpaceRoutes from "./routes/sponsor-space.js";
+import sponsorSpaceGuestRoutes from "./routes/sponsor-space-guests.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import myAgentsRoutes from "./routes/me/agents.js";
 import adminRoutes from "./routes/admin/index.js";
 import { serverOptions } from "./lib/server-options.js";
-import { rateLimitOptions, UPLOADS_PREFIX } from "./lib/rate-limit-options.js";
+import { rateLimitOptions } from "./lib/rate-limit-options.js";
+import { uploadsStaticOptions } from "./lib/upload-headers.js";
 
 /**
  * The whole HTTP application, routes included, without listening. Shared by the
@@ -203,29 +205,10 @@ export async function buildServer() {
   await app.register(rateLimit, rateLimitOptions);
 
   await app.register(multipart);
-  await app.register(fastifyStatic, {
-    root: "/app/uploads",
-    prefix: UPLOADS_PREFIX,
-    decorateReply: false,
-    // Uploaded files are content-addressed by name (`${Date.now()}-${random}.ext`,
-    // see routes/admin/files.ts): a given URL never changes content, so it can be
-    // cached hard and forever. Without this, a 3 MB hero image was re-downloaded
-    // on every visit (#197).
-    maxAge: "365d",
-    immutable: true,
-    // Defence in depth for SVG (#346). Uploads are sanitized before storage, but
-    // a file predating that — or a case the allowlist misses — must still be
-    // inert when opened directly: served same-origin with its native
-    // content-type, an SVG runs script in our origin. `sandbox` drops it into an
-    // opaque origin with scripts disabled; `nosniff` stops a mislabelled file
-    // from being reinterpreted as something executable.
-    setHeaders: (reply, filePath) => {
-      reply.header("X-Content-Type-Options", "nosniff");
-      if (filePath.toLowerCase().endsWith(".svg")) {
-        reply.header("Content-Security-Policy", "sandbox; default-src 'none'; style-src 'unsafe-inline'");
-      }
-    },
-  });
+  // Allowlisted extensions, immutable caching, and per-type defence-in-depth
+  // headers (SVG sandbox #346, documents as sandboxed downloads #671): see
+  // upload-headers.ts.
+  await app.register(fastifyStatic, uploadsStaticOptions("/app/uploads"));
 
   // OpenAPI / Swagger — must be registered before routes so it can capture their schemas.
   // Exposes /api/docs (UI) and /api/docs/json (raw spec).
@@ -321,6 +304,7 @@ export async function buildServer() {
   await app.register(editRoutes, { prefix: "/api" });
   await app.register(sponsorInvitationRoutes, { prefix: "/api" });
   await app.register(sponsorSpaceRoutes, { prefix: "/api" });
+  await app.register(sponsorSpaceGuestRoutes, { prefix: "/api" });
 
   // Per-user routes (any authenticated back-office user — own resources only)
   await app.register(myApiKeysRoutes, { prefix: "/api/me" });

@@ -50,7 +50,7 @@ export default function PublicTab({
 
     setIsSaving(true);
     setMessage(null);
-    const { status, error, code, message: detail } = await saveSponsorProfile(profile.id, {
+    const { data, status, error, code, message: detail } = await saveSponsorProfile(profile.id, {
       descriptionFr,
       descriptionEn,
       websiteUrl,
@@ -60,6 +60,8 @@ export default function PublicTab({
     setIsSaving(false);
 
     if (status === 200) {
+      // A logo given by its address comes back as its imported /uploads/ copy (#687).
+      if (data?.logoUrl !== undefined) setLogoUrl(data.logoUrl ?? "");
       setMessage({ isOk: true, text: "Modifications enregistrées." });
       onSaved();
       return;
@@ -68,6 +70,10 @@ export default function PublicTab({
       isOk: false,
       text:
         validationErrorMessage(code, detail) ??
+        // The backend names the cause in the sponsor's words (#687).
+        (error === "image_import_failed" && detail
+          ? `Le logo n'a pas été importé : ${detail.charAt(0).toLowerCase()}${detail.slice(1)}`
+          : null) ??
         (error === "unsafe_url"
           ? "Une des adresses saisies n'est pas valide. Utilisez une URL commençant par http:// ou https://."
           : // The logo is stored per edition (#375), so it has nowhere to go when

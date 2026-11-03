@@ -19,8 +19,17 @@ interface ImportTabProps {
 
 type Source = "url" | "json";
 
+// A cancelled talk or a withdrawn speaker (#726) is a withdrawal already dealt
+// with, which the list has to tell apart from a forgotten draft.
+const STATUS_LABELS: Record<string, string> = {
+  PUBLISHED: "publié",
+  DRAFT: "brouillon",
+  CANCELLED: "annulé",
+  WITHDRAWN: "retiré",
+};
+
 function statusLabel(status: string): string {
-  return status === "PUBLISHED" ? "publié" : "brouillon";
+  return STATUS_LABELS[status] ?? status;
 }
 
 export default function ImportTab({ editionId }: ImportTabProps) {
@@ -277,8 +286,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
             </h3>
             <p className="text-sm text-gris mt-1">
               Présents sur le site pour cette édition, mais pas dans Sessionize&nbsp;: désistement,
-              session annulée, ou fiche créée à la main. Rien n&apos;a été modifié&nbsp;; dépubliez ou
-              mettez à la corbeille ce qui doit l&apos;être.
+              session annulée, ou fiche créée à la main. Rien n&apos;a été modifié&nbsp;: marquez annulé
+              ou retiré ce qui n&apos;aura pas lieu, ou mettez à la corbeille ce qui doit l&apos;être.
             </p>
           </div>
           {report.absent.talks.length > 0 && (
@@ -292,7 +301,9 @@ export default function ImportTab({ editionId }: ImportTabProps) {
                     </Link>{" "}
                     <span className="text-gris">
                       ({statusLabel(talk.publicationStatus)}
+                      {/* A cancelled talk no longer holds its slot (#726). */}
                       {talk.startsAt &&
+                        talk.publicationStatus !== "CANCELLED" &&
                         `, créneau à réaffecter : ${formatEventTime(talk.startsAt)}${talk.roomLabel ? `, ${talk.roomLabel}` : ""}`}
                       )
                     </span>

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useId } from "react";
 import { adminFetch } from "@/lib/admin-api";
 import { pastedFile } from "@/lib/clipboard-file";
 import { useDialog } from "@/lib/use-dialog";
+import FileSearch, { EMPTY_FILE_SEARCH, fileSearchParams, type FileSearchValue } from "./FileSearch";
 
 // Stripped-down sibling of ImagePickerDialog used for documents (today:
 // the sponsor brochure PDF). No preview, no alt text — a PDF doesn't
@@ -72,12 +73,17 @@ export default function FilePickerDialog({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState<FileSearchValue>(EMPTY_FILE_SEARCH);
+  // Only the latest list request lands: an earlier search answering late would
+  // show results for words no longer in the field (#768).
+  const latestRequest = useRef(0);
 
   const acceptAttr = [...mimeTypes, ...extensions].join(",");
 
   useEffect(() => {
     if (open) {
-      loadFiles();
+      setSearch(EMPTY_FILE_SEARCH);
+      loadFiles(true, EMPTY_FILE_SEARCH);
       setSelected(null);
       setError(null);
     }
@@ -86,14 +92,19 @@ export default function FilePickerDialog({
   // A page at a time, newest first, of the extensions this picker takes
   // (#416): it used to load the whole library and filter it here. `reset`
   // reloads from the first page, where a fresh upload lands.
-  async function loadFiles(reset = true) {
+  async function loadFiles(reset = true, searchValue = search) {
     const nextPage = reset ? 1 : Math.floor(files.length / PICKER_PAGE_SIZE) + 1;
     if (reset) setIsLoading(true);
     else setIsLoadingMore(true);
-    const ext = extensions.map((e) => e.toLowerCase()).join(",");
-    const { data } = await adminFetch<{ total: number; items: FileInfo[] }>(
-      `/files?ext=${encodeURIComponent(ext)}&page=${nextPage}&limit=${PICKER_PAGE_SIZE}`,
-    );
+    const request = ++latestRequest.current;
+    const query = new URLSearchParams({
+      ext: extensions.map((e) => e.toLowerCase()).join(","),
+      page: String(nextPage),
+      limit: String(PICKER_PAGE_SIZE),
+      ...fileSearchParams(searchValue),
+    });
+    const { data } = await adminFetch<{ total: number; items: FileInfo[] }>(`/files?${query}`);
+    if (request !== latestRequest.current) return;
     if (data) {
       setFiles((prev) => (reset ? data.items : [...prev, ...data.items]));
       setTotal(data.total);
@@ -120,7 +131,9 @@ export default function FilePickerDialog({
       return;
     }
 
-    await loadFiles();
+    // A search could hide the new file: show it where uploads land.
+    setSearch(EMPTY_FILE_SEARCH);
+    await loadFiles(true, EMPTY_FILE_SEARCH);
     setSelected(data.url);
     setTab("library");
     setIsUploading(false);
@@ -213,8 +226,21 @@ export default function FilePickerDialog({
         <div className="flex-1 overflow-y-auto p-4">
           {tab === "library" && (
             <>
+              <div className="mb-3">
+                <FileSearch
+                  value={search}
+                  onChange={(next) => {
+                    setSearch(next);
+                    void loadFiles(true, next);
+                  }}
+                />
+              </div>
               {isLoading ? (
                 <p className="text-gris text-center py-8">Chargement…</p>
+              ) : files.length === 0 && search.text ? (
+                <p role="status" className="text-gris text-center py-8">
+                  Aucun fichier ne correspond à « {search.text} ».
+                </p>
               ) : files.length === 0 ? (
                 <p className="text-gris text-center py-8">Aucun fichier. Uploadez-en un !</p>
               ) : (

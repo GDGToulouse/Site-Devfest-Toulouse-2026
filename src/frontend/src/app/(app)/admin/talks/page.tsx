@@ -32,6 +32,14 @@ const FORMAT_LABELS: Record<TalkFormat, string> = {
   WORKSHOP: "Workshop",
 };
 
+// A cancelled talk (#726) reads apart from the drafts, so nobody finishes and
+// republishes it thinking it is work in progress.
+const STATUS_BADGES: Record<Talk["publicationStatus"], { label: string; variant: "green" | "gray" | "red" }> = {
+  PUBLISHED: { label: "Publié", variant: "green" },
+  DRAFT: { label: "Brouillon", variant: "gray" },
+  CANCELLED: { label: "Annulé", variant: "red" },
+};
+
 const PAGE_SIZE = 50;
 // Long enough not to query on every key, short enough to feel immediate.
 const SEARCH_DELAY_MS = 300;
@@ -70,6 +78,7 @@ export default function TalksDataPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [deleteTarget, setDeleteTarget] = useState<TalkRow | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     adminFetch<{ id: number; year: number }[]>("/editions").then(({ data }) => {
@@ -141,11 +150,20 @@ export default function TalksDataPage() {
   }, [searchInput, params.search, update]);
 
   async function applyBulk(value: "DRAFT" | "PUBLISHED") {
-    const { status } = await adminFetch("/talks/bulk", {
+    const { data, status } = await adminFetch<{ count: number }>("/talks/bulk", {
       method: "POST",
       body: JSON.stringify({ ids: [...selectedIds], action: "setStatus", value }),
     });
     if (status !== 200) return;
+    // The API leaves cancelled talks alone (#726): say so, or the click looks lost.
+    const skipped = selectedIds.size - (data?.count ?? selectedIds.size);
+    setNotice(
+      skipped > 0
+        ? skipped > 1
+          ? `${skipped} conférences annulées laissées telles quelles : une conférence annulée se rétablit depuis sa fiche.`
+          : "1 conférence annulée laissée telle quelle : une conférence annulée se rétablit depuis sa fiche."
+        : null,
+    );
     setSelectedIds(new Set());
     await load();
   }
@@ -221,10 +239,7 @@ export default function TalksDataPage() {
       label: "Statut",
       sortable: true,
       render: (t: TalkRow) => (
-        <StatusBadge
-          status={t.publicationStatus === "PUBLISHED" ? "Publié" : "Brouillon"}
-          variant={t.publicationStatus === "PUBLISHED" ? "green" : "gray"}
-        />
+        <StatusBadge status={STATUS_BADGES[t.publicationStatus].label} variant={STATUS_BADGES[t.publicationStatus].variant} />
       ),
     },
     { key: "edition", label: "Édition", sortable: true, render: (t: TalkRow) => t.edition?.year ?? "—" },
@@ -278,6 +293,7 @@ export default function TalksDataPage() {
           <option value="">Tous les statuts</option>
           <option value="PUBLISHED">Publié</option>
           <option value="DRAFT">Brouillon</option>
+          <option value="CANCELLED">Annulé</option>
         </select>
         <select
           aria-label="Catégorie"
@@ -363,6 +379,12 @@ export default function TalksDataPage() {
           onSetStatus={applyBulk}
           onClear={() => setSelectedIds(new Set())}
         />
+      )}
+
+      {notice && (
+        <div role="status" className="mb-4 rounded-lg bg-jaune/10 px-4 py-3 text-sm text-noir">
+          {notice}
+        </div>
       )}
 
       {error && (

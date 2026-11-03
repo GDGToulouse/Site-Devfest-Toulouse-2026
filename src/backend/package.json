@@ -1,6 +1,6 @@
 {
   "name": "devfest-toulouse-backend",
-  "version": "1.12.1",
+  "version": "1.13.0",
   "description": "DevFest Toulouse 2026 — REST API backend",
   "type": "module",
   "scripts": {
@@ -61,6 +61,10 @@
       "deepmerge-ts": "^8.0.0",
       "mysql2": "^3.23.1",
       "@fastify/busboy": "^3.2.2"
+    },
+    "auditConfig": {
+      "//": {},
+      "ignoreGhsas": []
     }
   },
   "devDependencies": {

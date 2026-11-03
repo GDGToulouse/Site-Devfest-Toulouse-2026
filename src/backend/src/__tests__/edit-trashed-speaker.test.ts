@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
+import { hashLinkToken } from "../lib/edit-token.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 
 // #523 — a speaker or a session sent to the trash is gone for the site; the
@@ -23,7 +24,7 @@ describe("Modification link of trashed content (#523)", () => {
       data: {
         name: "Trashed Link Speaker",
         slug: "trashed-link-speaker",
-        editToken: TOKEN,
+        editToken: hashLinkToken(TOKEN),
         editTokenSentAt: new Date(),
         editLinkLocked: false,
       },

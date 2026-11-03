@@ -141,6 +141,7 @@ services:
       - SMTP_FROM=${SMTP_FROM:-contact@devfesttoulouse.fr}
       - BILLETWEB_USER=${BILLETWEB_USER:-}
       - BILLETWEB_KEY=${BILLETWEB_KEY:-}
+      - SPONSOR_GUESTS_ENABLED=${SPONSOR_GUESTS_ENABLED:-}
     # `start_period` is generous because the entrypoint runs `prisma migrate
     # deploy` and the seed before Fastify ever listens (see scripts/db-boot.sh).
     # Overshooting costs nothing — the window only suppresses early failures —

@@ -1,4 +1,3 @@
-import crypto from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client.js";
 import { hasTrashedAccount } from "../src/lib/trashed-account.js";
@@ -117,24 +116,17 @@ export async function seedBase({ skipAccountEmails = [] }: { skipAccountEmails?:
     }
     const existing = await prisma.user.findUnique({ where: { email } });
     if (!existing) {
-      const password = crypto.randomUUID().slice(0, 16);
-      try {
-        await auth.api.signUpEmail({
-          body: { name: email.split("@")[0], email, password },
-        });
-        await prisma.user.update({
-          where: { email },
-          data: { role: "ADMIN", emailVerified: true },
-        });
-        // The password stays out of the logs, which Coolify keeps and shows:
-        // the account signs in by magic link, OAuth or 'Mot de passe oublié'.
-        console.log(`Admin account created: ${email} — use 'Mot de passe oublié' or a magic link`);
-      } catch (err) {
-        await prisma.user.create({
-          data: { email, name: email.split("@")[0], role: "ADMIN" },
-        });
-        console.log(`Admin account created (no password): ${email} — use 'Mot de passe oublié'`);
-      }
+      // Written straight to the database, verified and without a password.
+      // better-auth's sign-up no longer creates or signs in anyone it answers
+      // (#673), and the random password it used to get here signed no one in
+      // anyway. The seed itself is what vouches for an ADMIN_EMAILS address;
+      // its owner gets in by magic link, OAuth or 'Mot de passe oublié'.
+      // Verified matters: a password set by a reset only signs in a verified
+      // account (requireEmailVerification).
+      await prisma.user.create({
+        data: { email, name: email.split("@")[0], role: "ADMIN", emailVerified: true },
+      });
+      console.log(`Admin account created: ${email} — use a magic link, OAuth or 'Mot de passe oublié'`);
     } else {
       console.log(`Admin account exists: ${email} (${existing.role})`);
     }

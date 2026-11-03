@@ -1,6 +1,8 @@
+import { notFound } from "next/navigation";
 import { ImageResponse } from "next/og";
 
 import { getEditionByYear } from "@/lib/api";
+import { parseEditionYear } from "@/lib/edition-year";
 
 export const alt = "DevFest Toulouse";
 export const size = { width: 1200, height: 630 };
@@ -12,7 +14,8 @@ export default async function OpengraphImage({
   params: Promise<{ locale: string; year: string }>;
 }) {
   const { locale, year: yearStr } = await params;
-  const year = Number(yearStr);
+  const year = parseEditionYear(yearStr);
+  if (year === null) notFound();
   const edition = await getEditionByYear(year);
 
   const figures = edition?.keyFigures?.slice(0, 3) ?? [];

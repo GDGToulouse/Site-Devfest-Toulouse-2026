@@ -277,15 +277,15 @@ moyen de révoquer un lien déjà envoyé.
   - Techniquement : un `databaseHook` (`user.create.before`) bloque toute création de compte dont l'email n'est pas dans `ADMIN_EMAILS`. Les providers OAuth ont `disableImplicitSignUp: true` pour empêcher la création implicite de compte.
   - Si un utilisateur tente de se connecter via Google ou GitHub avec un email non autorisé, Better Auth refuse la connexion et l'utilisateur voit un message d'erreur.
 - **Workflow de première connexion (compte local)** :
-  1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS` (Coolify) et redéploie : au démarrage, `prisma/seed.ts` crée le compte avec un mot de passe aléatoire qui n'est **jamais** affiché ni journalisé (#658). Il n'y a donc pas de mot de passe initial à transmettre.
+  1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS` (Coolify) et redéploie : au démarrage, `prisma/seed.ts` crée le compte, adresse vérifiée et **sans** mot de passe (#658, #674). Il n'y a donc pas de mot de passe initial à transmettre. S'inscrire soi-même par mot de passe avec une adresse de `ADMIN_EMAILS` ne crée rien : rien ne prouverait que la boîte appartient à celui qui s'inscrit.
   2. L'utilisateur accède à la page de login (`/admin`) et clique « Mot de passe oublié ? » (ou se connecte par lien magique).
-  3. Il reçoit un email avec un lien de réinitialisation (via SMTP / MailHog en dev).
+  3. Il reçoit un email avec un lien de réinitialisation (via SMTP / Mailpit en dev).
   4. Il définit son mot de passe (minimum 10 caractères) via ce lien.
   5. Il peut ensuite se connecter avec email + mot de passe.
 - **Workflow de première connexion (OAuth)** :
   1. L'admin ajoute l'email de l'utilisateur dans `ADMIN_EMAILS`.
   2. L'utilisateur accède à la page de login et clique « Google » ou « GitHub ».
-  3. Better Auth crée le compte automatiquement (l'email est autorisé) et établit la session.
+  3. Better Auth crée le compte automatiquement, avec le rôle `ADMIN`, si l'email est autorisé **et** vérifié par le fournisseur (#674), puis établit la session.
 - **Retirer un administrateur** : mettre son compte à la corbeille **et** retirer son adresse de `ADMIN_EMAILS`. Un compte à la corbeille n'est pas recréé au redémarrage, mais tant que l'adresse reste listée, une nouvelle inscription avec elle reste autorisée.
 - **Réconciliation de comptes** : un même compte est lié à l'adresse email. Un utilisateur peut se connecter indifféremment via son compte local, Google ou GitHub s'ils partagent la même adresse email. Better Auth fusionne les providers sur un compte unique.
 - **Compte local — sécurité** :

@@ -4,6 +4,7 @@ import {
   isEditingFrozen,
   isEditTokenExpired,
   EDIT_TOKEN_TTL_DAYS,
+  hashLinkToken,
 } from "./edit-token.js";
 
 const HOUR = 60 * 60 * 1000;
@@ -72,5 +73,20 @@ describe("isEditTokenExpired", () => {
   // would break links already in speakers' mailboxes.
   it("should not expire a token that has no send date", () => {
     expect(isEditTokenExpired(null, new Date())).toBe(false);
+  });
+});
+
+describe("hashLinkToken (#672)", () => {
+  it("should return the SHA-256 of the token in lowercase hex", () => {
+    // Known vector: the migration hashes the links already sent with Postgres'
+    // sha256(), and both sides must agree byte for byte.
+    expect(hashLinkToken("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
+  });
+
+  it("should never return the token itself", () => {
+    const token = generateEditToken();
+
+    expect(hashLinkToken(token)).not.toBe(token);
+    expect(hashLinkToken(token)).toMatch(/^[0-9a-f]{64}$/);
   });
 });
