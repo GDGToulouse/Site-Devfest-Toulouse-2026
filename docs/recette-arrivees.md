@@ -76,6 +76,7 @@ l'écran de suivi. C'est à vérifier aussi.
 | Poste **Aide** : billets sans badge, impression d'une étiquette | `/arrivees` → Aide | #713 |
 | Écran de suivi pour grand écran (admins et éditeurs) | `/arrivees/suivi` | #644 |
 | Scans faits pendant une coupure réseau, renvoyés au retour | `/arrivees` → Scan | #645 |
+| Une adresse par poste, QR code par poste sans compte, fenêtre de validité, régénération, pages A4 | Admin → Arrivées → QR codes des postes ; `/arrivees/poste/<jeton>` | #775 |
 | Suppression des participants 18 mois après l'événement | automatique, chaque nuit | RG-ARR-66 |
 
 ## Parcours de test
@@ -158,8 +159,30 @@ n'est pas faite.
 ### 5. Les écrans du jour J
 
 Ouvrez `/arrivees` sur un ou plusieurs téléphones ou ordinateurs, avec votre compte admin ou un
-compte bénévole créé plus haut. Chaque appareil choisit son poste une fois et s'en souvient
-(« Changer de poste » pour revenir au choix).
+compte bénévole créé plus haut, et choisissez un poste. Chaque poste a son adresse
+(`/arrivees/scan`, `/arrivees/guichet/2`, `/arrivees/guichet/2/presentoir/1`, `/arrivees/aide`) :
+« Changer de poste » revient au choix.
+
+**Sans compte : les QR codes des postes** (#775). Admin → Arrivées → **QR codes des postes** :
+
+1. Réglez la **fenêtre** si besoin. Par défaut : de minuit la veille de l'événement à la fin de
+   son dernier jour. Pour tester maintenant, ouvrez-la d'hier à demain, puis **Enregistrer la
+   fenêtre**.
+2. **Ouvrir ce poste** (ou scannez le QR code affiché) dans une **fenêtre de navigation privée** ou
+   sur un téléphone : le poste s'ouvre connecté, sans compte. Il n'offre ni « Changer de poste »,
+   ni écran de suivi, ni déconnexion.
+3. Dans cette même fenêtre, essayez `/admin`, `/arrivees/suivi` et l'adresse d'un autre poste :
+   tout est refusé ou ramené au poste.
+4. Hors fenêtre (fermez-la : fermeture dans le passé), le même QR code affiche un message clair.
+5. **Régénérer** (taper « REGENERER ») : les QR codes déjà ouverts, imprimés ou affichés cessent de
+   marcher, et l'écran déjà ouvert l'annonce en une minute. Les nouveaux fonctionnent.
+6. **Imprimer les pages A4** : une page par poste (Scan, Aide, chaque guichet et chacun de ses
+   présentoirs), le nom en très grand, le QR code, deux lignes. Choisissez « Enregistrer au format
+   PDF » pour la relire sans imprimante.
+
+À vérifier : un badge déplacé depuis un poste est tracé « Poste Guichet N » dans son historique ;
+le poste d'un guichet ne déplace pas les badges d'un autre guichet. Le compte nominatif des
+bénévoles reste utilisable à côté.
 
 **Scan**
 - **Scanner un billet** ouvre la caméra. Pour avoir des codes à lire : affichez le PDF des

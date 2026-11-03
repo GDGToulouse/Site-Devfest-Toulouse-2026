@@ -49,8 +49,12 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même",
     anonymous: [401],
   },
+  "POST /api/arrivals/station-session": {
+    why: "QR code d'un poste (#775) : le jeton signé du lien est l'accès, vérifié contre la génération et la fenêtre de l'édition ; pose le cookie de poste",
+    anonymous: [400],
+  },
   "GET /api/arrivals/:editionId/stream": {
-    why: "flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals)",
+    why: "flux temps réel de l'accueil : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition (canAccessArrivals)",
     anonymous: [401],
   },
   "GET /api/arrivals/:editionId/tracking": {
@@ -62,27 +66,27 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     anonymous: [400, 401],
   },
   "POST /api/arrivals/:editionId/scan": {
-    why: "scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition",
+    why: "scan d'un billet à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
   "POST /api/arrivals/:editionId/offline-scans": {
-    why: "scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition",
+    why: "scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
   "GET /api/arrivals/:editionId/search": {
-    why: "recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition",
+    why: "recherche par nom à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
   "POST /api/arrivals/:editionId/attendees/:attendeeId/label": {
-    why: "impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition",
+    why: "impression d'une étiquette au guichet d'aide, tracée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [401],
   },
   "POST /api/arrivals/:editionId/attendees/:attendeeId/label/delivered": {
-    why: "étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition",
+    why: "étiquette remise, le participant passe en Distribué : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [401],
   },
   "GET /api/arrivals/:editionId/offline-table": {
-    why: "table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition",
+    why: "table du mode dégradé (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [401],
   },
   "POST /api/arrivals-invitation/:token/accept": {

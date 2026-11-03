@@ -546,6 +546,57 @@ body {
     display: block !important;
   }
 
+  /* The station sheets (#775) print from the admin: the app steps aside, only
+     the portal that holds them stays on the body. */
+  body.print-stations > *:not(.station-sheets) {
+    display: none !important;
+  }
+  .station-sheet {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 210mm;
+    height: 296mm;
+    padding: 14mm;
+    text-align: center;
+    break-after: page;
+  }
+  .station-sheet:last-child {
+    break-after: auto;
+  }
+  .station-sheet-event {
+    font-size: 16pt;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .station-sheet-name {
+    margin: 6mm 0 0;
+    font-size: 96pt;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .station-sheet-sub {
+    margin: 3mm 0 0;
+    font-size: 48pt;
+    font-weight: 700;
+    line-height: 1;
+  }
+  .station-sheet-qr {
+    width: 120mm;
+    height: 120mm;
+    margin: 10mm 0;
+  }
+  .station-sheet-line {
+    font-size: 18pt;
+    font-weight: 600;
+  }
+  .station-sheet-small {
+    margin-top: 3mm;
+    font-size: 11pt;
+  }
+
   .print-only * {
     color: #000 !important;
   }

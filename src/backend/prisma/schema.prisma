@@ -168,6 +168,13 @@ model Edition {
   // Set when the badges go to print (RG-ARR-18): from then on no number moves,
   // and later imports add attendees without one.
   badgesFrozenAt          DateTime?
+  // Station links without an account (RG-ARR-70 to RG-ARR-76, #775). The
+  // window in which a station's QR code opens it: null = the default, the day
+  // before the event through its last day, Paris time. `Generation` is what the
+  // links and their sessions are derived from: raising it invalidates them all.
+  stationAccessFrom       DateTime?
+  stationAccessUntil      DateTime?
+  stationAccessGeneration Int               @default(1)
   // Billetweb's id of the hidden ticket field "Numéro de badge" (RG-ARR-20).
   // Written by id, read back by name: found on the event's form when unset.
   billetwebBadgeFieldId   String?

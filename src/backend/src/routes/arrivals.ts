@@ -4,6 +4,8 @@ import { APIError } from "better-auth/api";
 import { prisma } from "../lib/prisma.js";
 import { auth } from "../lib/auth.js";
 import { getAuthContext } from "../lib/auth-context.js";
+import { authorizeArrivals, resolveArrivalsPrincipal } from "../lib/arrivals-principal.js";
+import { checkStationToken, isBadgeInScope, stationCookie, stationPath } from "../lib/arrivals-station.js";
 import { maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
 import { canAccessArrivals, findCurrentEdition, findPendingArrivalsInvitation } from "../lib/arrivals-access.js";
 import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
@@ -71,11 +73,6 @@ const attendeeParamsSchema = {
   },
 } as const;
 
-const actorOf = (user: { id: string; name: string | null; email: string }) => ({
-  id: user.id,
-  label: user.name || user.email,
-});
-
 const LABEL_REFUSALS: Record<LabelRefusal, string> = {
   cancelled: "Ce billet est annulé : pas d'étiquette.",
   dedicated: "Ce billet passe par l'accueil dédié, qui a ses propres badges.",
@@ -93,20 +90,65 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
   // caller may, and whether they may take a badge back (RG-ARR-46): the
   // screen offers it, the move route decides. 401 tells the page to sign in.
   app.get("/arrivals/current", { config }, async (request, reply) => {
-    const ctx = await getAuthContext(request);
-    if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-    const canStepBack = ctx.user.role === "ADMIN";
+    const access = await resolveArrivalsPrincipal(request);
+    if (!access.ok) return reply.code(access.status).send(access.body);
+    const { principal } = access;
+
+    // A station is locked to its own edition and screen (RG-ARR-72): the page
+    // opens that station and offers no other.
+    if (principal.kind === "station") {
+      const edition = await prisma.edition.findUnique({
+        where: { id: principal.editionId },
+        select: { id: true, year: true },
+      });
+      return {
+        edition,
+        hasAccess: edition !== null,
+        canStepBack: false,
+        canTrack: false,
+        station: principal.station,
+      };
+    }
+
+    const { user } = principal;
+    const canStepBack = user.role === "ADMIN";
     // The tracking screen's guard, told ahead (RG-ARR-26, #644).
-    const canTrack = ctx.user.role === "ADMIN" || ctx.user.role === "EDITOR";
+    const canTrack = user.role === "ADMIN" || user.role === "EDITOR";
     const edition = await findCurrentEdition();
-    if (!edition) return { edition: null, hasAccess: false, canStepBack, canTrack };
+    if (!edition) return { edition: null, hasAccess: false, canStepBack, canTrack, station: null };
     return {
       edition: { id: edition.id, year: edition.year },
-      hasAccess: await canAccessArrivals(ctx.user, edition.id),
+      hasAccess: await canAccessArrivals(user, edition.id),
       canStepBack,
       canTrack,
+      station: null,
     };
   });
+
+  // POST /api/arrivals/station-session — a station's QR code becomes its
+  // session (RG-ARR-70): the token in the link is checked, then travels as an
+  // HttpOnly cookie bound to /api/arrivals until the window closes.
+  app.post<{ Body: { token: string } }>(
+    "/arrivals/station-session",
+    {
+      config,
+      schema: {
+        body: {
+          type: "object",
+          required: ["token"],
+          additionalProperties: false,
+          properties: { token: { type: "string", minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { token } = request.body;
+      const check = await checkStationToken(token);
+      if (!check.ok) return reply.code(403).send({ error: `station_${check.reason}`, message: check.message });
+      reply.header("set-cookie", stationCookie(token, check.until));
+      return { editionId: check.editionId, station: check.station, path: stationPath(check.station) };
+    },
+  );
 
   // GET /api/arrivals/:editionId/stream — Server-Sent Events: the full state
   // first, on every (re)connection (RG-ARR-61), then each badge that moves,
@@ -116,9 +158,9 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     { config, schema: { params: editionParamsSchema } },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "stream");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
       // Subscribe before reading: a move committed while the snapshot loads is
       // queued, not lost. Sent after it, it may repeat what the snapshot
@@ -158,7 +200,18 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       isLive = true;
       for (const event of queued) send(event.type, event.data);
 
-      const heartbeat = setInterval(() => send("ping", { at: Date.now() }), STREAM_HEARTBEAT_MS);
+      const heartbeat = setInterval(() => {
+        send("ping", { at: Date.now() });
+        // A station's stream ends with its window or its regeneration: the
+        // screen reconnects and meets the refusal (RG-ARR-75).
+        if (principal.kind === "station") {
+          checkStationToken(principal.token)
+            .then((check) => {
+              if (!check.ok) reply.raw.end();
+            })
+            .catch((err: unknown) => request.log.error({ err, editionId }, "Station stream check failed"));
+        }
+      }, STREAM_HEARTBEAT_MS);
       // The response's close, not the request's: the request one fires once
       // its (empty) body is read, long before the screen goes away.
       reply.raw.on("close", () => {
@@ -177,9 +230,8 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     { config, schema: { params: editionParamsSchema } },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (ctx.user.role !== "ADMIN" && ctx.user.role !== "EDITOR") return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "tracking");
+      if (!access.ok) return reply.code(access.status).send(access.body);
 
       const first = await loadTrackingSummary(editionId);
       if (!first) return reply.code(404).send({ error: "Not found" });
@@ -251,18 +303,28 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     async (request, reply) => {
       const { editionId, attendeeId } = request.params;
       const { from, to } = request.body;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "move");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
       const isOutageHandOver = isHandedOverDuringOutage(from, to);
       const isAllowed =
-        isCounterMove(from, to) || isOutageHandOver || (ctx.user.role === "ADMIN" && isStepBack(from, to));
+        isCounterMove(from, to) ||
+        isOutageHandOver ||
+        (principal.kind === "user" && principal.user.role === "ADMIN" && isStepBack(from, to));
       if (!isAllowed) {
         return reply.code(400).send({ error: "move_not_allowed", message: "Ce passage n'est pas possible depuis cet écran." });
       }
 
-      const result = await moveBadge(editionId, attendeeId, from, to, actorOf(ctx.user), {
+      // A counter's station touches its own badges only (RG-ARR-72).
+      if (principal.kind === "station") {
+        const badge = await prisma.attendee.findFirst({ where: { id: attendeeId, editionId }, select: { badgeNumber: true } });
+        if (badge && !isBadgeInScope(principal.station, badge.badgeNumber)) {
+          return reply.code(403).send({ error: "Forbidden", message: "Ce badge n'est pas à votre guichet." });
+        }
+      }
+
+      const result = await moveBadge(editionId, attendeeId, from, to, principal.actor, {
         onlyIfScannedOffline: isOutageHandOver,
       });
       if (!result) return reply.code(404).send({ error: "Not found" });
@@ -293,16 +355,13 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "scan");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
       const { code, attendeeId } = request.body;
       const target = code !== undefined ? { barcode: code.trim() } : { attendeeId: attendeeId! };
-      const { outcome, isFirstScan } = await scanTicket(editionId, target, {
-        id: ctx.user.id,
-        label: ctx.user.name || ctx.user.email,
-      });
+      const { outcome, isFirstScan } = await scanTicket(editionId, target, principal.actor);
       if (isFirstScan) requestCheckIn(editionId, request.log);
       return outcome;
     },
@@ -348,12 +407,12 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "offline");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
       const scans = request.body.scans.map((s) => ({ ...s, scannedAt: new Date(s.scannedAt) }));
-      const { results, hasNewScans } = await replayOfflineScans(editionId, scans, actorOf(ctx.user));
+      const { results, hasNewScans } = await replayOfflineScans(editionId, scans, principal.actor);
       if (hasNewScans) requestCheckIn(editionId, request.log);
       return { results };
     },
@@ -376,9 +435,9 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "search");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
       return searchAttendees(editionId, request.query.q);
     },
   );
@@ -391,11 +450,11 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     { config, schema: { params: attendeeParamsSchema } },
     async (request, reply) => {
       const { editionId, attendeeId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
-      const result = await printLabel(editionId, attendeeId, actorOf(ctx.user));
+      const result = await printLabel(editionId, attendeeId, principal.actor);
       if (!result) return reply.code(404).send({ error: "Not found" });
       if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
       return result;
@@ -409,11 +468,11 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     { config, schema: { params: attendeeParamsSchema } },
     async (request, reply) => {
       const { editionId, attendeeId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
 
-      const result = await deliverLabel(editionId, attendeeId, actorOf(ctx.user));
+      const result = await deliverLabel(editionId, attendeeId, principal.actor);
       if (!result) return reply.code(404).send({ error: "Not found" });
       if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
       if (result.isFirstScan) requestCheckIn(editionId, request.log);
@@ -428,9 +487,9 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     { config, schema: { params: editionParamsSchema } },
     async (request, reply) => {
       const { editionId } = request.params;
-      const ctx = await getAuthContext(request);
-      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
-      if (!(await canAccessArrivals(ctx.user, editionId))) return reply.code(403).send({ error: "Forbidden" });
+      const access = await authorizeArrivals(request, editionId, "offline");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
       const table = await buildOfflineTable(editionId);
       if (!table) return reply.code(404).send({ error: "Not found" });
       return table;

@@ -203,7 +203,7 @@ export async function moveBadge(
   attendeeId: number,
   from: BadgeState,
   to: BadgeState,
-  actor: { id: string; label: string },
+  actor: { id: string | null; label: string },
   options: { at?: Date; onlyIfScannedOffline?: boolean } = {},
 ): Promise<MoveResult | null> {
   const at = options.at ?? new Date();

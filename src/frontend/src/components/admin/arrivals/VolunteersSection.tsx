@@ -107,8 +107,8 @@ export default function VolunteersSection({ editionId }: { editionId: number }) 
     <section className="mt-8 pt-6 border-t border-gris/20">
       <h3 className="text-lg font-bold text-noir mb-2">Bénévoles</h3>
       <p className="text-sm text-gris mb-4">
-        Les bénévoles reçoivent un compte qui n&apos;ouvre que l&apos;accueil du jour J, sur /arrivees, pour cette
-        édition seulement. Collez leurs adresses, une par ligne ou séparées par des virgules : un compte existant
+        Pour un accès nominatif (en plus des QR codes des postes) : le bénévole reçoit un compte qui n&apos;ouvre que
+        l&apos;accueil du jour J, sur /arrivees, pour cette édition seulement. Collez leurs adresses, une par ligne ou séparées par des virgules : un compte existant
         reçoit l&apos;accès sans invitation.
       </p>
 

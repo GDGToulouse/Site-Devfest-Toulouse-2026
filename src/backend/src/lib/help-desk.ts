@@ -17,7 +17,7 @@ export interface LabelText {
 /** Why the help desk may not label this ticket: it is not theirs to badge. */
 export type LabelRefusal = "cancelled" | "dedicated" | "not_printed";
 
-type Actor = { id: string; label: string };
+type Actor = { id: string | null; label: string };
 
 const LABEL_ROW_SELECT = {
   id: true,
