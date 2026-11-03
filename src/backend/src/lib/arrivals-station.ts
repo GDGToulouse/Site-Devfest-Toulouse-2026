@@ -16,28 +16,31 @@ import { slotOfNumber } from "./badge-numbering.js";
 export type Station =
   | { kind: "scan" }
   | { kind: "help" }
-  | { kind: "counter"; counter: number; bin: number | null };
+  | { kind: "counter"; counter: number };
 
-/** The station in a URL or a token: `scan`, `help`, `c2` (counter), `c2b1` (one bin of it). */
+/**
+ * The station in a URL or a token: `scan`, `help`, `c2` (a counter). A bin is
+ * not a station: the volunteers behind a counter serve all its bins.
+ */
 export function encodeStation(station: Station): string {
-  if (station.kind === "counter") return station.bin === null ? `c${station.counter}` : `c${station.counter}b${station.bin}`;
+  if (station.kind === "counter") return `c${station.counter}`;
   return station.kind;
 }
 
-const COUNTER_CODE = /^c([1-9])(?:b([1-9]))?$/;
+const COUNTER_CODE = /^c([1-9])$/;
 
 export function parseStation(code: string): Station | null {
   if (code === "scan" || code === "help") return { kind: code };
   const match = COUNTER_CODE.exec(code);
   if (!match) return null;
-  return { kind: "counter", counter: Number(match[1]), bin: match[2] ? Number(match[2]) : null };
+  return { kind: "counter", counter: Number(match[1]) };
 }
 
 /** The station as the team names it, on screen and on the printed page. */
 export function stationName(station: Station): string {
   if (station.kind === "scan") return "Scan";
   if (station.kind === "help") return "Aide";
-  return station.bin === null ? `Guichet ${station.counter}` : `Guichet ${station.counter} · présentoir ${station.bin}`;
+  return `Guichet ${station.counter}`;
 }
 
 /** What the audit log and the badge history read as author. */
@@ -47,25 +50,22 @@ export const stationLabel = (station: Station) => `Poste ${stationName(station)}
 export function stationPath(station: Station): string {
   if (station.kind === "scan") return "/arrivees/scan";
   if (station.kind === "help") return "/arrivees/aide";
-  const counter = `/arrivees/guichet/${station.counter}`;
-  return station.bin === null ? counter : `${counter}/presentoir/${station.bin}`;
+  return `/arrivees/guichet/${station.counter}`;
 }
 
 /** Every station an edition's layout holds: the admin prints one page for each. */
-export function listStations(layout: { counters: number; binsPerCounter: number }): Station[] {
+export function listStations(layout: { counters: number }): Station[] {
   const stations: Station[] = [{ kind: "scan" }, { kind: "help" }];
   for (let counter = 1; counter <= layout.counters; counter++) {
-    stations.push({ kind: "counter", counter, bin: null });
-    for (let bin = 1; bin <= layout.binsPerCounter; bin++) stations.push({ kind: "counter", counter, bin });
+    stations.push({ kind: "counter", counter });
   }
   return stations;
 }
 
-/** The badges a counter station acts on: its counter's, narrowed to a bin when it has one (RG-ARR-42). */
+/** The badges a counter station acts on: all of its counter's, whatever their bin. */
 export function isBadgeInScope(station: Station, badgeNumber: number | null): boolean {
   if (station.kind !== "counter" || badgeNumber === null) return false;
-  const slot = slotOfNumber(badgeNumber);
-  return slot.counter === station.counter && (station.bin === null || slot.bin === station.bin);
+  return slotOfNumber(badgeNumber).counter === station.counter;
 }
 
 /** What each kind of station may call, by the capabilities the arrivals routes name. */
@@ -191,17 +191,11 @@ export async function checkStationToken(token: string, now: Date = new Date()): 
       stationAccessUntil: true,
       stationAccessGeneration: true,
       badgeCounters: true,
-      badgeBinsPerCounter: true,
     },
   });
   if (!edition) return refuse("invalid");
   if (generation !== edition.stationAccessGeneration) return refuse("replaced");
-  if (
-    station.kind === "counter" &&
-    (station.counter > edition.badgeCounters || (station.bin !== null && station.bin > edition.badgeBinsPerCounter))
-  ) {
-    return refuse("invalid");
-  }
+  if (station.kind === "counter" && station.counter > edition.badgeCounters) return refuse("invalid");
 
   const { from, until } = stationWindow(edition);
   // No window at all (no event date, nothing set) is closed, never open.

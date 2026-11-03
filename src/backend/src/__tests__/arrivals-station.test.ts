@@ -22,7 +22,7 @@ let userId: string;
 let admin: { authorization: string };
 let stamp = 0;
 
-const counter = (n: number, bin: number | null = null): Station => ({ kind: "counter", counter: n, bin });
+const counter = (n: number): Station => ({ kind: "counter", counter: n });
 
 async function generation() {
   return (await prisma.edition.findUniqueOrThrow({ where: { id: editionId } })).stationAccessGeneration;
@@ -111,17 +111,11 @@ describe("Opening a station with its QR code (RG-ARR-70)", () => {
     const res = await exchange(await tokenOf(counter(2)));
 
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ editionId, station: { kind: "counter", counter: 2, bin: null }, path: "/arrivees/guichet/2" });
+    expect(res.json()).toMatchObject({ editionId, station: { kind: "counter", counter: 2 }, path: "/arrivees/guichet/2" });
     const cookie = String(res.headers["set-cookie"]);
     expect(cookie).toContain("HttpOnly");
     expect(cookie).toContain("SameSite=Lax");
     expect(cookie).toContain("Path=/api/arrivals");
-  });
-
-  it("should send a bin's QR code to that bin's screen", async () => {
-    const res = await exchange(await tokenOf(counter(1, 3)));
-
-    expect(res.json().path).toBe("/arrivees/guichet/1/presentoir/3");
   });
 
   it("should tell the page which station it is locked to", async () => {
@@ -207,8 +201,8 @@ describe("Regenerating the links (RG-ARR-75)", () => {
 
     const urls = (res: typeof first) => res.json().stations.map((s: { url: string }) => s.url);
     expect(urls(first)).toEqual(urls(second));
-    // Scan, Aide, then each of 2 counters with its 3 bins.
-    expect(urls(first)).toHaveLength(2 + 2 * (1 + 3));
+    // Scan, Aide, then one per counter: the bins have no station of their own.
+    expect(urls(first)).toHaveLength(2 + 2);
   });
 
   it("should refuse a window that ends before it starts", async () => {
@@ -303,10 +297,10 @@ describe("What a station may not do (RG-ARR-72)", () => {
     expect((await prisma.attendee.findUniqueOrThrow({ where: { id: other.id } })).badgeState).toBe("TO_FETCH");
   });
 
-  it("should let a bin's station move that bin's badges only", async () => {
+  it("should let a counter's station move the badges of every one of its bins", async () => {
     const inBin = await createTicket(1203);
     const inOtherBin = await createTicket(1303);
-    const session = await sessionOf(counter(1, 2));
+    const session = await sessionOf(counter(1));
     const move = (id: number) =>
       app.inject({
         method: "POST",
@@ -317,7 +311,7 @@ describe("What a station may not do (RG-ARR-72)", () => {
 
     const results = [(await move(inBin.id)).statusCode, (await move(inOtherBin.id)).statusCode];
 
-    expect(results).toEqual([200, 403]);
+    expect(results).toEqual([200, 200]);
   });
 
   it("should never take a badge back to Imprimé, as an admin may", async () => {

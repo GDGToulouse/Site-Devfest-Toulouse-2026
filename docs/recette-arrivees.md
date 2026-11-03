@@ -72,7 +72,7 @@ l'écran de suivi. C'est à vérifier aussi.
 | Bénévoles : invitation par liste d'adresses, accès limité à `/arrivees` | Admin → Arrivées → Bénévoles | #640 |
 | Écrans du jour J, flux temps réel, fonctionnement hors ligne | `/arrivees` | #641 |
 | Poste **Scan** : lecture des billets à l'entrée, recherche par nom | `/arrivees` → Scan | #642 |
-| Poste **Guichet** : tableau À chercher → Prêt → Distribué, par guichet ou par présentoir | `/arrivees` → Guichet N | #643 |
+| Poste **Guichet** : tableau À chercher → Prêt → Distribué, un écran par guichet, tous ses présentoirs | `/arrivees` → Guichet N | #643 |
 | Poste **Aide** : billets sans badge, impression d'une étiquette | `/arrivees` → Aide | #713 |
 | Écran de suivi pour grand écran (admins et éditeurs) | `/arrivees/suivi` | #644 |
 | Scans faits pendant une coupure réseau, renvoyés au retour | `/arrivees` → Scan | #645 |
@@ -111,7 +111,7 @@ ne connaît pas ».
 
 Dans la section **Badges** :
 
-1. **Guichets**, **Présentoirs par guichet**, **Badges par présentoir** (de 10 à 99), puis **Enregistrer**.
+1. **Guichets**, **Présentoirs par guichet**, **Badges par présentoir** (de 10 à 100), puis **Enregistrer**.
    Le tableau montre combien de badges tombent dans chaque présentoir et la plage de numéros de chaque
    présentoir (guichet 2, présentoir 1 : « 2 1 00 à 2 1 99 » pour des présentoirs de 100). Guichets et présentoirs se comptent à partir de 1, le rang à partir de 00.
 2. Mettez volontairement trop peu de présentoirs : un message dit combien il en manque et bloque
@@ -160,7 +160,7 @@ n'est pas faite.
 
 Ouvrez `/arrivees` sur un ou plusieurs téléphones ou ordinateurs, avec votre compte admin ou un
 compte bénévole créé plus haut, et choisissez un poste. Chaque poste a son adresse
-(`/arrivees/scan`, `/arrivees/guichet/2`, `/arrivees/guichet/2/presentoir/1`, `/arrivees/aide`) :
+(`/arrivees/scan`, `/arrivees/guichet/2`, `/arrivees/aide`) :
 « Changer de poste » revient au choix.
 
 **Sans compte : les QR codes des postes** (#775). Admin → Arrivées → **QR codes des postes** :
@@ -176,8 +176,8 @@ compte bénévole créé plus haut, et choisissez un poste. Chaque poste a son a
 4. Hors fenêtre (fermez-la : fermeture dans le passé), le même QR code affiche un message clair.
 5. **Régénérer** (taper « REGENERER ») : les QR codes déjà ouverts, imprimés ou affichés cessent de
    marcher, et l'écran déjà ouvert l'annonce en une minute. Les nouveaux fonctionnent.
-6. **Imprimer les pages A4** : une page par poste (Scan, Aide, chaque guichet et chacun de ses
-   présentoirs), le nom en très grand, le QR code, deux lignes. Choisissez « Enregistrer au format
+6. **Imprimer les pages A4** : une page par poste (Scan, Aide, chaque guichet : 6 pages pour
+   4 guichets), le nom en très grand, le QR code, deux lignes. Choisissez « Enregistrer au format
    PDF » pour la relire sans imprimante.
 
 À vérifier : un badge déplacé depuis un poste est tracé « Poste Guichet N » dans son historique ;
@@ -194,7 +194,7 @@ bénévoles reste utilisable à côté.
   d'aide, billet annulé, déjà scanné.
 - En bas, la charge de chaque guichet (badges en attente).
 
-**Guichet N** (tout le guichet, ou un seul présentoir pour le bénévole qui le tient)
+**Guichet N** (tout le guichet : ses bénévoles servent tous ses présentoirs)
 - Un billet scanné apparaît dans **À chercher**, avec un signal sonore (après un premier toucher
   de l'écran : les navigateurs coupent le son avant).
 - Toucher une carte la fait avancer : À chercher → Prêt → Distribué. ↩ la fait reculer.

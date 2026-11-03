@@ -13,7 +13,7 @@
 const CACHE_NAME = "arrivees-v3";
 const SHELL_URL = "/arrivees";
 // One address per station since #775: the Scan screen must open offline from
-// its own address, and a counter's or a bin's page is kept on its first visit
+// its own address, and a counter's page is kept on its first visit
 // (a QR code always opens it online first). The barcode reader of iOS phones
 // (#642) is needed by the Scan screen offline, and fetched only when a scan
 // starts otherwise.

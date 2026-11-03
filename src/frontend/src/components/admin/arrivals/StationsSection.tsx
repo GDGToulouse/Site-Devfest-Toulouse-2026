@@ -11,7 +11,6 @@ interface Station {
   code: string;
   kind: "scan" | "help" | "counter";
   counter: number | null;
-  bin: number | null;
   name: string;
   url: string;
   /** Drawn by the backend with the badges' QR library. */
@@ -39,13 +38,6 @@ function formatMoment(iso: string): string {
 
 const qrSource = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
 
-// What the page holds: the big word, and the small one under it (a bin).
-function titleOf(station: Station): { main: string; sub: string | null } {
-  if (station.kind === "scan") return { main: "Scan", sub: null };
-  if (station.kind === "help") return { main: "Aide", sub: null };
-  return { main: `Guichet ${station.counter}`, sub: station.bin === null ? null : `Présentoir ${station.bin}` };
-}
-
 // One A4 page per station: the name very large, the QR code, two lines (#775).
 // Rendered outside the app's tree, and alone on paper (globals.css hides the
 // rest of the page while `print-stations` is on the body).
@@ -60,12 +52,10 @@ function StationSheets({ data }: { data: Stations }) {
     <div className="print-only station-sheets">
       <style>{`@media print { @page { size: A4 portrait; margin: 0; } }`}</style>
       {data.stations.map((station) => {
-        const { main, sub } = titleOf(station);
         return (
           <section key={station.code} className="station-sheet">
             <p className="station-sheet-event">Accueil DevFest Toulouse {data.year}</p>
-            <h2 className="station-sheet-name">{main}</h2>
-            {sub && <p className="station-sheet-sub">{sub}</p>}
+            <h2 className="station-sheet-name">{station.name}</h2>
             {/* eslint-disable-next-line @next/next/no-img-element -- a data: URI, nothing to optimise */}
             <img className="station-sheet-qr" src={qrSource(station.qrSvg)} alt={`QR code du poste ${station.name}`} />
             <p className="station-sheet-line">Scannez avec l&apos;appareil photo de votre téléphone.</p>

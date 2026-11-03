@@ -101,7 +101,7 @@ describe("the live state of the arrivals screens (#641)", () => {
   it("should take a badge handed over as a label off its counter's board and loads (#713)", () => {
     const state = snapshot([{ ...badge(1, 1101, "DELIVERED", 2), byLabel: true }, badge(2, 1102, "DELIVERED", 2)]);
 
-    expect(counterBoard(state, 1, null).delivered.map((b) => b.number)).toEqual([1102]);
+    expect(counterBoard(state, 1).delivered.map((b) => b.number)).toEqual([1102]);
     expect(counterLoads(state)[0].delivered).toBe(1);
   });
 
@@ -130,7 +130,7 @@ describe("the live state of the arrivals screens (#641)", () => {
       badge(6, 1104, "DELIVERED", 3, "2026-11-19T08:04:00Z"),
     ]);
 
-    const board = counterBoard(state, 1, null);
+    const board = counterBoard(state, 1);
 
     expect(board.toFetch.map((b) => b.number)).toEqual([1101, 1201]);
     expect(board.ready.map((b) => b.number)).toEqual([1102]);
@@ -145,7 +145,7 @@ describe("the live state of the arrivals screens (#641)", () => {
     };
     const later = { ...badge(2, 1102, "TO_FETCH", 1, "2026-11-19T08:05:00Z"), scannedAt: "2026-11-19T08:05:00Z" };
 
-    expect(counterBoard(snapshot([later, sentBack]), 1, null).toFetch.map((b) => b.number)).toEqual([1101, 1102]);
+    expect(counterBoard(snapshot([later, sentBack]), 1).toFetch.map((b) => b.number)).toEqual([1101, 1102]);
   });
 
   it("should keep only the latest delivered cards in view", () => {
@@ -153,19 +153,19 @@ describe("the live state of the arrivals screens (#641)", () => {
       badge(i + 1, 1100 + i, "DELIVERED", 3, `2026-11-19T08:${String(10 + i).padStart(2, "0")}:00Z`),
     );
 
-    const board = counterBoard(snapshot(delivered), 1, null);
+    const board = counterBoard(snapshot(delivered), 1);
 
     expect(board.delivered).toHaveLength(DELIVERED_SHOWN);
     expect(board.delivered[0].number).toBe(1100 + DELIVERED_SHOWN + 1);
   });
 
-  it("should narrow the board to one bin, and still count what waits in the others", () => {
+  it("should show every bin of the counter, and count what waits in each", () => {
     const state = snapshot([badge(1, 1101, "TO_FETCH", 1), badge(2, 1201, "TO_FETCH", 1), badge(3, 1202, "READY", 2)]);
 
-    const board = counterBoard(state, 1, 1);
+    const board = counterBoard(state, 1);
 
-    expect(board.toFetch.map((b) => b.number)).toEqual([1101]);
-    expect(board.ready).toEqual([]);
+    expect(board.toFetch.map((b) => b.number)).toEqual([1101, 1201]);
+    expect(board.ready.map((b) => b.number)).toEqual([1202]);
     expect(board.toFetchByBin).toEqual([1, 1]);
   });
 

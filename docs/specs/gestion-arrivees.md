@@ -42,7 +42,7 @@ suivi et données.
    téléphone affiche le numéro de badge, par exemple `2 1 47`, et le guichet : « guichet 2 ». Il
    l'annonce au participant. Le badge apparaît aussitôt dans la colonne « À chercher » de
    l'écran du guichet 2.
-3. **Au guichet 2, le bénévole du présentoir 1** (badges 2 1 01 à 2 1 99) sort le `2 1 47` de son présentoir, le pose
+3. **Au guichet 2, le bénévole du présentoir 1** (badges 2 1 00 à 2 1 99) sort le `2 1 47` de son présentoir, le pose
    à l'avant du comptoir et touche la carte : elle passe en « Prêt ».
 4. **Le participant arrive au guichet 2** et donne son numéro ou son nom. Son badge l'attend.
 5. **Le bénévole vérifie le nom, remet le badge** et touche la carte : elle passe en
@@ -98,7 +98,7 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-22 | La permission « gestion des arrivées » est attribuée par un admin, **par édition** : elle tombe d'elle-même pour l'édition suivante. Elle s'ajoute au rôle, quel qu'il soit. |
 | RG-ARR-23 | Les bénévoles reçoivent un compte à l'avance, en `GUEST`, par **invitations en lot** (une quarantaine d'adresses collées d'un coup). Une invitation peut porter directement la permission « arrivées » de l'édition en cours. |
 | RG-ARR-24 | Un compte invité est créé avec `role = GUEST` **explicite** et `emailVerified = true` à l'acceptation. Jamais la valeur par défaut `EDITOR` (#362), et jamais `emailVerified = false`, qui ferait effacer son mot de passe par le premier lien magique (better-auth 1.7, cf. `auth.md`). |
-| RG-ARR-25 | À l'ouverture de la zone « Gestion des arrivées », le porteur de la permission choisit son poste : **Scan**, **Guichet** (avec son numéro, et en option son présentoir) ou **Aide**. Il peut en changer à tout moment par « Changer de poste ». Le poste est **dans l'adresse** (RG-ARR-70), plus dans la mémoire de l'appareil : `/arrivees` est le choix du poste, réservé aux admins et aux comptes nominatifs. |
+| RG-ARR-25 | À l'ouverture de la zone « Gestion des arrivées », le porteur de la permission choisit son poste : **Scan**, **Guichet** (avec son numéro : un guichet est un seul poste, ses bénévoles servent tous ses présentoirs) ou **Aide**. Il peut en changer à tout moment par « Changer de poste ». Le poste est **dans l'adresse** (RG-ARR-70), plus dans la mémoire de l'appareil : `/arrivees` est le choix du poste, réservé aux admins et aux comptes nominatifs. |
 | RG-ARR-26 | L'écran de suivi est réservé à `ADMIN` et `EDITOR`. |
 
 ### Scan
@@ -120,7 +120,7 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 |---|-------|
 | RG-ARR-40 | Un badge numéroté a quatre états : **Imprimé** (pas encore scanné), **À chercher**, **Prêt**, **Distribué**. Le scan le fait passer d'Imprimé à À chercher. |
 | RG-ARR-41 | L'écran d'un guichet est un **kanban** à trois colonnes : À chercher (du plus ancien au plus récent), Prêt, Distribué (les 10 derniers). Il se met à jour en temps réel, sans action ; un son ou une vibration signale une nouvelle carte. |
-| RG-ARR-42 | Chaque carte porte le numéro, le prénom, le nom, l'entreprise et la **couleur de son présentoir** : chaque bénévole repère les siennes. Sur smartphone, un bénévole peut n'afficher que son présentoir. |
+| RG-ARR-42 | Chaque carte porte le numéro, le prénom, le nom, l'entreprise et la **couleur de son présentoir** : chaque bénévole repère les siennes. L'écran montre toujours tout le guichet : il n'y a pas de filtre par présentoir, qui cacherait des cartes sur un écran partagé. |
 | RG-ARR-43 | Toucher une carte la fait avancer : À chercher → Prêt → Distribué. Toucher une carte Distribué la ramène en Prêt. Une action secondaire sur une carte Prêt la ramène en À chercher. |
 | RG-ARR-44 | Une transition porte l'état attendu au départ : si la carte a déjà bougé (même guichet ouvert sur le portable et un smartphone), le serveur l'ignore et l'écran se resynchronise. Pas d'état « pris » : un bénévole par présentoir, personne d'autre ne cherche ses badges. |
 | RG-ARR-45 | L'écran appartient au guichet, pas à une personne : un bénévole qui prend la relève n'a rien à configurer. |
@@ -147,9 +147,9 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-64 | **Mode dégradé** (obligatoire) : le téléphone Scan garde dans le stockage du navigateur la table code → numéro de badge et accueil dédié. Il la charge à l'ouverture de l'écran et la relit à chaque reconnexion. Quand le backend ne répond plus (VPS en panne, réseau coupé), un scan affiche quand même le numéro et le guichet, sous un bandeau « Mode dégradé : rien n'est enregistré ». Le guichet cherche alors le badge à la main dans le présentoir, d'après le numéro annoncé. Ce qui se perd : la recherche par nom, l'alerte « déjà scanné », le kanban, la charge des guichets et le compostage. |
 | RG-ARR-65 | La table du mode dégradé ne contient aucune donnée personnelle : chaque entrée est indexée par une empreinte du code (un téléphone perdu ne livre ni noms ni codes valides) et ne porte que le numéro, ou la mention accueil dédié. Elle est effacée à la fin de l'événement. |
 | RG-ARR-67 | **File d'attente hors ligne** (issue optionnelle) : en mode dégradé, le téléphone Scan garde aussi ses scans en local, et les envoie au retour du backend : passage en « À chercher », historique, compostage. Un badge remis à la main pendant la panne ne doit pas réapparaître « À chercher » sans signalement : le guichet le marque « Distribué » d'un geste. |
-| RG-ARR-70 | **Une adresse par poste** (#775) : `/arrivees/scan`, `/arrivees/guichet/<n>`, `/arrivees/guichet/<n>/presentoir/<p>`, `/arrivees/aide`, et `/arrivees/suivi` (inchangé). Un lien désigne son poste : on peut le donner. Un **QR code par poste** ouvre cette adresse, connecté, sans compte ni mot de passe : `/arrivees/poste/<jeton>` échange le jeton contre un cookie de session propre au poste (HttpOnly, SameSite=Lax, Secure en production, valable seulement pour `/api/arrivals`). |
+| RG-ARR-70 | **Une adresse par poste** (#775) : `/arrivees/scan`, `/arrivees/guichet/<n>`, `/arrivees/aide`, et `/arrivees/suivi` (inchangé). Pas d'adresse ni de QR code par présentoir : 6 postes pour 4 guichets. Un lien désigne son poste : on peut le donner. Un **QR code par poste** ouvre cette adresse, connecté, sans compte ni mot de passe : `/arrivees/poste/<jeton>` échange le jeton contre un cookie de session propre au poste (HttpOnly, SameSite=Lax, Secure en production, valable seulement pour `/api/arrivals`). |
 | RG-ARR-71 | **Fenêtre de validité**, réglée par édition dans l'admin : par défaut de minuit la veille de l'événement (répétition) à la fin de son dernier jour, heure de Paris, déduite des dates de l'édition. Sans date d'événement et sans réglage, les QR codes sont refusés. Le cookie expire à la fin de la fenêtre ; avant son ouverture, la page dit quand le poste ouvre. |
-| RG-ARR-72 | **Portée côté serveur** : une session de poste n'appelle que les routes de son poste, pour son édition. Scan : flux, scan, recherche, table et rejeu hors ligne. Aide : flux, recherche, étiquettes. Guichet : flux et mouvements des badges **de son guichet** (de son présentoir s'il est borné), jamais le retour à Imprimé. Jamais le back-office, ni l'écran de suivi, ni un autre poste. `GET /api/arrivals/current` dit le poste : la page s'y verrouille (ni « Changer de poste », ni suivi, ni déconnexion). |
+| RG-ARR-72 | **Portée côté serveur** : une session de poste n'appelle que les routes de son poste, pour son édition. Scan : flux, scan, recherche, table et rejeu hors ligne. Aide : flux, recherche, étiquettes. Guichet : flux et mouvements des badges **de son guichet**, tous présentoirs confondus, jamais le retour à Imprimé. Jamais le back-office, ni l'écran de suivi, ni un autre poste. `GET /api/arrivals/current` dit le poste : la page s'y verrouille (ni « Changer de poste », ni suivi, ni déconnexion). |
 | RG-ARR-73 | Les liens sont **dérivés, pas stockés** : HMAC-SHA256 de l'édition, du poste et de la génération sous le secret du serveur. Rien en base ne permet de reconstruire un lien ; l'admin peut réimprimer les pages à tout moment. |
 | RG-ARR-74 | Le compte bénévole nominatif par invitation (#640) reste possible, à côté des postes ; les admins gardent tous les accès. |
 | RG-ARR-75 | **Régénérer** (confirmation par saisie du mot) augmente la génération de l'édition : tous les QR codes imprimés et toutes les sessions qu'ils ont ouvertes sont refusés, avec un message clair, y compris sur un écran déjà ouvert (le flux se coupe au battement suivant). |
@@ -312,7 +312,7 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 
 ## Questions ouvertes
 
-1. **Capacité** : 4 guichets × 3 présentoirs × 99 = 1 188 badges. Combien de billets restent une fois
+1. **Capacité** : 4 guichets × 3 présentoirs × 100 = 1 200 badges. Combien de billets restent une fois
    le flux dédié retiré ? Au-delà, un 4ᵉ présentoir par guichet (RG-ARR-17).
 2. **Mobilier** : 3 meubles guichet et 1 meuble bas pour 4 guichets plus l'aide. Le meuble bas
    irait à l'aide, plus accessible en fauteuil.

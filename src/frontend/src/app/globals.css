@@ -577,12 +577,6 @@ body {
     font-weight: 800;
     line-height: 1;
   }
-  .station-sheet-sub {
-    margin: 3mm 0 0;
-    font-size: 48pt;
-    font-weight: 700;
-    line-height: 1;
-  }
   .station-sheet-qr {
     width: 120mm;
     height: 120mm;
