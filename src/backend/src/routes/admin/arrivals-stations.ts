@@ -32,7 +32,6 @@ const EDITION_SELECT = {
   stationAccessUntil: true,
   stationAccessGeneration: true,
   badgeCounters: true,
-  badgeBinsPerCounter: true,
 } as const;
 
 async function findEdition(editionId: number) {
@@ -44,14 +43,13 @@ type StationEdition = NonNullable<Awaited<ReturnType<typeof findEdition>>>;
 async function describe(edition: StationEdition) {
   const effective = stationWindow(edition);
   const stations = await Promise.all(
-    listStations({ counters: edition.badgeCounters, binsPerCounter: edition.badgeBinsPerCounter }).map(
+    listStations({ counters: edition.badgeCounters }).map(
       async (station) => {
         const url = `${baseUrl}/arrivees/poste/${deriveStationToken(edition.id, station, edition.stationAccessGeneration)}`;
         return {
           code: encodeStation(station),
           kind: station.kind,
           counter: station.kind === "counter" ? station.counter : null,
-          bin: station.kind === "counter" ? station.bin : null,
           name: stationName(station),
           url,
           // Vector, drawn by the same library as the badges' QR codes.

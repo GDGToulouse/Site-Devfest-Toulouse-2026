@@ -149,8 +149,8 @@ const bySince = (a: LiveBadge, b: LiveBadge) => sinceTime(a) - sinceTime(b) || a
 const scanTime = (badge: LiveBadge) => (badge.scannedAt ? Date.parse(badge.scannedAt) : sinceTime(badge));
 const byScan = (a: LiveBadge, b: LiveBadge) => scanTime(a) - scanTime(b) || a.number - b.number;
 
-/** A counter's kanban (#643), narrowed to one bin for the phone that follows only its own. */
-export function counterBoard(state: LiveState, counter: number, bin: number | null): CounterBoard {
+/** A counter's kanban (#643): every bin of the counter, its colour on each card. */
+export function counterBoard(state: LiveState, counter: number): CounterBoard {
   const board: CounterBoard = {
     toFetch: [],
     ready: [],
@@ -162,7 +162,6 @@ export function counterBoard(state: LiveState, counter: number, bin: number | nu
     if (counterOf(badge.number) !== counter || badge.byLabel) continue;
     const badgeBin = binOf(badge.number);
     if (badge.state === "TO_FETCH" && badgeBin <= board.toFetchByBin.length) board.toFetchByBin[badgeBin - 1]++;
-    if (bin !== null && badgeBin !== bin) continue;
     if (badge.state === "TO_FETCH") board.toFetch.push(badge);
     else if (badge.state === "READY") board.ready.push(badge);
     else if (badge.state === "DELIVERED") board.delivered.push(badge);

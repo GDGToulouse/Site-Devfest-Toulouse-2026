@@ -22,30 +22,29 @@ describe("The station cookie", () => {
 });
 
 describe("Station codes", () => {
-  it("should round-trip every station of a layout", () => {
-    const stations = listStations({ counters: 3, binsPerCounter: 2 });
+  it("should list Scan, Aide and one station per counter, never one per bin", () => {
+    const stations = listStations({ counters: 4 });
 
     expect(stations.map((s) => parseStation(encodeStation(s)))).toEqual(stations);
-    expect(stations).toHaveLength(2 + 3 * (1 + 2));
+    expect(stations.map(encodeStation)).toEqual(["scan", "help", "c1", "c2", "c3", "c4"]);
   });
 
   it("should refuse a code that names no station", () => {
-    expect(["c0", "c10", "c1b0", "guichet", ""].map(parseStation)).toEqual([null, null, null, null, null]);
+    expect(["c0", "c10", "c1b1", "guichet", ""].map(parseStation)).toEqual([null, null, null, null, null]);
   });
 
   it("should name stations the way the team does, and give their screen's address", () => {
-    expect(stationName({ kind: "counter", counter: 2, bin: 1 })).toBe("Guichet 2 · présentoir 1");
-    expect(stationPath({ kind: "counter", counter: 2, bin: 1 })).toBe("/arrivees/guichet/2/presentoir/1");
+    expect(stationName({ kind: "counter", counter: 2 })).toBe("Guichet 2");
+    expect(stationPath({ kind: "counter", counter: 2 })).toBe("/arrivees/guichet/2");
     expect(stationPath({ kind: "help" })).toBe("/arrivees/aide");
   });
 });
 
 describe("A counter station's badges", () => {
-  it("should cover its counter, narrowed to a bin when it has one", () => {
-    expect(isBadgeInScope({ kind: "counter", counter: 2, bin: null }, 2147)).toBe(true);
-    expect(isBadgeInScope({ kind: "counter", counter: 2, bin: 1 }, 2147)).toBe(true);
-    expect(isBadgeInScope({ kind: "counter", counter: 2, bin: 2 }, 2147)).toBe(false);
-    expect(isBadgeInScope({ kind: "counter", counter: 1, bin: null }, 2147)).toBe(false);
+  it("should cover every bin of its counter, and no other counter", () => {
+    expect(isBadgeInScope({ kind: "counter", counter: 2 }, 2147)).toBe(true);
+    expect(isBadgeInScope({ kind: "counter", counter: 2 }, 2399)).toBe(true);
+    expect(isBadgeInScope({ kind: "counter", counter: 1 }, 2147)).toBe(false);
     expect(isBadgeInScope({ kind: "scan" }, 2147)).toBe(false);
   });
 });

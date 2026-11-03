@@ -100,7 +100,6 @@ export default function ArrivalsWorkspace({
           <CounterBoard
             editionId={edition.id}
             counter={station.counter}
-            bin={station.bin}
             live={live}
             canStepBack={canStepBack}
             onMoved={applyMoved}

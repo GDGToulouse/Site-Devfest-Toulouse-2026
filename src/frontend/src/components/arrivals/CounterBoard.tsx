@@ -15,7 +15,7 @@ import {
 } from "@/lib/arrivals-live";
 
 // A counter's screen (RG-ARR-41 to RG-ARR-46, #643): the laptop at the back
-// of the counter, or a volunteer's phone narrowed to their bin. Touching a
+// of the counter, or a volunteer's phone on the same counter. Touching a
 // card moves it one step; every move names where the card starts from, so the
 // laptop and a phone touching the same card move it once (RG-ARR-44). The
 // number is what the volunteer scans for from a step away, so it takes the card
@@ -151,19 +151,17 @@ function Column({ title, count, children }: { title: string; count: string; chil
 export default function CounterBoard({
   editionId,
   counter,
-  bin,
   live,
   canStepBack,
   onMoved,
 }: {
   editionId: number;
   counter: number;
-  bin: number | null;
   live: LiveState;
   canStepBack: boolean;
   onMoved: (badge: LiveBadge) => void;
 }) {
-  const board = counterBoard(live, counter, bin);
+  const board = counterBoard(live, counter);
   const [busyIds, setBusyIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const { isMuted, signal } = useArrivalSignal();
@@ -221,9 +219,7 @@ export default function CounterBoard({
         {board.toFetchByBin.map((count, i) => (
           <span
             key={i}
-            className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 ${
-              bin === i + 1 ? "border-noir" : "border-gris/30"
-            }`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-gris/30 px-2.5 py-0.5"
           >
             <span aria-hidden="true" className={`inline-block h-3 w-3 rounded-full ${binColor(i + 1)}`} />
             présentoir {i + 1} : <b className="font-mono tabular-nums">{count}</b>
