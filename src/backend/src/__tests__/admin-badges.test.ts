@@ -74,7 +74,7 @@ beforeEach(async () => {
         badgesFrozenAt: null,
         badgeCounters: 4,
         badgeBinsPerCounter: 3,
-        badgesPerBin: 100,
+        badgesPerBin: 99,
         badgeDesign: Prisma.DbNull,
         billetwebBadgeFieldId: null,
       },
@@ -141,7 +141,7 @@ const numbers = async () =>
 describe("Badge numbering and freeze (#639)", () => {
   it("should refuse to freeze one ticket over capacity, and number nothing", async () => {
     await prisma.edition.update({ where: { id: editionId }, data: { badgeCounters: 1, badgeBinsPerCounter: 1 } });
-    await seed(101);
+    await seed(100);
 
     const res = await freeze();
     await settle();
@@ -167,7 +167,7 @@ describe("Badge numbering and freeze (#639)", () => {
 
     expect(res.statusCode).toBe(201);
     expect(await numbers()).toEqual([
-      ["1001", 1000], ["1002", 2000], ["1003", 3000], ["1004", 4000], ["1005", 1100], ["1006", null], ["1007", null],
+      ["1001", 1101], ["1002", 2101], ["1003", 3101], ["1004", 4101], ["1005", 1201], ["1006", null], ["1007", null],
     ]);
     expect((await status()).json().bins).toEqual(preview.bins);
   });
@@ -180,7 +180,7 @@ describe("Badge numbering and freeze (#639)", () => {
     const settings = await call("PUT", `/api/admin/badges/${editionId}/settings`, {
       counters: 3,
       binsPerCounter: 3,
-      badgesPerBin: 100,
+      badgesPerBin: 99,
       billetwebBadgeFieldId: null,
     });
     expect(settings.statusCode).toBe(409);
@@ -206,7 +206,7 @@ describe("Badge numbering and freeze (#639)", () => {
     expect((await status()).json()).toMatchObject({ badgesPerBin: 50, capacity: 600 });
   });
 
-  it("should refuse to number beyond bins smaller than 100", async () => {
+  it("should refuse to number beyond bins smaller than 99", async () => {
     await prisma.edition.update({ where: { id: editionId }, data: { badgeCounters: 1, badgeBinsPerCounter: 1, badgesPerBin: 50 } });
     await seed(51);
 
@@ -263,23 +263,27 @@ describe("Badge design and preview (#639, #749)", () => {
   const pageCount = async (bytes: Buffer) => (await PDFDocument.load(bytes)).getPageCount();
   const design = (overrides: Record<string, unknown> = {}) => ({
     qrContent: "VCARD",
+    qrColor: "#5F3B9F",
     types: Object.fromEntries(
-      ["PARTICIPANT", "SPEAKER", "VOLUNTEER", "CONTRACTOR"].map((t) => [t, { background: null, color: "#683D91" }]),
+      ["PARTICIPANT", "SPONSOR", "STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"].map((t) => [
+        t,
+        { background: null, backBackground: null, color: "#FFFFFF" },
+      ]),
     ),
     ...overrides,
   });
 
-  it("should preview one badge of each type, numbering untouched", async () => {
+  it("should preview the front and back of each of the six types, numbering untouched", async () => {
     await seed(2);
 
     const res = await call("GET", `/api/admin/badges/${editionId}/preview`);
 
     expect(res.headers["content-type"]).toBe("application/pdf");
-    expect(await pageCount(res.rawPayload)).toBe(4);
+    expect(await pageCount(res.rawPayload)).toBe(12);
     expect(await prisma.attendee.count({ where: { editionId, badgeNumber: { not: null } } })).toBe(0);
   });
 
-  it("should store the design and each outside-flow tier's badge", async () => {
+  it("should store the design and each tier's badge", async () => {
     const res = await call("PUT", `/api/admin/badges/${editionId}/design`, {
       design: design(),
       tierTypes: [{ tierId: outsideTierId, badgeType: "VOLUNTEER" }],
@@ -288,8 +292,27 @@ describe("Badge design and preview (#639, #749)", () => {
     expect(res.statusCode).toBe(200);
     expect((await status()).json()).toMatchObject({
       design: { qrContent: "VCARD" },
-      outsideTiers: [{ id: outsideTierId, badgeType: "VOLUNTEER", isGuessed: false }],
+      tiers: expect.arrayContaining([{ id: outsideTierId, name: expect.any(String), isOutsideFlow: true, badgeType: "VOLUNTEER", isGuessed: false }]),
     });
+  });
+
+  it("should refuse a badge type the tier's flow does not allow", async () => {
+    const outsideWithParticipant = await call("PUT", `/api/admin/badges/${editionId}/design`, {
+      design: design(),
+      tierTypes: [{ tierId: outsideTierId, badgeType: "PARTICIPANT" }],
+    });
+    const counterWithSpeaker = await call("PUT", `/api/admin/badges/${editionId}/design`, {
+      design: design(),
+      tierTypes: [{ tierId, badgeType: "SPEAKER" }],
+    });
+    const counterWithSponsor = await call("PUT", `/api/admin/badges/${editionId}/design`, {
+      design: design(),
+      tierTypes: [{ tierId, badgeType: "SPONSOR" }],
+    });
+
+    expect([outsideWithParticipant.statusCode, outsideWithParticipant.json().error]).toEqual([400, "invalid_tier_badge_type"]);
+    expect(counterWithSpeaker.statusCode).toBe(400);
+    expect(counterWithSponsor.statusCode).toBe(200);
   });
 
   it("should refuse a background that is not a file of the media library", async () => {
@@ -297,7 +320,7 @@ describe("Badge design and preview (#639, #749)", () => {
       design: design({
         types: {
           ...design().types,
-          SPEAKER: { background: "https://example.org/fond.png", color: "#683D91" },
+          SPEAKER: { background: "https://example.org/fond.png", backBackground: null, color: "#FFFFFF" },
         },
       }),
       tierTypes: [],
@@ -312,8 +335,8 @@ describe("Badge design and preview (#639, #749)", () => {
 
     const res = await call("GET", `/api/admin/badges/${editionId}/pdf`);
 
-    // Two bins with a separator and a badge each, then the speakers' separator and badge.
-    expect(await pageCount(res.rawPayload)).toBe(6);
+    // Recto-verso: two bins with a separator and a badge each, then the speakers' separator and badge, each followed by a back.
+    expect(await pageCount(res.rawPayload)).toBe(12);
   });
 });
 
@@ -335,8 +358,8 @@ describe("Badge numbers written to Billetweb (#639)", () => {
     expect((await status()).json()).toMatchObject({ written: 2, writeErrors: 0 });
     expect(writeCalls).toEqual([
       [
-        { id: 1001, custom: { "777": "1000" } },
-        { id: 1002, custom: { "777": "2000" } },
+        { id: 1001, custom: { "777": "1101" } },
+        { id: 1002, custom: { "777": "2101" } },
       ],
     ]);
   });
@@ -353,6 +376,6 @@ describe("Badge numbers written to Billetweb (#639)", () => {
     writeCalls = [];
     expect((await writeAndWait()).json()).toMatchObject({ pending: 1 });
     expect((await status()).json()).toMatchObject({ written: 3, writeErrors: 0 });
-    expect(writeCalls).toEqual([[{ id: 1002, custom: { "777": "2000" } }]]);
+    expect(writeCalls).toEqual([[{ id: 1002, custom: { "777": "2101" } }]]);
   });
 });
