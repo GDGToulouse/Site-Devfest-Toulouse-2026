@@ -39,7 +39,8 @@ export interface TrackingSummary {
   waiting: number;
   counters: Array<{ counter: number; numbered: number; toFetch: number; ready: number; delivered: number }>;
   dedicated: { expected: number; scanned: number };
-  help: { toHandle: number; labelsDelivered: number; labelsPrinted: number };
+  /** `labelsPrinted`: every label generated; `freeLabels`: of which, without a ticket (#801). */
+  help: { toHandle: number; labelsDelivered: number; labelsPrinted: number; freeLabels: number };
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<ArrivalsResult<T>> {
@@ -174,10 +175,29 @@ export interface LabelText {
   company: string | null;
 }
 
-/** Records the print, then gives the text: a reprint is the same call (RG-ARR-54). */
-export function printLabel(editionId: number, attendeeId: number) {
-  return call<{ label: LabelText; printCount: number }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/label`, {
+/** What the label prints: the text, and the badges' QR code when there is a ticket (#801). */
+export interface PrintedLabel extends LabelText {
+  qrSvg: string | null;
+}
+
+/**
+ * Records the print, then gives the label: a reprint is the same call
+ * (RG-ARR-54). `text` is what the desk corrected (#801).
+ */
+export function printLabel(editionId: number, attendeeId: number, text: LabelText) {
+  return call<{ label: PrintedLabel; printCount: number }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/label`, {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(text),
+  });
+}
+
+/** A label for a person without a ticket (#801): all three lines required, no QR code. */
+export function printFreeLabel(editionId: number, text: LabelText) {
+  return call<{ label: PrintedLabel }>(`/api/arrivals/${editionId}/free-labels`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(text),
   });
 }
 

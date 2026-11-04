@@ -1,6 +1,10 @@
+import QRCode from "qrcode";
+
 import { prisma } from "./prisma.js";
 import { publishArrivals } from "./arrivals-stream.js";
 import { HELP_ENTRY_SELECT, LIVE_BADGE_SELECT, toHelpEntry, toLiveBadge } from "./badge-state.js";
+import { readBadgeDesign } from "./badge-design.js";
+import { badgeVCard } from "./badge-pdf.js";
 
 // The help desk (RG-ARR-50 to RG-ARR-54, #713): whoever left the normal path
 // gets a label printed on the Zebra and stuck on a blank badge. Printing and
@@ -14,6 +18,21 @@ export interface LabelText {
   company: string | null;
 }
 
+/** What the label prints: the text, and the badge's QR code when there is a ticket (#801). */
+export interface PrintedLabel extends LabelText {
+  /** SVG, black: the Zebra prints in one colour. Null for a label without a ticket. */
+  qrSvg: string | null;
+}
+
+// The same content as the edition's badges (RG-ARR-51): the ticket's code,
+// which the entrance and the sponsors' app read, or a contact card of what
+// the label prints.
+async function qrSvgOf(editionId: number, barcode: string, text: LabelText): Promise<string> {
+  const edition = await prisma.edition.findUnique({ where: { id: editionId }, select: { badgeDesign: true } });
+  const content = readBadgeDesign(edition?.badgeDesign).qrContent === "VCARD" ? badgeVCard(text) : barcode;
+  return QRCode.toString(content, { type: "svg", errorCorrectionLevel: "M", margin: 0 });
+}
+
 /** Why the help desk may not label this ticket: it is not theirs to badge. */
 export type LabelRefusal = "cancelled" | "dedicated" | "not_printed";
 
@@ -21,6 +40,7 @@ type Actor = { id: string | null; label: string };
 
 const LABEL_ROW_SELECT = {
   id: true,
+  barcode: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -35,21 +55,40 @@ function refusalOf(row: { isCancelled: boolean; ticketTier: { isOutsideFlow: boo
   return null;
 }
 
-/** Record one print (RG-ARR-54) and give what goes on the label; null for no such ticket. */
+/**
+ * Record one print (RG-ARR-54) and give what goes on the label; null for no
+ * such ticket. `text` is what the desk corrected (#801): a ticket handed to a
+ * colleague, a typo. The ticket itself is left as Billetweb has it.
+ */
 export async function printLabel(
   editionId: number,
   attendeeId: number,
   actor: Actor,
-): Promise<{ label: LabelText; printCount: number } | { refused: LabelRefusal } | null> {
+  text?: LabelText,
+): Promise<{ label: PrintedLabel; printCount: number } | { refused: LabelRefusal } | null> {
   const row = await prisma.attendee.findFirst({ where: { id: attendeeId, editionId }, select: LABEL_ROW_SELECT });
   if (!row) return null;
   const refused = refusalOf(row);
   if (refused) return { refused };
 
-  await prisma.badgeLabel.create({ data: { attendeeId, userId: actor.id, userLabel: actor.label } });
+  const printed = text ?? { firstName: row.firstName, lastName: row.lastName, company: row.company };
+  await prisma.badgeLabel.create({
+    data: { editionId, attendeeId, ...printed, userId: actor.id, userLabel: actor.label },
+  });
   publishArrivals(editionId, { type: "counts", data: null });
   const printCount = await prisma.badgeLabel.count({ where: { attendeeId } });
-  return { label: { firstName: row.firstName, lastName: row.lastName, company: row.company }, printCount };
+  return { label: { ...printed, qrSvg: await qrSvgOf(editionId, row.barcode, printed) }, printCount };
+}
+
+/**
+ * A label for a person with no ticket (#801): a contractor, a guest added at
+ * the last minute. Typed at the desk, all three lines required; no QR code,
+ * nothing on Billetweb, no badge to move. Counted apart on the tracking screen.
+ */
+export async function printFreeLabel(editionId: number, actor: Actor, text: LabelText): Promise<{ label: PrintedLabel }> {
+  await prisma.badgeLabel.create({ data: { editionId, ...text, userId: actor.id, userLabel: actor.label } });
+  publishArrivals(editionId, { type: "counts", data: null });
+  return { label: { ...text, qrSvg: null } };
 }
 
 /**

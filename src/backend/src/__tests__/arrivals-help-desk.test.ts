@@ -6,6 +6,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 import arrivalsRoutes from "../routes/arrivals.js";
 import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
 import { isCheckInRunning } from "../lib/billetweb-checkin.js";
+import { loadTrackingSummary } from "../lib/arrivals-tracking.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -107,6 +108,7 @@ afterAll(async () => {
   vi.unstubAllGlobals();
   await app.close();
   if (editionId !== undefined) {
+    await prisma.badgeLabel.deleteMany({ where: { editionId } });
     await prisma.attendee.deleteMany({ where: { editionId } });
     await prisma.ticketTier.deleteMany({ where: { editionId } });
     await prisma.edition.deleteMany({ where: { id: editionId } });
@@ -124,7 +126,7 @@ describe("Labels at the help desk (#713)", () => {
     const first = await print(ticket.id);
     const second = await print(ticket.id);
 
-    expect(first.json()).toEqual({ label: { firstName: "Paul", lastName: ticket.lastName, company: "Capitole Cloud" }, printCount: 1 });
+    expect(first.json()).toMatchObject({ label: { firstName: "Paul", lastName: ticket.lastName, company: "Capitole Cloud" }, printCount: 1 });
     expect(second.json().printCount).toBe(2);
     const trace = await prisma.badgeLabel.findMany({ where: { attendeeId: ticket.id } });
     expect(trace).toHaveLength(2);
@@ -237,5 +239,71 @@ describe("Labels at the help desk (#713)", () => {
     expect(res.json()).toEqual([
       expect.objectContaining({ id: ticket.id, badgeNumber: 2150, badgeState: "READY", labelCount: 1, labelDeliveredAt: null }),
     ]);
+  });
+});
+
+describe("Labels the desk corrects or types (#801)", () => {
+  const freeLabel = (payload: Record<string, unknown>) =>
+    app.inject({ method: "POST", url: `/api/arrivals/${editionId}/free-labels`, headers, payload });
+
+  it("should print the text the desk corrected, keep it with the label, and leave the ticket alone", async () => {
+    const ticket = await createTicket({ isScanned: true });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/attendees/${ticket.id}/label`,
+      headers,
+      payload: { firstName: " Léa ", lastName: "Martin", company: "" },
+    });
+
+    expect(res.json()).toMatchObject({ label: { firstName: "Léa", lastName: "Martin", company: null }, printCount: 1 });
+    expect(await prisma.badgeLabel.findFirstOrThrow({ where: { attendeeId: ticket.id } })).toMatchObject({
+      editionId,
+      firstName: "Léa",
+      lastName: "Martin",
+      company: null,
+    });
+    expect(await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } })).toMatchObject({ firstName: "Paul" });
+  });
+
+  it("should give a ticket's label the badges' QR code", async () => {
+    const ticket = await createTicket({ isScanned: true });
+
+    const { label } = (await print(ticket.id)).json();
+
+    expect(label.qrSvg).toMatch(/^<svg/);
+  });
+
+  it("should refuse a corrected label without a first or last name", async () => {
+    const ticket = await createTicket({ isScanned: true });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/attendees/${ticket.id}/label`,
+      headers,
+      payload: { firstName: "  ", lastName: "Martin", company: null },
+    });
+
+    expect([res.statusCode, res.json().error]).toEqual([400, "invalid_label_text"]);
+  });
+
+  it("should print a label for a person without a ticket: three lines required, no QR code", async () => {
+    const missing = await freeLabel({ firstName: "Sam", lastName: "Presta", company: " " });
+    const res = await freeLabel({ firstName: "Sam", lastName: "Presta", company: "Traiteur Garonne" });
+
+    expect([missing.statusCode, missing.json().error]).toEqual([400, "invalid_label_text"]);
+    expect(res.json()).toEqual({ label: { firstName: "Sam", lastName: "Presta", company: "Traiteur Garonne", qrSvg: null } });
+    expect(await prisma.badgeLabel.count({ where: { editionId, attendeeId: null, lastName: "Presta" } })).toBe(1);
+  });
+
+  it("should count every label generated on the tracking screen, and the free ones apart", async () => {
+    const before = await loadTrackingSummary(editionId);
+    await freeLabel({ firstName: "Lou", lastName: "Invite", company: "GDG Toulouse" });
+    await print((await createTicket({ isScanned: true })).id);
+
+    const after = await loadTrackingSummary(editionId);
+
+    expect(after!.help.labelsPrinted - before!.help.labelsPrinted).toBe(2);
+    expect(after!.help.freeLabels - before!.help.freeLabels).toBe(1);
   });
 });

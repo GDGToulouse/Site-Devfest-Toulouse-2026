@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 
 import { LabelPreview, LabelSheet } from "@/components/arrivals/BadgeLabel";
 import CancelScan from "@/components/arrivals/CancelScan";
+import CodeScanner from "@/components/arrivals/CodeScanner";
 import { counterOf, formatBadgeNumber, type BadgeState, type HelpEntry, type LiveState } from "@/lib/arrivals-live";
 import {
   deliverLabel,
+  printFreeLabel,
   printLabel,
   scanTicket,
   searchAttendees,
   type LabelText,
+  type PrintedLabel,
   type SearchHit,
 } from "@/lib/arrivals-api";
 import { LABEL_FORMATS, readLabelFormat, saveLabelFormat, type LabelFormat } from "@/lib/badge-label";
@@ -66,6 +69,57 @@ const fromHelpEntry = (entry: HelpEntry): SearchHit => ({
   labelDeliveredAt: entry.labelDeliveredAt,
 });
 
+const EMPTY_TEXT: LabelText = { firstName: "", lastName: "", company: null };
+
+/** First and last name always; the company too for a label without a ticket. */
+function isComplete(text: LabelText, needsCompany: boolean): boolean {
+  return text.firstName.trim() !== "" && text.lastName.trim() !== "" && (!needsCompany || (text.company ?? "").trim() !== "");
+}
+
+const FIELD_CLASS = "rounded-2xl border border-gris/30 bg-blanc px-4 py-3 text-noir";
+
+/** The three lines of a label, typed or corrected at the desk (#801). */
+function LabelFields({
+  idPrefix,
+  text,
+  isCompanyRequired,
+  onChange,
+}: {
+  idPrefix: string;
+  text: LabelText;
+  isCompanyRequired: boolean;
+  onChange: (text: LabelText) => void;
+}) {
+  const fields = [
+    { key: "firstName", label: "Prénom", value: text.firstName, isRequired: true },
+    { key: "lastName", label: "Nom", value: text.lastName, isRequired: true },
+    { key: "company", label: "Entreprise", value: text.company ?? "", isRequired: isCompanyRequired },
+  ] as const;
+  return (
+    <div className="grid gap-2 sm:grid-cols-3">
+      {fields.map((field) => (
+        <label key={field.key} htmlFor={`${idPrefix}-${field.key}`} className="flex flex-col gap-1 text-sm text-noir">
+          <span>
+            {field.label}
+            {field.isRequired ? " *" : ""}
+          </span>
+          <input
+            id={`${idPrefix}-${field.key}`}
+            value={field.value}
+            required={field.isRequired}
+            maxLength={100}
+            autoComplete="off"
+            onChange={(e) =>
+              onChange({ ...text, [field.key]: field.key === "company" ? e.target.value || null : e.target.value })
+            }
+            className={FIELD_CLASS}
+          />
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function standing(person: SearchHit, state: BadgeState): string {
   if (person.isCancelled) return "Billet annulé";
   if (person.isDedicated) return "Accueil dédié";
@@ -88,7 +142,12 @@ export default function HelpStation({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[] | null>(null);
   const [person, setPerson] = useState<SearchHit | null>(null);
-  const [label, setLabel] = useState<LabelText | null>(null);
+  // What the label of the person found will print, corrected at the desk (#801).
+  const [draft, setDraft] = useState<LabelText>(EMPTY_TEXT);
+  // A label for someone without a ticket (#801): open, and what it says.
+  const [freeDraft, setFreeDraft] = useState<LabelText | null>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const [label, setLabel] = useState<PrintedLabel | null>(null);
   const [printRequest, setPrintRequest] = useState(0);
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
@@ -125,6 +184,8 @@ export default function HelpStation({
 
   function select(next: SearchHit) {
     setPerson(next);
+    setDraft({ firstName: next.firstName, lastName: next.lastName, company: next.company });
+    setFreeDraft(null);
     setLabel(null);
     setNotice(null);
     setError(null);
@@ -132,9 +193,13 @@ export default function HelpStation({
 
   async function print() {
     if (!person) return;
+    if (!isComplete(draft, false)) {
+      setError("Le prénom et le nom de l'étiquette sont obligatoires.");
+      return;
+    }
     setIsBusy(true);
     setError(null);
-    const { data, status, error: code } = await printLabel(edition.id, person.id);
+    const { data, status, error: code } = await printLabel(edition.id, person.id, draft);
     setIsBusy(false);
     if (!data) {
       setError(failure(status, code));
@@ -143,6 +208,52 @@ export default function HelpStation({
     setLabel(data.label);
     setPerson({ ...person, labelCount: data.printCount });
     setPrintRequest((n) => n + 1);
+  }
+
+  // No ticket at all: typed here, three lines required, no QR code (#801).
+  async function printFree() {
+    if (!freeDraft) return;
+    if (!isComplete(freeDraft, true)) {
+      setError("Prénom, nom et entreprise sont obligatoires pour une étiquette sans billet.");
+      return;
+    }
+    setIsBusy(true);
+    setError(null);
+    const { data, status, error: code } = await printFreeLabel(edition.id, freeDraft);
+    setIsBusy(false);
+    if (!data) {
+      setError(failure(status, code));
+      return;
+    }
+    setLabel(data.label);
+    setNotice(`Étiquette sans billet imprimée pour ${freeDraft.firstName} ${freeDraft.lastName}.`);
+    setPrintRequest((n) => n + 1);
+  }
+
+  // A ticket read at the desk counts as a scan, as at the entrance (#801), then
+  // opens the person's page.
+  async function scanAtDesk(code: string) {
+    setIsCameraOpen(false);
+    setIsBusy(true);
+    setError(null);
+    setNotice(null);
+    const { data, status, error: refusal } = await scanTicket(edition.id, { code });
+    if (!data) {
+      setIsBusy(false);
+      setError(failure(status, refusal));
+      return;
+    }
+    if (data.result === "unknown") {
+      setIsBusy(false);
+      setError("Code inconnu : cherchez la personne par son nom, ou faites-lui une étiquette sans billet.");
+      return;
+    }
+    const { attendee } = data;
+    const found = await searchAttendees(edition.id, `${attendee.firstName} ${attendee.lastName}`);
+    setIsBusy(false);
+    const hit = found.data?.find((h) => h.id === attendee.id);
+    if (hit) select(hit);
+    else setError("Billet lu, mais la fiche de la personne n'a pas pu s'ouvrir : cherchez-la par son nom.");
   }
 
   async function deliver() {
@@ -211,9 +322,40 @@ export default function HelpStation({
         )}
       </section>
 
+      {isCameraOpen ? (
+        <CodeScanner onRead={(code) => void scanAtDesk(code)} onClose={() => setIsCameraOpen(false)} />
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              setIsCameraOpen(true);
+            }}
+            disabled={isBusy}
+            className="rounded-2xl bg-malachite px-4 py-4 font-bold text-blanc hover:bg-malachite/90 disabled:opacity-60"
+          >
+            Scanner un billet
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setPerson(null);
+              setLabel(null);
+              setNotice(null);
+              setError(null);
+              setFreeDraft(EMPTY_TEXT);
+            }}
+            className="rounded-2xl border border-bleu px-4 py-4 font-bold text-bleu"
+          >
+            Étiquette sans billet
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-col gap-2">
         <label htmlFor="help-query" className="text-sm font-medium text-noir">
-          Chercher quelqu&apos;un : nom ou prénom
+          Chercher quelqu&apos;un : nom, prénom ou numéro de badge
         </label>
         <input
           id="help-query"
@@ -259,6 +401,44 @@ export default function HelpStation({
         <p role="alert" className="rounded-2xl bg-rouge/10 p-4 text-sm text-noir">
           {error}
         </p>
+      )}
+
+      {!person && notice && (
+        <p role="status" className="rounded-2xl bg-malachite/10 p-3 text-sm text-noir">
+          {notice}
+        </p>
+      )}
+
+      {freeDraft && (
+        <section aria-labelledby="free-label-title" className="flex flex-col gap-4 rounded-3xl bg-blanc p-5 shadow-card">
+          <div>
+            <h2 id="free-label-title" className="text-xl font-bold text-noir">
+              Étiquette sans billet
+            </h2>
+            <p className="text-sm text-gris">
+              Pour une personne qui n&apos;a pas de billet : prestataire, invité de dernière minute. Pas de QR code.
+            </p>
+          </div>
+          <LabelFields idPrefix="free-label" text={freeDraft} isCompanyRequired onChange={setFreeDraft} />
+          <LabelPreview text={freeDraft} format={format} year={edition.year} />
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void printFree()}
+              disabled={isBusy}
+              className="rounded-2xl bg-bleu px-4 py-3 font-bold text-blanc hover:bg-bleu/90 disabled:opacity-60"
+            >
+              Imprimer l&apos;étiquette sans billet
+            </button>
+            <button
+              type="button"
+              onClick={() => setFreeDraft(null)}
+              className="rounded-2xl border border-gris/30 px-4 py-3 text-noir"
+            >
+              Fermer
+            </button>
+          </div>
+        </section>
       )}
 
       {person && (
@@ -307,7 +487,9 @@ export default function HelpStation({
               {person.badgeNumber !== null && !person.labelDeliveredAt && (
                 <p className="text-sm text-gris">Badge introuvable dans son présentoir ? Imprimez une étiquette.</p>
               )}
-              <LabelPreview text={label ?? person} format={format} year={edition.year} />
+              <LabelFields idPrefix="person-label" text={draft} isCompanyRequired={false} onChange={setDraft} />
+              {/* The QR code comes back with the first print; until then, the text alone. */}
+              <LabelPreview text={{ ...draft, qrSvg: label?.qrSvg }} format={format} year={edition.year} />
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"

@@ -27,7 +27,7 @@ import {
   type CancelScanRefusal,
 } from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
-import { deliverLabel, printLabel, type LabelRefusal } from "../lib/help-desk.js";
+import { deliverLabel, printFreeLabel, printLabel, type LabelRefusal, type LabelText } from "../lib/help-desk.js";
 import { loadTrackingSummary, type TrackingSummary } from "../lib/arrivals-tracking.js";
 import { arrivalsRateLimit } from "../lib/rate-limit-options.js";
 import type { BadgeState } from "../generated/prisma/client.js";
@@ -53,6 +53,25 @@ const OFFLINE_REPLAY_MAX = 500;
 
 /** How long the tracking screen's totals may trail an event: one read per burst. */
 const TRACKING_REFRESH_MS = 500;
+
+/** Longest line a label takes: well beyond any real name, short of abuse. */
+const LABEL_LINE_MAX = 100;
+
+const LABEL_TEXT_INVALID = {
+  error: "invalid_label_text",
+  message: "Prénom et nom sont obligatoires (et l'entreprise pour une étiquette sans billet), 100 caractères au plus.",
+};
+
+/** The text of a label typed at the help desk; null when it does not hold. */
+function labelTextOf(body: unknown): LabelText | null {
+  if (!body || typeof body !== "object") return null;
+  const line = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const { firstName, lastName, company } = body as Record<string, unknown>;
+  const text = { firstName: line(firstName), lastName: line(lastName), company: line(company) || null };
+  const lines = [text.firstName, text.lastName, text.company ?? ""];
+  if (!text.firstName || !text.lastName || lines.some((l) => l.length > LABEL_LINE_MAX)) return null;
+  return text;
+}
 
 const CANCEL_SCAN_REFUSALS: Record<CancelScanRefusal, { status: number; message: string }> = {
   not_found: { status: 404, message: "Billet introuvable." },
@@ -397,7 +416,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
     },
     async (request, reply) => {
       const { editionId, attendeeId } = request.params;
-      const access = await authorizeArrivals(request, editionId, "scan");
+      const access = await authorizeArrivals(request, editionId, "cancel-scan");
       if (!access.ok) return reply.code(access.status).send(access.body);
       const { principal } = access;
 
@@ -499,10 +518,30 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       if (!access.ok) return reply.code(access.status).send(access.body);
       const { principal } = access;
 
-      const result = await printLabel(editionId, attendeeId, principal.actor);
+      // Optional: the text the desk corrected (#801); without it, the ticket's.
+      const text = request.body === undefined || request.body === null ? undefined : labelTextOf(request.body);
+      if (text === null) return reply.code(400).send(LABEL_TEXT_INVALID);
+      const result = await printLabel(editionId, attendeeId, principal.actor, text);
       if (!result) return reply.code(404).send({ error: "Not found" });
       if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
       return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/free-labels — a label for a person with no
+  // ticket (#801): first name, last name and company, all three required.
+  app.post<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/free-labels",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const text = labelTextOf(request.body);
+      if (!text?.company) return reply.code(400).send(LABEL_TEXT_INVALID);
+      return printFreeLabel(editionId, principal.actor, text);
     },
   );
 

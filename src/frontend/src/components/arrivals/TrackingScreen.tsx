@@ -122,7 +122,8 @@ export default function TrackingScreen({ edition }: { edition: { id: number; yea
                 </p>
                 <p className="text-sm text-gris">
                   {summary.help.toHandle} à traiter · {summary.help.labelsPrinted}{" "}
-                  {plural(summary.help.labelsPrinted, "impression", "impressions")}
+                  {plural(summary.help.labelsPrinted, "étiquette générée", "étiquettes générées")}, dont{" "}
+                  {summary.help.freeLabels} sans billet
                 </p>
               </div>
             </section>

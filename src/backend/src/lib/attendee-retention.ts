@@ -34,6 +34,8 @@ export async function purgeExpiredAttendees(now = new Date()): Promise<Array<{ y
   for (const edition of editions) {
     const [{ count }] = await prisma.$transaction([
       prisma.attendee.deleteMany({ where: { editionId: edition.id } }),
+      // Labels typed for people without a ticket (#801) hold names too.
+      prisma.badgeLabel.deleteMany({ where: { editionId: edition.id } }),
       prisma.edition.update({ where: { id: edition.id }, data: { attendeesPurgedAt: now } }),
     ]);
     report.push({ year: edition.year, purged: count });

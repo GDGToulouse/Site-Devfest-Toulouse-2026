@@ -69,11 +69,22 @@ export function isBadgeInScope(station: Station, badgeNumber: number | null): bo
 }
 
 /** What each kind of station may call, by the capabilities the arrivals routes name. */
-export type ArrivalsCapability = "stream" | "scan" | "search" | "offline" | "move" | "label" | "tracking";
+export type ArrivalsCapability =
+  | "stream"
+  | "scan"
+  | "cancel-scan"
+  | "search"
+  | "offline"
+  | "move"
+  | "label"
+  | "tracking";
 
 const CAPABILITIES: Record<Station["kind"], readonly ArrivalsCapability[]> = {
-  scan: ["stream", "scan", "search", "offline"],
-  help: ["stream", "search", "label"],
+  // Undoing a scan is the entrance's alone (#797), within its minute.
+  scan: ["stream", "scan", "cancel-scan", "search", "offline"],
+  // The help desk reads a ticket too (#801): a person sent there with their
+  // confirmation in hand.
+  help: ["stream", "scan", "search", "label"],
   // A counter looks people up across the edition to send them to the right
   // one (#802); it still moves only its own badges.
   counter: ["stream", "move", "search"],

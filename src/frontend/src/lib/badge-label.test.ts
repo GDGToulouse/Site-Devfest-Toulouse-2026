@@ -12,7 +12,15 @@ describe("the help desk's label (#713)", () => {
       firstNameMm: 20,
       lastNameMm: 11,
       companyMm: 6,
+      qrMm: null,
     });
+  });
+
+  it("should put the badge's QR code under the text, smaller on the short roll (#801)", () => {
+    const text = { firstName: "Paul", lastName: "Martin", company: null, qrSvg: "<svg/>" };
+
+    expect(labelLayout(text, roll).qrMm).toBe(40);
+    expect(labelLayout(text, LABEL_FORMATS["100x100"]).qrMm).toBe(26);
   });
 
   it("should shrink a long name to keep it on one line, down to a readable floor", () => {

@@ -348,6 +348,25 @@ describe("Cancelling a scan from a station (#797)", () => {
   });
 });
 
+describe("What the help desk may do (#801)", () => {
+  it("should let the help desk read a ticket, and print a label without one", async () => {
+    const badge = await createTicket(1007, "PRINTED");
+    const session = await sessionOf({ kind: "help" });
+
+    const scan = await app.inject({ method: "POST", url: `/api/arrivals/${editionId}/scan`, headers: session, payload: { code: badge.barcode } });
+    const free = await app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/free-labels`,
+      headers: session,
+      payload: { firstName: "Sam", lastName: "Presta", company: "Traiteur Garonne" },
+    });
+
+    expect(scan.json()).toMatchObject({ result: "badge", badge: { number: 1007 } });
+    expect(free.statusCode).toBe(200);
+    await prisma.badgeLabel.deleteMany({ where: { editionId } });
+  });
+});
+
 describe("What a counter may look up (#802)", () => {
   it("should let a counter find a person of another counter, without moving their badge", async () => {
     const other = await createTicket(2105);
