@@ -216,8 +216,13 @@ un badge déjà scanné répond « déjà scanné ».
 **Aide**
 - Les billets scannés sans badge imprimé arrivent dans **À traiter**.
 - Recherche par nom pour tout autre cas : badge introuvable dans son présentoir, billet modifié.
+- **Scanner un billet** : la caméra lit la confirmation (ou un badge du PDF) et ouvre la fiche
+  de la personne ; le scan compte comme à l'entrée.
 - **Imprimer l'étiquette** ouvre la boîte d'impression du navigateur, au format du rouleau
-  choisi ; l'étiquette remise passe le participant en Distribué.
+  choisi ; l'étiquette remise passe le participant en Distribué. Prénom, nom et entreprise se
+  corrigent avant l'impression ; l'étiquette est centrée et porte le QR code du badge.
+- **Étiquette sans billet** : prénom, nom et entreprise obligatoires, pas de QR code. Le suivi
+  compte les étiquettes générées, dont celles sans billet.
 
 **Suivi** (`/arrivees/suivi`, ou le lien « Écran de suivi du jour J » de la page Arrivées) :
 totaux en direct, pour un grand écran. Réservé aux admins et éditeurs : vérifiez qu'un compte
