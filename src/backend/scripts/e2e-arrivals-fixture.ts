@@ -46,6 +46,7 @@ const ATTENDEES: FixtureAttendee[] = [
   { key: "help", firstName: "Noa", lastName: "Testaide", company: "Atelier Test", tier: "normal", number: null },
   { key: "outage", firstName: "Olivia", lastName: "Testcoupure", company: "Atelier Test", tier: "normal", number: 1104 },
   { key: "layout", firstName: "Lou", lastName: "Testmiseenpage", company: "Atelier Test", tier: "normal", number: 1105 },
+  { key: "undo", firstName: "Eden", lastName: "Testannulation", company: "Atelier Test", tier: "normal", number: 1106 },
 ];
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });

@@ -20,9 +20,11 @@ import {
 import {
   OFFLINE_KEY_HEX_LENGTH,
   buildOfflineTable,
+  cancelScan,
   replayOfflineScans,
   scanTicket,
   searchAttendees,
+  type CancelScanRefusal,
 } from "../lib/arrivals-scan.js";
 import { requestCheckIn } from "../lib/billetweb-checkin.js";
 import { deliverLabel, printLabel, type LabelRefusal } from "../lib/help-desk.js";
@@ -51,6 +53,14 @@ const OFFLINE_REPLAY_MAX = 500;
 
 /** How long the tracking screen's totals may trail an event: one read per burst. */
 const TRACKING_REFRESH_MS = 500;
+
+const CANCEL_SCAN_REFUSALS: Record<CancelScanRefusal, { status: number; message: string }> = {
+  not_found: { status: 404, message: "Billet introuvable." },
+  not_scanned: { status: 409, message: "Ce billet n'est pas scanné : rien à annuler." },
+  delivered: { status: 409, message: "Le badge a déjà été remis : récupérez-le, puis demandez à un admin." },
+  not_yours: { status: 403, message: "Seul le poste qui a scanné ce billet, ou un admin, peut annuler le scan." },
+  too_late: { status: 409, message: "Plus d'une minute depuis le scan : demandez à un admin de l'annuler." },
+};
 
 const tokenParamsSchema = {
   type: "object",
@@ -364,6 +374,41 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       const { outcome, isFirstScan } = await scanTicket(editionId, target, principal.actor);
       if (isFirstScan) requestCheckIn(editionId, request.log);
       return outcome;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/cancel-scan — undo a
+  // scan (#797): the entrance its own within a minute, an admin any. The
+  // check-in job takes the ticket back on Billetweb, never this request.
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/cancel-scan",
+    {
+      config,
+      schema: {
+        params: {
+          type: "object",
+          required: ["editionId", "attendeeId"],
+          properties: {
+            editionId: { type: "integer", minimum: 1 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "scan");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const isAdmin = principal.kind === "user" && principal.user.role === "ADMIN";
+      const result = await cancelScan(editionId, attendeeId, principal.actor, { isAdmin });
+      if (!result.ok) {
+        const { status, message } = CANCEL_SCAN_REFUSALS[result.reason];
+        return reply.code(status).send({ error: result.reason, message });
+      }
+      requestCheckIn(editionId, request.log);
+      return { cancelled: true };
     },
   );
 

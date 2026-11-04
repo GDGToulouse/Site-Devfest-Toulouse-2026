@@ -20,6 +20,27 @@ test.describe("scan station", () => {
     await expect(page.getByRole("button", { name: "Scanner le suivant" })).toBeVisible();
   });
 
+  test("should undo a scan within the minute: the card leaves the counter, a new scan counts again (#797)", async ({
+    openStation,
+    data,
+  }) => {
+    const counter = await openStation("c1");
+    const page = await openStation("scan");
+    await expect(page.getByRole("status").filter({ hasText: "Connecté" })).toBeVisible();
+    await typeCode(page, data.attendees.undo.barcode);
+    const card = counter.getByRole("button", { name: /Eden Testannulation/ });
+    await expect(card).toBeVisible();
+
+    await page.getByRole("button", { name: "Annuler ce scan" }).click();
+    await page.getByRole("button", { name: /Confirmer : annuler le scan de Eden Testannulation/ }).click();
+
+    await expect(page.getByRole("status").filter({ hasText: "Scan annulé" })).toBeVisible();
+    await expect(card).toHaveCount(0);
+    await typeCode(page, data.attendees.undo.barcode);
+    await expect(page.getByText("1 1 06", { exact: true })).toBeVisible();
+    await expect(page.getByText("Déjà scanné")).toHaveCount(0);
+  });
+
   test("should tell the counter and the badge number of a person found by name", async ({ openStation }) => {
     const page = await openStation("scan");
 

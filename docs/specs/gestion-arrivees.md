@@ -113,6 +113,7 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-35 | Un code inconnu ou un billet annulé affiche une erreur claire et propose la recherche par nom ; à défaut, le participant va au guichet d'aide. |
 | RG-ARR-36 | L'écran Scan montre en permanence la **charge de chaque guichet** : le nombre de badges scannés et pas encore distribués (« À chercher » + « Prêt »). Orange au-delà de 10, rouge au-delà de 20. |
 | RG-ARR-37 | Le scan composte le billet dans Billetweb (`POST /api/event/{id}/check`, `lane` = nom du bénévole). Un échec de compostage ne bloque pas l'accueil : il est retenté plus tard. |
+| RG-ARR-38 | **Annuler un scan** (#797) : le poste Scan annule **son propre** scan pendant **1 minute** (bouton « Annuler ce scan », avec confirmation) ; un admin annule n'importe quel scan, à tout moment (écran Aide). Un badge **Distribué** (au guichet ou en étiquette) ne s'annule jamais : il faut d'abord le récupérer. L'annulation efface le scan, remet le badge en Imprimé (sa carte quitte le guichet, ou l'entrée quitte la liste de l'Aide) et **décomposte** le billet dans Billetweb (`used: 0`, par la même tâche que le compostage, retentée chaque minute). Billetweb garde la date et le `lane` du compostage. Un nouveau scan du billet compte comme un premier scan. |
 
 ### Guichets
 

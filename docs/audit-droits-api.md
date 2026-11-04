@@ -375,6 +375,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/arrivals/:editionId/tracking` | Contrôlé dans la route : écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas |
 | POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne |
 | POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/cancel-scan` | Contrôlé dans la route : annulation d'un scan (#797) : session, ou session du poste Scan, puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué |
 | POST | `/api/arrivals/:editionId/offline-scans` | Contrôlé dans la route : scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
 | GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition |
 | POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition |

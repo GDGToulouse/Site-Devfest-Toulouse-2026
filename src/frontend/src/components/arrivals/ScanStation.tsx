@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import CancelScan from "@/components/arrivals/CancelScan";
 import CodeScanner from "@/components/arrivals/CodeScanner";
 import ScanResultCard, { type ScanResult } from "@/components/arrivals/ScanResultCard";
 import { LOAD_CRITICAL, LOAD_WARNING, counterLoads, formatBadgeNumber, type LiveState } from "@/lib/arrivals-live";
@@ -48,6 +49,9 @@ export default function ScanStation({
 }) {
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
+  // When this phone recorded the scan shown: the cancel button's minute (#797).
+  const [scannedAt, setScannedAt] = useState<number | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -136,6 +140,7 @@ export default function ScanStation({
   async function scan(target: { code: string } | { attendeeId: number }) {
     setIsCameraOpen(false);
     setError(null);
+    setNotice(null);
     setResult(null);
     // Already known to be cut off: answer at once. Asking the backend first
     // costs the whole timeout per person, measured at 4 s behind Next's relay
@@ -149,6 +154,7 @@ export default function ScanStation({
     setIsBusy(false);
     if (res.data) {
       setResult({ source: "online", outcome: res.data });
+      setScannedAt(Date.now());
       setQuery("");
       setHits(null);
       return;
@@ -171,6 +177,14 @@ export default function ScanStation({
     }
     setError("Le scan n'a pas abouti. Réessayez.");
   }
+
+  // A first scan this phone just made, online: the one it may undo (#797).
+  const cancellable =
+    result?.source === "online" &&
+    (result.outcome.result === "badge" || result.outcome.result === "help" || result.outcome.result === "dedicated") &&
+    result.outcome.alreadyScanned === null
+      ? result.outcome.attendee
+      : null;
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -208,11 +222,29 @@ export default function ScanStation({
               {error}
             </p>
           )}
+          {notice && (
+            <p role="status" className="rounded-2xl bg-malachite/10 p-4 text-sm text-noir">
+              {notice}
+            </p>
+          )}
           {result && <ScanResultCard result={result} />}
+          {cancellable && (
+            <CancelScan
+              key={cancellable.id}
+              editionId={editionId}
+              attendee={cancellable}
+              scannedAt={scannedAt}
+              onCancelled={(message) => {
+                setResult(null);
+                setNotice(message);
+              }}
+            />
+          )}
           <button
             type="button"
             onClick={() => {
               setResult(null);
+              setNotice(null);
               setError(null);
               setIsCameraOpen(true);
             }}

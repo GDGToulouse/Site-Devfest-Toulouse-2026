@@ -69,6 +69,10 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "scan d'un billet à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
   },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/cancel-scan": {
+    why: "annulation d'un scan (#797) : session, ou session du poste Scan (QR code), puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué",
+    anonymous: [400, 401],
+  },
   "POST /api/arrivals/:editionId/offline-scans": {
     why: "scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
     anonymous: [400, 401],
