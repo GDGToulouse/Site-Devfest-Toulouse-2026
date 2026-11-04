@@ -158,13 +158,18 @@ const INVITATION_COPY: Record<ContactLocale, InvitationCopy> = {
 // It explains what the space is for and how to get back to it (#505): the
 // first version only said "you have been invited", and the team had to chase
 // sponsors by hand. It asks for replies, so SMTP_FROM must be a read mailbox.
+// Also what the admin copies to send by hand when the email went astray (#799).
+export function sponsorInvitationUrl(token: string): string {
+  return `${baseUrl}/sponsor/invitation/${token}`;
+}
+
 export async function sendSponsorInvitationEmail(opts: {
   to: string;
   sponsorName: string;
   token: string;
   locale?: string | null;
 }) {
-  const url = `${baseUrl}/sponsor/invitation/${opts.token}`;
+  const url = sponsorInvitationUrl(opts.token);
   const spaceUrl = `${baseUrl}/sponsor`;
   const lang = normalizeLocale(opts.locale);
   const c = INVITATION_COPY[lang];
