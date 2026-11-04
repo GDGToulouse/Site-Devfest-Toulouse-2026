@@ -18,6 +18,8 @@ interface TierCount {
 interface AttendeeSummary {
   billetwebEventId: string | null;
   syncedAt: string | null;
+  /** Why the last import failed, by hand or by the five-minute sync (#800). */
+  syncError: string | null;
   /** Data deleted 18 months after the event (RG-ARR-66): no import any more. */
   purgedAt: string | null;
   expected: number;
@@ -35,6 +37,8 @@ interface ImportReport {
   cancelled: number;
   unchanged: number;
   withoutTier: number;
+  /** Tickets checked in by Billetweb's own app, marked scanned here (#800). */
+  externalCheckIns: number;
 }
 
 function formatDateTime(iso: string): string {
@@ -102,9 +106,19 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
           : !isLinked
           ? "L'édition n'est liée à aucun événement Billetweb : importez d'abord ses tarifs, onglet Billetterie."
           : summary.syncedAt
-            ? `Dernier import le ${formatDateTime(summary.syncedAt)}. Le suivant ne reprend que ce qui a changé depuis.`
+            ? `Dernière synchronisation le ${formatDateTime(summary.syncedAt)}. La suivante ne reprend que ce qui a changé depuis.`
             : "Aucun import pour l'instant."}
+        {isLinked && !summary.purgedAt && (
+          <> Pendant l&apos;ouverture des postes (QR codes des postes), elle se fait toute seule toutes les 5 minutes.</>
+        )}
       </p>
+
+      {summary.syncError && (
+        <div role="alert" className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
+          La dernière synchronisation avec Billetweb a échoué ({summary.syncError}). Elle sera retentée ; si l&apos;erreur
+          persiste, vérifiez la clé Billetweb et l&apos;événement lié.
+        </div>
+      )}
 
       {importError && (
         <div role="alert" className="p-3 rounded-lg bg-terre-cuite/10 text-terre-cuite text-sm mb-4">
@@ -116,6 +130,8 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
         <div role="status" className="p-3 rounded-lg bg-malachite/10 text-noir text-sm mb-4">
           {report.isIncremental ? "Import des changements" : "Premier import"} : {report.created} nouveaux,{" "}
           {report.updated} mis à jour dont {report.cancelled} annulés, {report.unchanged} inchangés.
+          {report.externalCheckIns > 0 &&
+            ` ${report.externalCheckIns} billets déjà compostés par l'application Billetweb, comptés comme scannés.`}
         </div>
       )}
 

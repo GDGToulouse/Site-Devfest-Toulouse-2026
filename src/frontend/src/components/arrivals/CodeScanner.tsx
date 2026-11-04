@@ -13,6 +13,25 @@ const FRAME_INTERVAL_MS = 150;
 export default function CodeScanner({ onRead, onClose }: { onRead: (code: string) => void; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
+  // The camera's light, for a paper ticket in a dark entrance (#800). Only
+  // where the camera offers it (Chrome on Android; not promised on iOS): no
+  // button that does nothing.
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const [hasTorch, setHasTorch] = useState(false);
+  const [isTorchOn, setIsTorchOn] = useState(false);
+
+  async function toggleTorch() {
+    const track = trackRef.current;
+    if (!track) return;
+    const next = !isTorchOn;
+    try {
+      // `torch` is not in TypeScript's DOM types yet.
+      await track.applyConstraints({ advanced: [{ torch: next } as MediaTrackConstraintSet] });
+      setIsTorchOn(next);
+    } catch {
+      setHasTorch(false);
+    }
+  }
   // The latest callback, without restarting the camera when the parent re-renders.
   const onReadRef = useRef(onRead);
   useEffect(() => {
@@ -46,6 +65,10 @@ export default function CodeScanner({ onRead, onClose }: { onRead: (code: string
       }
       const video = videoRef.current;
       if (!video) return;
+      const [track] = stream.getVideoTracks();
+      trackRef.current = track ?? null;
+      const capabilities = track?.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+      setHasTorch(capabilities?.torch === true);
       video.srcObject = stream;
       await video.play().catch(() => undefined);
 
@@ -83,6 +106,16 @@ export default function CodeScanner({ onRead, onClose }: { onRead: (code: string
           <video ref={videoRef} muted playsInline className="aspect-[3/4] w-full object-cover" aria-label="Caméra" />
           <div aria-hidden="true" className="pointer-events-none absolute inset-[15%] rounded-xl border-4 border-blanc/80" />
         </div>
+      )}
+      {hasTorch && !error && (
+        <button
+          type="button"
+          onClick={() => void toggleTorch()}
+          aria-pressed={isTorchOn}
+          className="rounded-2xl border border-gris/30 bg-blanc px-4 py-4 font-medium text-noir"
+        >
+          {isTorchOn ? "Éteindre la lampe" : "Allumer la lampe"}
+        </button>
       )}
       <button
         type="button"

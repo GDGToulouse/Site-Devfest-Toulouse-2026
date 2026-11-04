@@ -5,9 +5,17 @@ import { useEffect, useState } from "react";
 import { LabelPreview, LabelSheet } from "@/components/arrivals/BadgeLabel";
 import CancelScan from "@/components/arrivals/CancelScan";
 import CodeScanner from "@/components/arrivals/CodeScanner";
-import { counterOf, formatBadgeNumber, type BadgeState, type HelpEntry, type LiveState } from "@/lib/arrivals-live";
+import {
+  counterOf,
+  formatBadgeNumber,
+  type BadgeState,
+  type HelpEntry,
+  type LiveState,
+  type WithdrawalEntry,
+} from "@/lib/arrivals-live";
 import {
   deliverLabel,
+  markWithdrawn,
   printFreeLabel,
   printLabel,
   scanTicket,
@@ -120,6 +128,14 @@ function LabelFields({
   );
 }
 
+/** Where a refunded badge is now (#800): in its bin, at its counter, or with the person. */
+function whereToFind(entry: WithdrawalEntry): string {
+  const counter = counterOf(entry.number);
+  if (entry.state === "PRINTED") return `Dans son présentoir, guichet ${counter}`;
+  if (entry.state === "DELIVERED") return `Déjà remis à la personne (guichet ${counter})`;
+  return `Au guichet ${counter}, ${entry.state === "READY" ? "prêt" : "à chercher"}`;
+}
+
 function standing(person: SearchHit, state: BadgeState): string {
   if (person.isCancelled) return "Billet annulé";
   if (person.isDedicated) return "Accueil dédié";
@@ -179,6 +195,15 @@ export default function HelpStation({
 
   // Oldest first: the first to arrive has waited longest.
   const toHandle = (live?.help ?? []).filter((entry) => !entry.labelDeliveredAt);
+  const withdrawals = live?.withdrawals ?? [];
+
+  async function withdraw(entry: WithdrawalEntry) {
+    setIsBusy(true);
+    setError(null);
+    const { data, status, error: code } = await markWithdrawn(edition.id, entry.id);
+    setIsBusy(false);
+    if (!data) setError(failure(status, code));
+  }
   // The stream knows better than the search that found the person.
   const liveState = person ? (live?.badges.get(person.id)?.state ?? person.badgeState) : "PRINTED";
 
@@ -291,6 +316,36 @@ export default function HelpStation({
 
   return (
     <div className="flex flex-col gap-6">
+      {withdrawals.length > 0 && (
+        <section aria-labelledby="withdrawals-title" className="rounded-3xl border-4 border-rouge bg-blanc p-5 shadow-card">
+          <h2 id="withdrawals-title" className="mb-1 flex justify-between text-lg font-bold text-rouge">
+            <span>Badges à retirer</span>
+            <span className="font-mono tabular-nums">{withdrawals.length}</span>
+          </h2>
+          <p className="mb-3 text-sm text-gris">Billets remboursés depuis l&apos;impression : allez récupérer ces badges.</p>
+          <ul className="flex flex-col gap-2">
+            {withdrawals.map((entry) => (
+              <li key={entry.id} className="flex flex-wrap items-center gap-2 rounded-2xl border border-gris/30 px-4 py-3">
+                <span className="min-w-0 flex-1">
+                  <span className="block font-bold text-noir">
+                    {formatBadgeNumber(entry.number)} · {entry.firstName} {entry.lastName}
+                  </span>
+                  <span className="block text-sm text-gris">{whereToFind(entry)}</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void withdraw(entry)}
+                  disabled={isBusy}
+                  className="rounded-2xl bg-rouge px-4 py-3 font-bold text-blanc disabled:opacity-60"
+                >
+                  Badge récupéré
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section aria-labelledby="to-handle-title" className="rounded-3xl bg-blanc p-5 shadow-card">
         <h2 id="to-handle-title" className="mb-3 flex justify-between text-lg font-bold text-noir">
           <span>À traiter</span>

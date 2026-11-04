@@ -126,6 +126,9 @@ function Card({
           {isFromOutage && (
             <span className="block text-sm font-medium text-orange">Scanné pendant la coupure : déjà remis ?</span>
           )}
+          {badge.isRefunded && (
+            <span className="block text-sm font-bold text-rouge">Remboursé : ne pas remettre, l&apos;Aide vient le chercher</span>
+          )}
         </span>
       </button>
       {actions.map((action) => (
@@ -220,6 +223,11 @@ export default function CounterBoard({
       isPointed={pointedId === badge.id}
       onTouch={() => {
         const to = TOUCH[badge.state];
+        // A refunded badge is never handed over (#800): the server refuses it too.
+        if (to === "DELIVERED" && badge.isRefunded) {
+          setError(`Le badge ${formatBadgeNumber(badge.number)} est remboursé : ne le remettez pas, l'Aide vient le chercher.`);
+          return;
+        }
         if (to) void move(badge, to);
       }}
       actions={actions.map((action) => ({ ...action, onClick: () => void move(badge, action.to) }))}

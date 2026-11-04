@@ -40,7 +40,7 @@ export interface TrackingSummary {
   counters: Array<{ counter: number; numbered: number; toFetch: number; ready: number; delivered: number }>;
   dedicated: { expected: number; scanned: number };
   /** `labelsPrinted`: every label generated; `freeLabels`: of which, without a ticket (#801). */
-  help: { toHandle: number; labelsDelivered: number; labelsPrinted: number; freeLabels: number };
+  help: { toHandle: number; labelsDelivered: number; labelsPrinted: number; freeLabels: number; refundedToWithdraw: number };
 }
 
 async function call<T>(path: string, init: RequestInit = {}): Promise<ArrivalsResult<T>> {
@@ -190,6 +190,11 @@ export function printLabel(editionId: number, attendeeId: number, text: LabelTex
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(text),
   });
+}
+
+/** The help desk took back a refunded badge (#800). */
+export function markWithdrawn(editionId: number, attendeeId: number) {
+  return call<{ withdrawn: true }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/withdrawn`, { method: "POST" });
 }
 
 /** A label for a person without a ticket (#801): all three lines required, no QR code. */
