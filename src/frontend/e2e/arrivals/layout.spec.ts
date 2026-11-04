@@ -81,4 +81,18 @@ test.describe("mobile layout", () => {
     expect(await isInFirstScreen(counter, /Lou Testmiseenpage/)).toBe(true);
     expect(await smallTargets(counter)).toEqual([]);
   });
+
+  // A tester's phone kept the columns stacked when turned sideways (#802): the
+  // narrowest phone still sold, an iPhone SE, is 667 px wide in landscape.
+  test("@layout should put a counter's three columns side by side on a phone turned sideways", async ({ openStation }) => {
+    const counter = await openStation("c1");
+    await counter.setViewportSize({ width: 667, height: 375 });
+    const columns = ["À chercher", "Prêt", "Distribué"].map((name) => counter.getByRole("region", { name }));
+    await expect(columns[0]).toBeVisible();
+
+    const tops = await Promise.all(columns.map(async (column) => Math.round((await column.boundingBox())!.y)));
+
+    expect(new Set(tops).size).toBe(1);
+    expect(await hasNoSideScroll(counter)).toBe(true);
+  });
 });

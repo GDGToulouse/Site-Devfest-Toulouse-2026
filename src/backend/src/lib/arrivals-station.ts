@@ -74,7 +74,9 @@ export type ArrivalsCapability = "stream" | "scan" | "search" | "offline" | "mov
 const CAPABILITIES: Record<Station["kind"], readonly ArrivalsCapability[]> = {
   scan: ["stream", "scan", "search", "offline"],
   help: ["stream", "search", "label"],
-  counter: ["stream", "move"],
+  // A counter looks people up across the edition to send them to the right
+  // one (#802); it still moves only its own badges.
+  counter: ["stream", "move", "search"],
 };
 
 export const canStationDo = (station: Station, capability: ArrivalsCapability) =>

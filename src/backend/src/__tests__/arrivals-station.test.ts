@@ -329,6 +329,38 @@ describe("What a station may not do (RG-ARR-72)", () => {
   });
 });
 
+describe("What a counter may look up (#802)", () => {
+  it("should let a counter find a person of another counter, without moving their badge", async () => {
+    const other = await createTicket(2105);
+    const session = await sessionOf(counter(1));
+
+    const search = await app.inject({
+      method: "GET",
+      url: `/api/arrivals/${editionId}/search?q=${encodeURIComponent(other.lastName)}`,
+      headers: session,
+    });
+    const move = await app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/badges/${other.id}/move`,
+      headers: session,
+      payload: { from: "TO_FETCH", to: "READY" },
+    });
+
+    expect(search.statusCode).toBe(200);
+    expect(search.json()).toMatchObject([{ id: other.id, badgeNumber: 2105 }]);
+    expect(move.statusCode).toBe(403);
+  });
+
+  it("should find a badge by its number, typed as it is printed", async () => {
+    const ticket = await createTicket(2247);
+    const session = await sessionOf(counter(2));
+
+    const res = await app.inject({ method: "GET", url: `/api/arrivals/${editionId}/search?q=2%202%2047`, headers: session });
+
+    expect(res.json()).toMatchObject([{ id: ticket.id, badgeNumber: 2247 }]);
+  });
+});
+
 describe("Who the history names (RG-ARR-76)", () => {
   it("should record a counter's move under the station, with no account", async () => {
     const badge = await createTicket(1005);
