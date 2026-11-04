@@ -57,6 +57,17 @@ const LAST_NAMES = [
 ];
 // Real events have a handful of exact homonyms (3 groups among 529 tickets in 2026).
 const HOMONYM_COUNT = 8;
+// The real event asks the buyer's company (`custom_order.Entreprise`): short,
+// long and accented, so the badges can be judged on it (#774). About one order
+// in five leaves it empty, as people do.
+const COMPANIES = [
+  "GDG Toulouse", "Airbus", "Thales Alenia Space", "CNES", "Capgemini", "Sopra Steria", "Ippon",
+  "Zenika", "Octo Technology", "SFEIR", "Free", "Orange", "La Poste", "Sogeti", "Continental",
+  "Aéronova Systèmes Embarqués Toulouse", "Société Générale de Transport Aérien Régional Occitanie",
+  "Capitole Cloud Engineering & Data Platform Services", "Université Toulouse III – Paul Sabatier",
+  "Indépendant", "Météo-France", "Liebherr-Aerospace", "Cassoulet & Co",
+];
+const NO_COMPANY_RATE = 0.2;
 
 type Ticket = { id: string; name: string };
 
@@ -95,10 +106,21 @@ function random(): number {
 }
 const pick = <T>(list: T[]): T => list[Math.floor(random() * list.length)];
 
-const [testTickets, existing] = (await Promise.all([
+type Form = { default?: string | number; buyer_fields?: Array<{ id: number; name: string }> };
+const [testTickets, existing, forms] = (await Promise.all([
   call("GET", `event/${TEST_EVENT_ID}/tickets`),
   call("GET", `event/${TEST_EVENT_ID}/attendees`),
-])) as [Ticket[], Array<{ order_id: string; disabled: string }>];
+  call("GET", `event/${TEST_EVENT_ID}/forms`),
+])) as [Ticket[], Array<{ order_id: string; disabled: string }>, Form[]];
+// `add_order` takes the question's id. The API cannot create a question: when
+// the form has none, the orders go without a company and the run says so.
+const form = forms.find((f) => String(f.default) === "1") ?? forms[0];
+const companyField = form?.buyer_fields?.find((f) => /entreprise/i.test(f.name)) ?? null;
+process.stdout.write(
+  companyField
+    ? `Company question: ${companyField.name} (${companyField.id})\n`
+    : "No « Entreprise » buyer question in the test event's form: create it in Billetweb to get companies.\n",
+);
 // Deleted orders stay listed with `disabled` other than "0".
 let testAttendees = existing.filter((a) => a.disabled === "0");
 
@@ -158,12 +180,14 @@ for (let i = 0; i < people.length; ) {
   const size = random() < 0.1 ? 2 + Math.floor(random() * 4) : 1;
   const group = people.slice(i, i + size);
   const buyer = group[0];
+  const company = random() < NO_COMPANY_RATE ? "" : pick(COMPANIES);
   orders.push({
     firstname: buyer.firstname,
     name: buyer.name,
     email: `participant-${orders.length + 1}@example.com`,
     payment_type: "other",
     request_id: `test-${orders.length + 1}`,
+    ...(companyField && company ? { custom: { [companyField.id]: company } } : {}),
     // No `ship`: Billetweb must not e-mail anyone.
     products: group.map((p, j) => ({
       ticket: p.ticket,
