@@ -12,6 +12,56 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+## [1.13.1] - 2026-11-03
+
+Correctif : la page des **offres d'emploi des partenaires** répondait une erreur à chaque visite depuis la version 1.12.1.
+
+> Aucune migration. Aucune nouvelle variable d'environnement.
+
+### Corrigé
+
+- **La page des offres d'emploi des partenaires s'affiche de nouveau** : elle répondait une erreur 500 depuis que les pages publiques sont servies du cache (1.12.1). Un test vérifie désormais l'ordre des appels dans toutes les pages publiques (#791).
+
+## [1.13.0] - 2026-11-03
+
+Le site se prépare au jour J : une conférence peut être **annulée** sans disparaître, sa fiche donne **l'heure et la salle**, et les partenaires (graphiste, régie) disposent d'une **vue brute du programme** à copier-coller. Le formulaire de contact met en **quarantaine les messages de phishing** au lieu de les relayer, et la médiathèque de l'admin se **recherche par nom, texte alternatif ou tag**.
+
+Cette version clôt aussi le lot de **sécurité et de données personnelles** de l'audit interne : jetons de lien stockés hachés, inscription qui ne révèle plus si une adresse a un compte, messages de contact anonymisés au bout d'un an et masqués dans l'historique.
+
+> Six migrations. **Sauvegarde de la base obligatoire avant déploiement** : deux d'entre elles sont irréversibles. `hash_link_tokens` remplace les jetons des liens speaker et des invitations sponsor par leur empreinte SHA-256 (les liens déjà envoyés restent valables) ; `mask_contact_message_audit` efface les valeurs des messages de contact et les IP de l'historique. Les autres : statuts `TalkStatus` et `SpeakerEditionStatus` (conversion un pour un de Brouillon / Publié), comptes ADMIN et sponsors invités marqués vérifiés, colonnes de quarantaine sur `ContactMessage`, tables des invités sponsors (fonctionnalité en sommeil). Nouvelle variable facultative `SPONSOR_GUESTS_ENABLED`, à **ne pas** poser en 2026. Au premier passage de la tâche quotidienne (3 h 30), les messages de contact de plus d'un an sont anonymisés. Un compte sans adresse vérifiée ne se connecte plus par mot de passe : il passe par le lien magique.
+
+### Ajouté
+
+- **Conférence annulée et speaker retiré**, distincts du brouillon : la conférence reste en ligne, marquée « Annulée », au lieu de disparaître (#726).
+- **Fiche conférence avec le jour, l'heure, la salle et les salles de retransmission** (#717).
+- **Programme brut pour les partenaires**, par salle ou par horaire, sans mise en forme, accessible depuis le tableau de bord (#755).
+- **Quarantaine des messages suspects du formulaire de contact** : un message qui ressemble à du phishing est enregistré mais rien ne part (ni e-mail, ni confirmation, ni webhook) tant qu'un organisateur ne l'a pas libéré ; une alerte sans contenu peut prévenir l'équipe sur Slack (#767).
+- **Recherche dans la médiathèque** de l'admin et dans les sélecteurs d'image et de document : par nom de fichier ou par ce qui l'utilise (un sponsor, un speaker), et sur demande par texte alternatif ou par tag, sans tenir compte des majuscules ni des accents (#768).
+- **Position du lieu sur une carte** dans l'admin, pour placer l'épingle à la main.
+
+### Corrigé
+
+- **Photo ou logo saisis par URL** : l'image est importée dans la médiathèque au lieu d'enregistrer l'adresse d'un site tiers (#687).
+- **Renommer un niveau de sponsoring** met à jour l'édition en cours, pas seulement les suivantes (#693).
+- **Une année non numérique dans l'adresse d'une édition** répond une page 404 au lieu d'une erreur 500 (#703), de même qu'un format inconnu sur la page des replays (#752).
+- **Favicon du DevFest** à la place de celui du framework (#709).
+- **L'URL du webhook d'alerte** saisie dans les paramètres s'enregistre enfin (#769).
+
+### Sécurité
+
+- **Jetons des liens speaker et des invitations sponsor stockés hachés** : une fuite de la base ne donne plus accès aux fiches (#672).
+- **Inscription** : même réponse que l'adresse ait un compte ou non, connexion par mot de passe réservée aux adresses vérifiées (#673), et une adresse `ADMIN_EMAILS` doit prouver sa boîte avant d'obtenir un compte (#674).
+- **Fichiers déposés servis avec des en-têtes de défense en profondeur** (#671).
+- **La limite de débit de la connexion lit la même adresse IP que le reste de l'API** (#688).
+- **Audit des dépendances vulnérables** dans la CI et avant chaque mise en production (#695) ; Dependabot, image Node épinglée, Mailpit à la place de MailHog (#679).
+- **Script de sauvegarde de la base de production** chiffrée, tournante et copiée hors du serveur, à installer sur le serveur (#678).
+
+### Données personnelles
+
+- **Messages de contact et messages libres des avis anonymisés au bout d'un an**, par une tâche quotidienne (#666).
+- **L'historique ne copie plus le contenu des messages de contact** ni l'IP de l'expéditeur, y compris pour les lignes déjà écrites (#665).
+- **Usage de Gemini en free tier documenté** : ce qui lui est envoyé, et ce qui ne doit jamais l'être (#668).
+
 ## [1.12.1] - 2026-10-25
 
 Le site tient la charge de l'événement : les **pages publiques sont rendues une fois puis servies du cache**, au lieu d'être recalculées à chaque visite. Mesuré sur la beta : environ 50 pages par seconde, et un temps de réponse médian de 0,16 s avec 100 visiteurs simultanés.
