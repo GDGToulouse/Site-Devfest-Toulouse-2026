@@ -95,7 +95,7 @@ export default function ArrivalsWorkspace({
             Ce poste n&apos;existe pas pour cette édition. Choisissez un poste dans la liste.
           </p>
         ) : station.kind === "help" ? (
-          <HelpStation edition={edition} live={live} />
+          <HelpStation edition={edition} live={live} canCancelScans={canStepBack} />
         ) : (
           <CounterBoard
             editionId={edition.id}

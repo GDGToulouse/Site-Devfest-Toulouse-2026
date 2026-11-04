@@ -155,6 +155,11 @@ export function sendOfflineScans(editionId: number, scans: QueuedScan[]) {
   );
 }
 
+/** Undo a scan (#797): refused with `too_late`, `delivered`, `not_yours` or `not_scanned`. */
+export function cancelScan(editionId: number, attendeeId: number) {
+  return call<{ cancelled: true }>(`/api/arrivals/${editionId}/attendees/${attendeeId}/cancel-scan`, { method: "POST" });
+}
+
 export function searchAttendees(editionId: number, query: string) {
   return call<SearchHit[]>(`/api/arrivals/${editionId}/search?q=${encodeURIComponent(query)}`, {
     signal: AbortSignal.timeout(SCAN_TIMEOUT_MS),

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { LabelPreview, LabelSheet } from "@/components/arrivals/BadgeLabel";
+import CancelScan from "@/components/arrivals/CancelScan";
 import { counterOf, formatBadgeNumber, type BadgeState, type HelpEntry, type LiveState } from "@/lib/arrivals-live";
 import {
   deliverLabel,
@@ -76,9 +77,12 @@ function standing(person: SearchHit, state: BadgeState): string {
 export default function HelpStation({
   edition,
   live,
+  canCancelScans = false,
 }: {
   edition: { id: number; year: number };
   live: LiveState | null;
+  /** An admin undoes any scan not yet handed over (#797). */
+  canCancelScans?: boolean;
 }) {
   const [format, setFormat] = useState<LabelFormat>(LABEL_FORMATS["100x150"]);
   const [query, setQuery] = useState("");
@@ -282,6 +286,20 @@ export default function HelpStation({
             >
               Envoyer au guichet {counterOf(person.badgeNumber!)}
             </button>
+          )}
+
+          {canCancelScans && person.scannedAt && liveState !== "DELIVERED" && !person.labelDeliveredAt && (
+            <CancelScan
+              key={person.id}
+              editionId={edition.id}
+              attendee={person}
+              scannedAt={null}
+              isAdmin
+              onCancelled={(message) => {
+                setPerson({ ...person, scannedAt: null, badgeState: "PRINTED" });
+                setNotice(message);
+              }}
+            />
           )}
 
           {canLabel && (

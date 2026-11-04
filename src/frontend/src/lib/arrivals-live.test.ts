@@ -11,6 +11,7 @@ import {
   counterOf,
   formatBadgeNumber,
   fromSnapshot,
+  withdrawHelp,
   type LiveBadge,
 } from "./arrivals-live";
 
@@ -96,6 +97,22 @@ describe("the live state of the arrivals screens (#641)", () => {
     const state = applyHelp(applyHelp(snapshot([]), entry), done);
 
     expect(state.help).toEqual([done]);
+  });
+
+  it("should take a help desk ticket off the list when its scan is cancelled (#797)", () => {
+    const entry = {
+      id: 9,
+      firstName: "Paul",
+      lastName: "Test",
+      company: null,
+      tierName: null,
+      scannedAt: "2026-11-19T08:00:00Z",
+      labelDeliveredAt: null,
+    };
+
+    const state = withdrawHelp(applyHelp(applyHelp(snapshot([]), entry), { ...entry, id: 10 }), 9);
+
+    expect(state.help.map((h) => h.id)).toEqual([10]);
   });
 
   it("should take a badge handed over as a label off its counter's board and loads (#713)", () => {

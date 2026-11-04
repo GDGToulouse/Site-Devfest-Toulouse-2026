@@ -15,6 +15,7 @@ export const ATTENDEE_KEYS = [
   "help",
   "outage",
   "layout",
+  "undo",
 ] as const;
 
 export type AttendeeKey = (typeof ATTENDEE_KEYS)[number];

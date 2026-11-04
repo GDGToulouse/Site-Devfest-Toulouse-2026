@@ -6,6 +6,7 @@ import {
   applyBadge,
   applyHelp,
   fromSnapshot,
+  withdrawHelp,
   type ArrivalsSnapshot,
   type HelpEntry,
   type LiveBadge,
@@ -129,6 +130,7 @@ export function useArrivalsStream(editionId: number | null): {
     snapshot: (data) => setLive(fromSnapshot(data as ArrivalsSnapshot)),
     badge: (data) => setLive((state) => (state ? applyBadge(state, data as LiveBadge) : state)),
     help: (data) => setLive((state) => (state ? applyHelp(state, data as HelpEntry) : state)),
+    "help-withdrawn": (data) => setLive((state) => (state ? withdrawHelp(state, (data as { id: number }).id) : state)),
   });
 
   const applyMoved = useCallback((badge: LiveBadge) => {

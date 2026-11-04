@@ -69,6 +69,11 @@ export function fromSnapshot(snapshot: ArrivalsSnapshot): LiveState {
  * A ticket sent to the help desk, or handed its label: one the screen already
  * lists is updated in place, never added twice.
  */
+/** A help desk entry whose scan was cancelled (#797): off the list. */
+export function withdrawHelp(state: LiveState, id: number): LiveState {
+  return { ...state, help: state.help.filter((h) => h.id !== id) };
+}
+
 export function applyHelp(state: LiveState, entry: HelpEntry): LiveState {
   const index = state.help.findIndex((h) => h.id === entry.id);
   if (index < 0) return { ...state, help: [...state.help, entry] };
