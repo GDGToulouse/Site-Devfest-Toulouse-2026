@@ -78,7 +78,11 @@ test.describe("mobile layout", () => {
     await expect(counter.getByRole("button", { name: /Lou Testmiseenpage/ })).toBeVisible();
 
     expect(await hasNoSideScroll(counter)).toBe(true);
-    expect(await isInFirstScreen(counter, /Lou Testmiseenpage/)).toBe(true);
+    // The column's first card, whichever it is: other tests leave cards at
+    // this counter, and the newest goes last.
+    const firstCard = counter.getByRole("region", { name: "À chercher" }).getByRole("button").first();
+    const box = await firstCard.boundingBox();
+    expect(box !== null && box.y + box.height <= counter.viewportSize()!.height).toBe(true);
     expect(await smallTargets(counter)).toEqual([]);
   });
 

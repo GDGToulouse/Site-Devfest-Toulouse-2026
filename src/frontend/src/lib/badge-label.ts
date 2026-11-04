@@ -65,11 +65,17 @@ export interface LabelLayout {
   firstNameMm: number;
   lastNameMm: number;
   companyMm: number | null;
+  /** The QR code's side, under the text; null without a ticket (#801). */
+  qrMm: number | null;
 }
 
-/** Text sizes for one person on one roll: each line as large as fits its width. */
+// The QR code's side by roll height: as on the badge, readable at arm's length
+// by a phone, and leaving the text its full size on the short roll.
+const QR_MM = { tall: 40, short: 26 } as const;
+
+/** Sizes for one person on one roll: each line as large as fits its width, the QR code under it. */
 export function labelLayout(
-  text: { firstName: string; lastName: string; company: string | null },
+  text: { firstName: string; lastName: string; company: string | null; qrSvg?: string | null },
   format: LabelFormat,
 ): LabelLayout {
   const usable = format.widthMm - 2 * LABEL_MARGIN_MM;
@@ -78,5 +84,6 @@ export function labelLayout(
     // Printed in capitals, which run wider.
     lastNameMm: fit(text.lastName.toUpperCase(), usable / 1.15, SIZES.lastName),
     companyMm: text.company ? fit(text.company, usable, SIZES.company) : null,
+    qrMm: text.qrSvg ? (format.heightMm >= 150 ? QR_MM.tall : QR_MM.short) : null,
   };
 }

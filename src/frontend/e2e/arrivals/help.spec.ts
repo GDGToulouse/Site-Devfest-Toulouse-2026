@@ -1,4 +1,4 @@
-import { expect, test } from "./support/test";
+import { expect, showToCamera, test } from "./support/test";
 
 test.describe("help station", () => {
   test("should list a ticket without badge, print its label, then record it as handed over", async ({ openStation, data }) => {
@@ -35,5 +35,46 @@ test.describe("help station", () => {
     await help.getByRole("button", { name: "Étiquette remise" }).click();
     await expect(help.getByRole("status").filter({ hasText: "Arrivée enregistrée : Noa Testaide" })).toBeVisible();
     await expect(toHandle.getByRole("button", { name: /Noa Testaide/ })).toHaveCount(0);
+  });
+
+  test("should open a person's page from a ticket read at the desk (#801)", async ({ openStation, data }) => {
+    const help = await openStation("help");
+    await showToCamera(help, data.attendees.search.qr);
+
+    await help.getByRole("button", { name: "Scanner un billet" }).click();
+
+    await expect(help.getByRole("heading", { name: "Dominique Testrecherche" })).toBeVisible({ timeout: 20_000 });
+  });
+
+  test("should print the corrected text, centred, with the badges' QR code (#801)", async ({ openStation }) => {
+    const help = await openStation("help");
+    await help.getByRole("searchbox", { name: /Chercher quelqu/ }).fill("Testsansbadge");
+    await help.getByRole("button", { name: /Nael Testsansbadge/ }).click();
+
+    await help.getByLabel("Prénom *", { exact: true }).fill("Naël");
+    await help.getByRole("button", { name: /Imprimer l'étiquette|Réimprimer/ }).click();
+
+    const sheet = help.locator(".print-only");
+    await expect(sheet).toContainText("Naël");
+    // The sheet only shows in print: looked up by tag, not by role.
+    await expect(sheet.locator('img[alt="QR code du billet"]')).toHaveCount(1);
+  });
+
+  test("should print a label for a person without a ticket, company required, no QR code (#801)", async ({ openStation }) => {
+    const help = await openStation("help");
+    await help.getByRole("button", { name: "Étiquette sans billet" }).click();
+    const form = help.getByRole("region", { name: "Étiquette sans billet" });
+    await form.getByLabel("Prénom *", { exact: true }).fill("Sam");
+    await form.getByLabel("Nom *", { exact: true }).fill("Presta");
+
+    await form.getByRole("button", { name: "Imprimer l'étiquette sans billet" }).click();
+    await expect(help.getByText("Prénom, nom et entreprise sont obligatoires")).toBeVisible();
+    await form.getByLabel("Entreprise *", { exact: true }).fill("Traiteur Garonne");
+    await form.getByRole("button", { name: "Imprimer l'étiquette sans billet" }).click();
+
+    await expect(help.getByRole("status").filter({ hasText: "Étiquette sans billet imprimée pour Sam Presta" })).toBeVisible();
+    const sheet = help.locator(".print-only");
+    await expect(sheet).toContainText("Traiteur Garonne");
+    await expect(sheet.locator("img")).toHaveCount(0);
   });
 });

@@ -2,14 +2,20 @@
 
 import { createPortal } from "react-dom";
 
-import type { LabelText } from "@/lib/arrivals-api";
+import type { PrintedLabel } from "@/lib/arrivals-api";
 import { LABEL_MARGIN_MM, labelLayout, type LabelFormat } from "@/lib/badge-label";
 
 // The label as the Zebra prints it (RG-ARR-51, #713), at its real size in mm.
 // The same drawing serves the on-screen preview and the print: what the
-// volunteer checks is what comes out.
+// volunteer checks is what comes out. Centred like the badges, with their QR
+// code when there is a ticket (#801).
 
-function Label({ text, format, year }: { text: LabelText; format: LabelFormat; year: number }) {
+/** The text alone (a QR code only comes back with the print), or the printed label. */
+export type LabelContent = Omit<PrintedLabel, "qrSvg"> & { qrSvg?: string | null };
+
+const qrSource = (svg: string) => `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+
+function Label({ text, format, year }: { text: LabelContent; format: LabelFormat; year: number }) {
   const layout = labelLayout(text, format);
   return (
     <div
@@ -20,8 +26,10 @@ function Label({ text, format, year }: { text: LabelText; format: LabelFormat; y
         boxSizing: "border-box",
         display: "flex",
         flexDirection: "column",
+        alignItems: "center",
         justifyContent: "center",
         gap: "2mm",
+        textAlign: "center",
         background: "#fff",
         color: "#000",
         fontWeight: 700,
@@ -39,12 +47,20 @@ function Label({ text, format, year }: { text: LabelText; format: LabelFormat; y
       {layout.companyMm && text.company && (
         <span style={{ fontSize: `${layout.companyMm}mm`, fontWeight: 500 }}>{text.company}</span>
       )}
+      {layout.qrMm && text.qrSvg && (
+        // eslint-disable-next-line @next/next/no-img-element -- an inline SVG from the backend, at a size in mm
+        <img
+          src={qrSource(text.qrSvg)}
+          alt="QR code du billet"
+          style={{ width: `${layout.qrMm}mm`, height: `${layout.qrMm}mm`, marginTop: "3mm" }}
+        />
+      )}
     </div>
   );
 }
 
 /** On screen, shrunk to fit: the volunteer checks spelling before printing. */
-export function LabelPreview({ text, format, year }: { text: LabelText; format: LabelFormat; year: number }) {
+export function LabelPreview({ text, format, year }: { text: LabelContent; format: LabelFormat; year: number }) {
   // 1 mm is about 3.78 CSS px; the preview takes 60 % of that.
   const scale = 0.6;
   return (
@@ -64,7 +80,7 @@ export function LabelPreview({ text, format, year }: { text: LabelText; format: 
  * The printed sheet: off screen, alone on paper. Outside the app's tree so
  * nothing of the screen prints with it, and the page takes the roll's size.
  */
-export function LabelSheet({ text, format, year }: { text: LabelText; format: LabelFormat; year: number }) {
+export function LabelSheet({ text, format, year }: { text: LabelContent; format: LabelFormat; year: number }) {
   return createPortal(
     <div className="print-only">
       <style>{`@media print { @page { size: ${format.widthMm}mm ${format.heightMm}mm; margin: 0; } }`}</style>
