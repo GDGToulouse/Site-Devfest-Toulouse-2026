@@ -329,6 +329,25 @@ describe("What a station may not do (RG-ARR-72)", () => {
   });
 });
 
+describe("Cancelling a scan from a station (#797)", () => {
+  it("should let the Scan station undo its own scan, and no other station", async () => {
+    const badge = await createTicket(1003, "PRINTED");
+    const scanSession = await sessionOf({ kind: "scan" });
+    await app.inject({ method: "POST", url: `/api/arrivals/${editionId}/scan`, headers: scanSession, payload: { attendeeId: badge.id } });
+    const url = `/api/arrivals/${editionId}/attendees/${badge.id}/cancel-scan`;
+
+    const byHelp = await app.inject({ method: "POST", url, headers: await sessionOf({ kind: "help" }) });
+    const byCounter = await app.inject({ method: "POST", url, headers: await sessionOf(counter(1)) });
+    const byScan = await app.inject({ method: "POST", url, headers: scanSession });
+
+    expect([byHelp.statusCode, byCounter.statusCode, byScan.statusCode]).toEqual([403, 403, 200]);
+    expect(await prisma.attendee.findUniqueOrThrow({ where: { id: badge.id } })).toMatchObject({
+      scannedAt: null,
+      badgeState: "PRINTED",
+    });
+  });
+});
+
 describe("What a counter may look up (#802)", () => {
   it("should let a counter find a person of another counter, without moving their badge", async () => {
     const other = await createTicket(2105);

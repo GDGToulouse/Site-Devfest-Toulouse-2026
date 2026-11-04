@@ -109,6 +109,64 @@ export async function scanTicket(
   return { outcome: { result: "badge", attendee, badge, alreadyScanned }, isFirstScan };
 }
 
+/**
+ * How long the entrance may undo its own scan (#797): long enough to notice a
+ * wrong name picked in the search, short enough that the person has not yet
+ * reached a counter.
+ */
+export const CANCEL_SCAN_WINDOW_MS = 60_000;
+
+export type CancelScanRefusal = "not_found" | "not_scanned" | "delivered" | "not_yours" | "too_late";
+
+/**
+ * Undo a scan (#797): the person is no longer counted as arrived, their card
+ * leaves the counter (or the help desk's list), and the next run of the
+ * check-in job uncompostes the ticket on Billetweb. A badge already handed
+ * over is refused, whoever asks: it must be fetched back first. Only an admin
+ * may undo another's scan, or one older than the window.
+ */
+export async function cancelScan(
+  editionId: number,
+  attendeeId: number,
+  actor: { id: string | null; label: string },
+  { isAdmin, now = new Date() }: { isAdmin: boolean; now?: Date },
+): Promise<{ ok: true } | { ok: false; reason: CancelScanRefusal }> {
+  const row = await prisma.attendee.findFirst({
+    where: { id: attendeeId, editionId },
+    select: {
+      scannedAt: true,
+      scannedByLabel: true,
+      badgeNumber: true,
+      badgeState: true,
+      labelDeliveredAt: true,
+      ticketTier: { select: { isOutsideFlow: true } },
+    },
+  });
+  if (!row) return { ok: false, reason: "not_found" };
+  if (!row.scannedAt) return { ok: false, reason: "not_scanned" };
+  if (row.badgeState === "DELIVERED" || row.labelDeliveredAt) return { ok: false, reason: "delivered" };
+  if (!isAdmin) {
+    if (row.scannedByLabel !== actor.label) return { ok: false, reason: "not_yours" };
+    if (now.getTime() - row.scannedAt.getTime() > CANCEL_SCAN_WINDOW_MS) return { ok: false, reason: "too_late" };
+  }
+
+  // The scan seen above, and only it: a second cancel, or one racing a fresh
+  // scan of the same ticket, finds nothing to undo.
+  const undone = await prisma.attendee.updateMany({
+    where: { id: attendeeId, editionId, scannedAt: row.scannedAt },
+    data: { scannedAt: null, scannedByLabel: null, scannedOffline: false },
+  });
+  if (undone.count === 0) return { ok: false, reason: "not_scanned" };
+
+  if (row.badgeNumber !== null && row.badgeState !== "PRINTED") {
+    await moveBadge(editionId, attendeeId, row.badgeState, "PRINTED", actor);
+  } else if (row.badgeNumber === null && !row.ticketTier?.isOutsideFlow) {
+    publishArrivals(editionId, { type: "help-withdrawn", data: { id: attendeeId } });
+  }
+  publishArrivals(editionId, { type: "counts", data: null });
+  return { ok: true };
+}
+
 export interface SearchHit extends ScanAttendee {
   badgeNumber: number | null;
   /** Meaningful with a number only (RG-ARR-50). */

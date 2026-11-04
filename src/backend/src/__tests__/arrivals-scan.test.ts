@@ -30,7 +30,8 @@ const billetwebStub = vi.fn(async (url: string, init?: RequestInit) => {
   const body = JSON.parse(String(init?.body)) as { data: Array<{ id: number; used: number; lane: string }> };
   checkInCalls.push({ url, data: body.data });
   if (isBilletwebDown) throw new Error("ECONNREFUSED");
-  return new Response(JSON.stringify(body.data.map((t) => ({ product_id: String(t.id), state: "1" }))));
+  // As measured on the test event (2026-11-04): `state` echoes the `used` sent.
+  return new Response(JSON.stringify(body.data.map((t) => ({ product_id: String(t.id), state: String(t.used) }))));
 });
 
 async function createTicket(options: {
@@ -230,6 +231,90 @@ describe("Checking tickets in on Billetweb (RG-ARR-37)", () => {
     expect(whileDown).toMatchObject({ checkedInAt: null, checkInError: "network" });
     expect(afterRetry.checkedInAt).not.toBeNull();
     expect(afterRetry.checkInError).toBeNull();
+  });
+});
+
+describe("Cancelling a scan (#797)", () => {
+  async function accountHeaders(role: "ADMIN" | "GUEST") {
+    const email = `cancel-${role}-${Date.now()}-${stamp++}@example.org`;
+    const user = await prisma.user.create({ data: { email, name: `Other ${email}`, role, emailVerified: true } });
+    userIds.push(user.id);
+    if (role === "GUEST") await prisma.arrivalsAccess.create({ data: { editionId, email, userId: user.id } });
+    const key = await generateApiKey(resolveApiKeyEnv());
+    await prisma.apiKey.create({ data: { name: `test-${email}`, prefix: key.prefix, hashedKey: key.hashedKey, userId: user.id } });
+    return { authorization: `Bearer ${key.raw}` };
+  }
+
+  function cancel(attendeeId: number, as = headers) {
+    return app.inject({ method: "POST", url: `/api/arrivals/${editionId}/attendees/${attendeeId}/cancel-scan`, headers: as });
+  }
+
+  const usedFor = (billetwebId: string) =>
+    checkInCalls.flatMap((c) => c.data).filter((t) => t.id === Number(billetwebId)).map((t) => t.used);
+
+  it("should undo the entrance's own scan: badge back in its bin, ticket taken back on Billetweb, a new scan counts as first", async () => {
+    const ticket = await createTicket({ number: 2141 });
+    await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+
+    const res = await cancel(ticket.id);
+    await waitForCheckIns();
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    const again = await scan({ code: ticket.barcode });
+
+    expect(res.statusCode).toBe(200);
+    expect(stored).toMatchObject({ scannedAt: null, scannedByLabel: null, badgeState: "PRINTED", checkedInAt: null });
+    expect(usedFor(ticket.billetwebId)).toEqual([1, 0]);
+    expect(again.json()).toMatchObject({ result: "badge", badge: { state: "TO_FETCH" }, alreadyScanned: null });
+  });
+
+  it("should refuse the entrance after a minute, and let an admin do it", async () => {
+    const ticket = await createTicket({ number: 2142 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { scannedAt: new Date(Date.now() - 2 * 60_000) } });
+
+    const late = await cancel(ticket.id);
+    const byAdmin = await cancel(ticket.id, await accountHeaders("ADMIN"));
+
+    expect([late.statusCode, late.json().error]).toEqual([409, "too_late"]);
+    expect(byAdmin.statusCode).toBe(200);
+  });
+
+  it("should refuse to undo another volunteer's scan", async () => {
+    const ticket = await createTicket({ number: 2143 });
+    await scan({ code: ticket.barcode });
+
+    const res = await cancel(ticket.id, await accountHeaders("GUEST"));
+
+    expect([res.statusCode, res.json().error]).toEqual([403, "not_yours"]);
+  });
+
+  it("should never undo a scan whose badge was handed over, even for an admin", async () => {
+    const ticket = await createTicket({ number: 2144 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { badgeState: "DELIVERED" } });
+
+    const res = await cancel(ticket.id, await accountHeaders("ADMIN"));
+
+    expect([res.statusCode, res.json().error]).toEqual([409, "delivered"]);
+    expect((await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } })).scannedAt).not.toBeNull();
+  });
+
+  it("should take the ticket back on Billetweb on a later run when Billetweb was down", async () => {
+    const ticket = await createTicket({ number: null });
+    await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+    isBilletwebDown = true;
+
+    await cancel(ticket.id);
+    await waitForCheckIns();
+    const whileDown = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    isBilletwebDown = false;
+    await checkInPending(editionId);
+    const afterRetry = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+
+    expect(whileDown.checkedInAt).not.toBeNull();
+    expect(afterRetry.checkedInAt).toBeNull();
   });
 });
 

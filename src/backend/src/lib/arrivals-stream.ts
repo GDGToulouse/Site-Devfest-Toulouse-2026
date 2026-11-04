@@ -7,6 +7,8 @@ import type { HelpEntry, LiveBadge } from "./badge-state.js";
 export type ArrivalsEvent =
   | { type: "badge"; data: LiveBadge }
   | { type: "help"; data: HelpEntry }
+  // A help desk entry whose scan was cancelled (#797): off the "to handle" list.
+  | { type: "help-withdrawn"; data: { id: number } }
   // Something only the tracking screen counts changed (#644): a dedicated-flow
   // scan, a label printed. Never sent to the volunteers' screens.
   | { type: "counts"; data: null };
