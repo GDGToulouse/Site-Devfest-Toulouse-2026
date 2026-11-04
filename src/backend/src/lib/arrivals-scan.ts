@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "./prisma.js";
 import { publishArrivals } from "./arrivals-stream.js";
 import { HELP_ENTRY_SELECT, LIVE_BADGE_SELECT, moveBadge, toHelpEntry, toLiveBadge, type LiveBadge } from "./badge-state.js";
-import type { BadgeState } from "../generated/prisma/client.js";
+import type { BadgeState, Prisma } from "../generated/prisma/client.js";
 
 // The entrance (RG-ARR-30 to RG-ARR-35, #642): a ticket read or picked by
 // name becomes an answer to say out loud — a number and a counter, or where
@@ -132,36 +132,52 @@ const fold = (text: string) =>
     .toLowerCase();
 
 /**
- * Search by first and/or last name (RG-ARR-31): every word typed must start a
+ * Search by badge number, or by first and/or last name (RG-ARR-31): every word typed must start a
  * word of the name. Filtered here rather than in SQL because Postgres has no
  * accent folding without the unaccent extension; the read is bounded by the
  * edition's tickets (about 1,500 short rows).
  */
 export async function searchAttendees(editionId: number, query: string): Promise<SearchHit[]> {
+  // A badge number, typed as printed ("2 1 47") or not ("2147"): a counter
+  // volunteer reads it off a badge (#802).
+  const digits = query.replace(/\s+/g, "");
+  if (BADGE_NUMBER_QUERY.test(digits)) {
+    return toHits(await prisma.attendee.findMany({ where: { editionId, badgeNumber: Number(digits) }, select: SEARCH_SELECT }));
+  }
+
   const words = fold(query).split(/[\s'-]+/).filter((w) => w.length > 0);
   if (words.length === 0) return [];
 
   const rows = await prisma.attendee.findMany({
     where: { editionId },
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      company: true,
-      badgeNumber: true,
-      badgeState: true,
-      isCancelled: true,
-      scannedAt: true,
-      labelDeliveredAt: true,
-      _count: { select: { badgeLabels: true } },
-      ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
-    },
+    select: SEARCH_SELECT,
   });
-  return rows
-    .filter((row) => {
+  return toHits(
+    rows.filter((row) => {
       const nameWords = fold(`${row.firstName} ${row.lastName}`).split(/[\s'-]+/);
       return words.every((w) => nameWords.some((n) => n.startsWith(w)));
-    })
+    }),
+  );
+}
+
+const BADGE_NUMBER_QUERY = /^[1-9]\d{3}$/;
+
+const SEARCH_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  company: true,
+  badgeNumber: true,
+  badgeState: true,
+  isCancelled: true,
+  scannedAt: true,
+  labelDeliveredAt: true,
+  _count: { select: { badgeLabels: true } },
+  ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
+} as const;
+
+function toHits(rows: Array<Prisma.AttendeeGetPayload<{ select: typeof SEARCH_SELECT }>>): SearchHit[] {
+  return rows
     .sort((a, b) => Number(a.isCancelled) - Number(b.isCancelled) || a.lastName.localeCompare(b.lastName, "fr"))
     .slice(0, SEARCH_RESULT_LIMIT)
     .map((row) => ({
