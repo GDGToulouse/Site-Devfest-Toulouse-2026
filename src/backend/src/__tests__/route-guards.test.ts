@@ -96,6 +96,17 @@ describe("API route guards (#514)", () => {
     expect(open).toEqual([]);
   });
 
+  it("should hand out invitation links only to a person, never to an agent or an API key", () => {
+    // A link that opens an account is a credential in transit (#799).
+    const open = routes
+      .filter((r) => r.path.endsWith("/invitation-link"))
+      .filter((r) => !r.preHandlers.includes("refuseApiKeys") || !r.preHandlers.includes("refuseAgents"))
+      .map(key);
+
+    expect(routes.filter((r) => r.path.endsWith("/invitation-link"))).toHaveLength(2);
+    expect(open).toEqual([]);
+  });
+
   it("should keep writes on editions, venues and rooms ADMIN-only, reads open to the team", () => {
     // The team reads them; writing is an ADMIN's call (#530). The group grants
     // the read, so each write route must carry requireAdminRole itself.
