@@ -667,6 +667,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       }
       const [{ count }] = await prisma.$transaction([
         prisma.attendee.deleteMany({ where: { editionId: edition.id } }),
+        prisma.badgeLabel.deleteMany({ where: { editionId: edition.id } }),
         prisma.edition.update({ where: { id: edition.id }, data: { badgesFrozenAt: null, attendeesSyncedAt: null } }),
       ]);
       request.log.warn({ editionId: edition.id, userId: request.adminUser?.id, deleted: count }, "Arrivals reset");

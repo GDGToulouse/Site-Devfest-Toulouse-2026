@@ -21,7 +21,7 @@ describe("the tracking screen's totals (#644)", () => {
         row({ badgeNumber: 2000, badgeState: "DELIVERED", isScanned: true }),
       ],
       2,
-      0,
+      { labelsPrinted: 0, freeLabels: 0 },
     );
 
     expect(summary).toMatchObject({ expected: 4, scanned: 3, delivered: 1, waiting: 2 });
@@ -35,7 +35,7 @@ describe("the tracking screen's totals (#644)", () => {
     const summary = summarize(
       [row({ isDedicated: true, isScanned: true }), row({ isDedicated: true }), row({ badgeNumber: 1000 })],
       1,
-      0,
+      { labelsPrinted: 0, freeLabels: 0 },
     );
 
     expect(summary.dedicated).toEqual({ expected: 2, scanned: 1 });
@@ -50,10 +50,10 @@ describe("the tracking screen's totals (#644)", () => {
         row({ badgeNumber: 1000, badgeState: "DELIVERED", isScanned: true, isLabelDelivered: true }),
       ],
       1,
-      3,
+      { labelsPrinted: 3, freeLabels: 1 },
     );
 
-    expect(summary.help).toEqual({ toHandle: 1, labelsDelivered: 2, labelsPrinted: 3 });
+    expect(summary.help).toEqual({ toHandle: 1, labelsDelivered: 2, labelsPrinted: 3, freeLabels: 1 });
     expect(summary.delivered).toBe(2);
     expect(summary.counters[0]).toEqual({ counter: 1, numbered: 0, toFetch: 0, ready: 0, delivered: 0 });
   });

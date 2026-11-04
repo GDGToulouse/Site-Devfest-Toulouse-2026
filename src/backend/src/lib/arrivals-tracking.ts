@@ -30,7 +30,10 @@ export interface TrackingSummary {
     /** Scanned without a number, no label handed over yet. */
     toHandle: number;
     labelsDelivered: number;
+    /** Every label generated, reprints and labels without a ticket included (#801). */
     labelsPrinted: number;
+    /** Of which, labels for a person without a ticket (#801). */
+    freeLabels: number;
   };
 }
 
@@ -43,7 +46,11 @@ export interface TrackingRow {
 }
 
 /** The totals over an edition's live tickets (cancelled ones left out by the caller). */
-export function summarize(rows: TrackingRow[], counters: number, labelsPrinted: number): TrackingSummary {
+export function summarize(
+  rows: TrackingRow[],
+  counters: number,
+  { labelsPrinted, freeLabels }: { labelsPrinted: number; freeLabels: number },
+): TrackingSummary {
   const summary: TrackingSummary = {
     expected: 0,
     scanned: 0,
@@ -57,7 +64,7 @@ export function summarize(rows: TrackingRow[], counters: number, labelsPrinted: 
       delivered: 0,
     })),
     dedicated: { expected: 0, scanned: 0 },
-    help: { toHandle: 0, labelsDelivered: 0, labelsPrinted },
+    help: { toHandle: 0, labelsDelivered: 0, labelsPrinted, freeLabels },
   };
 
   for (const row of rows) {
@@ -92,7 +99,7 @@ export function summarize(rows: TrackingRow[], counters: number, labelsPrinted: 
   return summary;
 }
 
-/** One read of the edition's tickets (about 1,500 short rows) and one count. */
+/** One read of the edition's tickets (about 1,500 short rows) and two counts. */
 export async function loadTrackingSummary(editionId: number): Promise<TrackingSummary | null> {
   const edition = await prisma.edition.findUnique({ where: { id: editionId }, select: { badgeCounters: true } });
   if (!edition) return null;
@@ -106,7 +113,10 @@ export async function loadTrackingSummary(editionId: number): Promise<TrackingSu
       ticketTier: { select: { isOutsideFlow: true } },
     },
   });
-  const labelsPrinted = await prisma.badgeLabel.count({ where: { attendee: { editionId } } });
+  const [labelsPrinted, freeLabels] = await Promise.all([
+    prisma.badgeLabel.count({ where: { editionId } }),
+    prisma.badgeLabel.count({ where: { editionId, attendeeId: null } }),
+  ]);
   return summarize(
     rows.map((row) => ({
       badgeNumber: row.badgeNumber,
@@ -116,6 +126,6 @@ export async function loadTrackingSummary(editionId: number): Promise<TrackingSu
       isLabelDelivered: row.labelDeliveredAt !== null,
     })),
     edition.badgeCounters,
-    labelsPrinted,
+    { labelsPrinted, freeLabels },
   );
 }

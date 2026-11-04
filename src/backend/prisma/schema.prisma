@@ -208,6 +208,7 @@ model Edition {
 
   ticketTiers     TicketTier[]
   attendees       Attendee[]
+  badgeLabels     BadgeLabel[]
   arrivalsAccess  ArrivalsAccess[]
   articles        Article[]
   keyFigures      KeyFigure[]
@@ -680,17 +681,26 @@ model BadgeTransition {
 }
 
 // Each label the help desk printed (RG-ARR-54, #713): a reprint is a row, so
-// the trace stays whole while the counts follow labelDeliveredAt.
+// the trace stays whole while the counts follow labelDeliveredAt. It keeps the
+// text it printed, corrected at the desk or not (#801). No ticket: a label for
+// a person without one (a contractor, a guest), typed at the desk. Personal
+// data: purged with the edition's attendees (RG-ARR-66).
 model BadgeLabel {
-  id         Int      @id @default(autoincrement())
-  attendeeId Int
-  attendee   Attendee @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  id         Int       @id @default(autoincrement())
+  editionId  Int
+  edition    Edition   @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  attendeeId Int?
+  attendee   Attendee? @relation(fields: [attendeeId], references: [id], onDelete: Cascade)
+  firstName  String
+  lastName   String
+  company    String?
   userId     String?
-  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   userLabel  String
-  createdAt  DateTime @default(now())
+  createdAt  DateTime  @default(now())
 
   @@index([attendeeId])
+  @@index([editionId])
 }
 
 // The "arrivals" permission of one edition (RG-ARR-22, #640): opens the event-
