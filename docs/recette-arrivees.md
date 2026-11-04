@@ -82,8 +82,8 @@ l'écran de suivi. C'est à vérifier aussi.
 ## Parcours de test
 
 Suivez les étapes dans l'ordre : chacune prépare la suivante. **L'étape 4 (envoi à
-l'impression) ne se défait pas** : avant elle, tout est provisoire ; après elle, les numéros sont
-figés pour toute la durée de l'environnement.
+l'impression) fige les numéros** : avant elle, tout est provisoire ; après elle, un admin peut
+encore annuler le gel, mais seulement tant qu'aucun billet n'a été scanné.
 
 ### 1. Lier l'édition à l'événement de test
 
@@ -142,7 +142,7 @@ d'un import propre.
 longs et accentués ; numéro séparé (« 2 1 47 ») en haut à droite sur les badges Participant et Sponsor, absent sur les
 autres ; le QR code se lit avec un téléphone.
 
-### 4. Envoyer à l'impression (gel) — irréversible
+### 4. Envoyer à l'impression (gel)
 
 **Envoyer à l'impression** → confirmer. Les numéros deviennent définitifs et sont écrits dans
 le champ « Numéro de badge » des billets de l'événement de test ; la ligne « Billetweb : N
@@ -184,10 +184,15 @@ compte bénévole créé plus haut, et choisissez un poste. Chaque poste a son a
 le poste d'un guichet ne déplace pas les badges d'un autre guichet. Le compte nominatif des
 bénévoles reste utilisable à côté.
 
+**Des billets à scanner.** Personne n'a de vrai billet de l'événement de test : ce sont les
+badges qui en tiennent lieu. Admin → Arrivées → Badges → **Télécharger tous les badges
+(provisoire)**, ouvrez le PDF sur un écran d'ordinateur, et scannez les QR codes avec le
+téléphone. Il faut que **Contenu du QR code** soit réglé sur « Code du billet » (Apparence des
+badges) : une carte de contact ne se scanne pas à l'entrée. Chaque page est un billet différent ;
+un badge déjà scanné répond « déjà scanné ».
+
 **Scan**
-- **Scanner un billet** ouvre la caméra. Pour avoir des codes à lire : affichez le PDF des
-  badges sur un écran d'ordinateur (QR code réglé sur « Code du billet ») et scannez-le avec le
-  téléphone.
+- **Scanner un billet** ouvre la caméra. Les billets : voir juste au-dessus.
 - Sans caméra : le champ **« Nom, prénom ou code du billet »** retrouve une personne ; la toucher
   vaut un scan.
 - Le résultat dit où envoyer la personne : guichet et numéro de badge, accueil dédié, guichet
@@ -227,8 +232,9 @@ Sur un téléphone en poste **Scan**, une fois la page chargée :
 - **Billetweb** : l'environnement écrit dans l'événement de test seulement (numéros de badge au
   gel, compostage des billets scannés, relancé chaque minute). Ne liez jamais l'édition au vrai
   événement : la clé le refuserait, mais ne tentez pas l'essai.
-- **Le gel ne se défait pas** depuis l'interface. Pour repartir de zéro, demandez à Julien de
-  réinitialiser la base de l'environnement.
+- **Revenir en arrière** : « Annuler le gel » tant qu'aucun billet n'a été scanné, sinon
+  « Réinitialiser l'accueil » (participants, scans et historique supprimés, puis réimport). La
+  réinitialisation ne décomposte pas les billets dans Billetweb.
 - **Ce qui ne se teste pas ici** : l'impression réelle sur la Zebra (seule la mise en page de
   l'étiquette est vérifiable, via « Enregistrer en PDF » dans la boîte d'impression) et le
   comportement sous la charge d'un vrai jour J.
