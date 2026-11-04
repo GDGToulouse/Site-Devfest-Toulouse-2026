@@ -32,7 +32,7 @@ Cette version clôt aussi le lot de **sécurité et de données personnelles** d
 
 ### Ajouté
 
-- **Conférence annulée et speaker retiré**, distincts du brouillon : la conférence reste en ligne, marquée « Annulée », au lieu de disparaître (#726).
+- **Conférence annulée et speaker retiré**, distincts du brouillon : ils disparaissent du site comme un brouillon, mais l'admin les marque « Annulé » / « Retiré », pour qu'on ne les republie pas par erreur (#726).
 - **Fiche conférence avec le jour, l'heure, la salle et les salles de retransmission** (#717).
 - **Programme brut pour les partenaires**, par salle ou par horaire, sans mise en forme, accessible depuis le tableau de bord (#755).
 - **Quarantaine des messages suspects du formulaire de contact** : un message qui ressemble à du phishing est enregistré mais rien ne part (ni e-mail, ni confirmation, ni webhook) tant qu'un organisateur ne l'a pas libéré ; une alerte sans contenu peut prévenir l'équipe sur Slack (#767).
