@@ -107,8 +107,8 @@ describe("the badge's text geometry (#774)", () => {
     const { lines } = layoutBadgeText(fonts(), people[0]);
 
     expect(lines.map((l) => [l.role, l.size, Number(l.y.toFixed(2))])).toEqual([
-      ["first", 28, 305.77],
-      ["last", 24, 275.76],
+      ["first", 36, 305.77],
+      ["last", 24, 273.5],
       ["company", 16, 245.4],
     ]);
   });

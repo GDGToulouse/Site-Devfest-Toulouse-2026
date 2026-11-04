@@ -31,8 +31,11 @@ const TEXT_MARGIN = 20;
 const CLEARANCE = 4;
 const TEXT_TOP = RIBBON_BOTTOM - CLEARANCE;
 const TEXT_BOTTOM = QR_SQUARE_TOP + CLEARANCE;
-const FIRST_NAME = { size: 28, min: 16, maxLines: 2, baseline: 305.77 };
-const LAST_NAME = { size: 24, min: 12, maxLines: 2, baseline: 275.76 };
+// The first name is what a visitor reads from afar: well above the last name
+// (28 against 24 read too close in testing, #774). The last name moves down to
+// keep its accents clear of the first name's descenders.
+const FIRST_NAME = { size: 36, min: 20, maxLines: 2, baseline: 305.77 };
+const LAST_NAME = { size: 24, min: 12, maxLines: 2, baseline: 273.5 };
 const COMPANY = { size: 16, min: 9, maxLines: 3, baseline: 245.4, tracking: 0.05 };
 // Baseline to baseline of two lines of the same text, and the glyphs' reach
 // above and below their baseline (accented capitals, descenders).
