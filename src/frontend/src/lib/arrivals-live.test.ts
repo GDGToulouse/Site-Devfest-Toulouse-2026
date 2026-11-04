@@ -24,13 +24,15 @@ const badge = (id: number, number: number, state: LiveBadge["state"], version: n
   byLabel: false,
   scannedOffline: false,
   scannedAt: null,
+  isRefunded: false,
+  isWithdrawn: false,
   firstName: "Camille",
   lastName: "Test",
   company: null,
 });
 
 const snapshot = (badges: LiveBadge[]) =>
-  fromSnapshot({ layout: { counters: 3, binsPerCounter: 2 }, frozenAt: null, badges, help: [] });
+  fromSnapshot({ layout: { counters: 3, binsPerCounter: 2 }, frozenAt: null, badges, help: [], withdrawals: [] });
 
 describe("the live state of the arrivals screens (#641)", () => {
   it("should apply a move newer than what the screen holds", () => {
@@ -97,6 +99,16 @@ describe("the live state of the arrivals screens (#641)", () => {
     const state = applyHelp(applyHelp(snapshot([]), entry), done);
 
     expect(state.help).toEqual([done]);
+  });
+
+  it("should keep a refunded badge on its counter until the help desk takes it back (#800)", () => {
+    const refunded = { ...badge(1, 1101, "READY", 2), isRefunded: true };
+
+    const before = counterBoard(snapshot([refunded]), 1);
+    const after = counterBoard(applyBadge(snapshot([refunded]), { ...refunded, version: 3, isWithdrawn: true }), 1);
+
+    expect(before.ready.map((b) => b.id)).toEqual([1]);
+    expect(after.ready).toEqual([]);
   });
 
   it("should take a help desk ticket off the list when its scan is cancelled (#797)", () => {

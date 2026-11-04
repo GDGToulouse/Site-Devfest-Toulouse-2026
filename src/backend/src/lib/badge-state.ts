@@ -24,6 +24,10 @@ export interface LiveBadge {
   scannedOffline: boolean;
   /** When the person was scanned: orders À chercher, a card sent back included (#643). */
   scannedAt: Date | null;
+  /** Refunded after its badge was printed (#800): flagged, never handed over. */
+  isRefunded: boolean;
+  /** The refunded badge was taken back by the help desk: off its counter's screen. */
+  isWithdrawn: boolean;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -38,6 +42,8 @@ export const LIVE_BADGE_SELECT = {
   labelDeliveredAt: true,
   scannedOffline: true,
   scannedAt: true,
+  isCancelled: true,
+  badgeWithdrawnAt: true,
   firstName: true,
   lastName: true,
   company: true,
@@ -52,6 +58,8 @@ type LiveBadgeRow = {
   labelDeliveredAt: Date | null;
   scannedOffline: boolean;
   scannedAt: Date | null;
+  isCancelled: boolean;
+  badgeWithdrawnAt: Date | null;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -68,6 +76,8 @@ export function toLiveBadge(row: LiveBadgeRow): LiveBadge {
     byLabel: row.labelDeliveredAt !== null,
     scannedOffline: row.scannedOffline,
     scannedAt: row.scannedAt,
+    isRefunded: row.isCancelled,
+    isWithdrawn: row.badgeWithdrawnAt !== null,
     firstName: row.firstName,
     lastName: row.lastName,
     company: row.company,
@@ -152,6 +162,36 @@ export const helpDeskTickets = (editionId: number) => ({
   OR: [{ ticketTierId: null }, { ticketTier: { isOutsideFlow: false } }],
 });
 
+/**
+ * A printed badge whose ticket was refunded (#800): the help desk goes and
+ * takes it back, from its bin, its counter's hands, or the person's.
+ */
+export interface WithdrawalEntry {
+  id: number;
+  number: number;
+  state: BadgeState;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+}
+
+/** The refunded badges not yet taken back, by number. Bounded by the edition's tickets. */
+export async function loadWithdrawals(editionId: number): Promise<WithdrawalEntry[]> {
+  const rows = await prisma.attendee.findMany({
+    where: { editionId, isCancelled: true, badgeNumber: { not: null }, badgeWithdrawnAt: null },
+    select: { id: true, badgeNumber: true, badgeState: true, firstName: true, lastName: true, company: true },
+    orderBy: { badgeNumber: "asc" },
+  });
+  return rows.map((row) => ({
+    id: row.id,
+    number: row.badgeNumber ?? 0,
+    state: row.badgeState,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    company: row.company,
+  }));
+}
+
 export interface ArrivalsSnapshot {
   layout: { counters: number; binsPerCounter: number };
   frozenAt: Date | null;
@@ -159,6 +199,8 @@ export interface ArrivalsSnapshot {
   badges: LiveBadge[];
   /** Scanned tickets without a number, oldest first. */
   help: HelpEntry[];
+  /** Refunded badges the help desk must take back (#800). */
+  withdrawals: WithdrawalEntry[];
 }
 
 /**
@@ -186,7 +228,32 @@ export async function loadArrivalsSnapshot(editionId: number): Promise<ArrivalsS
     frozenAt: edition.badgesFrozenAt,
     badges: rows.map(toLiveBadge),
     help: help.map(toHelpEntry),
+    // Only once the badges exist: before the freeze, nothing is printed.
+    withdrawals: edition.badgesFrozenAt ? await loadWithdrawals(editionId) : [],
   };
+}
+
+/**
+ * The help desk has the refunded badge in hand (#800): off the list, and its
+ * card off its counter. Null for no such refunded badge.
+ */
+export async function withdrawBadge(editionId: number, attendeeId: number): Promise<LiveBadge | null> {
+  const done = await prisma.attendee.updateMany({
+    where: { id: attendeeId, editionId, isCancelled: true, badgeNumber: { not: null }, badgeWithdrawnAt: null },
+    data: { badgeWithdrawnAt: new Date(), badgeStateVersion: { increment: 1 } },
+  });
+  const row = await prisma.attendee.findFirst({
+    where: { id: attendeeId, editionId, isCancelled: true, badgeNumber: { not: null } },
+    select: LIVE_BADGE_SELECT,
+  });
+  if (!row) return null;
+  const badge = toLiveBadge(row);
+  if (done.count === 1) {
+    publishArrivals(editionId, { type: "badge", data: badge });
+    publishArrivals(editionId, { type: "withdrawals", data: await loadWithdrawals(editionId) });
+    publishArrivals(editionId, { type: "counts", data: null });
+  }
+  return badge;
 }
 
 export type MoveResult = { applied: boolean; badge: LiveBadge };

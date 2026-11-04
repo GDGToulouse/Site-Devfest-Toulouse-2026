@@ -10,6 +10,7 @@ import { purgeExpiredTrash } from "./trash-purge.js";
 import { PERSONAL_DATA_RETENTION_MONTHS, anonymizeExpiredPersonalData } from "./personal-data-retention.js";
 import { editionsWithPendingCheckIns, requestCheckIn } from "./billetweb-checkin.js";
 import { ATTENDEE_RETENTION_MONTHS, purgeExpiredAttendees } from "./attendee-retention.js";
+import { runAttendeeSync } from "./attendee-sync.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
@@ -31,6 +32,9 @@ const STATUS_SCHEDULE_CRON = "0,15,30,45 0 * * *";
 // Every minute: the check-ins Billetweb missed are retried while the entrance
 // keeps scanning (RG-ARR-37, #642). Idle the rest of the year, one query.
 const CHECK_IN_RETRY_CRON = "* * * * *";
+// Every five minutes: the attendees follow Billetweb while the stations are
+// open (#800). Billetweb allows 10 calls a minute on /attendees.
+const ATTENDEE_SYNC_CRON = "*/5 * * * *";
 const TIMEZONE = "Europe/Paris";
 
 /**
@@ -194,6 +198,12 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "billetweb-check-in-retry", timezone: TIMEZONE, noOverlap: true },
   );
 
+  cron.schedule(ATTENDEE_SYNC_CRON, () => runAttendeeSync(log), {
+    name: "billetweb-attendee-sync",
+    timezone: TIMEZONE,
+    noOverlap: true,
+  });
+
   log.info(
     {
       cron: [
@@ -205,6 +215,7 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
         FEEDBACK_TEST_MODE_CRON,
         STATUS_SCHEDULE_CRON,
         CHECK_IN_RETRY_CRON,
+        ATTENDEE_SYNC_CRON,
       ],
       timezone: TIMEZONE,
     },

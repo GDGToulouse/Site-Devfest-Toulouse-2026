@@ -5,8 +5,10 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import {
   applyBadge,
   applyHelp,
+  applyWithdrawals,
   fromSnapshot,
   withdrawHelp,
+  type WithdrawalEntry,
   type ArrivalsSnapshot,
   type HelpEntry,
   type LiveBadge,
@@ -131,6 +133,7 @@ export function useArrivalsStream(editionId: number | null): {
     badge: (data) => setLive((state) => (state ? applyBadge(state, data as LiveBadge) : state)),
     help: (data) => setLive((state) => (state ? applyHelp(state, data as HelpEntry) : state)),
     "help-withdrawn": (data) => setLive((state) => (state ? withdrawHelp(state, (data as { id: number }).id) : state)),
+    withdrawals: (data) => setLive((state) => (state ? applyWithdrawals(state, data as WithdrawalEntry[]) : state)),
   });
 
   const applyMoved = useCallback((badge: LiveBadge) => {

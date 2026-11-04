@@ -103,6 +103,15 @@ après un nouvel import des tarifs.
 2. Lisez le compte rendu (nouveaux, mis à jour, annulés) et les totaux : Attendus, Aux guichets,
    Accueil dédié, Annulés ou remboursés.
 3. Relancez l'import : il ne reprend que ce qui a changé (« Import des changements »).
+4. Pendant la fenêtre des postes (étape 5), l'import se fait tout seul toutes les 5 minutes :
+   ajoutez un billet ou remboursez-en un dans l'événement de test Billetweb, et vérifiez qu'il
+   est reconnu (ou annoncé « Billet annulé ») au Scan dans les 5 minutes. Un billet remboursé
+   dont le badge est imprimé apparaît à l'Aide dans **Badges à retirer** et reste marqué
+   « Remboursé » au guichet.
+
+Les billets déjà compostés sur Billetweb (essais précédents, ou l'application Billetweb Scan)
+sont comptés comme scannés à l'import, « par Billetweb Scan » : c'est voulu. Pour repartir de
+billets neufs, il faut les décomposter dans Billetweb.
 
 À vérifier : les totaux par tarif correspondent à Billetweb ; aucun message « tarif que le site
 ne connaît pas ».
@@ -192,7 +201,8 @@ badges) : une carte de contact ne se scanne pas à l'entrée. Chaque page est un
 un badge déjà scanné répond « déjà scanné ».
 
 **Scan**
-- **Scanner un billet** ouvre la caméra. Les billets : voir juste au-dessus.
+- **Scanner un billet** ouvre la caméra. Les billets : voir juste au-dessus. Sur Android, un
+  bouton **Allumer la lampe** apparaît quand le téléphone le permet (pas promis sur iPhone).
 - Sans caméra : le champ **« Nom, prénom ou code du billet »** retrouve une personne ; la toucher
   vaut un scan.
 - Le résultat dit où envoyer la personne : guichet et numéro de badge, accueil dédié, guichet

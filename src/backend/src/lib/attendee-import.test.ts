@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { planAttendeeImport, toImportedAttendee, type ImportedAttendee } from "./attendees.js";
+import { checkInOf, planAttendeeImport, toImportedAttendee, type ImportedAttendee } from "./attendee-import.js";
 
 function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -45,6 +45,20 @@ describe("toImportedAttendee (#638)", () => {
   it("skips a row it cannot key", () => {
     expect(toImportedAttendee(row({ id: "" }))).toBeNull();
     expect(toImportedAttendee(row({ order_date: "" }))).toBeNull();
+  });
+});
+
+describe("checkInOf (#800)", () => {
+  it("reads Billetweb's check-in as Paris wall time, with its lane", () => {
+    expect(checkInOf(row({ used: "1", used_date: "2026-11-19 08:30:00", lane: "Porte A" }))).toEqual({
+      at: new Date("2026-11-19T07:30:00Z"),
+      lane: "Porte A",
+    });
+  });
+
+  it("sees no check-in on a ticket not used, or taken back", () => {
+    expect(checkInOf(row({ used: "0", used_date: "2026-11-19 08:30:00" }))).toBeNull();
+    expect(checkInOf(row())).toBeNull();
   });
 });
 

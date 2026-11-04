@@ -17,6 +17,20 @@ export interface LiveBadge {
   scannedOffline: boolean;
   /** When the person was scanned, ISO: orders À chercher. */
   scannedAt: string | null;
+  /** Refunded since the badge was printed (#800): flagged, never handed over. */
+  isRefunded: boolean;
+  /** That refunded badge was taken back by the help desk: off the counter. */
+  isWithdrawn: boolean;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+}
+
+/** A refunded badge the help desk must take back (#800). */
+export interface WithdrawalEntry {
+  id: number;
+  number: number;
+  state: BadgeState;
   firstName: string;
   lastName: string;
   company: string | null;
@@ -44,6 +58,7 @@ export interface ArrivalsSnapshot {
   frozenAt: string | null;
   badges: LiveBadge[];
   help: HelpEntry[];
+  withdrawals: WithdrawalEntry[];
 }
 
 export interface LiveState {
@@ -53,6 +68,8 @@ export interface LiveState {
   badges: Map<number, LiveBadge>;
   /** Oldest first. */
   help: HelpEntry[];
+  /** Refunded badges to take back, by number (#800). */
+  withdrawals: WithdrawalEntry[];
 }
 
 /** A snapshot replaces everything: it is the server's word after a break (RG-ARR-61). */
@@ -62,18 +79,24 @@ export function fromSnapshot(snapshot: ArrivalsSnapshot): LiveState {
     frozenAt: snapshot.frozenAt,
     badges: new Map(snapshot.badges.map((badge) => [badge.id, badge])),
     help: snapshot.help,
+    withdrawals: snapshot.withdrawals ?? [],
   };
+}
+
+/** A help desk entry whose scan was cancelled (#797): off the list. */
+export function withdrawHelp(state: LiveState, id: number): LiveState {
+  return { ...state, help: state.help.filter((h) => h.id !== id) };
+}
+
+/** The refunded badges to take back, sent whole after each change (#800). */
+export function applyWithdrawals(state: LiveState, withdrawals: WithdrawalEntry[]): LiveState {
+  return { ...state, withdrawals };
 }
 
 /**
  * A ticket sent to the help desk, or handed its label: one the screen already
  * lists is updated in place, never added twice.
  */
-/** A help desk entry whose scan was cancelled (#797): off the list. */
-export function withdrawHelp(state: LiveState, id: number): LiveState {
-  return { ...state, help: state.help.filter((h) => h.id !== id) };
-}
-
 export function applyHelp(state: LiveState, entry: HelpEntry): LiveState {
   const index = state.help.findIndex((h) => h.id === entry.id);
   if (index < 0) return { ...state, help: [...state.help, entry] };
@@ -163,8 +186,9 @@ export function counterBoard(state: LiveState, counter: number): CounterBoard {
     toFetchByBin: Array.from({ length: state.layout.binsPerCounter }, () => 0),
   };
   for (const badge of state.badges.values()) {
-    // A label from the help desk is not the counter's to hand over (RG-ARR-52).
-    if (counterOf(badge.number) !== counter || badge.byLabel) continue;
+    // A label from the help desk is not the counter's to hand over (RG-ARR-52),
+    // nor a refunded badge the help desk took back (#800).
+    if (counterOf(badge.number) !== counter || badge.byLabel || badge.isWithdrawn) continue;
     const badgeBin = binOf(badge.number);
     if (badge.state === "TO_FETCH" && badgeBin <= board.toFetchByBin.length) board.toFetchByBin[badgeBin - 1]++;
     if (badge.state === "TO_FETCH") board.toFetch.push(badge);

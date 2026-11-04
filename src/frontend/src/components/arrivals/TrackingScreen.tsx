@@ -125,6 +125,12 @@ export default function TrackingScreen({ edition }: { edition: { id: number; yea
                   {plural(summary.help.labelsPrinted, "étiquette générée", "étiquettes générées")}, dont{" "}
                   {summary.help.freeLabels} sans billet
                 </p>
+                {summary.help.refundedToWithdraw > 0 && (
+                  <p className="text-sm font-bold text-rouge">
+                    {summary.help.refundedToWithdraw}{" "}
+                    {plural(summary.help.refundedToWithdraw, "badge remboursé à retirer", "badges remboursés à retirer")}
+                  </p>
+                )}
               </div>
             </section>
           </>

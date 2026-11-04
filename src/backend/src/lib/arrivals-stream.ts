@@ -1,4 +1,4 @@
-import type { HelpEntry, LiveBadge } from "./badge-state.js";
+import type { HelpEntry, LiveBadge, WithdrawalEntry } from "./badge-state.js";
 
 // The fan-out behind the arrivals screens' stream (RG-ARR-60, #641). In memory,
 // like the scheduler: right while the backend runs as a single replica. A
@@ -9,6 +9,8 @@ export type ArrivalsEvent =
   | { type: "help"; data: HelpEntry }
   // A help desk entry whose scan was cancelled (#797): off the "to handle" list.
   | { type: "help-withdrawn"; data: { id: number } }
+  // The refunded badges to take back (#800), whole: a short list.
+  | { type: "withdrawals"; data: WithdrawalEntry[] }
   // Something only the tracking screen counts changed (#644): a dedicated-flow
   // scan, a label printed. Never sent to the volunteers' screens.
   | { type: "counts"; data: null };

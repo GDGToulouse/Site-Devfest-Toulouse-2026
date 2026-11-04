@@ -55,7 +55,7 @@ beforeEach(async () => {
   attendees = [];
   if (editionId !== undefined) {
     await prisma.attendee.deleteMany({ where: { editionId } });
-    await prisma.edition.update({ where: { id: editionId }, data: { attendeesSyncedAt: null } });
+    await prisma.edition.update({ where: { id: editionId }, data: { attendeesSyncedAt: null, attendeesSyncError: null } });
   }
 });
 
@@ -128,6 +128,53 @@ describe("Billetweb attendee import (#638)", () => {
     } finally {
       await prisma.edition.update({ where: { id: editionId }, data: { billetwebEventId: EVENT } });
     }
+  });
+
+  it("marks scanned a ticket Billetweb's own app checked in, at its time and lane, without moving its badge (#800)", async () => {
+    attendees = [ticket("4", { used: "1", used_date: "2026-11-19 08:30:00", lane: "Porte A" })];
+
+    const res = await importAttendees();
+
+    expect(res.json()).toMatchObject({ externalCheckIns: 1 });
+    expect(await prisma.attendee.findFirstOrThrow({ where: { editionId, billetwebId: "4" } })).toMatchObject({
+      scannedAt: new Date("2026-11-19T07:30:00Z"),
+      scannedByLabel: "Billetweb Scan (Porte A)",
+      badgeState: "PRINTED",
+    });
+  });
+
+  it("leaves alone a check-in of ours, and one being taken back (#800)", async () => {
+    attendees = [ticket("5"), ticket("6")];
+    await importAttendees();
+    const ours = new Date("2026-11-19T07:00:00Z");
+    await prisma.attendee.updateMany({
+      where: { editionId, billetwebId: "5" },
+      data: { scannedAt: ours, scannedByLabel: "Poste Scan", checkedInAt: ours },
+    });
+    // A scan cancelled here, whose check-in Billetweb still holds (#797).
+    await prisma.attendee.updateMany({ where: { editionId, billetwebId: "6" }, data: { checkedInAt: ours } });
+
+    attendees = [5, 6].map((id) => ticket(String(id), { used: "1", used_date: "2026-11-19 08:00:00", lane: "x" }));
+    const res = await importAttendees();
+
+    expect(res.json()).toMatchObject({ externalCheckIns: 0 });
+    const rows = await prisma.attendee.findMany({ where: { editionId }, orderBy: { billetwebId: "asc" } });
+    expect(rows.map((r) => [r.billetwebId, r.scannedByLabel])).toEqual([
+      ["5", "Poste Scan"],
+      ["6", null],
+    ]);
+  });
+
+  it("writes why an import failed on the edition, and clears it on the next success (#800)", async () => {
+    attendees = { error: "quota exceeded" } as unknown as Row[];
+    const failed = await importAttendees();
+    const whileFailing = (await summary()).json();
+    attendees = [ticket("7")];
+    await importAttendees();
+
+    expect(failed.statusCode).toBe(502);
+    expect(whileFailing.syncError).toBe("quota exceeded");
+    expect((await summary()).json().syncError).toBeNull();
   });
 
   it("keeps the e-mail out of the summary", async () => {

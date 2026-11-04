@@ -37,6 +37,19 @@ test.describe("help station", () => {
     await expect(toHandle.getByRole("button", { name: /Noa Testaide/ })).toHaveCount(0);
   });
 
+  // The fixture's cancelled ticket has a printed badge: a refund after the freeze.
+  test("should list a refunded badge to take back, until the desk has it (#800)", async ({ openStation }) => {
+    const help = await openStation("help");
+    const list = help.getByRole("region", { name: /Badges à retirer/ });
+    const entry = list.getByRole("listitem").filter({ hasText: "Claude Testannule" });
+    await expect(entry).toContainText("1 1 03");
+    await expect(entry).toContainText("Dans son présentoir, guichet 1");
+
+    await entry.getByRole("button", { name: "Badge récupéré" }).click();
+
+    await expect(help.getByRole("region", { name: /Badges à retirer/ })).toHaveCount(0);
+  });
+
   test("should open a person's page from a ticket read at the desk (#801)", async ({ openStation, data }) => {
     const help = await openStation("help");
     await showToCamera(help, data.attendees.search.qr);

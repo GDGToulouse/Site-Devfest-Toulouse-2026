@@ -153,6 +153,9 @@ model Edition {
   // When the attendees were last imported from that event (#638): the next
   // import only asks Billetweb for what changed since.
   attendeesSyncedAt       DateTime?
+  // Why the last import failed, by hand or by the five-minute sync (#800);
+  // null once one succeeds.
+  attendeesSyncError      String?
   // When the attendees' data was deleted, 18 months after the event
   // (RG-ARR-66): from then on, no import brings it back.
   attendeesPurgedAt       DateTime?
@@ -625,6 +628,9 @@ model Attendee {
   // (RG-ARR-52, #713): the person is Distribué, off their counter's screen,
   // and counted apart. Cleared if the badge moves again.
   labelDeliveredAt  DateTime?
+  // A badge printed for a ticket refunded since (#800): when the help desk
+  // took it back, off its counter's screen and the desk's list.
+  badgeWithdrawnAt  DateTime?
   badgeLabels       BadgeLabel[]
   // The first scan at the entrance, whatever the ticket's flow: what the
   // "already scanned" alert shows (RG-ARR-34). A label, not a user: it must

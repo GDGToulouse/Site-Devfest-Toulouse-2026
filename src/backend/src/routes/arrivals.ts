@@ -16,6 +16,7 @@ import {
   isStepBack,
   loadArrivalsSnapshot,
   moveBadge,
+  withdrawBadge,
 } from "../lib/badge-state.js";
 import {
   OFFLINE_KEY_HEX_LENGTH,
@@ -345,12 +346,17 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
         return reply.code(400).send({ error: "move_not_allowed", message: "Ce passage n'est pas possible depuis cet écran." });
       }
 
+      const current = await prisma.attendee.findFirst({
+        where: { id: attendeeId, editionId },
+        select: { badgeNumber: true, isCancelled: true, badgeWithdrawnAt: true },
+      });
       // A counter's station touches its own badges only (RG-ARR-72).
-      if (principal.kind === "station") {
-        const badge = await prisma.attendee.findFirst({ where: { id: attendeeId, editionId }, select: { badgeNumber: true } });
-        if (badge && !isBadgeInScope(principal.station, badge.badgeNumber)) {
-          return reply.code(403).send({ error: "Forbidden", message: "Ce badge n'est pas à votre guichet." });
-        }
+      if (principal.kind === "station" && current && !isBadgeInScope(principal.station, current.badgeNumber)) {
+        return reply.code(403).send({ error: "Forbidden", message: "Ce badge n'est pas à votre guichet." });
+      }
+      // Refunded since it was printed (#800): never handed over, the help desk takes it back.
+      if (to === "DELIVERED" && current?.isCancelled) {
+        return reply.code(409).send({ error: "refunded", message: "Billet remboursé : ne remettez pas ce badge, l'Aide vient le récupérer." });
       }
 
       const result = await moveBadge(editionId, attendeeId, from, to, principal.actor, {
@@ -525,6 +531,22 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       if (!result) return reply.code(404).send({ error: "Not found" });
       if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
       return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/withdrawn — the help
+  // desk took back the badge of a ticket refunded since it was printed (#800).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/withdrawn",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+
+      const badge = await withdrawBadge(editionId, attendeeId);
+      if (!badge) return reply.code(404).send({ error: "Not found" });
+      return { withdrawn: true };
     },
   );
 
