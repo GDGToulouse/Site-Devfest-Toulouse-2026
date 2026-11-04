@@ -198,6 +198,10 @@ un badge déjà scanné répond « déjà scanné ».
 - Le résultat dit où envoyer la personne : guichet et numéro de badge, accueil dédié, guichet
   d'aide, billet annulé, déjà scanné.
 - En bas, la charge de chaque guichet (badges en attente).
+- **Annuler ce scan** (une minute après le scan, sur le téléphone qui l'a fait) : la carte quitte
+  le guichet, le billet est décomposté dans Billetweb, et un nouveau scan compte comme le
+  premier. Après la minute, seul un admin peut annuler, depuis l'écran Aide (fiche de la
+  personne). Un badge déjà distribué ne s'annule pas.
 
 **Guichet N** (tout le guichet : ses bénévoles servent tous ses présentoirs)
 - Un billet scanné apparaît dans **À chercher**, avec un signal sonore (après un premier toucher
