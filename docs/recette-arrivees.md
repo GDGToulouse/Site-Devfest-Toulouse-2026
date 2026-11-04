@@ -205,6 +205,9 @@ un badge déjà scanné répond « déjà scanné ».
 - Toucher une carte la fait avancer : À chercher → Prêt → Distribué. ↩ la fait reculer.
 - Ouvrez le même guichet sur deux appareils : un mouvement sur l'un apparaît aussitôt sur
   l'autre.
+- **Chercher** (nom ou numéro de badge, `1 2 05`) : une personne de ce guichet → « Voir la
+  carte » met sa carte en évidence ; une personne d'un autre guichet → « Au guichet 3 ».
+- Téléphone en **paysage** : les trois colonnes passent côte à côte.
 
 **Aide**
 - Les billets scannés sans badge imprimé arrivent dans **À traiter**.
