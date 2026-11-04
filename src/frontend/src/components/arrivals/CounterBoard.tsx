@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import CounterSearch from "@/components/arrivals/CounterSearch";
 import { moveBadge } from "@/lib/arrivals-api";
 import {
   DELIVERED_SHOWN,
@@ -33,6 +34,9 @@ const TOUCH_WORDS: Partial<Record<BadgeState, string>> = {
   READY: "passer en Distribué",
   DELIVERED: "revenir en Prêt",
 };
+
+/** How long a card found by the search stays ringed. */
+const POINTED_MS = 4_000;
 
 const SIGNAL_VIBRATION_MS = 200;
 const SIGNAL_TONE_HZ = 880;
@@ -77,11 +81,14 @@ function useArrivalSignal() {
 function Card({
   badge,
   isBusy,
+  isPointed,
   onTouch,
   actions,
 }: {
   badge: LiveBadge;
   isBusy: boolean;
+  /** Found by the search: ringed for a moment (#802). */
+  isPointed: boolean;
   onTouch: () => void;
   /** Secondary gestures beside the card: a symbol, and what it does. */
   actions: Array<{ symbol: string; label: string; onClick: () => void }>;
@@ -91,13 +98,15 @@ function Card({
   // Scanned during an outage: the counter may have handed it over by hand (#645).
   const isFromOutage = badge.scannedOffline && badge.state === "TO_FETCH";
   return (
-    <li className={`flex items-stretch gap-1 ${isDone ? "opacity-60" : ""}`}>
+    <li id={`badge-card-${badge.id}`} className={`flex items-stretch gap-1 ${isDone && !isPointed ? "opacity-60" : ""}`}>
       <button
         type="button"
         onClick={onTouch}
         disabled={isBusy}
         aria-label={`Badge ${formatBadgeNumber(badge.number)}, ${badge.firstName} ${badge.lastName} : ${TOUCH_WORDS[badge.state]}`}
-        className="flex min-w-0 flex-1 items-stretch gap-3 overflow-hidden rounded-xl border border-gris/20 bg-blanc py-3 pr-3 text-left hover:border-bleu focus-visible:border-bleu disabled:opacity-50"
+        className={`flex min-w-0 flex-1 items-stretch gap-3 overflow-hidden rounded-xl border bg-blanc py-3 pr-3 text-left hover:border-bleu focus-visible:border-bleu disabled:opacity-50 ${
+          isPointed ? "border-terre-cuite ring-4 ring-terre-cuite" : "border-gris/20"
+        }`}
       >
         <span aria-hidden="true" className={`w-3 shrink-0 ${binColor(bin)}`} />
         <span className="min-w-0">
@@ -164,7 +173,17 @@ export default function CounterBoard({
   const board = counterBoard(live, counter);
   const [busyIds, setBusyIds] = useState<Set<number>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  const [pointedId, setPointedId] = useState<number | null>(null);
   const { isMuted, signal } = useArrivalSignal();
+  const shownIds = new Set([...board.toFetch, ...board.ready, ...board.delivered].map((b) => b.id));
+
+  // The card the search found: brought into view, ringed long enough to be seen.
+  useEffect(() => {
+    if (pointedId === null) return;
+    document.getElementById(`badge-card-${pointedId}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const timer = setTimeout(() => setPointedId(null), POINTED_MS);
+    return () => clearTimeout(timer);
+  }, [pointedId]);
 
   // A new card to fetch: beep. The first state the screen gets is not news.
   const seenRef = useRef<Set<number> | null>(null);
@@ -198,6 +217,7 @@ export default function CounterBoard({
       key={badge.id}
       badge={badge}
       isBusy={busyIds.has(badge.id)}
+      isPointed={pointedId === badge.id}
       onTouch={() => {
         const to = TOUCH[badge.state];
         if (to) void move(badge, to);
@@ -238,7 +258,10 @@ export default function CounterBoard({
         </p>
       )}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <CounterSearch editionId={editionId} counter={counter} live={live} shownIds={shownIds} onShow={setPointedId} />
+
+      {/* Side by side on a wide screen, and on any phone turned sideways (#802). */}
+      <div className="grid gap-3 md:grid-cols-3 landscape:grid-cols-3">
         <Column title="À chercher" count={String(board.toFetch.length)}>
           {board.toFetch.map((badge) => card(badge, toFetchActions(badge)))}
         </Column>

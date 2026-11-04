@@ -64,6 +64,27 @@ test.describe("counter station", () => {
     await expect(counter.getByRole("button", { name: nameBefore, exact: true })).toHaveCount(0);
   });
 
+  test("should find a person by name or number, here or at another counter (#802)", async ({ openStation, data }) => {
+    const counterOne = await openStation("c1");
+    const counterTwo = await openStation("c2");
+    const scan = await openStation("scan");
+    await expect(scan.getByRole("status").filter({ hasText: "Connecté" })).toBeVisible();
+    await scan.getByLabel(/Pas de confirmation/).fill(data.attendees.counter.barcode);
+    await scan.getByRole("button", { name: "Valider" }).click();
+    await expect(counterOne.getByRole("button", { name: /Charlie Testguichet/ })).toBeVisible();
+
+    // At another counter: where to send the person, nothing to touch.
+    await counterTwo.getByRole("searchbox", { name: /Chercher quelqu/ }).fill("Testguichet");
+    const results = counterTwo.getByRole("list", { name: "Résultats de la recherche" });
+    await expect(results).toContainText("Au guichet 1, badge 1 1 02");
+    await expect(results.getByRole("button", { name: "Voir la carte" })).toHaveCount(0);
+
+    // At its own counter, by the number as printed: the card is pointed at.
+    await counterOne.getByRole("searchbox", { name: /Chercher quelqu/ }).fill("1 1 02");
+    await counterOne.getByRole("list", { name: "Résultats de la recherche" }).getByRole("button", { name: "Voir la carte" }).click();
+    await expect(counterOne.locator(`#badge-card-${data.attendees.counter.id} button`).first()).toHaveClass(/ring-4/);
+  });
+
   test("should not show another counter's badge", async ({ openStation }) => {
     const counterTwo = await openStation("c2");
     const scan = await openStation("scan");
