@@ -45,6 +45,8 @@ const EXCLUDED_MODELS = new Set([
 const NOISE_ONLY_FIELDS: Record<string, readonly string[]> = {
   // Refreshed on API key use (auth-context.ts): one line per minute per key.
   ApiKey: ["lastUsedAt"],
+  // Written by every attendee import, every five minutes on event day (#800).
+  Edition: ["attendeesSyncedAt", "attendeesSyncError"],
 };
 
 // Set by Prisma on every write: never the change anyone asked for.

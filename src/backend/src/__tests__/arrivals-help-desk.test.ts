@@ -7,6 +7,8 @@ import arrivalsRoutes from "../routes/arrivals.js";
 import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
 import { isCheckInRunning } from "../lib/billetweb-checkin.js";
 import { loadTrackingSummary } from "../lib/arrivals-tracking.js";
+import { loadWithdrawals } from "../lib/badge-state.js";
+import { editionsToSync } from "../lib/attendee-sync.js";
 import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
 import { prisma } from "../lib/prisma.js";
 
@@ -239,6 +241,42 @@ describe("Labels at the help desk (#713)", () => {
     expect(res.json()).toEqual([
       expect.objectContaining({ id: ticket.id, badgeNumber: 2150, badgeState: "READY", labelCount: 1, labelDeliveredAt: null }),
     ]);
+  });
+});
+
+describe("Badges of tickets refunded since printing (#800)", () => {
+  it("should refuse to hand over a refunded badge, and let the help desk take it back", async () => {
+    const ticket = await createTicket({ number: 2160, state: "READY", isScanned: true, isCancelled: true });
+
+    const handOver = await app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/badges/${ticket.id}/move`,
+      headers,
+      payload: { from: "READY", to: "DELIVERED" },
+    });
+    const listed = await loadWithdrawals(editionId);
+    const events = await heardDuring(() =>
+      app.inject({ method: "POST", url: `/api/arrivals/${editionId}/attendees/${ticket.id}/withdrawn`, headers }),
+    );
+
+    expect([handOver.statusCode, handOver.json().error]).toEqual([409, "refunded"]);
+    expect(listed.map((w) => w.id)).toContain(ticket.id);
+    expect((await loadWithdrawals(editionId)).map((w) => w.id)).not.toContain(ticket.id);
+    expect(events).toContainEqual({ type: "badge", data: expect.objectContaining({ id: ticket.id, isRefunded: true, isWithdrawn: true }) });
+  });
+
+  it("should sync an edition only while its stations are open", async () => {
+    const day = 24 * 60 * 60 * 1000;
+    await prisma.edition.update({
+      where: { id: editionId },
+      data: { stationAccessFrom: new Date(Date.now() - day), stationAccessUntil: new Date(Date.now() + day) },
+    });
+    const open = await editionsToSync();
+    await prisma.edition.update({ where: { id: editionId }, data: { stationAccessUntil: new Date(Date.now() - 1000) } });
+    const closed = await editionsToSync();
+
+    expect(open).toContain(editionId);
+    expect(closed).not.toContain(editionId);
   });
 });
 

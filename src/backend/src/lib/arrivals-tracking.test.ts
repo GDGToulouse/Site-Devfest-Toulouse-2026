@@ -53,7 +53,7 @@ describe("the tracking screen's totals (#644)", () => {
       { labelsPrinted: 3, freeLabels: 1 },
     );
 
-    expect(summary.help).toEqual({ toHandle: 1, labelsDelivered: 2, labelsPrinted: 3, freeLabels: 1 });
+    expect(summary.help).toEqual({ toHandle: 1, labelsDelivered: 2, labelsPrinted: 3, freeLabels: 1, refundedToWithdraw: 0 });
     expect(summary.delivered).toBe(2);
     expect(summary.counters[0]).toEqual({ counter: 1, numbered: 0, toFetch: 0, ready: 0, delivered: 0 });
   });

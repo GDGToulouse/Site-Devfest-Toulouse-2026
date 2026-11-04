@@ -34,6 +34,8 @@ export interface TrackingSummary {
     labelsPrinted: number;
     /** Of which, labels for a person without a ticket (#801). */
     freeLabels: number;
+    /** Badges printed for tickets refunded since, not yet taken back (#800). */
+    refundedToWithdraw: number;
   };
 }
 
@@ -49,7 +51,11 @@ export interface TrackingRow {
 export function summarize(
   rows: TrackingRow[],
   counters: number,
-  { labelsPrinted, freeLabels }: { labelsPrinted: number; freeLabels: number },
+  {
+    labelsPrinted,
+    freeLabels,
+    refundedToWithdraw = 0,
+  }: { labelsPrinted: number; freeLabels: number; refundedToWithdraw?: number },
 ): TrackingSummary {
   const summary: TrackingSummary = {
     expected: 0,
@@ -64,7 +70,7 @@ export function summarize(
       delivered: 0,
     })),
     dedicated: { expected: 0, scanned: 0 },
-    help: { toHandle: 0, labelsDelivered: 0, labelsPrinted, freeLabels },
+    help: { toHandle: 0, labelsDelivered: 0, labelsPrinted, freeLabels, refundedToWithdraw },
   };
 
   for (const row of rows) {
@@ -113,9 +119,10 @@ export async function loadTrackingSummary(editionId: number): Promise<TrackingSu
       ticketTier: { select: { isOutsideFlow: true } },
     },
   });
-  const [labelsPrinted, freeLabels] = await Promise.all([
+  const [labelsPrinted, freeLabels, refundedToWithdraw] = await Promise.all([
     prisma.badgeLabel.count({ where: { editionId } }),
     prisma.badgeLabel.count({ where: { editionId, attendeeId: null } }),
+    prisma.attendee.count({ where: { editionId, isCancelled: true, badgeNumber: { not: null }, badgeWithdrawnAt: null } }),
   ]);
   return summarize(
     rows.map((row) => ({
@@ -126,6 +133,6 @@ export async function loadTrackingSummary(editionId: number): Promise<TrackingSu
       isLabelDelivered: row.labelDeliveredAt !== null,
     })),
     edition.badgeCounters,
-    { labelsPrinted, freeLabels },
+    { labelsPrinted, freeLabels, refundedToWithdraw },
   );
 }
