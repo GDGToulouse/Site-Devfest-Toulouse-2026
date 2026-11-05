@@ -10,22 +10,18 @@ import { parseWallTime } from "./zoned-time.js";
 // messages/*.json (feedback.items), and talk-feedback-labels.test.ts keeps the
 // two identical.
 export const TALK_FEEDBACK_ITEMS = [
-  { code: "fun", isPositive: true, fr: "Drôle/original 😃", en: "Fun 😃" },
-  { code: "learned", isPositive: true, fr: "J'ai beaucoup appris 🤓", en: "I've learned a lot 🤓" },
-  { code: "interesting", isPositive: true, fr: "Super intéressant 👍", en: "Very interesting 👍" },
-  { code: "speaker", isPositive: true, fr: "Très bon orateur/oratrice 👏", en: "Good speaker 👏" },
-  { code: "notClear", isPositive: false, fr: "Pas clair 🧐", en: "Not clear 🧐" },
-  { code: "tooTechnical", isPositive: false, fr: "Trop technique 🤖", en: "Too technical 🤖" },
-  { code: "lackOfDemo", isPositive: false, fr: "Pas assez de démo/exemple 🤔", en: "Lack of demo/example 🤔" },
-  { code: "tooComplex", isPositive: false, fr: "Trop complexe 🤯", en: "Too complex 🤯" },
+  { code: "fun", fr: "Drôle/original 😃", en: "Fun 😃" },
+  { code: "learned", fr: "J'ai beaucoup appris 🤓", en: "I've learned a lot 🤓" },
+  { code: "interesting", fr: "Super intéressant 👍", en: "Very interesting 👍" },
+  { code: "speaker", fr: "Très bon orateur/oratrice 👏", en: "Good speaker 👏" },
+  { code: "notClear", fr: "Pas clair 🧐", en: "Not clear 🧐" },
+  { code: "tooTechnical", fr: "Trop technique 🤖", en: "Too technical 🤖" },
+  { code: "lackOfDemo", fr: "Pas assez de démo/exemple 🤔", en: "Lack of demo/example 🤔" },
+  { code: "tooComplex", fr: "Trop complexe 🤯", en: "Too complex 🤯" },
 ] as const;
 
 export const TALK_FEEDBACK_CODES = TALK_FEEDBACK_ITEMS.map((item) => item.code);
 
-/** Below this many votes the public sees no trend: two opinions are not one. */
-export const PUBLIC_TREND_MIN_VOTES = 5;
-/** The public trend shows this many appreciations, the most ticked first. */
-export const PUBLIC_TREND_SIZE = 3;
 export const FEEDBACK_MESSAGE_MAX_LENGTH = 2000;
 
 export type FeedbackPhase = "upcoming" | "open" | "closed";
@@ -74,21 +70,23 @@ export function isTestVote(edition: EditionDates, now: Date = new Date()): boole
   return Boolean(edition.feedbackTestMode && window && now < window.opensAt);
 }
 
+export interface PublicResults {
+  votes: number;
+  /** Every appreciation of the fixed list, in its order, negatives included. */
+  items: { code: string; count: number }[];
+}
+
 /**
- * The trend shown to everyone: the positive appreciations most ticked, as a
- * share of the votes. Never the negative ones — those are for the speaker and
- * the team — and nothing at all under PUBLIC_TREND_MIN_VOTES.
+ * The results shown to everyone, from the first vote and whether one has voted
+ * or not (#803): the count of every appreciation. The messages are not in it —
+ * they stay between the audience, the speaker and the team.
  */
-export function publicTrend(votes: { items: string[] }[]): { code: string; percent: number }[] | null {
-  if (votes.length < PUBLIC_TREND_MIN_VOTES) return null;
-  return TALK_FEEDBACK_ITEMS.filter((item) => item.isPositive)
-    .map((item, order) => ({
-      code: item.code,
-      count: votes.filter((vote) => vote.items.includes(item.code)).length,
-      order,
-    }))
-    .filter((entry) => entry.count > 0)
-    .sort((a, b) => b.count - a.count || a.order - b.order)
-    .slice(0, PUBLIC_TREND_SIZE)
-    .map(({ code, count }) => ({ code, percent: Math.round((count / votes.length) * 100) }));
+export function publicResults(votes: { items: string[] }[]): PublicResults {
+  return {
+    votes: votes.length,
+    items: TALK_FEEDBACK_ITEMS.map(({ code }) => ({
+      code,
+      count: votes.filter((vote) => vote.items.includes(code)).length,
+    })),
+  };
 }
