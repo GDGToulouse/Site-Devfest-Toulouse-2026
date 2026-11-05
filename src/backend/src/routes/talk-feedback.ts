@@ -6,7 +6,7 @@ import {
   TALK_FEEDBACK_CODES,
   feedbackPhase,
   isTestVote,
-  publicTrend,
+  publicResults,
 } from "../lib/talk-feedback.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -45,8 +45,8 @@ async function findTalk(slug: string) {
 
 export default async function talkFeedbackRoutes(app: FastifyInstance) {
   // GET /api/talks/:slug/feedback?voterId= — where voting stands for this
-  // browser, and the public trend once it may be shown: after one has voted
-  // (so it does not steer the vote) or once voting is over.
+  // browser, and the results: to everyone, from the first vote, whether this
+  // browser has voted or not (#803). Never the messages.
   app.get<{ Params: { slug: string }; Querystring: { voterId?: string } }>("/talks/:slug/feedback", {
     schema: {
       params: SLUG_PARAMS,
@@ -59,7 +59,7 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
     const phase = feedbackPhase(found.edition);
     // Tells the page to say so: what is cast now will be wiped (#566).
     const isTest = isTestVote(found.edition);
-    if (phase === "upcoming") return { phase, isTest, hasVoted: false, hasMessage: false, trend: null };
+    if (phase === "upcoming") return { phase, isTest, hasVoted: false, hasMessage: false, results: null };
 
     const { voterId } = request.query;
     const mine = voterId
@@ -68,18 +68,14 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
           select: { message: true },
         })
       : null;
-    const hasVoted = mine !== null;
-    const mayShowTrend = hasVoted || phase === "closed";
-    const votes = mayShowTrend
-      ? await prisma.talkFeedback.findMany({ where: { talkId: found.talkId }, select: { items: true } })
-      : [];
+    const votes = await prisma.talkFeedback.findMany({ where: { talkId: found.talkId }, select: { items: true } });
 
     return {
       phase,
       isTest,
-      hasVoted,
+      hasVoted: mine !== null,
       hasMessage: Boolean(mine?.message),
-      trend: mayShowTrend ? publicTrend(votes) : null,
+      results: publicResults(votes),
     };
   });
 

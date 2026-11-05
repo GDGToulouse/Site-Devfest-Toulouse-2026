@@ -551,7 +551,7 @@
     "sendMessage": "Send the message",
     "messageSent": "Your message has been passed on.",
     "trendTitle": "What the audience thought",
-    "trendPending": "The trend will show from 5 votes.",
+    "votes": "{count, plural, one {# vote} other {# votes}}",
     "voteError": "Your feedback could not be sent. Please try again in a moment.",
     "messageError": "Your message could not be sent. Please try again in a moment.",
     "closedError": "Feedback is closed for this session.",

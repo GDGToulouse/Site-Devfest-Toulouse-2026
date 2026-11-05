@@ -28,7 +28,8 @@ interface FeedbackStatus {
   isTest: boolean;
   hasVoted: boolean;
   hasMessage: boolean;
-  trend: { code: string; percent: number }[] | null;
+  /** Every appreciation's count, shown to everyone from the first vote (#803). */
+  results: { votes: number; items: { code: string; count: number }[] } | null;
 }
 
 const LINK = "font-bold text-bleu underline";
@@ -61,9 +62,9 @@ export default function TalkFeedback({ slug }: { slug: string }) {
   }, [load]);
 
   if (!status || !voterId || status.phase === "upcoming") return null;
-  // Over and nothing to show: under five votes there is no trend, and the
-  // page stays as it was.
-  if (status.phase === "closed" && !status.trend) return null;
+  const votes = status.results?.votes ?? 0;
+  // Over and nobody voted: the page stays as it was.
+  if (status.phase === "closed" && votes === 0) return null;
 
   function toggle(code: string) {
     setPicked((current) => (current.includes(code) ? current.filter((c) => c !== code) : [...current, code]));
@@ -185,22 +186,20 @@ export default function TalkFeedback({ slug }: { slug: string }) {
         <p role="alert" className="mt-4 text-sm font-bold text-rouge">{error}</p>
       )}
 
-      {!canVote && (
-        <div className="mt-4">
-          {status.trend ? (
-            <>
-              {status.hasVoted && <h3 className="text-base font-bold text-noir">{t("trendTitle")}</h3>}
-              <ul className="mt-2 space-y-1">
-                {status.trend.map(({ code, percent }) => (
-                  <li key={code} className="text-sm text-noir">
-                    <span className="font-bold">{percent} %</span> — {t(`items.${code}`)}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="text-sm text-gris">{t("trendPending")}</p>
-          )}
+      {votes > 0 && (
+        <div className="mt-6">
+          {/* The heading already says it once voting is over and this browser did not vote. */}
+          {(canVote || status.hasVoted) && <h3 className="text-base font-bold text-noir">{t("trendTitle")}</h3>}
+          <p className="text-sm text-gris">{t("votes", { count: votes })}</p>
+          <ul className="mt-2 space-y-1">
+            {status.results!.items
+              .filter(({ count }) => count > 0)
+              .map(({ code, count }) => (
+                <li key={code} className="text-sm text-noir">
+                  <span className="font-bold">{count}</span> — {t(`items.${code}`)}
+                </li>
+              ))}
+          </ul>
         </div>
       )}
 

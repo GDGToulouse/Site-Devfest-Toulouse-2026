@@ -152,33 +152,34 @@ describe("GET /api/talks/:slug/feedback (#564)", () => {
     at(new Date(window.opensAt.getTime() - 60 * 1000));
     const res = await status();
 
-    expect(res.json()).toEqual({ phase: "upcoming", isTest: false, hasVoted: false, hasMessage: false, trend: null });
+    expect(res.json()).toEqual({ phase: "upcoming", isTest: false, hasVoted: false, hasMessage: false, results: null });
   });
 
-  it("should not show the trend to a browser that has not voted yet", async () => {
+  it("should show the results from the first vote to a browser that has not voted (#803)", async () => {
     duringEvent();
+    await vote(voter(), ["lackOfDemo"]);
     const res = await status(voter());
 
-    expect(res.json()).toMatchObject({ phase: "open", hasVoted: false, trend: null });
+    expect(res.json().hasVoted).toBe(false);
+    expect(res.json().results.votes).toBeGreaterThanOrEqual(1);
+    expect(res.json().results.items.find((i: { code: string }) => i.code === "lackOfDemo").count).toBeGreaterThanOrEqual(1);
   });
 
-  it("should show the trend to a browser that voted, once there are five votes", async () => {
+  it("should show the results to anyone, without a voter id (#803)", async () => {
     duringEvent();
-    const ids = [voter(), voter(), voter(), voter(), voter()];
-    for (const id of ids) await vote(id, ["learned", "tooComplex"]);
-    const res = await status(ids[0]);
+    await vote(voter(), ["learned"]);
+    const res = await status();
 
-    expect(res.json().hasVoted).toBe(true);
-    expect(res.json().trend).toContainEqual({ code: "learned", percent: expect.any(Number) });
+    expect(res.json().results.items).toHaveLength(8);
   });
 
-  it("should never expose a negative appreciation nor a message", async () => {
+  it("should never expose a message", async () => {
     duringEvent();
     const id = voter();
     await vote(id, ["tooComplex"]);
-    const body = JSON.stringify((await status(id)).json());
+    await app.inject({ method: "POST", url: `/api/talks/${slug}/feedback/message`, payload: { voterId: id, message: "Merci pour la démo" } });
+    const body = JSON.stringify((await status(voter())).json());
 
-    expect(body).not.toContain("tooComplex");
-    expect(body).not.toContain("Merci");
+    expect(body).not.toContain("Merci pour la démo");
   });
 });
