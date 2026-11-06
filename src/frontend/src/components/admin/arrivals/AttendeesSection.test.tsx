@@ -41,6 +41,8 @@ describe("badgeStatus", () => {
   it("should say where the badge is, as a station would", () => {
     expect(badgeStatus(row()).label).toBe("Pas arrivé");
     expect(badgeStatus(row({ scannedAt: SCANNED, badgeState: "TO_FETCH" })).label).toBe("À chercher");
+    // Checked in by Billetweb Scan: the badge never reached the counter's screen.
+    expect(badgeStatus(row({ scannedAt: SCANNED, badgeState: "PRINTED" })).label).toBe("Scanné, pas au guichet");
     expect(badgeStatus(row({ scannedAt: SCANNED, badgeState: "READY" })).label).toBe("Prêt");
     expect(badgeStatus(row({ scannedAt: SCANNED, badgeState: "DELIVERED" })).label).toBe("Distribué");
     expect(badgeStatus(row({ scannedAt: SCANNED, badgeState: "DELIVERED", labelDelivered: true })).label).toBe("Étiquette remise");
