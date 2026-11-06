@@ -79,7 +79,10 @@ export function badgeStatus(row: AttendeeRow): { label: string; variant: Variant
   if (row.isOutsideFlow) return { label: "Accueil dédié", variant: "blue" };
   if (row.badgeNumber === null) return { label: "Sans badge : Cas particuliers", variant: "orange" };
   if (row.badgeState === "READY") return { label: "Prêt", variant: "blue" };
-  return { label: "À chercher", variant: "orange" };
+  if (row.badgeState === "TO_FETCH") return { label: "À chercher", variant: "orange" };
+  // Checked in by Billetweb's own app: the import leaves the badge where it is,
+  // off the counter's screen (#800).
+  return { label: "Scanné, pas au guichet", variant: "gray" };
 }
 
 function formatScan(iso: string): string {
