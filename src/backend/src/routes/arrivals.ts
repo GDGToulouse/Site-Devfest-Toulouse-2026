@@ -356,7 +356,7 @@ export default async function arrivalsRoutes(app: FastifyInstance) {
       }
       // Refunded since it was printed (#800): never handed over, the help desk takes it back.
       if (to === "DELIVERED" && current?.isCancelled) {
-        return reply.code(409).send({ error: "refunded", message: "Billet remboursé : ne remettez pas ce badge, l'Aide vient le récupérer." });
+        return reply.code(409).send({ error: "refunded", message: "Billet remboursé : ne remettez pas ce badge, le poste Cas particuliers vient le récupérer." });
       }
 
       const result = await moveBadge(editionId, attendeeId, from, to, principal.actor, {

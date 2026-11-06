@@ -119,7 +119,7 @@ export default function ArrivalsZone({ station }: { station: Station | null }) {
           <button
             type="button"
             onClick={handleSignOut}
-            className="mt-6 w-full text-sm font-medium text-gris hover:text-noir"
+            className="mt-6 min-h-11 w-full rounded-2xl border border-gris/30 text-sm font-medium text-noir hover:border-bleu"
           >
             Me déconnecter
           </button>

@@ -1,7 +1,7 @@
 # Gestion des arrivées — badges et accueil
 
 **Version** : v2.1, 24 octobre 2026. Intègre les retours de l'équipe (Lionel, Arnaud, Valentin) :
-guichets, kanban, guichet d'aide avec imprimante d'étiquettes ; en v2.1, mode dégradé du Scan
+guichets, kanban, poste Cas particuliers avec imprimante d'étiquettes ; en v2.1, mode dégradé du Scan
 si le VPS tombe.
 **Échéance** : 19 novembre 2026 (jour du DevFest). Les badges partent à l'impression **5 jours
 avant** (14 novembre) : la numérotation et le PDF d'impression sont sur le chemin critique.
@@ -15,7 +15,7 @@ bénévole le cherche dans 1 200 badges.
 
 **Nomenclature** : `RG-ARR-xx` pour les règles, `US-ARR-xx` pour les user stories, pour ne pas
 les confondre avec les numéros d'issues GitHub. Les dizaines suivent les sections : 10
-participants et numérotation, 20 accès, 30 scan, 40 guichets, 50 guichet d'aide, 60 temps réel,
+participants et numérotation, 20 accès, 30 scan, 40 guichets, 50 poste Cas particuliers, 60 temps réel,
 suivi et données.
 
 ---
@@ -49,7 +49,7 @@ suivi et données.
    « Distribué ».
 
 Tout ce qui sort de ce parcours (billet oublié, code inconnu, billet annulé, billet acheté après
-l'impression, badge introuvable) part au **guichet d'aide**, qui imprime au besoin une étiquette
+l'impression, badge introuvable) part au **poste Cas particuliers**, qui imprime au besoin une étiquette
 sur une Zebra ZD421d.
 
 ---
@@ -60,7 +60,7 @@ sur une Zebra ZD421d.
 |---|---|---|
 | **Scan** (2 bénévoles ou plus) | Leur smartphone | Remontent la file, scannent, annoncent numéro et guichet |
 | **Guichet 1 à 4** | Un portable par guichet, au fond du meuble, écran vers les bénévoles ; badges prêts à l'avant | 300 badges, 3 présentoirs de 100, un bénévole par présentoir. Le kanban du guichet est sur le portable, et sur le smartphone de chaque bénévole s'il le veut |
-| **Guichet d'aide** | Un portable ou un smartphone, une Zebra ZD421d (étiquettes noir et blanc, ZPL), des badges vierges | Recherche par nom, cas particuliers, impression d'étiquettes |
+| **Cas particuliers** | Un portable ou un smartphone, une Zebra ZD421d (étiquettes noir et blanc, ZPL), des badges vierges | Recherche par nom, cas particuliers, impression d'étiquettes |
 | **Accueil dédié** | — | Speakers, staff, bénévoles, prestataires : catégorie de badge dédiée, hors numérotation |
 
 Le **présentoir** (la « centaine » des échanges précédents) est l'unité physique de rangement ; le
@@ -68,7 +68,7 @@ Le **présentoir** (la « centaine » des échanges précédents) est l'unité p
 journée.
 
 La vente s'arrête à l'impression ; des billets s'ajoutent encore à la main dans Billetweb
-jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
+jusqu'au jour J, de façon ponctuelle. Ils passent par le poste Cas particuliers.
 
 ---
 
@@ -83,10 +83,10 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-12 | Les participants d'une édition sont importés depuis l'événement Billetweb lié (`GET /api/event/{id}/attendees`). L'import se relance à la demande par un admin et est incrémental (`last_update`). Pendant la **fenêtre des postes** (RG-ARR-71), il se fait aussi **tout seul toutes les 5 minutes** (#800) : un billet ajouté le matin même est reconnu à l'entrée, un remboursement aussi. L'admin voit l'heure de la dernière synchronisation et la raison d'un échec. Les billets remboursés ou annulés (`disabled`) sont marqués annulés, pas supprimés : leur badge a pu être imprimé. |
 | RG-ARR-13 | Pour chaque participant, on conserve : id du billet, `barcode`, prénom, nom, e-mail, entreprise (champ perso Billetweb), tarif (`ticket_id`), catégorie, date et id de commande. L'e-mail ne s'affiche sur aucun écran d'accueil ; il sert à informer les participants de l'édition suivante. |
 | RG-ARR-14 | Le flux dédié se reconnaît au tarif : les tarifs « hors flux » se cochent dans le back-office des billets de l'édition. Ses participants n'ont pas de numéro. Six types de badge : **Participant** et **Sponsor** passent par les guichets (numérotés, rangés en présentoirs, même circuit) ; **Bénévole**, **Staff** (bénévoles présents toute l'année), **Speaker** et **Prestataire** vont à l'accueil dédié, sans numéro. Le type se choisit pour chaque tarif, parmi ceux de son flux (déduit du nom du tarif tant qu'il n'est pas choisi). |
-| RG-ARR-15 | Le **numéro de badge** a quatre chiffres : **guichet** (1 à 9), **présentoir** (1 à 9), comptés à partir de 1, et **rang** dans le présentoir, compté **à partir de 00** (00 à 99). `2147` = guichet 2, présentoir 1, rang 47 (48ᵉ badge du présentoir). Numéro = guichet × 1000 + présentoir × 100 + rang. Il s'**affiche séparé** partout (badge, Scan y compris hors ligne, Guichet, Aide, admin) : `2 1 47`, le rang toujours sur deux chiffres (`1205` → `1 2 05`). Billetweb garde le numéro collé (`2147`). |
+| RG-ARR-15 | Le **numéro de badge** a quatre chiffres : **guichet** (1 à 9), **présentoir** (1 à 9), comptés à partir de 1, et **rang** dans le présentoir, compté **à partir de 00** (00 à 99). `2147` = guichet 2, présentoir 1, rang 47 (48ᵉ badge du présentoir). Numéro = guichet × 1000 + présentoir × 100 + rang. Il s'**affiche séparé** partout (badge, Scan y compris hors ligne, Guichet, Cas particuliers, admin) : `2 1 47`, le rang toujours sur deux chiffres (`1205` → `1 2 05`). Billetweb garde le numéro collé (`2147`). |
 | RG-ARR-16 | Les numéros s'attribuent **billet par billet, à tour de rôle**, dans l'**ordre d'achat** (date de commande, puis commande, puis billet). Pour le n-ième billet (n à partir de 1) : guichet = ((n − 1) mod 4) + 1 ; présentoir = (⌊(n − 1) / 4⌋ mod 3) + 1 ; rang = ⌊(n − 1) / 12⌋ (le premier badge de chaque présentoir a le rang 00). Une commande de collègues se répartit ainsi sur les quatre guichets, et chaque présentoir reçoit le même nombre de badges. |
 | RG-ARR-17 | Le nombre de guichets (4), de présentoirs par guichet (3) et de badges par présentoir (100 au plus : rangs 00 à 99, le rang tient sur deux chiffres) sont des réglages de l'édition, modifiables jusqu'au gel ; la formule de RG-ARR-16 les prend en paramètre. Après le gel, seule la taille des présentoirs change encore, sur confirmation explicite. La capacité vaut guichets × présentoirs × badges par présentoir. Si les participants à numéroter la dépassent, la numérotation est **refusée** avec le nombre de présentoirs manquants : jamais de rang à trois chiffres. Au plus 9 guichets et 9 présentoirs par guichet. |
-| RG-ARR-18 | L'envoi à l'impression (J-5) **gèle** la numérotation : un numéro attribué ne change plus jamais. Un import après le gel ajoute les nouveaux participants **sans numéro**, orientés vers le guichet d'aide, et ne renumérote rien. L'admin peut **annuler le gel** (confirmation en tapant « ANNULER », tous les environnements) tant qu'aucun badge n'a été scanné ni remis : numéros et date de gel sont effacés, le champ Billetweb « Numéro de badge » est vidé, le gel suivant renumérote tout. Hors production seulement, il peut aussi **réinitialiser l'accueil** (« REINITIALISER ») : l'API le refuse en production, il supprime les participants importés de l'édition avec leurs scans, états de badge, étiquettes et historique, et annule le gel, sans marquer l'édition comme purgée (RG-ARR-66). |
+| RG-ARR-18 | L'envoi à l'impression (J-5) **gèle** la numérotation : un numéro attribué ne change plus jamais. Un import après le gel ajoute les nouveaux participants **sans numéro**, orientés vers le poste Cas particuliers, et ne renumérote rien. L'admin peut **annuler le gel** (confirmation en tapant « ANNULER », tous les environnements) tant qu'aucun badge n'a été scanné ni remis : numéros et date de gel sont effacés, le champ Billetweb « Numéro de badge » est vidé, le gel suivant renumérote tout. Hors production seulement, il peut aussi **réinitialiser l'accueil** (« REINITIALISER ») : l'API le refuse en production, il supprime les participants importés de l'édition avec leurs scans, états de badge, étiquettes et historique, et annule le gel, sans marquer l'édition comme purgée (RG-ARR-66). |
 | RG-ARR-19 | Le PDF d'impression sort dans l'**ordre des numéros**, guichet par guichet, présentoir par présentoir, avec une page de séparation par présentoir, pour que les badges se rangent dans l'ordre où ils sortent de l'imprimerie. Suivent les badges de l'accueil dédié, sans numéro, par type puis par nom. Le fichier est **recto-verso, pages alternées** : chaque badge est suivi du verso de son type, chaque page de séparation d'un verso blanc, pour que rectos et versos ne se décalent jamais. Badge A6 : un fond recto, un fond verso et une couleur de texte (blanc par défaut) par type, réglables dans l'admin, avec les six fonds du design V3 par défaut ; prénom, nom (casse d'origine) et entreprise centrés sous le bandeau, QR code centré dans le carré clair du fond, dans sa propre couleur (violet par défaut) ; le numéro séparé (`2 1 47`) en haut à droite, blanc, sans cadre, sur les badges Participant et Sponsor seulement. Le QR code porte le code du billet, lu par l'application de badges Billetweb des sponsors, ou une carte de contact (option). Un aperçu sort le recto et le verso de chaque type (#749, #774). |
 | RG-ARR-20 | Après le gel, le numéro de badge est écrit dans le champ perso de billet Billetweb **« Numéro de badge »** (`POST /api/event/{id}/update_product`), pour trace. Le champ est créé dans Billetweb au moment de traiter l'issue, masqué au participant ; son id se lit par `GET /api/fields`. |
 
@@ -98,8 +98,9 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-22 | La permission « gestion des arrivées » est attribuée par un admin, **par édition** : elle tombe d'elle-même pour l'édition suivante. Elle s'ajoute au rôle, quel qu'il soit. |
 | RG-ARR-23 | Les bénévoles reçoivent un compte à l'avance, en `GUEST`, par **invitations en lot** (une quarantaine d'adresses collées d'un coup). Une invitation peut porter directement la permission « arrivées » de l'édition en cours. |
 | RG-ARR-24 | Un compte invité est créé avec `role = GUEST` **explicite** et `emailVerified = true` à l'acceptation. Jamais la valeur par défaut `EDITOR` (#362), et jamais `emailVerified = false`, qui ferait effacer son mot de passe par le premier lien magique (better-auth 1.7, cf. `auth.md`). |
-| RG-ARR-25 | À l'ouverture de la zone « Gestion des arrivées », le porteur de la permission choisit son poste : **Scan**, **Guichet** (avec son numéro : un guichet est un seul poste, ses bénévoles servent tous ses présentoirs) ou **Aide**. Il peut en changer à tout moment par « Changer de poste ». Le poste est **dans l'adresse** (RG-ARR-70), plus dans la mémoire de l'appareil : `/arrivees` est le choix du poste, réservé aux admins et aux comptes nominatifs. |
-| RG-ARR-26 | L'écran de suivi est réservé à `ADMIN` et `EDITOR`. |
+| RG-ARR-25 | À l'ouverture de la zone « Gestion des arrivées », le porteur de la permission choisit son poste : **Scan**, **Guichet** (avec son numéro : un guichet est un seul poste, ses bénévoles servent tous ses présentoirs) ou **Cas particuliers**. Il peut en changer à tout moment par « Changer de poste ». Le poste est **dans l'adresse** (RG-ARR-70), plus dans la mémoire de l'appareil : `/arrivees` est le choix du poste, réservé aux admins et aux comptes nominatifs. |
+| RG-ARR-26 | L'écran de suivi est réservé à `ADMIN` et `EDITOR`. Il mène aux postes et à l'admin des arrivées par des boutons (#807). |
+| RG-ARR-27 | Le poste **Cas particuliers** s'appelait « Aide », lu comme une page d'aide (#807). Seul le nom affiché a changé : l'adresse reste `/arrivees/aide` et le poste `help`, pour que les QR codes déjà imprimés restent valables. Sur les écrans du jour J, tout ce qui se touche est un **bouton**, jamais un lien souligné. |
 
 ### Scan
 
@@ -108,13 +109,13 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-30 | Le scan lit le QR code et le code-barres de la confirmation (même valeur, le `barcode` Billetweb). Une saisie manuelle du code reste possible. |
 | RG-ARR-31 | La recherche par nom et/ou prénom est disponible sur le même écran, pour qui vient sans confirmation. Elle interroge le backend. |
 | RG-ARR-32 | Le résultat affiche en grand le **numéro** et le **guichet**, à annoncer à voix haute, puis le présentoir, le prénom, le nom et l'entreprise pour vérifier l'identité. Le badge passe « À chercher » sur l'écran de son guichet. |
-| RG-ARR-33 | Les résultats hors parcours se distinguent d'un coup d'œil : **accueil dédié** (flux dédié) ; **guichet d'aide** (billet sans numéro, acheté après le gel) ; **déjà scanné** ; **code inconnu ou billet annulé**. |
+| RG-ARR-33 | Les résultats hors parcours se distinguent d'un coup d'œil : **accueil dédié** (flux dédié) ; **poste Cas particuliers** (billet sans numéro, acheté après le gel) ; **déjà scanné** ; **code inconnu ou billet annulé**. |
 | RG-ARR-34 | Un billet déjà scanné déclenche une **alerte**, sans blocage : heure du premier scan, bénévole, état actuel du badge et guichet. |
-| RG-ARR-35 | Un code inconnu ou un billet annulé affiche une erreur claire et propose la recherche par nom ; à défaut, le participant va au guichet d'aide. |
+| RG-ARR-35 | Un code inconnu ou un billet annulé affiche une erreur claire et propose la recherche par nom ; à défaut, le participant va au poste Cas particuliers. |
 | RG-ARR-36 | L'écran Scan montre en permanence la **charge de chaque guichet** : le nombre de badges scannés et pas encore distribués (« À chercher » + « Prêt »). Orange au-delà de 10, rouge au-delà de 20. |
 | RG-ARR-37 | Le scan composte le billet dans Billetweb (`POST /api/event/{id}/check`, `lane` = nom du bénévole). Un échec de compostage ne bloque pas l'accueil : il est retenté plus tard. |
 | RG-ARR-39 | **Compostages faits par l'application Billetweb** (#800) : l'import lit l'état composté de chaque billet (`used`, `used_date`, `lane`). Un billet composté sur Billetweb que le site n'a ni scanné ni composté est marqué scanné, à l'heure du compostage, par « Billetweb Scan (guichet) » : l'entrée répond « déjà scanné ». Son badge **ne bouge pas** (la carte arriverait au guichet après la personne). Les deux applications ne sont pas prévues pour tourner ensemble ; ceci évite seulement qu'un billet passé par l'une passe pour neuf dans l'autre. |
-| RG-ARR-38 | **Annuler un scan** (#797) : le poste Scan annule **son propre** scan pendant **1 minute** (bouton « Annuler ce scan », avec confirmation) ; un admin annule n'importe quel scan, à tout moment (écran Aide). Un badge **Distribué** (au guichet ou en étiquette) ne s'annule jamais : il faut d'abord le récupérer. L'annulation efface le scan, remet le badge en Imprimé (sa carte quitte le guichet, ou l'entrée quitte la liste de l'Aide) et **décomposte** le billet dans Billetweb (`used: 0`, par la même tâche que le compostage, retentée chaque minute). Billetweb garde la date et le `lane` du compostage. Un nouveau scan du billet compte comme un premier scan. |
+| RG-ARR-38 | **Annuler un scan** (#797) : le poste Scan annule **son propre** scan pendant **1 minute** (bouton « Annuler ce scan », avec confirmation) ; un admin annule n'importe quel scan, à tout moment (écran Cas particuliers). Un badge **Distribué** (au guichet ou en étiquette) ne s'annule jamais : il faut d'abord le récupérer. L'annulation efface le scan, remet le badge en Imprimé (sa carte quitte le guichet, ou l'entrée quitte la liste du poste Cas particuliers) et **décomposte** le billet dans Billetweb (`used: 0`, par la même tâche que le compostage, retentée chaque minute). Billetweb garde la date et le `lane` du compostage. Un nouveau scan du billet compte comme un premier scan. |
 
 ### Guichets
 
@@ -127,37 +128,37 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le guichet d'aide.
 | RG-ARR-44 | Une transition porte l'état attendu au départ : si la carte a déjà bougé (même guichet ouvert sur le portable et un smartphone), le serveur l'ignore et l'écran se resynchronise. Pas d'état « pris » : un bénévole par présentoir, personne d'autre ne cherche ses badges. |
 | RG-ARR-45 | L'écran appartient au guichet, pas à une personne : un bénévole qui prend la relève n'a rien à configurer. |
 | RG-ARR-46 | Un admin peut ramener n'importe quel badge à l'état précédent. |
-| RG-ARR-47 | Le guichet a une **recherche** par nom, prénom ou numéro de badge (tapé `2 1 47` ou `2147`), sur **toute l'édition** (#802). Une personne de ce guichet : sa carte est mise en évidence (« Voir la carte »). Une personne d'un autre guichet : « Au guichet 3, badge 3 1 12 », avec l'état du badge. Billet sans badge ou annulé : guichet d'aide ; billet hors flux : accueil dédié. La recherche ne déplace aucune carte. |
+| RG-ARR-47 | Le guichet a une **recherche** par nom, prénom ou numéro de badge (tapé `2 1 47` ou `2147`), sur **toute l'édition** (#802). Une personne de ce guichet : sa carte est mise en évidence (« Voir la carte »). Une personne d'un autre guichet : « Au guichet 3, badge 3 1 12 », avec l'état du badge. Billet sans badge ou annulé : poste Cas particuliers ; billet hors flux : accueil dédié. La recherche ne déplace aucune carte. |
 | RG-ARR-48 | Sur un téléphone tourné en paysage, les trois colonnes sont côte à côte, quelle que soit la largeur de l'écran (#802). |
 
-### Guichet d'aide
+### Poste Cas particuliers
 
 | # | Règle |
 |---|-------|
-| RG-ARR-50 | L'écran Aide cherche par nom ou prénom parmi tous les participants de l'édition, flux dédié compris, et affiche pour chacun son numéro, son guichet et son état (pas encore scanné, à chercher, prêt, distribué), ou « sans badge imprimé », ou « billet annulé ». |
+| RG-ARR-50 | L'écran Cas particuliers cherche par nom ou prénom parmi tous les participants de l'édition, flux dédié compris, et affiche pour chacun son numéro, son guichet et son état (pas encore scanné, à chercher, prêt, distribué), ou « sans badge imprimé », ou « billet annulé ». |
 | RG-ARR-51 | L'aide **imprime une étiquette** pour un participant sans numéro, ou dont le badge est introuvable : prénom, nom, entreprise, sur une étiquette noir et blanc imprimée par le pilote de la Zebra ZD421d (ZPL par Browser Print plus tard, si l'essai le justifie), à coller sur un badge vierge. Le gabarit suit le format du rouleau, choisi sur le poste. |
 | RG-ARR-52 | Imprimer une étiquette puis la remettre fait passer le participant en **Distribué**. Un badge numéroté qui était À chercher ou Prêt quitte alors l'écran de son guichet. Le suivi compte les étiquettes à part. |
-| RG-ARR-53 | Un participant sans numéro scanné dans la file apparaît dans la liste « à traiter » de l'écran Aide, en temps réel. |
+| RG-ARR-53 | Un participant sans numéro scanné dans la file apparaît dans la liste « à traiter » de l'écran Cas particuliers, en temps réel. |
 | RG-ARR-54 | Une réimpression est possible (étiquette ratée) ; chaque impression est tracée (heure, bénévole). |
-| RG-ARR-55 | L'Aide **scanne** aussi un billet (#801), avec les mêmes réponses qu'à l'entrée (compostage compris) : le scan ouvre la fiche de la personne. Un code inconnu renvoie vers la recherche par nom ou l'étiquette sans billet. |
+| RG-ARR-55 | Le poste Cas particuliers **scanne** aussi un billet (#801), avec les mêmes réponses qu'à l'entrée (compostage compris) : le scan ouvre la fiche de la personne. Un code inconnu renvoie vers la recherche par nom ou l'étiquette sans billet. |
 | RG-ARR-56 | L'étiquette d'un billet a son prénom, son nom et son entreprise **préremplis et modifiables** avant l'impression (billet donné à un collègue, faute de frappe) ; ce qui est imprimé est gardé avec l'étiquette, le billet n'est pas modifié (Billetweb fait foi). Elle porte le **même QR code que les badges** (réglage « Contenu du QR code » : code du billet, ou carte de contact du texte imprimé). Tout est **centré**, comme sur les badges (#801). |
-| RG-ARR-58 | **Billet remboursé après l'impression de son badge** (#800) : sa carte reste au guichet, marquée « Remboursé : ne pas remettre », et ne passe jamais en Distribué ; l'Aide reçoit l'entrée dans **Badges à retirer** (numéro, nom, où est le badge : présentoir, guichet, ou déjà remis), va le récupérer et le marque **Badge récupéré** : la carte quitte alors le guichet. Le suivi compte les badges remboursés à retirer. |
+| RG-ARR-58 | **Billet remboursé après l'impression de son badge** (#800) : sa carte reste au guichet, marquée « Remboursé : ne pas remettre », et ne passe jamais en Distribué ; le poste Cas particuliers reçoit l'entrée dans **Badges à retirer** (numéro, nom, où est le badge : présentoir, guichet, ou déjà remis), va le récupérer et le marque **Badge récupéré** : la carte quitte alors le guichet. Le suivi compte les badges remboursés à retirer. |
 | RG-ARR-57 | **Étiquette sans billet** (#801) : pour une personne sans billet (prestataire, invité de dernière minute), prénom, nom et entreprise **obligatoires**, **sans QR code**, sans compostage ni badge. Ces étiquettes sont des données personnelles : supprimées avec les participants de l'édition (RG-ARR-66) et par la réinitialisation de l'accueil. Le suivi compte les **étiquettes générées** (toutes, réimpressions comprises) et, à part, celles **sans billet**. |
 
 ### Temps réel, suivi, données
 
 | # | Règle |
 |---|-------|
-| RG-ARR-60 | Les écrans Scan, Guichet, Aide et Suivi se mettent à jour en temps réel, sans rafraîchir. Un indicateur permanent montre l'état de la connexion au flux : connecté, reconnexion en cours, déconnecté. |
+| RG-ARR-60 | Les écrans Scan, Guichet, Cas particuliers et Suivi se mettent à jour en temps réel, sans rafraîchir. Un indicateur permanent montre l'état de la connexion au flux : connecté, reconnexion en cours, déconnecté. |
 | RG-ARR-61 | À chaque reconnexion, l'écran relit l'état complet : aucune mise à jour perdue pendant une coupure. |
-| RG-ARR-62 | L'écran de suivi montre en temps réel : attendus, scannés, distribués, en attente ; une barre par guichet (À chercher, Prêt, Distribué) ; le flux dédié (scannés / attendus) et les étiquettes de l'aide à part. Lisible sur un grand écran. |
+| RG-ARR-62 | L'écran de suivi montre en temps réel : attendus, scannés, distribués, en attente ; une barre par guichet (À chercher, Prêt, Distribué) ; le flux dédié (scannés / attendus) et les étiquettes du poste Cas particuliers à part. Lisible sur un grand écran. |
 | RG-ARR-63 | L'application (pages, scripts, styles, lecteur de codes) est mise en cache sur le téléphone et s'installe sur l'écran d'accueil. |
 | RG-ARR-64 | **Mode dégradé** (obligatoire) : le téléphone Scan garde dans le stockage du navigateur la table code → numéro de badge et accueil dédié. Il la charge à l'ouverture de l'écran et la relit à chaque reconnexion. Quand le backend ne répond plus (VPS en panne, réseau coupé), un scan affiche quand même le numéro et le guichet, sous un bandeau « Mode dégradé : rien n'est enregistré ». Le guichet cherche alors le badge à la main dans le présentoir, d'après le numéro annoncé. Ce qui se perd : la recherche par nom, l'alerte « déjà scanné », le kanban, la charge des guichets et le compostage. |
 | RG-ARR-65 | La table du mode dégradé ne contient aucune donnée personnelle : chaque entrée est indexée par une empreinte du code (un téléphone perdu ne livre ni noms ni codes valides) et ne porte que le numéro, ou la mention accueil dédié. Elle est effacée à la fin de l'événement. |
 | RG-ARR-67 | **File d'attente hors ligne** (issue optionnelle) : en mode dégradé, le téléphone Scan garde aussi ses scans en local, et les envoie au retour du backend : passage en « À chercher », historique, compostage. Un badge remis à la main pendant la panne ne doit pas réapparaître « À chercher » sans signalement : le guichet le marque « Distribué » d'un geste. |
 | RG-ARR-70 | **Une adresse par poste** (#775) : `/arrivees/scan`, `/arrivees/guichet/<n>`, `/arrivees/aide`, et `/arrivees/suivi` (inchangé). Pas d'adresse ni de QR code par présentoir : 6 postes pour 4 guichets. Un lien désigne son poste : on peut le donner. Un **QR code par poste** ouvre cette adresse, connecté, sans compte ni mot de passe : `/arrivees/poste/<jeton>` échange le jeton contre un cookie de session propre au poste (HttpOnly, SameSite=Lax, Secure en production, valable seulement pour `/api/arrivals`). |
 | RG-ARR-71 | **Fenêtre de validité**, réglée par édition dans l'admin : par défaut de minuit la veille de l'événement (répétition) à la fin de son dernier jour, heure de Paris, déduite des dates de l'édition. Sans date d'événement et sans réglage, les QR codes sont refusés. Le cookie expire à la fin de la fenêtre ; avant son ouverture, la page dit quand le poste ouvre. |
-| RG-ARR-72 | **Portée côté serveur** : une session de poste n'appelle que les routes de son poste, pour son édition. Scan : flux, scan, recherche, table et rejeu hors ligne. Aide : flux, scan (RG-ARR-55), recherche, étiquettes. Seul le poste Scan annule un scan (RG-ARR-38). Guichet : flux, recherche sur toute l'édition (RG-ARR-47), et mouvements des badges **de son guichet**, tous présentoirs confondus, jamais le retour à Imprimé. Jamais le back-office, ni l'écran de suivi, ni un autre poste. `GET /api/arrivals/current` dit le poste : la page s'y verrouille (ni « Changer de poste », ni suivi, ni déconnexion). |
+| RG-ARR-72 | **Portée côté serveur** : une session de poste n'appelle que les routes de son poste, pour son édition. Scan : flux, scan, recherche, table et rejeu hors ligne. Cas particuliers : flux, scan (RG-ARR-55), recherche, étiquettes. Seul le poste Scan annule un scan (RG-ARR-38). Guichet : flux, recherche sur toute l'édition (RG-ARR-47), et mouvements des badges **de son guichet**, tous présentoirs confondus, jamais le retour à Imprimé. Jamais le back-office, ni l'écran de suivi, ni un autre poste. `GET /api/arrivals/current` dit le poste : la page s'y verrouille (ni « Changer de poste », ni suivi, ni déconnexion). |
 | RG-ARR-73 | Les liens sont **dérivés, pas stockés** : HMAC-SHA256 de l'édition, du poste et de la génération sous le secret du serveur. Rien en base ne permet de reconstruire un lien ; l'admin peut réimprimer les pages à tout moment. |
 | RG-ARR-74 | Le compte bénévole nominatif par invitation (#640) reste possible, à côté des postes ; les admins gardent tous les accès. |
 | RG-ARR-75 | **Régénérer** (confirmation par saisie du mot) augmente la génération de l'édition : tous les QR codes imprimés et toutes les sessions qu'ils ont ouvertes sont refusés, avec un message clair, y compris sur un écran déjà ouvert (le flux se coupe au battement suivant). |
@@ -224,9 +225,9 @@ kanban, **afin de** les sortir du présentoir avant que le participant arrive, p
 
 - [ ] RG-ARR-40 à RG-ARR-46.
 
-### US-ARR-07 : Traiter les cas particuliers au guichet d'aide
+### US-ARR-07 : Traiter les cas particuliers au poste Cas particuliers
 
-**En tant que** bénévole Aide, **je veux** retrouver n'importe quel participant et imprimer son
+**En tant que** bénévole Cas particuliers, **je veux** retrouver n'importe quel participant et imprimer son
 étiquette, **afin que** personne ne reparte sans badge.
 
 - [ ] RG-ARR-50 à RG-ARR-54.
@@ -252,18 +253,18 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 
 | Cas | Comportement |
 |---|---|
-| Participant sans confirmation | Recherche par nom au Scan (RG-ARR-31), sinon guichet d'aide |
+| Participant sans confirmation | Recherche par nom au Scan (RG-ARR-31), sinon poste Cas particuliers |
 | Billet déjà scanné | Alerte avec l'historique (RG-ARR-34) |
-| Billet remboursé ou annulé | « Billet annulé » ; recherche par nom, sinon guichet d'aide |
-| Billet ajouté après le gel | Résultat « guichet d'aide » ; l'aide imprime l'étiquette (RG-ARR-51). L'admin relance l'import pour le faire connaître |
+| Billet remboursé ou annulé | « Billet annulé » ; recherche par nom, sinon poste Cas particuliers |
+| Billet ajouté après le gel | Résultat « Cas particuliers » ; le poste Cas particuliers imprime l'étiquette (RG-ARR-51). L'admin relance l'import pour le faire connaître |
 | Speaker, staff, bénévole, prestataire | « Accueil dédié » (RG-ARR-33) |
-| Badge introuvable dans le présentoir | La carte reste « À chercher », le participant va au guichet d'aide, qui imprime une étiquette (RG-ARR-52) |
+| Badge introuvable dans le présentoir | La carte reste « À chercher », le participant va au poste Cas particuliers, qui imprime une étiquette (RG-ARR-52) |
 | Carte touchée par erreur | On la retouche (RG-ARR-43) |
 | Même carte touchée sur deux écrans | La seconde transition est ignorée (RG-ARR-44) |
 | Un guichet sature | Rouge sur les téléphones Scan (RG-ARR-36) ; le suivi aide à y déplacer un bénévole |
 | Coupure réseau ou VPS en panne | Indicateur rouge, mode dégradé : le Scan donne toujours numéro et guichet, les guichets cherchent dans les présentoirs d'après le numéro annoncé (RG-ARR-64). À la reconnexion, état relu (RG-ARR-61) |
 | Téléphone Scan jamais ouvert avec le réseau | Pas de table, pas de mode dégradé : chaque bénévole ouvre l'écran Scan une fois au briefing |
-| Sans confirmation, en mode dégradé | Pas de recherche par nom hors ligne : le participant donne son nom au guichet d'aide, qui attend le retour du réseau ou cherche dans le PDF d'impression |
+| Sans confirmation, en mode dégradé | Pas de recherche par nom hors ligne : le participant donne son nom au poste Cas particuliers, qui attend le retour du réseau ou cherche dans le PDF d'impression |
 | Billetweb indisponible au moment du scan | Le scan réussit ; le compostage est retenté (RG-ARR-37) |
 
 ---
@@ -277,10 +278,10 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 - **Lecture des codes** : `BarcodeDetector` n'existe pas sur Safari iOS, il faut une
   bibliothèque (QR et code-barres). La caméra exige HTTPS.
 - **Imprimante** : un navigateur n'envoie pas de ZPL seul à une Zebra. Décidé le 29/10 :
-  l'étiquette est une page au format du rouleau, imprimée par le **pilote** Zebra du portable de
-  l'aide (rien d'autre à installer) ; Zebra Browser Print (ZPL brut) viendra ensuite si l'essai
+  l'étiquette est une page au format du rouleau, imprimée par le **pilote** Zebra du portable du
+  poste Cas particuliers (rien d'autre à installer) ; Zebra Browser Print (ZPL brut) viendra ensuite si l'essai
   sur la vraie imprimante le justifie. L'imprimante en réseau jointe par le backend est exclue :
-  le VPS ne voit pas le réseau du lieu. Le poste Aide doit donc être un portable.
+  le VPS ne voit pas le réseau du lieu. Le poste Cas particuliers doit donc être un portable.
 - **Billetweb** : clé d'API **lecture et écriture** pour `update_product` et `check` (la clé
   actuelle sert à lire). `attendees` est limité à 10 appels par minute.
 - **Volumes** : une journée, ~1 500 participants dont ~1 200 par les guichets, pic d'arrivée sur
@@ -314,7 +315,7 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 | 5 | #641 | Flux temps réel, indicateur de connexion, PWA | Socle des écrans |
 | 6 | #642 | Écran Scan : caméra, recherche, guichet et charge des guichets, compostage Billetweb, mode dégradé | |
 | 7 | #643 | Écran Guichet (kanban) — remplace « Distribution par centaines » et « Badges manuels » | |
-| 8 | #713 | Guichet d'aide : recherche, étiquette, impression sur la Zebra par son pilote | |
+| 8 | #713 | Cas particuliers : recherche, étiquette, impression sur la Zebra par son pilote | |
 | 9 | #644 | Écran de suivi par guichet | |
 | 10 | #645 | File d'attente hors ligne | Optionnelle |
 
@@ -322,12 +323,12 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
 
 1. **Capacité** : 4 guichets × 3 présentoirs × 100 = 1 200 badges. Combien de billets restent une fois
    le flux dédié retiré ? Au-delà, un 4ᵉ présentoir par guichet (RG-ARR-17).
-2. **Mobilier** : 3 meubles guichet et 1 meuble bas pour 4 guichets plus l'aide. Le meuble bas
-   irait à l'aide, plus accessible en fauteuil.
+2. **Mobilier** : 3 meubles guichet et 1 meuble bas pour 4 guichets plus le poste Cas particuliers. Le meuble bas
+   irait aux Cas particuliers, plus accessible en fauteuil.
 3. ~~**Impression des étiquettes**~~ : tranchée (pilote d'abord, cf. Contraintes). Reste
    l'essai sur la vraie Zebra.
 4. **Format des étiquettes** : 10 × 10 ou 10 × 15 cm, à mesurer sur le rouleau. Les deux sont
-   prêts, choisis sur le poste Aide (#713).
+   prêts, choisis sur le poste Cas particuliers (#713).
 5. **Maquette du badge** : fournie par l'équipe, pas encore disponible. Bloque le rendu du PDF,
    pas la numérotation.
 6. **Conservation 18 mois** (RG-ARR-66) : toujours sans réponse explicite.

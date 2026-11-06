@@ -39,7 +39,7 @@ export function parseStation(code: string): Station | null {
 /** The station as the team names it, on screen and on the printed page. */
 export function stationName(station: Station): string {
   if (station.kind === "scan") return "Scan";
-  if (station.kind === "help") return "Aide";
+  if (station.kind === "help") return "Cas particuliers";
   return `Guichet ${station.counter}`;
 }
 

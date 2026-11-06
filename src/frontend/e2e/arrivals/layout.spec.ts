@@ -60,7 +60,7 @@ test.describe("mobile layout", () => {
     const scan = await openStation("scan");
     await scan.getByLabel(/Pas de confirmation/).fill(data.attendees.nobadge.barcode);
     await scan.getByRole("button", { name: "Valider" }).click();
-    await expect(scan.getByText("Guichet d'aide", { exact: true })).toBeVisible();
+    await expect(scan.getByText("Cas particuliers", { exact: true })).toBeVisible();
     const help = await openStation("help");
     await help.getByRole("button", { name: /Nael Testsansbadge/ }).click();
     await expect(help.getByRole("button", { name: "Imprimer l'étiquette" })).toBeVisible();

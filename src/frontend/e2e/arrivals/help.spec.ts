@@ -11,7 +11,7 @@ test.describe("help station", () => {
     // The Scan phone sends the person to the help desk, whose screen follows live.
     await scan.getByLabel(/Pas de confirmation/).fill(data.attendees.help.barcode);
     await scan.getByRole("button", { name: "Valider" }).click();
-    await expect(scan.getByText("Guichet d'aide", { exact: true })).toBeVisible();
+    await expect(scan.getByText("Cas particuliers", { exact: true })).toBeVisible();
     const entry = toHandle.getByRole("button", { name: /Noa Testaide/ });
     await expect(entry).toBeVisible();
 
@@ -24,7 +24,7 @@ test.describe("help station", () => {
     await help.emulateMedia({ media: "print" });
     await expect(help.locator(".print-only")).toContainText("Noa");
     await expect(help.locator(".print-only")).toContainText("Testaide");
-    await expect(help.getByRole("heading", { name: "Aide", exact: true })).toBeHidden();
+    await expect(help.getByRole("heading", { name: "Cas particuliers", exact: true })).toBeHidden();
     const pdf = await help.pdf({ preferCSSPageSize: true });
     const mediaBox = /\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(pdf.toString("latin1"));
     // 100 × 150 mm, the default roll, in PDF points (1 pt = 1/72 in).

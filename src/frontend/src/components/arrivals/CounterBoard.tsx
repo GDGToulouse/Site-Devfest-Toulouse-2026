@@ -127,7 +127,7 @@ function Card({
             <span className="block text-sm font-medium text-orange">Scanné pendant la coupure : déjà remis ?</span>
           )}
           {badge.isRefunded && (
-            <span className="block text-sm font-bold text-rouge">Remboursé : ne pas remettre, l&apos;Aide vient le chercher</span>
+            <span className="block text-sm font-bold text-rouge">Remboursé : ne pas remettre, le poste Cas particuliers vient le chercher</span>
           )}
         </span>
       </button>
@@ -148,13 +148,28 @@ function Card({
   );
 }
 
-function Column({ title, count, children }: { title: string; count: string; children: React.ReactNode }) {
+// Each column says what it means: Prêt is a step of its own, the badge out of
+// its bin and not handed over yet, so the counter sees what it holds (#807).
+function Column({
+  title,
+  hint,
+  count,
+  children,
+}: {
+  title: string;
+  hint: string;
+  count: string;
+  children: React.ReactNode;
+}) {
   return (
     <section className="flex min-w-0 flex-col gap-2 rounded-2xl bg-gris/10 p-3" aria-label={title}>
-      <h2 className="flex justify-between text-sm font-medium uppercase tracking-wider text-gris">
-        <span>{title}</span>
-        <span className="font-mono tabular-nums">{count}</span>
-      </h2>
+      <div>
+        <h2 className="flex justify-between text-sm font-medium uppercase tracking-wider text-gris">
+          <span>{title}</span>
+          <span className="font-mono tabular-nums">{count}</span>
+        </h2>
+        <p className="text-xs text-gris">{hint}</p>
+      </div>
       <ul className="flex flex-col gap-2">{children}</ul>
     </section>
   );
@@ -225,7 +240,7 @@ export default function CounterBoard({
         const to = TOUCH[badge.state];
         // A refunded badge is never handed over (#800): the server refuses it too.
         if (to === "DELIVERED" && badge.isRefunded) {
-          setError(`Le badge ${formatBadgeNumber(badge.number)} est remboursé : ne le remettez pas, l'Aide vient le chercher.`);
+          setError(`Le badge ${formatBadgeNumber(badge.number)} est remboursé : ne le remettez pas, le poste Cas particuliers vient le chercher.`);
           return;
         }
         if (to) void move(badge, to);
@@ -270,13 +285,13 @@ export default function CounterBoard({
 
       {/* Side by side on a wide screen, and on any phone turned sideways (#802). */}
       <div className="grid gap-3 md:grid-cols-3 landscape:grid-cols-3">
-        <Column title="À chercher" count={String(board.toFetch.length)}>
+        <Column title="À chercher" hint="Scanné à l'entrée : sortir le badge du présentoir" count={String(board.toFetch.length)}>
           {board.toFetch.map((badge) => card(badge, toFetchActions(badge)))}
         </Column>
-        <Column title="Prêt" count={String(board.ready.length)}>
+        <Column title="Prêt" hint="Badge en main, pas encore remis" count={String(board.ready.length)}>
           {board.ready.map((badge) => card(badge, [{ symbol: "↩", label: "remettre à chercher", to: "TO_FETCH" }]))}
         </Column>
-        <Column title="Distribué" count={`${DELIVERED_SHOWN} derniers`}>
+        <Column title="Distribué" hint="Remis à la personne" count={`${DELIVERED_SHOWN} derniers`}>
           {board.delivered.map((badge) => card(badge, []))}
         </Column>
       </div>

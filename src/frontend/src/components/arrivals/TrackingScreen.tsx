@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 import ConnectionIndicator from "@/components/arrivals/ConnectionIndicator";
 import { LOAD_CRITICAL, LOAD_WARNING } from "@/lib/arrivals-live";
@@ -27,6 +28,10 @@ function Figure({ label, value, tone = "text-noir" }: { label: string; value: nu
 const plural = (count: number, one: string, many: string) => (count > 1 ? many : one);
 
 const share = (part: number, whole: number) => `${whole > 0 ? (100 * part) / whole : 0}%`;
+
+// The way out, as buttons like the stations' footer (#807): the screen had none.
+const NAV_BUTTON =
+  "inline-flex min-h-11 items-center rounded-full border border-gris/30 bg-blanc px-4 text-sm font-medium text-noir hover:border-bleu";
 
 export default function TrackingScreen({ edition }: { edition: { id: number; year: number } }) {
   const [summary, setSummary] = useState<TrackingSummary | null>(null);
@@ -113,7 +118,7 @@ export default function TrackingScreen({ edition }: { edition: { id: number; yea
                 <p className="text-sm text-gris">speakers, staff, bénévoles, prestataires arrivés</p>
               </div>
               <div className="rounded-3xl bg-blanc p-5 shadow-card">
-                <h2 className="text-sm font-medium uppercase tracking-wider text-gris">Guichet d&apos;aide</h2>
+                <h2 className="text-sm font-medium uppercase tracking-wider text-gris">Cas particuliers</h2>
                 <p className="font-mono text-3xl font-bold tabular-nums text-noir lg:text-4xl">
                   {summary.help.labelsDelivered}{" "}
                   <span className="font-sans text-base font-normal text-gris">
@@ -135,6 +140,15 @@ export default function TrackingScreen({ edition }: { edition: { id: number; yea
             </section>
           </>
         )}
+
+        <nav aria-label="Autres écrans" className="mt-4 flex flex-wrap justify-center gap-2">
+          <Link href="/arrivees" className={NAV_BUTTON}>
+            Ouvrir un poste
+          </Link>
+          <Link href="/admin/arrivals" className={NAV_BUTTON}>
+            Admin des arrivées
+          </Link>
+        </nav>
       </main>
     </div>
   );

@@ -77,7 +77,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
             <p className="text-sm text-gris">Speaker, staff, bénévole ou prestataire.</p>
           </Detour>
         ) : (
-          <Detour title="Guichet d'aide" tone="border-terre-cuite text-terre-cuite">
+          <Detour title="Cas particuliers" tone="border-terre-cuite text-terre-cuite">
             <p className="text-sm text-gris">
               {answer.kind === "ambiguous"
                 ? "Ce code ne suffit pas sans le serveur."
@@ -93,7 +93,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
   if (outcome.result === "unknown") {
     return (
       <Detour title="Code inconnu" tone="border-rouge text-rouge">
-        <p className="text-sm text-noir">Cherchez la personne par son nom, sinon envoyez-la au guichet d&apos;aide.</p>
+        <p className="text-sm text-noir">Cherchez la personne par son nom, sinon envoyez-la au poste Cas particuliers.</p>
       </Detour>
     );
   }
@@ -101,7 +101,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
     return (
       <Detour title="Billet annulé" tone="border-rouge text-rouge">
         <Person attendee={outcome.attendee} />
-        <p className="text-sm text-noir">Cherchez un autre billet par son nom, sinon envoyez la personne au guichet d&apos;aide.</p>
+        <p className="text-sm text-noir">Cherchez un autre billet par son nom, sinon envoyez la personne au poste Cas particuliers.</p>
       </Detour>
     );
   }
@@ -131,7 +131,7 @@ export default function ScanResultCard({ result }: { result: ScanResult }) {
     return (
       <div className="flex flex-col gap-3">
         {already}
-        <Detour title="Guichet d'aide" tone="border-terre-cuite text-terre-cuite">
+        <Detour title="Cas particuliers" tone="border-terre-cuite text-terre-cuite">
           <Person attendee={outcome.attendee} />
           <p className="text-sm text-gris">Pas de badge imprimé pour ce billet.</p>
         </Detour>

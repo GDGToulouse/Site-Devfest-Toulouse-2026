@@ -44,7 +44,10 @@ export default function ArrivalsTrackingPage() {
         ) : (
           <p className="text-noir">Cet écran est réservé à l&apos;équipe DevFest (administrateurs et éditeurs).</p>
         )}
-        <Link href="/arrivees" className="mt-6 block text-sm font-medium text-gris hover:text-noir">
+        <Link
+          href="/arrivees"
+          className="mt-6 flex min-h-11 items-center justify-center rounded-2xl border border-gris/30 text-sm font-medium text-noir hover:border-bleu"
+        >
           Retour à l&apos;accueil des participants
         </Link>
       </div>

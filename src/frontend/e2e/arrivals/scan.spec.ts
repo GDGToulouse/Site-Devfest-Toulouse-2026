@@ -92,7 +92,7 @@ test.describe("scan station", () => {
 
     await typeCode(page, data.attendees.nobadge.barcode);
 
-    await expect(page.getByText("Guichet d'aide", { exact: true })).toBeVisible();
+    await expect(page.getByText("Cas particuliers", { exact: true })).toBeVisible();
     await expect(page.getByText("Pas de badge imprimé pour ce billet.")).toBeVisible();
   });
 
