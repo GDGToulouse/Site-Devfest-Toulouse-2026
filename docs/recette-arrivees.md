@@ -108,6 +108,11 @@ après un nouvel import des tarifs.
    est reconnu (ou annoncé « Billet annulé ») au Scan dans les 5 minutes. Un billet remboursé
    dont le badge est imprimé apparaît à l'Aide dans **Badges à retirer** et reste marqué
    « Remboursé » au guichet.
+5. Sous les totaux, la section **Participants** liste chaque billet : badge, arrivée (heure et
+   poste du scan), état du compostage Billetweb. Cherchez par nom, entreprise ou numéro de badge
+   (`1 2 05`), filtrez (pas encore arrivés, compostage en attente ou en échec…). Pendant les
+   essais des écrans du jour J, gardez-la ouverte à côté : c'est là qu'on voit un scan arriver
+   jusqu'à Billetweb. Elle sert aussi à trouver des noms à chercher au Scan.
 
 Les billets déjà compostés sur Billetweb (essais précédents, ou l'application Billetweb Scan)
 sont comptés comme scannés à l'import, « par Billetweb Scan » : c'est voulu. Pour repartir de
