@@ -60,6 +60,36 @@ export function feedbackPhase(edition: EditionDates, now: Date = new Date()): Fe
   return now < window.closesAt ? "open" : "closed";
 }
 
+// Long enough to vote before leaving the room, short enough that the audience
+// has seen most of the talk (#809).
+const SESSION_OPENS_BEFORE_END_MS = 10 * 60 * 1000;
+
+interface SessionTimes {
+  startsAt: Date | null;
+  endsAt: Date | null;
+}
+
+/**
+ * When the audience may vote on a session (#809): ten minutes before it ends,
+ * or at its start when it has no end. Null when it has no time at all.
+ */
+export function sessionFeedbackOpensAt(talk: SessionTimes): Date | null {
+  if (talk.endsAt) return new Date(talk.endsAt.getTime() - SESSION_OPENS_BEFORE_END_MS);
+  return talk.startsAt;
+}
+
+/**
+ * The edition's window, narrowed to the session (#809): on the day, a session
+ * opens ten minutes before its end. The test mode (#566) skips that rule — before
+ * the event every session is in the future, and the team could try nothing.
+ */
+export function sessionFeedbackPhase(edition: EditionDates, talk: SessionTimes, now: Date = new Date()): FeedbackPhase {
+  const phase = feedbackPhase(edition, now);
+  if (phase !== "open" || isTestVote(edition, now)) return phase;
+  const opensAt = sessionFeedbackOpensAt(talk);
+  return opensAt && now >= opensAt ? "open" : "upcoming";
+}
+
 /**
  * A vote cast now is a test (#566): the test mode is on and the real window
  * has not opened yet. From the event day on, a vote is real whatever the flag
