@@ -13,8 +13,10 @@ import ScanStation from "@/components/arrivals/ScanStation";
 import { isStationInLayout, stationLabel, stationPath, type Station } from "@/lib/arrivals-station";
 import { useArrivalsStream } from "@/lib/use-arrivals-stream";
 
-// Discreet, but a finger-sized target (44 px).
-const FOOTER_LINK = "inline-flex min-h-11 items-center px-3 underline decoration-gris/40 hover:text-noir";
+// Discreet, but a button and a finger-sized target (44 px): a screen held in
+// the hand has nothing that reads as a web link (#807).
+const FOOTER_LINK =
+  "inline-flex min-h-11 items-center rounded-full border border-gris/30 bg-blanc px-4 font-medium text-noir hover:border-bleu";
 
 const STATION_ENDED = "Ce poste n'est plus ouvert. Demandez le QR code à jour à l'équipe DevFest.";
 
@@ -108,7 +110,7 @@ export default function ArrivalsWorkspace({
 
         {/* Out of the foreground: a station has its own address, so these are for the rare move. */}
         {!isLocked && (
-          <nav aria-label="Autres écrans" className="mt-10 flex flex-wrap justify-center gap-x-2 text-sm text-gris">
+          <nav aria-label="Autres écrans" className="mt-10 flex flex-wrap justify-center gap-2 text-sm">
             {station && (
               <Link href="/arrivees" className={FOOTER_LINK}>
                 Changer de poste

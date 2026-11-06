@@ -120,7 +120,7 @@ export default function ScanStation({
           setHits(null);
           setError(
             code === 0 || code >= 500
-              ? "La recherche par nom a besoin du serveur, qui ne répond pas. Envoyez la personne au guichet d'aide."
+              ? "La recherche par nom a besoin du serveur, qui ne répond pas. Envoyez la personne au poste Cas particuliers."
               : "La recherche n'a pas abouti. Réessayez.",
           );
         }
@@ -170,8 +170,8 @@ export default function ScanStation({
       }
       setError(
         "code" in target
-          ? "Le serveur ne répond pas et ce téléphone n'a pas de table hors ligne : envoyez la personne au guichet d'aide."
-          : "Le serveur ne répond pas : scannez la confirmation, ou envoyez la personne au guichet d'aide.",
+          ? "Le serveur ne répond pas et ce téléphone n'a pas de table hors ligne : envoyez la personne au poste Cas particuliers."
+          : "Le serveur ne répond pas : scannez la confirmation, ou envoyez la personne au poste Cas particuliers.",
       );
       return;
     }

@@ -12,7 +12,7 @@ export async function sendArrivalsInvitationEmail(opts: { to: string; editionYea
   const zoneUrl = `${baseUrl}/arrivees`;
   const intro = `Vous êtes invité·e à l'accueil des participants du DevFest Toulouse ${opts.editionYear}, en tant que bénévole.`;
   const purpose =
-    "Ce compte vous ouvre les écrans de l'accueil le jour J : scan des billets, préparation et remise des badges, guichet d'aide. Il ne donne accès à rien d'autre.";
+    "Ce compte vous ouvre les écrans de l'accueil le jour J : scan des billets, préparation et remise des badges, cas particuliers. Il ne donne accès à rien d'autre.";
   const exactAddress = (to: string) =>
     `Créez votre compte avec exactement cette adresse e-mail (${to}) : l'invitation ne fonctionne qu'avec elle.`;
   const validity = `Cette invitation est valable ${INVITATION_TTL_DAYS} jours et ne sert qu'une fois. Passé ce délai, demandez-en une nouvelle à l'équipe.`;

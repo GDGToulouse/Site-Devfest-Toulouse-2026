@@ -22,7 +22,7 @@ describe("The station cookie", () => {
 });
 
 describe("Station codes", () => {
-  it("should list Scan, Aide and one station per counter, never one per bin", () => {
+  it("should list Scan, Cas particuliers and one station per counter, never one per bin", () => {
     const stations = listStations({ counters: 4 });
 
     expect(stations.map((s) => parseStation(encodeStation(s)))).toEqual(stations);

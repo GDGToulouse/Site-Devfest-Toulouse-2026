@@ -321,7 +321,7 @@ export default function BadgesSection({
       {isFrozen && status.withoutNumber > 0 && (
         <div className="p-3 rounded-lg bg-jaune/20 text-noir text-sm mb-4">
           {status.withoutNumber} participants inscrits après l&apos;envoi à l&apos;impression n&apos;ont pas de badge
-          imprimé : ils passeront au guichet d&apos;aide.
+          imprimé : ils passeront au poste Cas particuliers.
         </div>
       )}
 

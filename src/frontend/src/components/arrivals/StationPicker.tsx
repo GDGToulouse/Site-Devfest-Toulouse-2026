@@ -33,8 +33,8 @@ export default function StationPicker({
           </button>
         ))}
         <button type="button" onClick={() => onPick({ kind: "help" })} className={`${CHOICE_CLASS} col-span-2`}>
-          <span className="block font-bold">Aide</span>
-          <span className="block text-sm text-gris">Billets sans numéro, cas particuliers</span>
+          <span className="block font-bold">Cas particuliers</span>
+          <span className="block text-sm text-gris">Billets sans badge, étiquettes, badges remboursés</span>
         </button>
       </div>
     </div>

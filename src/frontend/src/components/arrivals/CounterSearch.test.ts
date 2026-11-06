@@ -33,8 +33,8 @@ describe("where a counter sends the person it found (#802)", () => {
   });
 
   it("should send a ticket without a badge, or cancelled, to the help desk", () => {
-    expect(whereTo(hit({ badgeNumber: null }), "PRINTED", 2)).toBe("Sans badge : guichet d'aide");
-    expect(whereTo(hit({ isCancelled: true }), "TO_FETCH", 2)).toBe("Billet annulé : guichet d'aide");
+    expect(whereTo(hit({ badgeNumber: null }), "PRINTED", 2)).toBe("Sans badge : Cas particuliers");
+    expect(whereTo(hit({ isCancelled: true }), "TO_FETCH", 2)).toBe("Billet annulé : Cas particuliers");
   });
 
   it("should send a dedicated ticket to its own desk", () => {

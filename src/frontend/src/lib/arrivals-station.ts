@@ -63,6 +63,6 @@ export function recallArrivalsEdition(): { id: number; year: number } | null {
 
 export function stationLabel(station: Station): string {
   if (station.kind === "scan") return "Scan";
-  if (station.kind === "help") return "Aide";
+  if (station.kind === "help") return "Cas particuliers";
   return `Guichet ${station.counter}`;
 }

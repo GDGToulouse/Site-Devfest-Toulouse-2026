@@ -21,9 +21,9 @@ const STATE_WORDS: Record<BadgeState, string> = {
 
 /** Where the person stands, as the counter tells them. */
 export function whereTo(hit: SearchHit, state: BadgeState, counter: number): string {
-  if (hit.isCancelled) return "Billet annulé : guichet d'aide";
+  if (hit.isCancelled) return "Billet annulé : Cas particuliers";
   if (hit.isDedicated) return "Accueil dédié";
-  if (hit.badgeNumber === null) return "Sans badge : guichet d'aide";
+  if (hit.badgeNumber === null) return "Sans badge : Cas particuliers";
   const number = formatBadgeNumber(hit.badgeNumber);
   const where = counterOf(hit.badgeNumber) === counter ? "Ici" : `Au guichet ${counterOf(hit.badgeNumber)}`;
   if (state === "PRINTED") return `${where}, badge ${number} sur le présentoir ${binOf(hit.badgeNumber)} : ${STATE_WORDS[state]}`;
