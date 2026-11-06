@@ -221,3 +221,39 @@ describe("SessionCard in the mobile agenda", () => {
     expect(screen.getByText("Marie Dupont")).toBeInTheDocument();
   });
 });
+
+// #808 — the keynote is the session the whole audience gathers for: it stands
+// out wherever it is drawn, alone in its slot or not.
+describe("SessionCard for a keynote", () => {
+  const keynote = { ...talk, format: "KEYNOTE" } as ScheduleTalk;
+  const labels = { ...formatLabels, KEYNOTE: "Keynote" };
+
+  it("keeps a badge naming it in the grid, where other formats have none", () => {
+    render(<SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="grid" />);
+
+    expect(screen.getByText("Keynote")).toBeInTheDocument();
+    expect(screen.getByText("40 min")).toBeInTheDocument();
+  });
+
+  it("draws its card in the keynote accent, in the grid and the agenda", () => {
+    const { container, rerender } = render(<SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="grid" />);
+    expect(container.firstElementChild).toHaveClass("border-jaune");
+
+    rerender(<SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="agenda" />);
+    expect(container.firstElementChild).toHaveClass("border-jaune");
+  });
+
+  it("keeps the accent on a relayed copy", () => {
+    const { container } = render(
+      <SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="grid" isSimulcast simulcastLabel="Retransmis" />,
+    );
+
+    expect(container.firstElementChild).toHaveClass("border-jaune", "border-dashed");
+  });
+
+  it("leaves a conference card as it was", () => {
+    const { container } = render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
+
+    expect(container.firstElementChild).not.toHaveClass("border-jaune");
+  });
+});

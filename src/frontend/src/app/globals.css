@@ -640,6 +640,15 @@ body {
   .print-title {
     font-weight: 700;
   }
+  /* The keynote stands out on paper too (#808): no colour survives a
+     black-and-white printer, so a thick rule and a larger title carry it. */
+  .print-keynote {
+    border-left: 3pt solid #000;
+    padding-left: 3pt;
+  }
+  .print-keynote .print-title {
+    font-size: 1.15em;
+  }
   .print-speakers,
   .print-meta {
     font-size: 8.5pt;
