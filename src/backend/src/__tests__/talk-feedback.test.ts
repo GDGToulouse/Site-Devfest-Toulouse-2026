@@ -3,18 +3,20 @@ import { randomUUID } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { buildServer } from "../server.js";
 import { prisma } from "../lib/prisma.js";
-import { feedbackWindow } from "../lib/talk-feedback.js";
+import { feedbackWindow, sessionFeedbackOpensAt } from "../lib/talk-feedback.js";
 import { getFeaturedEdition } from "../routes/editions.js";
 
 // #564 — the audience votes on a session of the featured edition, once per
 // browser, the day of the event and the next. Read-only on the shared fixtures:
 // the tests vote on a published talk the seed already has and delete their own
-// votes, keyed by the voter ids they generated.
+// votes, keyed by the voter ids they generated. #809 — a session opens ten
+// minutes before its end, so the tests pick one with times.
 
 let app: FastifyInstance;
 let slug: string;
 let talkId: number;
 let window: { opensAt: Date; closesAt: Date };
+let sessionOpensAt: Date;
 const voters: string[] = [];
 
 function voter(): string {
@@ -28,7 +30,7 @@ function at(date: Date) {
   vi.setSystemTime(date);
 }
 
-const duringEvent = () => at(new Date(window.opensAt.getTime() + 10 * 60 * 60 * 1000));
+const duringEvent = () => at(new Date(sessionOpensAt.getTime() + 60 * 1000));
 
 function vote(voterId: string, items: string[] = ["learned"], talkSlug = slug) {
   return app.inject({ method: "POST", url: `/api/talks/${talkSlug}/feedback`, payload: { voterId, items } });
@@ -39,11 +41,12 @@ beforeAll(async () => {
   const edition = await getFeaturedEdition();
   if (!edition) throw new Error("the seed has no featured edition");
   const talk = await prisma.talk.findFirst({
-    where: { editionId: edition.id, publicationStatus: "PUBLISHED", deletedAt: null },
-    select: { id: true, slug: true },
+    where: { editionId: edition.id, publicationStatus: "PUBLISHED", deletedAt: null, startsAt: { not: null }, endsAt: { not: null } },
+    select: { id: true, slug: true, startsAt: true, endsAt: true },
   });
-  if (!talk) throw new Error("the featured edition has no published talk");
+  if (!talk) throw new Error("the featured edition has no published talk with times");
   ({ id: talkId, slug } = talk);
+  sessionOpensAt = sessionFeedbackOpensAt(talk)!;
   const found = feedbackWindow(edition);
   if (!found) throw new Error("the featured edition has no date");
   window = found;
@@ -74,6 +77,13 @@ describe("POST /api/talks/:slug/feedback (#564)", () => {
     expect(res.statusCode).toBe(201);
     const stored = await prisma.talkFeedback.findUnique({ where: { talkId_voterId: { talkId, voterId: id } } });
     expect(stored?.items).toEqual(["learned", "notClear"]);
+  });
+
+  it("should refuse a vote on the day until ten minutes before the session ends (#809)", async () => {
+    at(new Date(sessionOpensAt.getTime() - 60 * 1000));
+    const res = await vote(voter());
+
+    expect(res.statusCode).toBe(403);
   });
 
   it("should refuse a second vote from the same browser", async () => {
@@ -152,7 +162,9 @@ describe("GET /api/talks/:slug/feedback (#564)", () => {
     at(new Date(window.opensAt.getTime() - 60 * 1000));
     const res = await status();
 
-    expect(res.json()).toEqual({ phase: "upcoming", isTest: false, hasVoted: false, hasMessage: false, results: null });
+    expect(res.json()).toEqual({
+      phase: "upcoming", isTest: false, opensAt: sessionOpensAt.toISOString(), hasVoted: false, hasMessage: false, results: null,
+    });
   });
 
   it("should show the results from the first vote to a browser that has not voted (#803)", async () => {

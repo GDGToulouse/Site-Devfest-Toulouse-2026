@@ -7,10 +7,10 @@ import en from "../../../messages/en.json";
 import TalkFeedback, { FEEDBACK_ITEMS } from "./TalkFeedback";
 
 // #564 — the audience votes on the talk page, once, then may leave the speaker
-// a private message. Nothing shows before the event day. #803 — the results
-// show to everyone from the first vote, negatives included.
+// a private message. #803 — the results show to everyone from the first vote,
+// negatives included. #809 — before it opens, the form shows greyed out.
 
-type Status = { phase: string; isTest?: boolean; hasVoted: boolean; hasMessage: boolean; results: Results | null };
+type Status = { phase: string; isTest?: boolean; opensAt?: string | null; hasVoted: boolean; hasMessage: boolean; results: Results | null };
 type Results = { votes: number; items: { code: string; count: number }[] };
 
 const results = (counts: Record<string, number>, votes: number): Results => ({
@@ -39,6 +39,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -51,12 +52,31 @@ function renderBlock() {
 }
 
 describe("TalkFeedback (#564)", () => {
-  it("should render nothing before the event day", async () => {
-    status = { phase: "upcoming", hasVoted: false, hasMessage: false, results: null };
-    const { container } = renderBlock();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+  it("should show the form greyed out, with its opening time, before it opens (#809)", async () => {
+    status = { phase: "upcoming", opensAt: "2026-11-19T09:35:00.000Z", hasVoted: false, hasMessage: false, results: null };
+    renderBlock();
 
-    expect(container).toBeEmptyDOMElement();
+    expect(await screen.findByText("Les avis ouvriront le 19 novembre 2026 à 10:35, dix minutes avant la fin de la session.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "J'ai beaucoup appris 🤓" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Envoyer mon avis" })).not.toBeInTheDocument();
+  });
+
+  it("should say the form opens during the session when it has no time (#809)", async () => {
+    status = { phase: "upcoming", opensAt: null, hasVoted: false, hasMessage: false, results: null };
+    renderBlock();
+
+    expect(await screen.findByText("Les avis ouvriront pendant la session, dix minutes avant sa fin.")).toBeInTheDocument();
+  });
+
+  it("should open the form by itself when its time comes (#809)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    status = { phase: "upcoming", opensAt: new Date(Date.now() + 60_000).toISOString(), hasVoted: false, hasMessage: false, results: null };
+    renderBlock();
+    await screen.findByText(/Les avis ouvriront le/);
+    status = { phase: "open", hasVoted: false, hasMessage: false, results: null };
+    await vi.advanceTimersByTimeAsync(62_000);
+
+    expect(await screen.findByRole("button", { name: "Envoyer mon avis" })).toBeInTheDocument();
   });
 
   it("should send the ticked appreciations with this browser's voter id", async () => {
