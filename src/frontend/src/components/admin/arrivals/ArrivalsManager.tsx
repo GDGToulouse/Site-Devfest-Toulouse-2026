@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import StatusBadge from "@/components/admin/StatusBadge";
+import AttendeesSection from "@/components/admin/arrivals/AttendeesSection";
 import BadgesSection from "@/components/admin/arrivals/BadgesSection";
 import StationsSection from "@/components/admin/arrivals/StationsSection";
 import VolunteersSection from "@/components/admin/arrivals/VolunteersSection";
@@ -51,8 +52,8 @@ function formatDateTime(iso: string): string {
   });
 }
 
-// The attendees of the edition, imported from its Billetweb event (#638). Counts
-// only: the import is checked here, people are looked up on the arrivals screens.
+// The attendees of the edition, imported from its Billetweb event (#638): the
+// counts check the import, the list says where each arrival stands (#806).
 export default function ArrivalsManager({ editionId }: { editionId: number }) {
   const [summary, setSummary] = useState<AttendeeSummary | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -186,6 +187,7 @@ export default function ArrivalsManager({ editionId }: { editionId: number }) {
         </div>
       )}
 
+      {summary.expected + summary.cancelled > 0 && <AttendeesSection editionId={editionId} />}
       <BadgesSection
         editionId={editionId}
         syncedAt={summary.syncedAt}

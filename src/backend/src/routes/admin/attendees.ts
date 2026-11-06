@@ -2,6 +2,10 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
 import { importAttendees, type AttendeeImportRefusal } from "../../lib/attendee-import.js";
+import { ATTENDEE_FILTERS, listAttendees, type AttendeeFilter } from "../../lib/attendee-list.js";
+
+const ATTENDEE_PAGE_SIZE = 50;
+const ATTENDEE_PAGE_SIZE_MAX = 200;
 
 const editionIdParams = {
   type: "object",
@@ -48,6 +52,42 @@ export default async function adminAttendeeRoutes(app: FastifyInstance) {
       if (result.reason === "not_found") return notFound(reply, "Edition");
       const { status, body } = IMPORT_REFUSALS[result.reason];
       return reply.status(status).send(body);
+    },
+  );
+
+  // GET /api/admin/attendees/list/:editionId — every attendee and where their
+  // arrival stands (#806), a page at a time. Names and companies, never the
+  // e-mail: the same guard as the import, so ADMIN only and no AI agent.
+  app.get<{
+    Params: { editionId: string };
+    Querystring: { page?: string; limit?: string; search?: string; filter?: AttendeeFilter };
+  }>(
+    "/attendees/list/:editionId",
+    {
+      schema: {
+        params: editionIdParams,
+        querystring: {
+          type: "object",
+          properties: {
+            page: { type: "string", pattern: "^[0-9]+$" },
+            limit: { type: "string", pattern: "^[0-9]+$" },
+            search: { type: "string", maxLength: 200 },
+            filter: { type: "string", enum: [...ATTENDEE_FILTERS] },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const editionId = Number(request.params.editionId);
+      const edition = await prisma.edition.findFirst({ where: { id: editionId, ...notDeleted }, select: { id: true } });
+      if (!edition) return notFound(reply, "Edition");
+      const q = request.query;
+      return listAttendees(editionId, {
+        search: q.search,
+        filter: q.filter,
+        page: Math.max(1, Number(q.page) || 1),
+        limit: Math.min(ATTENDEE_PAGE_SIZE_MAX, Math.max(1, Number(q.limit) || ATTENDEE_PAGE_SIZE)),
+      });
     },
   );
 

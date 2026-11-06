@@ -183,7 +183,7 @@ export interface SearchHit extends ScanAttendee {
 const SEARCH_RESULT_LIMIT = 20;
 
 // "Hélène" must come up for "helene": typed on a phone, in a queue.
-const fold = (text: string) =>
+export const fold = (text: string) =>
   text
     .normalize("NFD")
     .replace(/\p{Diacritic}/gu, "")
@@ -218,7 +218,7 @@ export async function searchAttendees(editionId: number, query: string): Promise
   );
 }
 
-const BADGE_NUMBER_QUERY = /^[1-9]\d{3}$/;
+export const BADGE_NUMBER_QUERY = /^[1-9]\d{3}$/;
 
 const SEARCH_SELECT = {
   id: true,

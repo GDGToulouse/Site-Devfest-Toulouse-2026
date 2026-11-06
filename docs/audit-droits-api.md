@@ -92,6 +92,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/articles/:id/translate-fields` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/attendees/import/:editionId` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/attendees/list/:editionId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/attendees/summary/:editionId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/badges/:editionId` | ADMIN ; refusé aux agents IA |
 | PUT | `/api/admin/badges/:editionId/settings` | ADMIN ; refusé aux agents IA |
