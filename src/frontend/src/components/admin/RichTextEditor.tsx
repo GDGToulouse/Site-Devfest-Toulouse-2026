@@ -11,6 +11,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import ImagePickerDialog from "./ImagePickerDialog";
 import PastedImageAltDialog from "./PastedImageAltDialog";
 import { LinkedImage } from "./linked-image";
+import { applyLinkHref, currentLinkHref } from "./editor-link";
 import { adminFetch } from "@/lib/admin-api";
 import { pastedFile } from "@/lib/clipboard-file";
 
@@ -20,15 +21,6 @@ const PASTE_IMAGE_TYPES = {
   mimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/svg+xml"],
   extensions: [".svg"],
 };
-
-// Prefix https:// when the user types a bare domain (e.g. "www.devfest.fr"),
-// otherwise the browser treats it as a relative link and it 404s (#167).
-// Leave absolute URLs and mailto:/tel: links untouched, and don't touch
-// in-page anchors (#...) or root-relative paths (/...).
-function normalizeLinkHref(href: string): string {
-  if (/^([a-z][a-z0-9+.-]*:|#|\/)/i.test(href)) return href;
-  return `https://${href}`;
-}
 
 interface RichTextEditorProps {
   label: string;
@@ -256,33 +248,22 @@ function Toolbar({
 
   function applyLink() {
     if (!editor) return;
-    const trimmed = linkUrl.trim();
-    if (editor.isActive("image")) {
-      // An image carries its link as an attribute: the link mark cannot apply
-      // to a block node (#490). An empty URL removes it.
-      editor.chain().focus().updateAttributes("image", { href: trimmed ? normalizeLinkHref(trimmed) : null }).run();
-    } else if (trimmed) {
-      editor.chain().focus().setLink({ href: normalizeLinkHref(trimmed) }).run();
-    } else {
-      editor.chain().focus().unsetLink().run();
-    }
+    applyLinkHref(editor, linkUrl);
     setShowLinkInput(false);
     setLinkUrl("");
   }
 
+  // Opens the address field, filled with the current link's: clicking a link
+  // used to remove it, so a link once set could be neither read nor fixed (#805).
   function handleLinkClick() {
     if (!editor) return;
-    if (editor.isActive("image")) {
-      setLinkUrl(editor.getAttributes("image").href || "");
-      setShowLinkInput(true);
-    } else if (editor.isActive("link")) {
-      editor.chain().focus().unsetLink().run();
-    } else {
-      const existing = editor.getAttributes("link").href || "";
-      setLinkUrl(existing);
-      setShowLinkInput(true);
-    }
+    setLinkUrl(currentLinkHref(editor));
+    setShowLinkInput(true);
   }
+
+  // Shown while the cursor is in a link: links do not open on click in the
+  // editor, so this is the only place their address can be read.
+  const linkUnderCursor = showLinkInput ? "" : currentLinkHref(editor);
 
   const btnBase = "px-2 py-1 rounded text-sm font-medium transition-colors";
   const btnActive = "bg-malachite/10 text-malachite";
@@ -508,7 +489,7 @@ function Toolbar({
           type="button"
           onClick={handleLinkClick}
           className={btnClass(editor.isActive("link") || !!(editor.isActive("image") && editor.getAttributes("image").href))}
-          title={editor.isActive("image") ? "Lien de l'image" : "Lien"}
+          title={editor.isActive("image") ? "Lien de l'image" : editor.isActive("link") ? "Modifier le lien" : "Lien"}
         >
           Lien
         </button>
@@ -525,10 +506,21 @@ function Toolbar({
         )}
       </div>
 
+      {linkUnderCursor && (
+        <p className="truncate px-2 pb-2 text-xs text-gris">
+          Lien :{" "}
+          <a href={linkUnderCursor} target="_blank" rel="noopener noreferrer" className="text-malachite underline">
+            {linkUnderCursor}
+          </a>{" "}
+          — cliquez sur « Lien » pour le modifier ou le retirer.
+        </p>
+      )}
+
       {showLinkInput && (
         <div className="flex items-center gap-2 px-2 pb-2">
           <input
             type="url"
+            aria-label="Adresse du lien (vide pour le retirer)"
             value={linkUrl}
             onChange={(e) => setLinkUrl(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && applyLink()}

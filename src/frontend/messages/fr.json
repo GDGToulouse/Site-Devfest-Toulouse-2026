@@ -551,10 +551,12 @@
     "sendMessage": "Envoyer le message",
     "messageSent": "Votre message a bien été transmis.",
     "trendTitle": "Ce que le public en a pensé",
-    "trendPending": "La tendance s'affichera à partir de 5 avis.",
+    "votes": "{count, plural, one {# avis} other {# avis}}",
     "voteError": "Votre avis n'a pas pu être envoyé. Réessayez dans un instant.",
     "messageError": "Votre message n'a pas pu être envoyé. Réessayez dans un instant.",
     "closedError": "Les avis sont fermés pour cette session.",
+    "opensAt": "Les avis ouvriront le {day} à {time}, dix minutes avant la fin de la session.",
+    "opensDuring": "Les avis ouvriront pendant la session, dix minutes avant sa fin.",
     "credit": "Inspiré d’<openfeedback>OpenFeedback</openfeedback> d’Hugo Gresse (aussi dispo en version hébergée sur <openplanner>OpenPlanner</openplanner>).",
     "items": {
       "fun": "Drôle/original 😃",

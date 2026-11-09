@@ -8,6 +8,7 @@ import ListPagination from "@/components/admin/ListPagination";
 import FormField from "@/components/admin/FormField";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import InvitationLinkNotice, { copyToClipboard, type CopiedInvitation } from "@/components/admin/InvitationLinkNotice";
 
 type UserRole = "ADMIN" | "EDITOR" | "SPONSOR";
 
@@ -20,6 +21,8 @@ interface AdminUser {
   emailVerified: boolean;
   createdAt: string;
   lastLogin: string | null;
+  // Invited, never taken up: no password, no Google/GitHub account (#799).
+  isPending: boolean;
   sponsors: { id: number; name: string }[];
 }
 
@@ -58,6 +61,7 @@ export default function UsersAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<AdminUser | null>(null);
   const [editingRôle, setEditingRôle] = useState<{ id: string; role: string } | null>(null);
+  const [invitation, setInvitation] = useState<(CopiedInvitation & { email: string }) | null>(null);
 
   const query = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
   if (params.search) query.set("search", params.search);
@@ -122,6 +126,22 @@ export default function UsersAdminPage() {
     loadUsers();
   }
 
+  // The invitation email never arrived (#799): copy a link that sets the
+  // password, for the admin to send by hand. "Mot de passe oublié" would mail
+  // it too, and go astray the same way.
+  async function handleCopyLink(user: AdminUser) {
+    setError(null);
+    setInvitation(null);
+    const result = await adminFetch<{ url: string }>(`/users/${user.id}/invitation-link`, { method: "POST" });
+    if (result.status !== 200 || !result.data) {
+      setError(humanError(result, "Le lien n'a pas pu être créé. Réessayez."));
+      loadUsers();
+      return;
+    }
+    const isCopied = await copyToClipboard(result.data.url);
+    setInvitation({ url: result.data.url, isCopied, email: user.email });
+  }
+
   async function handleDelete() {
     if (!deleteTarget) return;
     const { status, error: apiError } = await adminFetch(`/users/${deleteTarget.id}`, { method: "DELETE" });
@@ -151,6 +171,18 @@ export default function UsersAdminPage() {
 
       {error && (
         <div role="alert" aria-live="assertive" className="mb-6 p-4 rounded-xl bg-terre-cuite/10 text-terre-cuite">{error}</div>
+      )}
+
+      {invitation && (
+        <div className="mb-6">
+          <InvitationLinkNotice
+            invitation={invitation}
+            recipient={invitation.email}
+            validity="1 heure"
+            note="Il ouvre la page où choisir son mot de passe."
+            onDismiss={() => setInvitation(null)}
+          />
+        </div>
       )}
 
       {showForm && (
@@ -250,10 +282,26 @@ export default function UsersAdminPage() {
                   )}
                 </td>
                 <td className="px-4 py-3 text-gris text-xs">
-                  {user.lastLogin ? new Date(user.lastLogin).toLocaleString("fr-FR") : "Jamais"}
+                  {user.isPending ? (
+                    <StatusBadge status="Invitation en attente" variant="orange" />
+                  ) : user.lastLogin ? (
+                    new Date(user.lastLogin).toLocaleString("fr-FR")
+                  ) : (
+                    "Jamais"
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex justify-end gap-2">
+                    {user.isPending && !user.banned && (
+                      <button
+                        onClick={() => handleCopyLink(user)}
+                        className="p-2 rounded-lg text-malachite hover:bg-malachite/10 transition-colors"
+                        title="Copier le lien d'invitation"
+                        aria-label={`Copier le lien d'invitation de ${user.email}`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>
+                      </button>
+                    )}
                     {user.role !== "SPONSOR" && (
                       <button
                         onClick={() => setEditingRôle({ id: user.id, role: user.role })}

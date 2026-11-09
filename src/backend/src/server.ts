@@ -53,8 +53,12 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 function isInvalidInput(err: Error): boolean {
   if (err.name === "PrismaClientValidationError") return true;
   // PostgreSQL's class 22 is "data exception": the value, not the server.
-  const cause = (err as { cause?: { kind?: string; code?: string } }).cause;
-  return err.name === "DriverAdapterError" && cause?.kind === "postgres" && !!cause.code?.startsWith("22");
+  // Since Prisma 7.10 the adapter's error arrives wrapped in a known request
+  // error (P2039), its cause moved under `meta.driverAdapterError` (#811).
+  type PgCause = { kind?: string; code?: string };
+  const wrapped = err as { cause?: PgCause; meta?: { driverAdapterError?: { cause?: PgCause } } };
+  const cause = err.name === "DriverAdapterError" ? wrapped.cause : wrapped.meta?.driverAdapterError?.cause;
+  return cause?.kind === "postgres" && !!cause.code?.startsWith("22");
 }
 
 export async function buildServer() {
