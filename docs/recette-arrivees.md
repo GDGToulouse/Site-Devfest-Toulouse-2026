@@ -265,9 +265,12 @@ Avec un compte contact d'un sponsor de l'édition, quel que soit son rôle (en l
 2. Scannez un badge valide : prénom, nom et entreprise s'affichent, « Contact ajouté ».
    Rescannez-le : « Déjà scanné », sans seconde ligne.
 3. Scannez un billet annulé ou un QR code quelconque : « Code non reconnu » et le code tel quel.
-4. Dans l'onglet, **Exporter en CSV** : prénom, nom, e-mail, entreprise, date, auteur. Il
+4. Sous le contact qui vient d'être scanné, tapez une note sans l'enregistrer, puis **Scanner le
+   badge suivant** : la note est enregistrée d'office. Dans l'onglet, **Modifier la note** avec un
+   autre compte du même sponsor : la note indique qui l'a modifiée en dernier.
+5. Dans l'onglet, **Exporter en CSV** : prénom, nom, e-mail, entreprise, date, auteur, note. Il
    s'ouvre en colonnes dans Excel.
-5. Avec un autre sponsor : sa liste est vide, il ne voit pas les scans du premier.
+6. Avec un autre sponsor : sa liste est vide, il ne voit pas les scans du premier.
 
 ## Précautions
 
