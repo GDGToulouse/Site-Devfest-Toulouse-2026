@@ -405,6 +405,19 @@ export interface SponsorScan {
   attendee: { firstName: string; lastName: string; company: string | null } | null;
   // The code as read, only when it names no live ticket.
   code: string | null;
+  // What the booth noted of the talk (#815): the last change, with its author.
+  note: { text: string; updatedAt: string; updatedBy: string } | null;
+}
+
+/** As the backend checks it (lib/sponsor-scans.ts). */
+export const SCAN_NOTE_MAX = 500;
+
+// Blank text clears the note.
+export function saveSponsorScanNote(sponsorId: number, scanId: number, note: string) {
+  return call<{ scan: SponsorScan }>(`/api/sponsor-space/${sponsorId}/scans/${scanId}/note`, {
+    method: "PUT",
+    body: JSON.stringify({ note }),
+  });
 }
 
 export function getSponsorScans(sponsorId: number) {

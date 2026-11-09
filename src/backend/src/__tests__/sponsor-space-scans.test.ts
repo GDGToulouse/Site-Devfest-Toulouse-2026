@@ -243,10 +243,10 @@ describe("Sponsor badge scans — export (#813)", () => {
 
     expect(res.headers["content-type"]).toContain("text/csv");
     expect(res.body.startsWith("﻿")).toBe(true);
-    expect(lines[0]).toBe("Prénom;Nom;E-mail;Entreprise;Scanné le;Scanné par;Code non reconnu");
+    expect(lines[0]).toBe("Prénom;Nom;E-mail;Entreprise;Scanné le;Scanné par;Code non reconnu;Note");
     expect(lines).toHaveLength(3);
     expect(lines.find((l) => l.startsWith("Hélène"))).toMatch(/^Hélène;Martin;helene@example\.org;Cassoulet SA;/);
-    expect(lines.find((l) => l.endsWith(";inconnu-123"))).toMatch(/^;;;;/);
+    expect(lines.find((l) => l.endsWith(";inconnu-123;"))).toMatch(/^;;;;/);
   });
 
   it("should neutralise a name Excel would run as a formula", async () => {
@@ -257,5 +257,66 @@ describe("Sponsor badge scans — export (#813)", () => {
     const res = await exportCsv(sponsor.id, headers);
 
     expect(res.body).toContain(`"'=HYPERLINK(""x"")"`);
+  });
+});
+
+describe("Sponsor badge scans — a note on the talk (#815)", () => {
+  const saveNote = (sponsorId: number, scanId: number, headers: Record<string, string>, note: string) =>
+    app.inject({ method: "PUT", url: `/api/sponsor-space/${sponsorId}/scans/${scanId}/note`, headers, payload: { note } });
+
+  it("should let a colleague change the note, and say who changed it last", async () => {
+    const { sponsor, headers } = await booth("STAND");
+    const { user: colleague, headers: colleagueHeaders } = await account(`note-colleague-${RUN}@example.org`);
+    await prisma.sponsorContact.create({ data: { sponsorId: sponsor.id, email: colleague.email, userId: colleague.id, accessRole: "EDITEUR" } });
+    const scanId = (await scan(sponsor.id, headers, CODE("live"))).json().scan.id;
+
+    await saveNote(sponsor.id, scanId, headers, "  Intéressée par Kotlin  ");
+    const changed = await saveNote(sponsor.id, scanId, colleagueHeaders, "Intéressée par Kotlin, rappeler lundi");
+    const row = (await list(sponsor.id, headers)).json().scans[0];
+
+    expect(changed.statusCode).toBe(200);
+    expect(row.note).toMatchObject({ text: "Intéressée par Kotlin, rappeler lundi", updatedBy: `Nom note-colleague-${RUN}@example.org` });
+  });
+
+  it("should keep the note when the badge is scanned again", async () => {
+    const { sponsor, headers } = await booth("STAND");
+    const scanId = (await scan(sponsor.id, headers, CODE("live"))).json().scan.id;
+    await saveNote(sponsor.id, scanId, headers, "Déjà vue hier");
+
+    const again = await scan(sponsor.id, headers, CODE("live"));
+
+    expect(again.json().scan.note.text).toBe("Déjà vue hier");
+  });
+
+  it("should clear the note on blank text, on an unrecognised code too", async () => {
+    const { sponsor, headers } = await booth("STAND");
+    const scanId = (await scan(sponsor.id, headers, "inconnu-note")).json().scan.id;
+    await saveNote(sponsor.id, scanId, headers, "Carte de visite prise");
+
+    const cleared = await saveNote(sponsor.id, scanId, headers, "   ");
+
+    expect(cleared.json().scan.note).toBeNull();
+  });
+
+  it("should refuse a note on another sponsor's scan, and a note too long", async () => {
+    const { sponsor, headers } = await booth("STAND");
+    const { sponsor: other, headers: otherHeaders } = await booth("RESPONSABLE");
+    const scanId = (await scan(sponsor.id, headers, CODE("live"))).json().scan.id;
+
+    const viaOwnSpace = await saveNote(other.id, scanId, otherHeaders, "x");
+    const tooLong = await saveNote(sponsor.id, scanId, headers, "x".repeat(501));
+
+    expect(viaOwnSpace.statusCode).toBe(404);
+    expect(tooLong.statusCode).toBe(400);
+  });
+
+  it("should export the note", async () => {
+    const { sponsor, headers } = await booth("STAND");
+    const scanId = (await scan(sponsor.id, headers, CODE("live"))).json().scan.id;
+    await saveNote(sponsor.id, scanId, headers, "Rappeler; lundi");
+
+    const res = await exportCsv(sponsor.id, headers);
+
+    expect(res.body).toContain(';"Rappeler; lundi"\r\n');
   });
 });
