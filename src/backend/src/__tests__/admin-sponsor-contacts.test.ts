@@ -9,6 +9,7 @@ vi.mock("nodemailer", () => ({
 import Fastify, { type FastifyInstance } from "fastify";
 import adminSponsorRoutes from "../routes/admin/sponsors.js";
 import { prisma } from "../lib/prisma.js";
+import { findPendingInvitation } from "../lib/sponsor-invitation.js";
 import { getSeededEdition } from "./edition-test-helpers.js";
 import { createSponsorFixture, tierIdByKey } from "./sponsor-test-helpers.js";
 
@@ -93,5 +94,76 @@ describe("Admin sponsor contacts (#250)", () => {
     });
     expect(res.statusCode).toBe(404);
     await prisma.sponsor.deleteMany({ where: { id: other.id } });
+  });
+});
+
+describe("POST /api/admin/sponsors/:id/contacts/:contactId/invitation-link (#799)", () => {
+  let linkSponsorId: number;
+
+  beforeAll(async () => {
+    app = Fastify({ logger: false });
+    await app.register(adminSponsorRoutes, { prefix: "/api/admin" });
+    const sponsor = await createSponsorFixture({
+      name: "Invitation Link Sponsor", slug: `invitation-link-${Date.now()}`, editionId, tierId: await tierIdByKey("gold"),
+    });
+    linkSponsorId = sponsor.id;
+  });
+
+  afterAll(async () => {
+    if (linkSponsorId !== undefined) await prisma.sponsor.deleteMany({ where: { id: linkSponsorId } });
+    await app.close();
+  });
+
+  beforeEach(() => sendMailMock.mockClear());
+
+  it("should return a fresh invitation link without sending any email", async () => {
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: linkSponsorId, email: `link-${Date.now()}@example.org` },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/sponsors/${linkSponsorId}/contacts/${contact.id}/invitation-link`,
+    });
+
+    expect(res.statusCode).toBe(200);
+    const { url, contact: returned } = res.json();
+    const token = url.match(/\/sponsor\/invitation\/([0-9a-f]{64})$/)?.[1];
+    expect(token).toBeDefined();
+    expect(await findPendingInvitation(token)).toMatchObject({ id: contact.id });
+    expect(returned.invitationPending).toBe(true);
+    // The first contact invited runs the space (#362), whichever way the link travels.
+    expect(returned.accessRole).toBe("RESPONSABLE");
+    expect(sendMailMock).not.toHaveBeenCalled();
+  });
+
+  it("should stop the previous link from working", async () => {
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: linkSponsorId, email: `rotate-${Date.now()}@example.org` },
+    });
+    const url = `/api/admin/sponsors/${linkSponsorId}/contacts/${contact.id}/invitation-link`;
+    const first = (await app.inject({ method: "POST", url })).json().url.split("/").pop();
+
+    await app.inject({ method: "POST", url });
+
+    expect(await findPendingInvitation(first)).toBeNull();
+  });
+
+  it("should refuse a contact that already has an account (409)", async () => {
+    const user = await prisma.user.create({
+      data: { email: `linked-${Date.now()}@example.org`, name: "Linked", role: "SPONSOR", emailVerified: true },
+    });
+    const contact = await prisma.sponsorContact.create({
+      data: { sponsorId: linkSponsorId, email: user.email, userId: user.id },
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `/api/admin/sponsors/${linkSponsorId}/contacts/${contact.id}/invitation-link`,
+    });
+
+    expect(res.statusCode).toBe(409);
+    expect((await prisma.sponsorContact.findUniqueOrThrow({ where: { id: contact.id } })).invitationToken).toBeNull();
+    await prisma.user.deleteMany({ where: { id: user.id } });
   });
 });

@@ -76,22 +76,26 @@ function unixToDate(ts: unknown): Date | null {
 }
 
 // Billetweb only credits a sale to the site when the shop link carries `src`
-// (#507). Its API returns the bare shop URL, so the import adds the source the
-// editor chose; a blank source keeps the URL as Billetweb sent it.
-export function withTrackingSource(
+// (#507). Its API returns the long `shop.php?event=<slug>` form, so the import
+// stores the event's public address `/<slug>` instead (#798) — Billetweb keeps
+// `src` through it — with the source the editor chose; a blank source means no
+// tracking.
+export function shopLink(
   shopUrl: string | undefined,
   source: string | undefined,
 ): string | null {
   if (!shopUrl) return null;
-  const src = source?.trim();
-  if (!src) return shopUrl;
+  let url: URL;
   try {
-    const url = new URL(shopUrl);
-    url.searchParams.set("src", src);
-    return url.toString();
+    url = new URL(shopUrl);
   } catch {
     return shopUrl;
   }
+  const event = url.searchParams.get("event");
+  if (event) url = new URL(`/${encodeURIComponent(event)}`, url.origin);
+  const src = source?.trim();
+  if (src) url.searchParams.set("src", src);
+  return url.toString();
 }
 
 function toDateOrNull(value: string | null | undefined): Date | null {
@@ -151,7 +155,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       return reply.status(502).send({ error: "Failed to fetch Billetweb event" });
     }
     const eventData = (await eventRes.json()) as Array<Record<string, unknown>>;
-    const shopUrl = withTrackingSource(eventData[0]?.shop as string | undefined, trackingSource);
+    const shopUrl = shopLink(eventData[0]?.shop as string | undefined, trackingSource);
 
     // Fetch tickets
     const ticketsRes = await fetch(

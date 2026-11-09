@@ -24,9 +24,9 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
 // of ~3,000 characters the page was already nine screens long (#556). The list
 // now shows a card per offer, and the full text lives on the offer's own page.
 export default async function JobOffersPage({ params }: { params: Promise<{ locale: string }> }) {
-  const t = await getTranslations("jobOffers");
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations("jobOffers");
   const sponsors = await getJobOffers();
   const offers = sponsors.flatMap((sponsor) => sponsor.jobOffers.map((offer) => ({ sponsor, offer })));
 

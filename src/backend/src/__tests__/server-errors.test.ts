@@ -33,6 +33,26 @@ describe("error responses", () => {
     expect(res.statusCode).toBe(400);
     expect(res.body).not.toContain("invalid byte sequence");
   });
+
+  // Prisma 7.10 wraps the adapter's error in a known request error (P2039), the
+  // PostgreSQL code moving under meta (#811): the 400 must survive the wrapping.
+  it("should refuse a data exception wrapped by Prisma as P2039", async () => {
+    const server = await buildServer();
+    server.get("/api/test-wrapped-input-error", async () => {
+      throw Object.assign(new Error("invalid byte sequence"), {
+        name: "PrismaClientKnownRequestError",
+        code: "P2039",
+        meta: { driverAdapterError: { cause: { kind: "postgres", code: "22021" } } },
+      });
+    });
+    await server.ready();
+
+    const res = await server.inject({ method: "GET", url: "/api/test-wrapped-input-error" });
+    await server.close();
+
+    expect(res.statusCode).toBe(400);
+    expect(res.body).not.toContain("invalid byte sequence");
+  });
 });
 
 describe("a server error", () => {

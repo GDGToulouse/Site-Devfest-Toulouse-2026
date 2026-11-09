@@ -21,6 +21,7 @@ const YEAR = 1995;
 // runs, while the tests move the clock past it when they need to.
 const START = new Date("2100-11-19T00:00:00.000Z");
 const OPENS_AT = new Date("2100-11-18T23:00:00.000Z");
+const SESSION_ENDS_AT = new Date("2100-11-19T09:45:00.000Z");
 
 let app: FastifyInstance;
 let editionId: number;
@@ -44,7 +45,11 @@ beforeAll(async () => {
   const edition = await prisma.edition.create({ data: { year: YEAR, startDate: START, endDate: START } });
   editionId = edition.id;
   const talk = await prisma.talk.create({
-    data: { editionId, slug: "feedback-test-mode", title: "Test mode", description: "", format: "CONFERENCE", language: "fr", publicationStatus: "PUBLISHED" },
+    data: {
+      editionId, slug: "feedback-test-mode", title: "Test mode", description: "", format: "CONFERENCE", language: "fr", publicationStatus: "PUBLISHED",
+      // 10:00-10:45 in Paris: on the day, its vote opens at 10:35 (#809).
+      startsAt: new Date("2100-11-19T09:00:00.000Z"), endsAt: SESSION_ENDS_AT,
+    },
   });
   talkId = talk.id;
   app = Fastify();
@@ -138,7 +143,7 @@ describe("voting during the test mode (#566)", () => {
   it("should let a browser that voted in the trial vote for real on the day", async () => {
     await setMode(true);
     await castVote("66666666-6666-4666-8666-666666666666");
-    at(new Date(OPENS_AT.getTime() + 60 * 60 * 1000));
+    at(SESSION_ENDS_AT);
     const res = await castVote("66666666-6666-4666-8666-666666666666");
 
     expect(res.statusCode).toBe(201);
