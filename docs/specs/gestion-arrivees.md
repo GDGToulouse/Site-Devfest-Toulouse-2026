@@ -166,6 +166,15 @@ jusqu'au jour J, de façon ponctuelle. Ils passent par le poste Cas particuliers
 | RG-ARR-76 | Les actions faites par un poste sont tracées avec le poste pour auteur (« Poste Guichet 2 », sans compte derrière) : historique des badges, étiquettes, scans. |
 | RG-ARR-66 | Les données des participants sont conservées **18 mois** après l'événement, pour informer les participants de l'édition suivante, puis supprimées. La politique de confidentialité le mentionne. **En attente d'un accord explicite** (question ouverte). |
 
+### Scan des badges sur les stands des sponsors
+
+| # | Règle |
+|---|-------|
+| RG-ARR-80 | Tout contact d'un sponsor de l'édition en cours, quel que soit son rôle (Stand, Éditeur, Responsable), et un admin, **scanne les badges** depuis l'espace partenaire (#813) : onglet « Contacts scannés » et page `/sponsor/<id>/scan`. La caméra est la seule entrée : ni saisie d'un code, ni recherche par nom. Aucune route du sponsor ne cherche ni ne liste les participants autrement que par le code scanné. |
+| RG-ARR-81 | Le scan garde le **code lu**, l'auteur et l'heure ; jamais une copie du participant. Le participant est retrouvé à chaque lecture parmi les billets non annulés de l'édition, que son badge soit marqué distribué ou non : une fiche corrigée ou un billet annulé après le scan apparaît tel qu'il est maintenant. Un code qui ne désigne aucun billet valide (inconnu, annulé, QR code étranger) est affiché et gardé tel quel, sans aucune donnée. Un même badge scanné deux fois par le même sponsor ne fait qu'une ligne, « Déjà scanné ». |
+| RG-ARR-82 | L'écran montre prénom, nom et entreprise ; l'**export CSV** (UTF-8 avec BOM, `;`) ajoute l'e-mail : prénom, nom, e-mail, entreprise, date, auteur, code non reconnu. Toute l'équipe du sponsor voit la même liste ; aucun autre sponsor ne la voit. Tendre son badge au stand vaut accord pour que le sponsor reçoive ses coordonnées : la politique de confidentialité le dit. |
+| RG-ARR-83 | Limite de **60 requêtes par minute et par contact**, par route (scan, liste, export), au lieu du budget par adresse : tous les stands partagent l'adresse du lieu. Les scans sont supprimés avec les participants (RG-ARR-66) et par la réinitialisation de l'accueil. |
+
 ---
 
 ## User stories

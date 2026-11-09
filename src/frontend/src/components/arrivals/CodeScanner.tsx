@@ -10,7 +10,17 @@ const FRAME_INTERVAL_MS = 150;
 // The camera, opened by the Scan button and closed as soon as a code is read
 // (RG-ARR-30). The back camera, full width, so a ticket held at arm's length
 // fills it; one hand holds the phone, the thumb reaches the close button.
-export default function CodeScanner({ onRead, onClose }: { onRead: (code: string) => void; onClose: () => void }) {
+// `canTypeCode`: the entrance has a field for a code typed by hand; a sponsor's
+// booth has none (#813), so its error messages do not send people looking for one.
+export default function CodeScanner({
+  onRead,
+  onClose,
+  canTypeCode = true,
+}: {
+  onRead: (code: string) => void;
+  onClose: () => void;
+  canTypeCode?: boolean;
+}) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [error, setError] = useState<string | null>(null);
   // The camera's light, for a paper ticket in a dark entrance (#800). Only
@@ -56,7 +66,11 @@ export default function CodeScanner({ onRead, onClose }: { onRead: (code: string
           audio: false,
         });
       } catch {
-        setError("La caméra n'a pas pu s'ouvrir. Autorisez-la dans les réglages du navigateur, ou saisissez le code.");
+        setError(
+          canTypeCode
+            ? "La caméra n'a pas pu s'ouvrir. Autorisez-la dans les réglages du navigateur, ou saisissez le code."
+            : "La caméra n'a pas pu s'ouvrir. Autorisez-la dans les réglages du navigateur, puis réessayez.",
+        );
         return;
       }
       if (isStopped) {
@@ -74,7 +88,11 @@ export default function CodeScanner({ onRead, onClose }: { onRead: (code: string
 
       const read = await createFrameReader().catch(() => null);
       if (!read) {
-        setError("Le lecteur de codes n'a pas pu démarrer. Saisissez le code à la main.");
+        setError(
+          canTypeCode
+            ? "Le lecteur de codes n'a pas pu démarrer. Saisissez le code à la main."
+            : "Le lecteur de codes n'a pas pu démarrer. Rechargez la page, ou essayez un autre navigateur.",
+        );
         return;
       }
       const tick = async () => {
@@ -92,6 +110,8 @@ export default function CodeScanner({ onRead, onClose }: { onRead: (code: string
     })();
 
     return stop;
+    // Read once, at opening: the camera must not restart if the prop changed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (

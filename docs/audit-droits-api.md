@@ -287,6 +287,9 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/sponsor-space/:sponsorId/job-offers/:offerId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | PUT | `/api/sponsor-space/:sponsorId/job-offers/:offerId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/private` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
+| POST | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/scans/export` | Contact du sponsor (STAND et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | POST | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | DELETE | `/api/sponsor-space/:sponsorId/team/:contactId` | Contact du sponsor (RESPONSABLE) ou ADMIN |

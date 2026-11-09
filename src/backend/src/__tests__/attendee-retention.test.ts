@@ -16,6 +16,7 @@ const NOW = new Date("1240-01-01T00:00:00Z");
 let expiredId: number;
 let recentId: number;
 let undatedId: number;
+let sponsorId: number;
 let stamp = 0;
 
 const addAttendee = (editionId: number) => {
@@ -43,9 +44,15 @@ beforeAll(async () => {
   recentId = (await create(1653, new Date("1238-08-01T17:00:00Z"))).id;
   undatedId = (await create(1654, null)).id;
   for (const id of [expiredId, recentId, undatedId]) await addAttendee(id);
+  // A booth's scans name attendees through their code (#813).
+  sponsorId = (await prisma.sponsor.create({ data: { name: "Retention Co", slug: `retention-co-${Date.now()}` } })).id;
+  for (const id of [expiredId, recentId]) {
+    await prisma.sponsorScan.create({ data: { editionId: id, sponsorId, code: `retention-${id}-0`, scannedByLabel: "Stand" } });
+  }
 });
 
 afterAll(async () => {
+  if (sponsorId !== undefined) await prisma.sponsor.delete({ where: { id: sponsorId } });
   const ids = [expiredId, recentId, undatedId].filter((id) => id !== undefined);
   if (ids.length) {
     await prisma.attendee.deleteMany({ where: { editionId: { in: ids } } });
@@ -61,6 +68,13 @@ describe("Attendee retention (RG-ARR-66)", () => {
     expect(await prisma.attendee.count({ where: { editionId: expiredId } })).toBe(0);
     expect(await prisma.attendee.count({ where: { editionId: recentId } })).toBe(1);
     expect(await prisma.attendee.count({ where: { editionId: undatedId } })).toBe(1);
+  });
+
+  it("should delete a sponsor's scans with the attendees (#813)", async () => {
+    await purgeExpiredAttendees(NOW);
+
+    expect(await prisma.sponsorScan.count({ where: { editionId: expiredId } })).toBe(0);
+    expect(await prisma.sponsorScan.count({ where: { editionId: recentId } })).toBe(1);
   });
 
   it("should purge an edition once, and refuse to import its attendees again", async () => {

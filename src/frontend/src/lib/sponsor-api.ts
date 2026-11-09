@@ -394,3 +394,31 @@ export async function importSponsorGuests(
     return { status: 0 };
   }
 }
+
+// --- Badge scans at the booth (#813) ---
+
+export interface SponsorScan {
+  id: number;
+  scannedAt: string;
+  scannedBy: string;
+  // The person, when the code is a live ticket of the edition.
+  attendee: { firstName: string; lastName: string; company: string | null } | null;
+  // The code as read, only when it names no live ticket.
+  code: string | null;
+}
+
+export function getSponsorScans(sponsorId: number) {
+  return call<{ year: number; scans: SponsorScan[] }>(`/api/sponsor-space/${sponsorId}/scans`);
+}
+
+export function recordSponsorScan(sponsorId: number, code: string) {
+  return call<{ scan: SponsorScan; isDuplicate: boolean }>(`/api/sponsor-space/${sponsorId}/scans`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+// A plain link: the session cookie goes with it, and the browser saves the file.
+export function sponsorScansExportUrl(sponsorId: number) {
+  return `/api/sponsor-space/${sponsorId}/scans/export`;
+}
