@@ -122,6 +122,14 @@ describe("sendSponsorInvitationEmail (#505)", () => {
     }
   });
 
+  // The stand team goes through Billetweb badges, not the partner space (#804).
+  it.each(["fr", "en"])("does not mention the stand team in %s", async (locale) => {
+    await invite(locale);
+
+    const { text, html } = sent();
+    for (const body of [text, html]) expect(body).not.toMatch(/stand|booth/i);
+  });
+
   it("shows a preview line that does not repeat the subject", async () => {
     await invite("fr");
 

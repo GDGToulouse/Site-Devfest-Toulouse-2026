@@ -11,6 +11,7 @@ import Fastify, { type FastifyInstance } from "fastify";
 
 import adminUserRoutes from "../routes/admin/users.js";
 import { prisma } from "../lib/prisma.js";
+import { auth } from "../lib/auth.js";
 
 // #500 — a sponsor contact must never be promoted into the back-office. EDITOR
 // is the column default and opens it, so every assertion reads the role STORED
@@ -56,6 +57,8 @@ afterAll(async () => {
     await prisma.sponsor.deleteMany({ where: { id: { in: created.sponsorIds } } });
   }
   if (created.userIds.length) {
+    // Reset tokens (#799) point at the account by value, with no foreign key.
+    await prisma.verification.deleteMany({ where: { value: { in: created.userIds } } });
     await prisma.user.deleteMany({ where: { id: { in: created.userIds } } });
   }
 });
@@ -158,5 +161,65 @@ describe("GET /api/admin/users — pagination (#416)", () => {
     const res = await app.inject({ method: "GET", url: "/api/admin/users" });
 
     expect(Array.isArray(res.json())).toBe(true);
+  });
+});
+
+// #799 — the invitation email never arrived: the admin sends the link by hand.
+// "Mot de passe oublié" mails too, so the link must come from here.
+describe("POST /api/admin/users/:id/invitation-link (#799)", () => {
+  it("should return a link that sets the password, without sending any email", async () => {
+    const user = await createUser("EDITOR");
+    sendMailMock.mockClear();
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/users/${user.id}/invitation-link` });
+
+    expect(res.statusCode).toBe(200);
+    expect(sendMailMock).not.toHaveBeenCalled();
+    // The admin's reset page, not the partner space's (#411). BASE_URL is "/"
+    // under Vitest: the path is what this asserts, not the origin.
+    const token = res.json().url.match(/\/admin\/reset-password\?token=(\w+)$/)?.[1];
+    expect(token).toBeDefined();
+    await auth.api.resetPassword({ body: { token, newPassword: "invited-password-799" } });
+    expect(await prisma.account.count({ where: { userId: user.id, providerId: "credential" } })).toBe(1);
+  });
+
+  it("should still mail a reset someone else asks for meanwhile", async () => {
+    const other = await createUser("EDITOR");
+    sendMailMock.mockClear();
+
+    await auth.api.requestPasswordReset({ body: { email: other.email } });
+
+    expect(sendMailMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("should refuse an account that is already active (409)", async () => {
+    const user = await createUser("ADMIN");
+    await prisma.account.create({ data: { userId: user.id, accountId: user.id, providerId: "credential", password: "x" } });
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/users/${user.id}/invitation-link` });
+
+    expect(res.statusCode).toBe(409);
+    expect(await prisma.verification.count({ where: { value: user.id } })).toBe(0);
+  });
+
+  it("should refuse a sponsor account (409)", async () => {
+    const user = await createUser("SPONSOR");
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/users/${user.id}/invitation-link` });
+
+    expect(res.statusCode).toBe(409);
+  });
+
+  it("should flag the accounts nobody has taken up in the list", async () => {
+    const pending = await createUser("EDITOR");
+    const active = await createUser("EDITOR");
+    await prisma.account.create({ data: { userId: active.id, accountId: active.id, providerId: "github" } });
+    const sponsor = await createUser("SPONSOR");
+
+    const rows = (await app.inject({ method: "GET", url: "/api/admin/users" })).json();
+
+    expect(rows.find((u: { id: string }) => u.id === pending.id).isPending).toBe(true);
+    expect(rows.find((u: { id: string }) => u.id === active.id).isPending).toBe(false);
+    expect(rows.find((u: { id: string }) => u.id === sponsor.id).isPending).toBe(false);
   });
 });
