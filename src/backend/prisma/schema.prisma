@@ -212,6 +212,7 @@ model Edition {
   ticketTiers     TicketTier[]
   attendees       Attendee[]
   badgeLabels     BadgeLabel[]
+  sponsorScans    SponsorScan[]
   arrivalsAccess  ArrivalsAccess[]
   articles        Article[]
   keyFigures      KeyFigure[]
@@ -706,6 +707,25 @@ model BadgeLabel {
   createdAt  DateTime  @default(now())
 
   @@index([attendeeId])
+  @@index([editionId])
+}
+
+// A badge a sponsor's booth scanned (#813). Only the code read is kept: the
+// attendee is looked up again on each read, so a corrected or cancelled ticket
+// shows as it is now, and a code that matches nothing is shown as read. Purged
+// with the edition's attendees (RG-ARR-66) and by an arrivals reset.
+model SponsorScan {
+  id             Int      @id @default(autoincrement())
+  editionId      Int
+  edition        Edition  @relation(fields: [editionId], references: [id], onDelete: Cascade)
+  sponsorId      Int
+  sponsor        Sponsor  @relation(fields: [sponsorId], references: [id], onDelete: Cascade)
+  code           String
+  // A label, not a user: it must still name the person once the account is gone.
+  scannedByLabel String
+  scannedAt      DateTime @default(now())
+
+  @@unique([editionId, sponsorId, code])
   @@index([editionId])
 }
 
@@ -1412,6 +1432,9 @@ model Sponsor {
   contacts SponsorContact[]
 
   editions EditionSponsor[]
+
+  // Badges its booth scanned (#813).
+  badgeScans SponsorScan[]
 
   @@index([deletedAt])
 }

@@ -312,10 +312,20 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // The Scan screen reads tickets with the camera (#642): the one place the
-      // site may ask for it. Listed after the rule above, which it overrides.
+      // The Scan screen reads tickets with the camera (#642), and a sponsor's
+      // booth reads badges (#813): the only places the site may ask for it.
+      // Listed after the rule above, which they override.
       {
         source: "/arrivees/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=()",
+          },
+        ],
+      },
+      {
+        source: "/sponsor/:sponsorId/scan",
         headers: [
           {
             key: "Permissions-Policy",

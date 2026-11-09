@@ -36,6 +36,8 @@ export async function purgeExpiredAttendees(now = new Date()): Promise<Array<{ y
       prisma.attendee.deleteMany({ where: { editionId: edition.id } }),
       // Labels typed for people without a ticket (#801) hold names too.
       prisma.badgeLabel.deleteMany({ where: { editionId: edition.id } }),
+      // A sponsor's scans name attendees through their ticket code (#813).
+      prisma.sponsorScan.deleteMany({ where: { editionId: edition.id } }),
       prisma.edition.update({ where: { id: edition.id }, data: { attendeesPurgedAt: now } }),
     ]);
     report.push({ year: edition.year, purged: count });

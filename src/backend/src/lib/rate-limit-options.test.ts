@@ -8,8 +8,10 @@ import {
   AUTH_ACCOUNT_RATE_LIMIT_MAX,
   AUTH_RATE_LIMIT_MAX,
   OAUTH_RATE_LIMIT_MAX,
+  SPONSOR_SCAN_RATE_LIMIT_MAX,
   UPLOADS_RATE_LIMIT_MAX,
   arrivalsRateLimit,
+  sponsorScanRateLimit,
   authAccountRateLimit,
   authRateLimit,
   rateLimitOptions,
@@ -174,5 +176,56 @@ describe("rate limit at the venue, where every phone shares one address (#642)",
     const codes = await hammer(app as Awaited<ReturnType<typeof probeApp>>, "/api/arrivals/current", ARRIVALS_RATE_LIMIT_MAX + 1);
 
     expect(codes.at(-1)).toBe(429);
+  });
+});
+
+describe("rate limit on a sponsor's badge scans (#813)", () => {
+  // The sponsor guard runs first and names the contact, as in sponsor-space-scans.ts.
+  async function boothApp() {
+    const app = Fastify({ logger: false });
+    await app.register(rateLimit, rateLimitOptions);
+    app.decorateRequest("sponsorAccess");
+    app.post(
+      "/api/sponsor-space/:sponsorId/scans",
+      {
+        config: { rateLimit: sponsorScanRateLimit },
+        preHandler: async (request) => {
+          request.sponsorAccess = {
+            sponsorId: 7,
+            contactId: Number(request.headers["x-contact"]),
+            accessRole: "STAND",
+            isAdminOverride: false,
+          };
+        },
+      },
+      async () => ({ ok: true }),
+    );
+    return app;
+  }
+
+  const scan = (app: Awaited<ReturnType<typeof boothApp>>, contact: number) =>
+    app.inject({ method: "POST", url: "/api/sponsor-space/7/scans", headers: { "x-contact": String(contact) } });
+
+  it("should let every booth scan past the shared API budget, all from one address", async () => {
+    const app = await boothApp();
+
+    const codes = [];
+    for (let contact = 1; contact <= 4; contact++) {
+      for (let i = 0; i < SPONSOR_SCAN_RATE_LIMIT_MAX; i++) codes.push((await scan(app, contact)).statusCode);
+    }
+
+    expect(codes.length).toBeGreaterThan(API_RATE_LIMIT_MAX);
+    expect(codes).not.toContain(429);
+  });
+
+  it("should hold one contact to its budget without blocking the others", async () => {
+    const app = await boothApp();
+
+    for (let i = 0; i < SPONSOR_SCAN_RATE_LIMIT_MAX; i++) await scan(app, 1);
+    const over = await scan(app, 1);
+    const colleague = await scan(app, 2);
+
+    expect(over.statusCode).toBe(429);
+    expect(colleague.statusCode).toBe(200);
   });
 });

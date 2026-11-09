@@ -176,3 +176,23 @@ export const teamInviteRateLimit = {
   keyGenerator: (request: FastifyRequest) =>
     `team-invite:${(request.params as { sponsorId?: string }).sponsorId}`,
 };
+
+/**
+ * Badge scans by a sponsor's booth, per contact and per minute (#813). Its own
+ * bucket, keyed on the person rather than the address: every booth sits behind
+ * the venue's single address, where the shared 200/min would run out. Sixty is
+ * a badge a second, well above a queue at a stand, and keeps a contact who
+ * calls the route by hand from trying codes in series. Counted in preHandler,
+ * after the sponsor guard, like the team invitations. Reading the list and
+ * the export count apart (method and path in the key), so a list refreshed
+ * while scanning never eats into the scans.
+ */
+export const SPONSOR_SCAN_RATE_LIMIT_MAX = 60;
+
+export const sponsorScanRateLimit = {
+  hook: "preHandler" as const,
+  timeWindow: "1 minute",
+  max: SPONSOR_SCAN_RATE_LIMIT_MAX,
+  keyGenerator: (request: FastifyRequest) =>
+    `sponsor-scan:${request.method}:${request.routeOptions.url}:${request.sponsorAccess?.sponsorId}:${request.sponsorAccess?.contactId}`,
+};

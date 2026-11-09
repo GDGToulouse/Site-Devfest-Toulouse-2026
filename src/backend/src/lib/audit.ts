@@ -25,6 +25,7 @@ const EXCLUDED_MODELS = new Set([
   "Attendee",
   "BadgeTransition",
   "BadgeLabel",
+  "SponsorScan",
   "AuditLog",
   "Session",
   "Account",
