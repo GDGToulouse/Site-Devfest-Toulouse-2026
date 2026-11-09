@@ -724,6 +724,11 @@ model SponsorScan {
   // A label, not a user: it must still name the person once the account is gone.
   scannedByLabel String
   scannedAt      DateTime @default(now())
+  // What the booth wants to remember of the talk (#815): one note per scan,
+  // shared by the sponsor's team, the last change only.
+  note               String?
+  noteUpdatedAt      DateTime?
+  noteUpdatedByLabel String?
 
   @@unique([editionId, sponsorId, code])
   @@index([editionId])

@@ -6,7 +6,8 @@ import { use, useCallback, useEffect, useState } from "react";
 
 import CodeScanner from "@/components/arrivals/CodeScanner";
 import { ScanLine } from "@/components/sponsor-space/ScansTab";
-import { getSponsorScans, recordSponsorScan, type SponsorScan } from "@/lib/sponsor-api";
+import { NoteField, noteErrorMessage } from "@/components/sponsor-space/ScanNote";
+import { getSponsorScans, recordSponsorScan, saveSponsorScanNote, type SponsorScan } from "@/lib/sponsor-api";
 
 // The booth's scanner (#813), on the phone of whoever stands at the stand. The
 // camera is the only way in: no field to type a code, no search by name. A
@@ -26,6 +27,9 @@ export default function SponsorScanPage({ params }: { params: Promise<{ sponsorI
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteError, setNoteError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const { data, status } = await getSponsorScans(id);
@@ -56,6 +60,8 @@ export default function SponsorScanPage({ params }: { params: Promise<{ sponsorI
     setIsSending(false);
     if (data) {
       setResult(data);
+      setNoteDraft(data.scan.note?.text ?? "");
+      setNoteError(null);
       if (!data.isDuplicate) setScans((previous) => [data.scan, ...previous]);
       return;
     }
@@ -69,7 +75,28 @@ export default function SponsorScanPage({ params }: { params: Promise<{ sponsorI
     });
   }
 
-  function openCamera() {
+  const scanned = result && "scan" in result ? result.scan : null;
+  const isNoteDirty = scanned !== null && noteDraft.trim() !== (scanned.note?.text ?? "");
+
+  // Returns false when the note could not be saved: it stays on screen, unsent.
+  async function saveNote(): Promise<boolean> {
+    if (!scanned) return true;
+    setIsSavingNote(true);
+    const { data, status, message } = await saveSponsorScanNote(id, scanned.id, noteDraft);
+    setIsSavingNote(false);
+    if (!data) {
+      setNoteError(noteErrorMessage(status, message));
+      return false;
+    }
+    setNoteError(null);
+    setResult((current) => (current && "scan" in current ? { ...current, scan: data.scan } : current));
+    setScans((previous) => previous.map((s) => (s.id === data.scan.id ? data.scan : s)));
+    return true;
+  }
+
+  // A note typed but not saved goes with the next badge (#815), never lost.
+  async function openCamera() {
+    if (isNoteDirty && !(await saveNote())) return;
     setResult(null);
     setIsCameraOpen(true);
   }
@@ -112,12 +139,23 @@ export default function SponsorScanPage({ params }: { params: Promise<{ sponsorI
                 {result && <ResultCard result={result} />}
                 <button
                   type="button"
-                  onClick={openCamera}
-                  disabled={isSending}
+                  onClick={() => void openCamera()}
+                  disabled={isSending || isSavingNote}
                   className="min-h-16 rounded-2xl bg-malachite px-5 text-lg font-bold text-blanc transition-colors hover:bg-malachite/90 disabled:opacity-60"
                 >
                   {result ? "Scanner le badge suivant" : "Ouvrir la caméra"}
                 </button>
+                {scanned && (
+                  <NoteField
+                    value={noteDraft}
+                    onChange={setNoteDraft}
+                    onSave={() => void saveNote()}
+                    isSaving={isSavingNote}
+                    isDirty={isNoteDirty}
+                    error={noteError}
+                    savedNote={scanned.note}
+                  />
+                )}
               </>
             )}
 
@@ -131,7 +169,9 @@ export default function SponsorScanPage({ params }: { params: Promise<{ sponsorI
                 </h2>
                 <ul className="divide-y divide-gris/15 rounded-xl border border-gris/20 bg-blanc px-4">
                   {scans.slice(0, RECENT).map((scan) => (
-                    <ScanLine key={scan.id} scan={scan} />
+                    <ScanLine key={scan.id} scan={scan}>
+                      {scan.note && <p className="whitespace-pre-line text-sm text-noir">{scan.note.text}</p>}
+                    </ScanLine>
                   ))}
                 </ul>
                 <Link href={`/sponsor/${id}`} className="mt-2 inline-block text-sm text-bleu underline">

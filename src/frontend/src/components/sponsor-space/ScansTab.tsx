@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import { getSponsorScans, sponsorScansExportUrl, type SponsorScan } from "@/lib/sponsor-api";
+import ScanNoteEditor from "@/components/sponsor-space/ScanNote";
 
 // The people the booth met (#813): every badge scanned by the sponsor's team
 // this edition, and the export. Each line is read again from the attendees, so
@@ -19,8 +20,8 @@ export function formatScanTime(iso: string) {
   });
 }
 
-/** One scan: the person, or the code as read when it names no valid ticket. */
-export function ScanLine({ scan }: { scan: SponsorScan }) {
+/** One scan: the person, or the code as read when it names no valid ticket. `children`: its note. */
+export function ScanLine({ scan, children }: { scan: SponsorScan; children?: React.ReactNode }) {
   return (
     <li className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3">
       <div className="min-w-0">
@@ -41,6 +42,7 @@ export function ScanLine({ scan }: { scan: SponsorScan }) {
       <p className="text-xs text-gris">
         {formatScanTime(scan.scannedAt)} · {scan.scannedBy}
       </p>
+      {children && <div className="w-full">{children}</div>}
     </li>
   );
 }
@@ -114,7 +116,13 @@ export default function ScansTab({ sponsorId }: { sponsorId: number }) {
           </p>
           <ul className="divide-y divide-gris/15 rounded-xl border border-gris/20 bg-blanc px-4">
             {scans.map((scan) => (
-              <ScanLine key={scan.id} scan={scan} />
+              <ScanLine key={scan.id} scan={scan}>
+                <ScanNoteEditor
+                  sponsorId={sponsorId}
+                  scan={scan}
+                  onSaved={(saved) => setScans((all) => all?.map((s) => (s.id === saved.id ? saved : s)) ?? null)}
+                />
+              </ScanLine>
             ))}
           </ul>
         </>

@@ -5,7 +5,14 @@ import { getAuthContext } from "../lib/auth-context.js";
 import { findCurrentEdition } from "../lib/arrivals-access.js";
 import { requireSponsorAccess } from "../lib/sponsor-guard.js";
 import { sponsorScanRateLimit } from "../lib/rate-limit-options.js";
-import { listSponsorScans, recordSponsorScan, SCAN_CODE_MAX, sponsorScansCsv } from "../lib/sponsor-scans.js";
+import {
+  listSponsorScans,
+  recordSponsorScan,
+  SCAN_CODE_MAX,
+  SCAN_NOTE_MAX,
+  setSponsorScanNote,
+  sponsorScansCsv,
+} from "../lib/sponsor-scans.js";
 
 // A sponsor's booth scans the badges held out to it (#813), and finds the
 // people it met in its space, with an export. Every contact of the sponsor,
@@ -78,6 +85,44 @@ export default async function sponsorSpaceScanRoutes(app: FastifyInstance) {
     const { item, isDuplicate } = await recordSponsorScan(edition.id, sponsorId, code, await scannerLabel(request));
     return reply.code(isDuplicate ? 200 : 201).send({ scan: item, isDuplicate });
   });
+
+  // PUT /api/sponsor-space/:sponsorId/scans/:scanId/note — what the booth wants
+  // to remember of the talk (#815). Any member of the team writes, changes or
+  // clears it (blank text); the last change is kept, with its author.
+  app.put<{ Params: { sponsorId: string; scanId: string }; Body: { note: string } }>(
+    "/sponsor-space/:sponsorId/scans/:scanId/note",
+    {
+      schema: {
+        params: {
+          type: "object",
+          required: ["sponsorId", "scanId"],
+          properties: { sponsorId: { type: "string" }, scanId: { type: "string", pattern: "^[0-9]+$" } },
+        },
+        body: {
+          type: "object",
+          required: ["note"],
+          additionalProperties: false,
+          properties: { note: { type: "string", maxLength: SCAN_NOTE_MAX } },
+        },
+      },
+      preHandler: requireSponsorAccess("STAND"),
+      config,
+    },
+    async (request, reply) => {
+      const { sponsorId } = request.sponsorAccess!;
+      const edition = await scanEdition(sponsorId);
+      if (!edition) return reply.code(422).send(NO_PARTICIPATION);
+      const scan = await setSponsorScanNote(
+        edition.id,
+        sponsorId,
+        Number(request.params.scanId),
+        request.body.note,
+        await scannerLabel(request),
+      );
+      if (!scan) return reply.code(404).send({ error: "Scan not found" });
+      return { scan };
+    },
+  );
 
   // GET /api/sponsor-space/:sponsorId/scans/export — the CSV, e-mail included.
   app.get<{ Params: { sponsorId: string } }>("/sponsor-space/:sponsorId/scans/export", {

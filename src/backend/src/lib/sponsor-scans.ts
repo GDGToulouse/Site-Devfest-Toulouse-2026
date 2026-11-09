@@ -15,6 +15,15 @@ export const SCAN_CODE_MAX = 512;
 // A booth scans a few hundred badges at most; the guard keeps a read bounded.
 const SCANS_MAX = 5_000;
 
+/** A note is a few lines on the talk (#815), not a report. */
+export const SCAN_NOTE_MAX = 500;
+
+export interface SponsorScanNote {
+  text: string;
+  updatedAt: Date;
+  updatedBy: string;
+}
+
 export interface SponsorScanItem {
   id: number;
   scannedAt: Date;
@@ -23,6 +32,7 @@ export interface SponsorScanItem {
   attendee: { firstName: string; lastName: string; company: string | null } | null;
   /** The code as read, only when it names no live ticket. */
   code: string | null;
+  note: SponsorScanNote | null;
 }
 
 interface LiveTicket {
@@ -48,7 +58,25 @@ async function liveTicketsByCode(editionId: number, codes: string[]): Promise<Ma
   return byCode;
 }
 
-type ScanRow = { id: number; code: string; scannedAt: Date; scannedByLabel: string };
+const SCAN_SELECT = {
+  id: true,
+  code: true,
+  scannedAt: true,
+  scannedByLabel: true,
+  note: true,
+  noteUpdatedAt: true,
+  noteUpdatedByLabel: true,
+} as const;
+
+type ScanRow = {
+  id: number;
+  code: string;
+  scannedAt: Date;
+  scannedByLabel: string;
+  note: string | null;
+  noteUpdatedAt: Date | null;
+  noteUpdatedByLabel: string | null;
+};
 
 function toItem(row: ScanRow, ticket: LiveTicket | undefined): SponsorScanItem {
   return {
@@ -57,6 +85,10 @@ function toItem(row: ScanRow, ticket: LiveTicket | undefined): SponsorScanItem {
     scannedBy: row.scannedByLabel,
     attendee: ticket ? { firstName: ticket.firstName, lastName: ticket.lastName, company: ticket.company } : null,
     code: ticket ? null : row.code,
+    note:
+      row.note && row.noteUpdatedAt
+        ? { text: row.note, updatedAt: row.noteUpdatedAt, updatedBy: row.noteUpdatedByLabel ?? "" }
+        : null,
   };
 }
 
@@ -68,13 +100,13 @@ export async function recordSponsorScan(
   scannedByLabel: string,
 ): Promise<{ item: SponsorScanItem; isDuplicate: boolean }> {
   const where = { editionId_sponsorId_code: { editionId, sponsorId, code } };
-  const existing = await prisma.sponsorScan.findUnique({ where });
+  const existing = await prisma.sponsorScan.findUnique({ where, select: SCAN_SELECT });
   const row =
     existing ??
     (await prisma.sponsorScan
-      .create({ data: { editionId, sponsorId, code, scannedByLabel } })
+      .create({ data: { editionId, sponsorId, code, scannedByLabel }, select: SCAN_SELECT })
       // Two phones of the same booth reading the same badge at once.
-      .catch(async () => prisma.sponsorScan.findUniqueOrThrow({ where })));
+      .catch(async () => prisma.sponsorScan.findUniqueOrThrow({ where, select: SCAN_SELECT })));
   const tickets = await liveTicketsByCode(editionId, [code]);
   return { item: toItem(row, tickets.get(code)), isDuplicate: existing !== null };
 }
@@ -82,12 +114,36 @@ export async function recordSponsorScan(
 async function loadScans(editionId: number, sponsorId: number) {
   const rows = await prisma.sponsorScan.findMany({
     where: { editionId, sponsorId },
-    select: { id: true, code: true, scannedAt: true, scannedByLabel: true },
+    select: SCAN_SELECT,
     orderBy: [{ scannedAt: "desc" }, { id: "desc" }],
     take: SCANS_MAX,
   });
   const tickets = await liveTicketsByCode(editionId, [...new Set(rows.map((r) => r.code))]);
   return { rows, tickets };
+}
+
+/**
+ * Write, change or clear (blank text) the note of one of this booth's scans
+ * (#815). Null when the scan is not this sponsor's in this edition.
+ */
+export async function setSponsorScanNote(
+  editionId: number,
+  sponsorId: number,
+  scanId: number,
+  text: string,
+  updatedByLabel: string,
+): Promise<SponsorScanItem | null> {
+  const note = text.trim();
+  const { count } = await prisma.sponsorScan.updateMany({
+    where: { id: scanId, editionId, sponsorId },
+    data: note
+      ? { note, noteUpdatedAt: new Date(), noteUpdatedByLabel: updatedByLabel }
+      : { note: null, noteUpdatedAt: null, noteUpdatedByLabel: null },
+  });
+  if (count === 0) return null;
+  const row = await prisma.sponsorScan.findUniqueOrThrow({ where: { id: scanId }, select: SCAN_SELECT });
+  const tickets = await liveTicketsByCode(editionId, [row.code]);
+  return toItem(row, tickets.get(row.code));
 }
 
 /** The booth's scans, latest first. */
@@ -103,7 +159,7 @@ function csvCell(value: string) {
   return /[;"\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-const CSV_HEADER = ["Prénom", "Nom", "E-mail", "Entreprise", "Scanné le", "Scanné par", "Code non reconnu"];
+const CSV_HEADER = ["Prénom", "Nom", "E-mail", "Entreprise", "Scanné le", "Scanné par", "Code non reconnu", "Note"];
 
 function parisTime(date: Date) {
   return date.toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "short", timeStyle: "short" });
@@ -126,6 +182,7 @@ export async function sponsorScansCsv(editionId: number, sponsorId: number): Pro
       parisTime(row.scannedAt),
       row.scannedByLabel,
       t ? "" : row.code,
+      row.note ?? "",
     ];
   });
   return `﻿${[CSV_HEADER, ...lines].map((cells) => cells.map(csvCell).join(";")).join("\r\n")}\r\n`;
