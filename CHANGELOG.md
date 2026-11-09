@@ -12,6 +12,22 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
+> Aucune migration. Aucune nouvelle variable d'environnement.
+
+### Ajouté
+
+- **Keynotes mises en avant** partout où une conférence est listée : grille et agenda mobile du programme, liste des conférences, fiche et impression, avec un badge « ★ Keynote » (#808).
+- **Avis du public visibles dès le premier vote**, par tout visiteur, pendant et après le vote ; les messages laissés aux speakers ne sont jamais publics (#803).
+- **Zone d'avis affichée grisée avant son ouverture**, avec l'heure d'ouverture : le vote d'une session ouvre dix minutes avant sa fin et la page bascule seule à l'heure dite (#809).
+- **Copier le lien d'invitation** d'un contact sponsor ou d'un membre de l'équipe qui ne s'est jamais connecté, sans renvoyer d'e-mail (#799).
+
+### Corrigé
+
+- **Liens de la billetterie** vers l'adresse courte de l'événement Billetweb au lieu de `shop.php` (#798).
+- **Éditeur de texte** : le bouton « Lien » montre et modifie l'adresse d'un lien posé au lieu de le supprimer (#805).
+- **Invitation sponsor** : l'e-mail ne mentionne plus l'équipe du stand (#804).
+- **Une valeur que la base refuse** (un octet nul dans une adresse) reste une erreur 400 avec Prisma 7.10, au lieu d'une erreur 500 qui alerte l'équipe (#811).
+
 ## [1.13.1] - 2026-11-03
 
 Correctif : la page des **offres d'emploi des partenaires** répondait une erreur à chaque visite depuis la version 1.12.1.
@@ -32,7 +48,7 @@ Cette version clôt aussi le lot de **sécurité et de données personnelles** d
 
 ### Ajouté
 
-- **Conférence annulée et speaker retiré**, distincts du brouillon : la conférence reste en ligne, marquée « Annulée », au lieu de disparaître (#726).
+- **Conférence annulée et speaker retiré**, distincts du brouillon : ils disparaissent du site comme un brouillon, mais l'admin les marque « Annulé » / « Retiré », pour qu'on ne les republie pas par erreur (#726).
 - **Fiche conférence avec le jour, l'heure, la salle et les salles de retransmission** (#717).
 - **Programme brut pour les partenaires**, par salle ou par horaire, sans mise en forme, accessible depuis le tableau de bord (#755).
 - **Quarantaine des messages suspects du formulaire de contact** : un message qui ressemble à du phishing est enregistré mais rien ne part (ni e-mail, ni confirmation, ni webhook) tant qu'un organisateur ne l'a pas libéré ; une alerte sans contenu peut prévenir l'équipe sur Slack (#767).

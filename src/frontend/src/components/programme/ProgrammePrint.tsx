@@ -203,9 +203,12 @@ function PrintedSession({
     .join(" · ");
 
   return (
-    <li>
+    <li className={talk.format === "KEYNOTE" ? "print-keynote" : undefined}>
       <span className="print-time">{aside}</span>
-      <span className="print-title">{talk.title}</span>
+      <span className="print-title">
+        {talk.format === "KEYNOTE" && <span aria-hidden="true">★ </span>}
+        {talk.title}
+      </span>
       {talk.speakers.length > 0 && (
         <span className="print-speakers">{talk.speakers.map((s) => s.name).join(", ")}</span>
       )}
