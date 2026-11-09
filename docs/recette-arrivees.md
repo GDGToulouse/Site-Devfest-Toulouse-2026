@@ -255,6 +255,20 @@ Sur un téléphone en poste **Scan**, une fois la page chargée :
 3. Réactivez le réseau sans fermer l'application : le scan est envoyé, et la carte apparaît sur
    le guichet avec la mention « Scanné pendant la coupure : déjà remis ? » et un bouton ✓.
 
+### 7. Scan des badges sur un stand sponsor
+
+Avec un compte contact d'un sponsor de l'édition, quel que soit son rôle (en local :
+`responsable@aeronova.example.com`, rôle Stand chez Garonne Digital), ou en admin :
+
+1. Espace partenaire, onglet **Contacts scannés**, bouton **Scanner un badge** : la page
+   `/sponsor/<id>/scan` ouvre la caméra du téléphone. Il n'y a pas de champ pour taper un code.
+2. Scannez un badge valide : prénom, nom et entreprise s'affichent, « Contact ajouté ».
+   Rescannez-le : « Déjà scanné », sans seconde ligne.
+3. Scannez un billet annulé ou un QR code quelconque : « Code non reconnu » et le code tel quel.
+4. Dans l'onglet, **Exporter en CSV** : prénom, nom, e-mail, entreprise, date, auteur. Il
+   s'ouvre en colonnes dans Excel.
+5. Avec un autre sponsor : sa liste est vide, il ne voit pas les scans du premier.
+
 ## Précautions
 
 - **Billetweb** : l'environnement écrit dans l'événement de test seulement (numéros de badge au
