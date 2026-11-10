@@ -58,4 +58,17 @@ describe("computeTicketStatus", () => {
       ),
     ).toBe("AVAILABLE");
   });
+
+  // #822: Billetweb sells nothing past the edition's deadline.
+  it("closes every tier once the registration deadline has passed, override included", () => {
+    expect(
+      computeTicketStatus({ saleStartDate: PAST, saleEndDate: FUTURE, manualStatus: "AVAILABLE" }, NOW, PAST),
+    ).toBe("CLOSED");
+  });
+
+  it("leaves the status alone while the deadline is ahead", () => {
+    expect(
+      computeTicketStatus({ saleStartDate: PAST, saleEndDate: FUTURE }, NOW, FUTURE),
+    ).toBe("AVAILABLE");
+  });
 });

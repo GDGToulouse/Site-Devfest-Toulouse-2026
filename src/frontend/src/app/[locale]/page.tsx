@@ -51,7 +51,7 @@ function buildEventJsonLd(
   // otherwise surface to Google as invalid structured data.
   const seenKeys = new Set<string>();
   const offers = tiers
-    .filter((t) => t.status !== "SOLD_OUT")
+    .filter((t) => t.status !== "SOLD_OUT" && t.status !== "CLOSED")
     .filter((t) => {
       const key = `${t.nameFr}|${t.price}|${t.status}`;
       if (seenKeys.has(key)) return false;
@@ -171,7 +171,11 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const isSoldOut = tiers.length > 0 && tiers.every((tier) => tier.status === "SOLD_OUT");
   // The last month leads with the ticket; the last week offers it after the
   // programme while seats are left; on the day, nothing is left to sell.
-  const ticketsCta = isTicketing ? (isSoldOut ? "soldOut" : "open") : isProgramme && !isToday && !isSoldOut ? "open" : null;
+  // Past the registration deadline (#822) every tier comes back CLOSED.
+  const isClosed = tiers.some((tier) => tier.status === "CLOSED");
+  const ticketsCta = isTicketing
+    ? isClosed ? "closed" : isSoldOut ? "soldOut" : "open"
+    : isProgramme && !isToday && !isSoldOut && !isClosed ? "open" : null;
 
   const eventJsonLd = edition
     ? buildEventJsonLd(edition, tiers, {
@@ -205,7 +209,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const announcementSections: HomeSection[] = [
     {
       show: tiers.length > 0,
-      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} />,
+      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} salesEndAt={edition?.ticketSalesEndAt} />,
     },
     {
       show: Boolean(edition?.previousAfterMovieUrl),
@@ -259,7 +263,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     },
     {
       show: tiers.length > 0 && !isToday,
-      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} />,
+      render: (surface) => <TicketingSection tiers={tiers} locale={locale} surface={surface} salesEndAt={edition?.ticketSalesEndAt} />,
     },
     {
       show: articles.length > 0,

@@ -6,6 +6,7 @@ import FormField from "@/components/admin/FormField";
 import BilingualInput from "@/components/admin/BilingualInput";
 import StatusBadge from "@/components/admin/StatusBadge";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
+import SalesEndField from "./SalesEndField";
 
 interface TicketTier {
   id: number;
@@ -33,7 +34,31 @@ const TICKET_STATUS = [
   { value: "COMING_SOON", label: "Bientôt disponible", variant: "gray" as const },
   { value: "AVAILABLE", label: "Disponible", variant: "green" as const },
   { value: "SOLD_OUT", label: "Complet", variant: "orange" as const },
+  // Past the edition's registration deadline (#822), whatever the tier says.
+  { value: "CLOSED", label: "Inscriptions closes", variant: "gray" as const },
 ];
+
+interface ImportResult {
+  imported: number;
+  salesEndAt: string | null;
+  salesEndField: string | null;
+  eventDateFields: Record<string, string>;
+}
+
+// What the import says about the registration deadline (#822). Billetweb's API
+// documents no field for it: when nothing is found, the date fields the event
+// did carry are listed, so the next person knows where to look.
+function salesEndReport(result: ImportResult): string {
+  if (result.salesEndAt) {
+    const date = new Date(result.salesEndAt).toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" });
+    return `${result.imported} tarifs importés. Fin des inscriptions lue dans Billetweb (${result.salesEndField}) : ${date}.`;
+  }
+  const fields = Object.keys(result.eventDateFields);
+  return (
+    `${result.imported} tarifs importés. Billetweb ne donne pas la date de fin des inscriptions : saisissez-la ci-dessous. ` +
+    (fields.length ? `Dates présentes sur l'événement : ${fields.join(", ")}.` : "")
+  ).trim();
+}
 
 // Admin override choices. "AUTO" clears the override → status is derived from
 // the BilletWeb sync and sale dates.
@@ -145,6 +170,9 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
   const [selectedEvent, setSelectedEvent] = useState<BilletwebEvent | null>(null);
   // Billetweb credits a sale to the site only through `src` (#507).
   const [trackingSource, setTrackingSource] = useState("site");
+  // What the last import said about the registration deadline (#822).
+  const [importReport, setImportReport] = useState<string | null>(null);
+  const [salesEndReloadKey, setSalesEndReloadKey] = useState(0);
 
   async function loadTiers() {
     setIsLoading(true);
@@ -234,7 +262,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
     setIsImporting(true);
     setImportError(null);
 
-    const { data, status } = await adminFetch<{ imported: number }>("/tickets/import/billetweb", {
+    const { data, status } = await adminFetch<ImportResult>("/tickets/import/billetweb", {
       method: "POST",
       body: JSON.stringify({ editionId, billetwebEventId: selectedEvent.id, trackingSource }),
     });
@@ -244,6 +272,8 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
     if (status === 201 && data) {
       setShowImportModal(false);
       setSelectedEvent(null);
+      setImportReport(salesEndReport(data));
+      setSalesEndReloadKey((key) => key + 1);
       loadTiers();
     } else {
       setImportError("Erreur lors de l'import des tarifs.");
@@ -268,6 +298,17 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
           </button>
         </div>
       </div>
+
+      {importReport && (
+        <div role="status" className="p-3 rounded-lg bg-bleu/10 text-noir text-sm mb-4 flex items-start justify-between gap-3">
+          <span>{importReport}</span>
+          <button onClick={() => setImportReport(null)} className="text-gris hover:text-noir" aria-label="Fermer le message">
+            ×
+          </button>
+        </div>
+      )}
+
+      <SalesEndField editionId={editionId} reloadKey={salesEndReloadKey} />
 
       {showForm && (
         <div className="bg-blanc-casse/50 rounded-xl p-6 mb-6 space-y-4">
