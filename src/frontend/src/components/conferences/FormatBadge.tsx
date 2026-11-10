@@ -17,7 +17,7 @@ export default function FormatBadge({
     return <span className={`whitespace-nowrap rounded-full bg-bleu/10 font-bold text-bleu ${box}`}>{label}</span>;
   }
   return (
-    <span className={`whitespace-nowrap rounded-full bg-noir font-bold text-jaune ${box}`}>
+    <span className={`whitespace-nowrap rounded-full bg-terre-cuite font-bold text-blanc ${box}`}>
       <span aria-hidden="true">★ </span>
       {label}
     </span>
