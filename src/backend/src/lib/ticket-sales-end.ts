@@ -19,7 +19,10 @@ export function readBilletwebDate(value: unknown): Date | null {
     const n = Number(value);
     return n >= 1_000_000_000 && n < 10_000_000_000 ? new Date(n * 1000) : null;
   }
-  if (typeof value !== "string") return null;
+  // Only a string that starts like a date: parseWallTime hands anything with a
+  // trailing "-2026" to `new Date`, which read the event's slug and shop URL
+  // as 1 January 2026 on the beta.
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(value.trim())) return null;
   return parseWallTime(value.trim().replace(" ", "T"));
 }
 
