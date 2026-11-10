@@ -188,7 +188,7 @@ export default function TicketingTab({ editionId }: TicketingTabProps) {
       isVisible: form.isVisible,
       saleStartDate: form.saleStartDate || null,
       saleEndDate: form.saleEndDate || null,
-      externalUrl: form.externalUrl || undefined,
+      externalUrl: form.externalUrl,
       sortOrder: Number(form.sortOrder) || 0,
       manualStatus: form.manualStatus,
       editionId,
