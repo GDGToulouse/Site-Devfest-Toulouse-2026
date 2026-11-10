@@ -44,6 +44,7 @@
       "cfpBadge": "CFP open",
       "ctaTickets": "Get my ticket",
       "ctaSoldOut": "Sold out",
+      "ctaClosed": "Registrations closed",
       "countdown": {
         "days": "In {count} days",
         "tomorrow": "Tomorrow",
@@ -163,6 +164,13 @@
     "label": "Pagination",
     "previous": "Previous",
     "next": "Next"
+  },
+  "ticketSales": {
+    "until": "Registrations open until {date}",
+    "remaining": "{days}d {hours}h {minutes}m {seconds}s left",
+    "remainingToday": "{hours}h {minutes}m {seconds}s left",
+    "closed": "Registrations closed on {date}.",
+    "status": "Registrations closed"
   },
   "ticketing": {
     "pageTitle": "Tickets",

@@ -160,6 +160,10 @@ model Edition {
   sponsorGuestBilletwebEventId     String?
   sponsorGuestBilletwebTicketId    String?
   sponsorGuestBilletwebTicketName  String?
+  // When registrations close (#822): every visible tier shows as closed from
+  // then on, whatever its own status. Imported from Billetweb when the event
+  // exposes it, editable by hand in the ticketing tab. Null = no deadline.
+  ticketSalesEndAt        DateTime?
   feedbackTestMode        Boolean           @default(false)
   // When an admin last sent the speakers their feedback recap (#567).
   feedbackRecapSentAt     DateTime?
