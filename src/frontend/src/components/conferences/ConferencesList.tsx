@@ -42,7 +42,7 @@ export default function ConferencesList({
             <Link
               href={`/conferences/${talk.slug}`}
               className={`flex h-full flex-col rounded-2xl p-5 shadow-card ${
-                talk.format === "KEYNOTE" ? "border-2 border-jaune bg-jaune-clair/30" : "bg-blanc"
+                talk.format === "KEYNOTE" ? "border-2 border-terre-cuite bg-blanc-casse" : "bg-blanc"
               } transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50`}
             >
               <div className="flex flex-wrap items-center gap-2 pr-8">
