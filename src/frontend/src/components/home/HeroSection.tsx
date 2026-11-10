@@ -22,7 +22,7 @@ interface HeroSectionProps {
   locale: string;
   figures?: KeyFigure[];
   /** The ticket button of the last month (#576): open, or every tier sold out. */
-  tickets?: "open" | "soldOut" | null;
+  tickets?: "open" | "soldOut" | "closed" | null;
 }
 
 export default function HeroSection({ edition, cfp, locale, figures = [], tickets = null }: HeroSectionProps) {
@@ -117,6 +117,12 @@ export default function HeroSection({ edition, cfp, locale, figures = [], ticket
               {tickets === "soldOut" && (
                 <span className="rounded-[12px] border-2 border-gris/30 bg-blanc px-7 py-3.5 text-lg font-bold text-gris">
                   {t("ctaSoldOut")}
+                </span>
+              )}
+              {/* Registrations closed (#822): same muted label, its own words. */}
+              {tickets === "closed" && (
+                <span className="rounded-[12px] border-2 border-gris/30 bg-blanc px-7 py-3.5 text-lg font-bold text-gris">
+                  {t("ctaClosed")}
                 </span>
               )}
               {showSponsorCta && (

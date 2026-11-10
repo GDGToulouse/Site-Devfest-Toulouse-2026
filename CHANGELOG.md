@@ -12,10 +12,11 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 _Changements mergés sur `dev` (beta), pas encore en production._
 
-> Aucune migration. Aucune nouvelle variable d'environnement.
+> Une migration : la date de fin des inscriptions de l'édition (#822). Aucune nouvelle variable d'environnement.
 
 ### Ajouté
 
+- **Fin des inscriptions** : compte à rebours au-dessus des billets, sur l'accueil et la billetterie, puis billets grisés « Inscriptions closes » à l'heure dite, sans recharger la page. La date se saisit dans l'onglet Billetterie de l'édition ; l'import Billetweb la reprend quand l'événement la fournit (#822).
 - **Keynotes mises en avant** partout où une conférence est listée : grille et agenda mobile du programme, liste des conférences, fiche et impression, avec un badge « ★ Keynote » (#808).
 - **Avis du public visibles dès le premier vote**, par tout visiteur, pendant et après le vote ; les messages laissés aux speakers ne sont jamais publics (#803).
 - **Zone d'avis affichée grisée avant son ouverture**, avec l'heure d'ouverture : le vote d'une session ouvre dix minutes avant sa fin et la page bascule seule à l'heure dite (#809).
