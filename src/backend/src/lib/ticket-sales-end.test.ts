@@ -17,6 +17,11 @@ describe("readBilletwebDate", () => {
     expect(readBilletwebDate(undefined)).toBeNull();
   });
 
+  it("should not read a slug or a URL ending in a year as a date", () => {
+    expect(readBilletwebDate("devfest-toulouse-2026")).toBeNull();
+    expect(readBilletwebDate("https://www.billetweb.fr/shop.php?event=devfest-toulouse-2026")).toBeNull();
+  });
+
   it("should not read a rate or a quota as a date", () => {
     expect(readBilletwebDate("20")).toBeNull();
     expect(readBilletwebDate(20)).toBeNull();
