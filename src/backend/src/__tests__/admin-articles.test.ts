@@ -19,6 +19,7 @@ const ARTICLE_PREFIXES = [
   "publish-gate-",
   "direct-publish-",
   "draft-permissive-",
+  "cleared-fields-",
 ];
 
 afterAll(async () => {
@@ -288,6 +289,41 @@ describe("Admin Articles API", () => {
       payload: { titleFr: "Titre modifié" },
     });
     expect(saved.statusCode).toBe(200);
+
+    await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
+    await app.close();
+  });
+
+  it("erases the optional fields an editor emptied (#817)", async () => {
+    const app = await buildAdminApp();
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/admin/articles",
+      payload: {
+        slug: `cleared-fields-${Date.now()}`,
+        titleFr: "Titre",
+        excerptFr: "Résumé",
+        excerptEn: "Summary",
+        imageUrl: "/uploads/cover.webp",
+        author: "Ada",
+      },
+    });
+    const { id } = created.json();
+
+    // The editor sends an emptied field as "": the route used to read it with
+    // `?? existing`, which only falls back on undefined, and stored "".
+    const saved = await app.inject({
+      method: "PUT",
+      url: `/api/admin/articles/${id}`,
+      payload: { excerptFr: "", excerptEn: "", imageUrl: "", author: "" },
+    });
+    expect(saved.statusCode).toBe(200);
+
+    const stored = await prisma.article.findUnique({
+      where: { id },
+      select: { excerptFr: true, excerptEn: true, imageUrl: true, author: true },
+    });
+    expect(stored).toEqual({ excerptFr: null, excerptEn: null, imageUrl: null, author: null });
 
     await app.inject({ method: "DELETE", url: `/api/admin/articles/${id}` });
     await app.close();
