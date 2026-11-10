@@ -69,8 +69,9 @@ export default function SessionCard({
   const duration = formatEventDuration(talk.startsAt, talk.endsAt ?? null);
   const hasFaces = isGrid && talk.speakers.length > 0;
   // The keynote stands out in the grid and the agenda alike, alone in its slot
-  // or not (#808). The tint is light enough for the card's grey text, darkened
-  // to its cream shade, to keep 4.9:1.
+  // or not (#808), in the brand's terre cuite on cream: the bright yellow first
+  // used is the Gold sponsors' colour, and read as loud. The grey text takes
+  // its cream shade to keep AA on that background.
   const isKeynote = talk.format === "KEYNOTE";
   const secondaryText = isKeynote ? "text-gris-sur-creme" : "text-gris";
 
@@ -85,8 +86,8 @@ export default function SessionCard({
       className={`relative flex h-full flex-col rounded-2xl p-3 transition-shadow hover:shadow-lg ${
         isKeynote
           ? isSimulcast
-            ? "border-2 border-dashed border-jaune bg-jaune-clair/30"
-            : "border-2 border-jaune bg-jaune-clair/30 shadow-card"
+            ? "border-2 border-dashed border-terre-cuite bg-blanc-casse"
+            : "border-2 border-terre-cuite bg-blanc-casse shadow-card"
           : isSimulcast
             ? "border border-dashed border-gris/40 bg-blanc-casse"
             : "bg-blanc shadow-card"

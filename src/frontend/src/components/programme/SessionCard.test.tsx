@@ -237,10 +237,10 @@ describe("SessionCard for a keynote", () => {
 
   it("draws its card in the keynote accent, in the grid and the agenda", () => {
     const { container, rerender } = render(<SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="grid" />);
-    expect(container.firstElementChild).toHaveClass("border-jaune");
+    expect(container.firstElementChild).toHaveClass("border-terre-cuite");
 
     rerender(<SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="agenda" />);
-    expect(container.firstElementChild).toHaveClass("border-jaune");
+    expect(container.firstElementChild).toHaveClass("border-terre-cuite");
   });
 
   it("keeps the accent on a relayed copy", () => {
@@ -248,12 +248,12 @@ describe("SessionCard for a keynote", () => {
       <SessionCard talk={keynote} locale="fr" formatLabels={labels} variant="grid" isSimulcast simulcastLabel="Retransmis" />,
     );
 
-    expect(container.firstElementChild).toHaveClass("border-jaune", "border-dashed");
+    expect(container.firstElementChild).toHaveClass("border-terre-cuite", "border-dashed");
   });
 
   it("leaves a conference card as it was", () => {
     const { container } = render(<SessionCard talk={talk} locale="fr" formatLabels={formatLabels} variant="grid" />);
 
-    expect(container.firstElementChild).not.toHaveClass("border-jaune");
+    expect(container.firstElementChild).not.toHaveClass("border-terre-cuite");
   });
 });
