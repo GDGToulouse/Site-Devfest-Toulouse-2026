@@ -27,6 +27,7 @@ _Changements mergés sur `dev` (beta), pas encore en production._
 - **Éditeur de texte** : le bouton « Lien » montre et modifie l'adresse d'un lien posé au lieu de le supprimer (#805).
 - **Invitation sponsor** : l'e-mail ne mentionne plus l'équipe du stand (#804).
 - **Une valeur que la base refuse** (un octet nul dans une adresse) reste une erreur 400 avec Prisma 7.10, au lieu d'une erreur 500 qui alerte l'équipe (#811).
+- **Admin : un champ facultatif vidé est enregistré vide** (société d'un speaker, extrait d'un article, site d'un sponsor…) au lieu de garder l'ancienne valeur (#817).
 
 ## [1.13.1] - 2026-11-03
 
