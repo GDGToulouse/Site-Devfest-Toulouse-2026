@@ -8,9 +8,31 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.14.0] - 2026-11-11
 
-_Changements mergés sur `dev` (beta), pas encore en production._
+Dernière version de fonctionnalités avant le DevFest : la billetterie affiche un **compte à rebours jusqu'à la fin des inscriptions** et se ferme seule à l'heure dite, les **keynotes ressortent** dans tout le programme, les **avis du public** s'affichent dès le premier vote et la zone de vote annonce son heure d'ouverture. Côté admin, on peut **copier un lien d'invitation** à envoyer soi-même, l'éditeur de texte permet enfin de **relire et corriger un lien**, et un champ facultatif vidé est bien enregistré vide.
+
+> **Une migration** : la date de fin des inscriptions de l'édition (#822). Sauvegarder la base avant le déploiement. Aucune nouvelle variable d'environnement. Après le déploiement, relancer l'import des tarifs Billetweb depuis l'admin pour que les boutons de la billetterie prennent l'adresse courte de l'événement (#798), puis saisir la date de fin des inscriptions dans l'onglet Billetterie de l'édition : Billetweb ne la fournit pas.
+
+### Ajouté
+
+- **Fin des inscriptions** : compte à rebours au-dessus des billets, sur l'accueil et la billetterie, puis billets grisés « Inscriptions closes » à l'heure dite, sans recharger la page. La date se saisit dans l'onglet Billetterie de l'édition ; l'import Billetweb la reprend quand l'événement la fournit (#822).
+- **Keynotes mises en avant** partout où une conférence est listée : grille et agenda mobile du programme, liste des conférences, fiche et impression, avec un badge « ★ Keynote » et une carte en terre cuite sur fond crème, aux couleurs du DevFest (#808).
+- **Avis du public visibles dès le premier vote**, par tout visiteur, pendant et après le vote ; les messages laissés aux speakers ne sont jamais publics (#803).
+- **Zone d'avis affichée grisée avant son ouverture**, avec l'heure d'ouverture : le vote d'une session ouvre dix minutes avant sa fin et la page bascule seule à l'heure dite (#809).
+- **Copier le lien d'invitation** d'un contact sponsor ou d'un membre de l'équipe qui ne s'est jamais connecté, sans renvoyer d'e-mail (#799).
+
+### Corrigé
+
+- **Liens de la billetterie** vers l'adresse courte de l'événement Billetweb au lieu de `shop.php` (#798).
+- **Éditeur de texte** : le bouton « Lien » montre et modifie l'adresse d'un lien posé au lieu de le supprimer (#805).
+- **Invitation sponsor** : l'e-mail ne mentionne plus l'équipe du stand (#804).
+- **Une valeur que la base refuse** (un octet nul dans une adresse) reste une erreur 400 avec Prisma 7.10, au lieu d'une erreur 500 qui alerte l'équipe (#811).
+- **Admin : un champ facultatif vidé est enregistré vide** (société d'un speaker, extrait d'un article, site d'un sponsor…) au lieu de garder l'ancienne valeur (#817).
+
+### Modifié
+
+- **Dépendances mises à jour** dans leurs versions mineures et correctives (frontend, backend, actions GitHub, Mailpit), dont Prisma 7.10. Les mises à jour majeures sont reportées après l'événement.
 
 ## [1.13.1] - 2026-11-03
 
@@ -32,7 +54,7 @@ Cette version clôt aussi le lot de **sécurité et de données personnelles** d
 
 ### Ajouté
 
-- **Conférence annulée et speaker retiré**, distincts du brouillon : la conférence reste en ligne, marquée « Annulée », au lieu de disparaître (#726).
+- **Conférence annulée et speaker retiré**, distincts du brouillon : ils disparaissent du site comme un brouillon, mais l'admin les marque « Annulé » / « Retiré », pour qu'on ne les republie pas par erreur (#726).
 - **Fiche conférence avec le jour, l'heure, la salle et les salles de retransmission** (#717).
 - **Programme brut pour les partenaires**, par salle ou par horaire, sans mise en forme, accessible depuis le tableau de bord (#755).
 - **Quarantaine des messages suspects du formulaire de contact** : un message qui ressemble à du phishing est enregistré mais rien ne part (ni e-mail, ni confirmation, ni webhook) tant qu'un organisateur ne l'a pas libéré ; une alerte sans contenu peut prévenir l'équipe sur Slack (#767).

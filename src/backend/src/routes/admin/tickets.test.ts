@@ -1,33 +1,40 @@
 import { describe, it, expect } from "vitest";
-import { availToIsSoldOut, withTrackingSource } from "./tickets.js";
+import { availToIsSoldOut, shopLink } from "./tickets.js";
 
 const SHOP = "https://www.billetweb.fr/shop.php?event=devfest-toulouse-2026";
+const EVENT = "https://www.billetweb.fr/devfest-toulouse-2026";
 
-describe("withTrackingSource (#507)", () => {
-  it("adds the src parameter to the Billetweb shop URL", () => {
-    expect(withTrackingSource(SHOP, "site")).toBe(`${SHOP}&src=site`);
+// The import stores the event's public address with the tracking source:
+// Billetweb's API only gives the long shop.php form (#507, #798).
+describe("shopLink", () => {
+  it("turns the shop URL into the event's short address, with the src parameter", () => {
+    expect(shopLink(SHOP, "site")).toBe(`${EVENT}?src=site`);
   });
 
-  it("replaces an src parameter already present", () => {
-    expect(withTrackingSource(`${SHOP}&src=old`, "site")).toBe(`${SHOP}&src=site`);
+  it("drops an src parameter Billetweb already put on the shop URL", () => {
+    expect(shopLink(`${SHOP}&src=old`, "site")).toBe(`${EVENT}?src=site`);
   });
 
   it("encodes a source typed with spaces or symbols", () => {
-    expect(withTrackingSource(SHOP, " newsletter octobre ")).toBe(`${SHOP}&src=newsletter+octobre`);
+    expect(shopLink(SHOP, " newsletter octobre ")).toBe(`${EVENT}?src=newsletter+octobre`);
   });
 
-  it("keeps the URL untouched when the source is blank or missing", () => {
-    expect(withTrackingSource(SHOP, "  ")).toBe(SHOP);
-    expect(withTrackingSource(SHOP, undefined)).toBe(SHOP);
+  it("gives the bare short address when the source is blank or missing", () => {
+    expect(shopLink(SHOP, "  ")).toBe(EVENT);
+    expect(shopLink(SHOP, undefined)).toBe(EVENT);
+  });
+
+  it("only adds the source to a URL that names no event", () => {
+    expect(shopLink(EVENT, "site")).toBe(`${EVENT}?src=site`);
   });
 
   it("returns null when Billetweb gave no shop URL", () => {
-    expect(withTrackingSource(undefined, "site")).toBeNull();
-    expect(withTrackingSource("", "site")).toBeNull();
+    expect(shopLink(undefined, "site")).toBeNull();
+    expect(shopLink("", "site")).toBeNull();
   });
 
   it("keeps an unparseable URL as Billetweb sent it", () => {
-    expect(withTrackingSource("not a url", "site")).toBe("not a url");
+    expect(shopLink("not a url", "site")).toBe("not a url");
   });
 });
 

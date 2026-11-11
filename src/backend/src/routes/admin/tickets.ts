@@ -3,7 +3,9 @@ import { prisma } from "../../lib/prisma.js";
 import { computeTicketStatus } from "../editions.js";
 import { revalidateBilletterie } from "../../lib/revalidate.js";
 import { notDeleted, notFound, softDeleteData } from "../../lib/admin-helpers.js";
+import { findSalesEnd } from "../../lib/ticket-sales-end.js";
 
+// The statuses an admin can force; CLOSED only comes from the deadline (#822).
 type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
 const TICKET_STATUSES: TicketStatus[] = ["AVAILABLE", "SOLD_OUT", "COMING_SOON"];
 
@@ -76,22 +78,26 @@ function unixToDate(ts: unknown): Date | null {
 }
 
 // Billetweb only credits a sale to the site when the shop link carries `src`
-// (#507). Its API returns the bare shop URL, so the import adds the source the
-// editor chose; a blank source keeps the URL as Billetweb sent it.
-export function withTrackingSource(
+// (#507). Its API returns the long `shop.php?event=<slug>` form, so the import
+// stores the event's public address `/<slug>` instead (#798) — Billetweb keeps
+// `src` through it — with the source the editor chose; a blank source means no
+// tracking.
+export function shopLink(
   shopUrl: string | undefined,
   source: string | undefined,
 ): string | null {
   if (!shopUrl) return null;
-  const src = source?.trim();
-  if (!src) return shopUrl;
+  let url: URL;
   try {
-    const url = new URL(shopUrl);
-    url.searchParams.set("src", src);
-    return url.toString();
+    url = new URL(shopUrl);
   } catch {
     return shopUrl;
   }
+  const event = url.searchParams.get("event");
+  if (event) url = new URL(`/${encodeURIComponent(event)}`, url.origin);
+  const src = source?.trim();
+  if (src) url.searchParams.set("src", src);
+  return url.toString();
 }
 
 function toDateOrNull(value: string | null | undefined): Date | null {
@@ -151,7 +157,8 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       return reply.status(502).send({ error: "Failed to fetch Billetweb event" });
     }
     const eventData = (await eventRes.json()) as Array<Record<string, unknown>>;
-    const shopUrl = withTrackingSource(eventData[0]?.shop as string | undefined, trackingSource);
+    const shopUrl = shopLink(eventData[0]?.shop as string | undefined, trackingSource);
+    const salesEnd = findSalesEnd(eventData[0]);
 
     // Fetch tickets
     const ticketsRes = await fetch(
@@ -200,9 +207,63 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       });
     }
 
+    // An import that finds no deadline leaves the one typed by hand alone (#822).
+    if (salesEnd.salesEndAt) {
+      await prisma.edition.update({
+        where: { id: editionId },
+        data: { ticketSalesEndAt: salesEnd.salesEndAt },
+      });
+    }
+
     revalidateBilletterie();
-    return reply.status(201).send({ imported: tickets.length });
+    return reply.status(201).send({
+      imported: tickets.length,
+      salesEndAt: salesEnd.salesEndAt,
+      salesEndField: salesEnd.field,
+      eventDateFields: salesEnd.dateFields,
+    });
   });
+
+  // GET /api/admin/tickets/sales-end — the edition's registration deadline (#822)
+  app.get<{ Querystring: { editionId?: string } }>("/tickets/sales-end", async (request, reply) => {
+    const editionId = Number(request.query.editionId);
+    if (!Number.isInteger(editionId)) return reply.status(400).send({ error: "Invalid editionId" });
+    const edition = await prisma.edition.findFirst({
+      where: { id: editionId, ...notDeleted },
+      select: { ticketSalesEndAt: true },
+    });
+    if (!edition) return notFound(reply, "Edition");
+    return { salesEndAt: edition.ticketSalesEndAt };
+  });
+
+  // PUT /api/admin/tickets/sales-end — set or clear it by hand (#822)
+  app.put<{ Body: { editionId: number; salesEndAt: string | null } }>(
+    "/tickets/sales-end",
+    {
+      schema: {
+        body: {
+          type: "object",
+          required: ["editionId", "salesEndAt"],
+          properties: {
+            editionId: { type: "integer" },
+            salesEndAt: { type: ["string", "null"] },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, salesEndAt } = request.body;
+      const date = salesEndAt ? new Date(salesEndAt) : null;
+      if (date && Number.isNaN(date.getTime())) {
+        return reply.status(400).send({ error: "invalid_field", message: "Date de fin des inscriptions illisible." });
+      }
+      const edition = await prisma.edition.findFirst({ where: { id: editionId, ...notDeleted }, select: { id: true } });
+      if (!edition) return notFound(reply, "Edition");
+      await prisma.edition.update({ where: { id: editionId }, data: { ticketSalesEndAt: date } });
+      revalidateBilletterie();
+      return { salesEndAt: date };
+    },
+  );
 
   // GET /api/admin/tickets — list all ticket tiers
   app.get<{
@@ -214,7 +275,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
     const tiers = await prisma.ticketTier.findMany({
       where,
       orderBy: [{ editionId: "desc" }, { sortOrder: "asc" }],
-      include: { edition: { select: { year: true } } },
+      include: { edition: { select: { year: true, ticketSalesEndAt: true } } },
     });
 
     const now = new Date();
@@ -227,7 +288,7 @@ export default async function adminTicketRoutes(app: FastifyInstance) {
       isVisible: t.isVisible,
       saleStartDate: t.saleStartDate,
       saleEndDate: t.saleEndDate,
-      status: computeTicketStatus(t, now),
+      status: computeTicketStatus(t, now, t.edition.ticketSalesEndAt),
       manualStatus: t.manualStatus,
       isSoldOut: t.isSoldOut,
       externalUrl: t.externalUrl,

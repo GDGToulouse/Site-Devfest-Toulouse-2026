@@ -204,6 +204,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/sponsors/:id/contacts` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/sponsors/:id/contacts/:contactId` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/sponsors/:id/contacts/:contactId/access-role` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsors/:id/contacts/:contactId/invitation-link` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
 | POST | `/api/admin/sponsors/:id/contacts/:contactId/invite` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/:id/editions` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/sponsors/:id/editions/:editionId` | Équipe (ADMIN, EDITOR) |
@@ -244,6 +245,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/users/:id` | ADMIN ; refusé aux agents IA |
 | PUT | `/api/admin/users/:id` | ADMIN ; refusé aux agents IA |
 | PUT | `/api/admin/users/:id/ban` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/users/:id/invitation-link` | ADMIN ; refusé aux agents IA et aux clés d'API |
 | GET | `/api/admin/venues` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/venues` | ADMIN |
 | DELETE | `/api/admin/venues/:id` | ADMIN |
