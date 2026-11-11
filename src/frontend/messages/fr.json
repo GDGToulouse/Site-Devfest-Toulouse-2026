@@ -44,6 +44,7 @@
       "cfpBadge": "CFP ouvert",
       "ctaTickets": "Prendre mon billet",
       "ctaSoldOut": "Complet",
+      "ctaClosed": "Inscriptions closes",
       "countdown": {
         "days": "Dans {count} jours",
         "tomorrow": "Demain",
@@ -163,6 +164,13 @@
     "label": "Pagination",
     "previous": "Précédent",
     "next": "Suivant"
+  },
+  "ticketSales": {
+    "until": "Inscriptions ouvertes jusqu'au {date}",
+    "remaining": "Plus que {days} j {hours} h {minutes} min {seconds} s",
+    "remainingToday": "Plus que {hours} h {minutes} min {seconds} s",
+    "closed": "Les inscriptions sont closes depuis le {date}.",
+    "status": "Inscriptions closes"
   },
   "ticketing": {
     "pageTitle": "Billetterie",
