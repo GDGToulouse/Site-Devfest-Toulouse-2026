@@ -14,6 +14,7 @@ const hit = (over: Partial<SearchHit>): SearchHit => ({
   isCancelled: false,
   isDedicated: false,
   scannedAt: null,
+  scannedBy: null,
   labelCount: 0,
   labelDeliveredAt: null,
   ...over,

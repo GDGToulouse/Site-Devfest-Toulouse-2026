@@ -56,7 +56,12 @@ test.describe("help station", () => {
 
     await help.getByRole("button", { name: "Scanner un billet" }).click();
 
-    await expect(help.getByRole("heading", { name: "Dominique Testrecherche" })).toBeVisible({ timeout: 20_000 });
+    const title = help.getByRole("heading", { name: "Dominique Testrecherche" });
+    await expect(title).toBeVisible({ timeout: 20_000 });
+    // Said where the volunteer looks, with the page scrolled to it (#826).
+    await expect(title).toBeInViewport();
+    await expect(help.getByRole("status").filter({ hasText: /scanné à/ })).toBeInViewport();
+    await expect(help.getByText(/^Scanné à \d+ h \d{2}/)).toBeVisible();
   });
 
   test("should print the corrected text, centred, with the badges' QR code (#801)", async ({ openStation }) => {

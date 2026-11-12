@@ -124,6 +124,8 @@ export interface SearchHit extends ScanAttendee {
   isCancelled: boolean;
   isDedicated: boolean;
   scannedAt: string | null;
+  /** Who recorded the arrival (#826). */
+  scannedBy: string | null;
   labelCount: number;
   labelDeliveredAt: string | null;
 }

@@ -174,6 +174,8 @@ export interface SearchHit extends ScanAttendee {
   isCancelled: boolean;
   isDedicated: boolean;
   scannedAt: Date | null;
+  /** Who recorded the arrival: the help desk shows it (#826). */
+  scannedBy: string | null;
   /** The help desk's labels (#713): how many printed, and whether one was handed over. */
   labelCount: number;
   labelDeliveredAt: Date | null;
@@ -229,6 +231,7 @@ const SEARCH_SELECT = {
   badgeState: true,
   isCancelled: true,
   scannedAt: true,
+  scannedByLabel: true,
   labelDeliveredAt: true,
   _count: { select: { badgeLabels: true } },
   ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
@@ -249,6 +252,7 @@ function toHits(rows: Array<Prisma.AttendeeGetPayload<{ select: typeof SEARCH_SE
       isCancelled: row.isCancelled,
       isDedicated: row.ticketTier?.isOutsideFlow ?? false,
       scannedAt: row.scannedAt,
+      scannedBy: row.scannedByLabel,
       labelCount: row._count.badgeLabels,
       labelDeliveredAt: row.labelDeliveredAt,
     }));
