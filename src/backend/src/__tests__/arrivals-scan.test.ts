@@ -202,6 +202,18 @@ describe("Scanning a ticket at the entrance (#642)", () => {
     expect(res.json()).toMatchObject({ result: "badge", badge: { number: 2108, state: "TO_FETCH" } });
   });
 
+  it("should tell the help desk when and by whom a ticket was scanned (#826)", async () => {
+    const ticket = await createTicket({ number: 2150, firstName: "Hélène", lastName: "Déjà-Vue" });
+    await scan({ attendeeId: ticket.id });
+
+    const search = await app.inject({ method: "GET", url: `/api/arrivals/${editionId}/search?q=helene%20deja`, headers });
+
+    const [hit] = search.json();
+    expect(hit.scannedAt).not.toBeNull();
+    expect(typeof hit.scannedBy).toBe("string");
+    expect(hit.scannedBy.length).toBeGreaterThan(0);
+  });
+
   it("should refuse an account without the permission", async () => {
     const outsider = `outsider-${Date.now()}@example.org`;
     const user = await prisma.user.create({ data: { email: outsider, name: outsider, role: "GUEST", emailVerified: true } });

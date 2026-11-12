@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { LabelPreview, LabelSheet } from "@/components/arrivals/BadgeLabel";
 import CancelScan from "@/components/arrivals/CancelScan";
@@ -22,6 +22,7 @@ import {
   searchAttendees,
   type LabelText,
   type PrintedLabel,
+  type ScanOutcome,
   type SearchHit,
 } from "@/lib/arrivals-api";
 import { LABEL_FORMATS, readLabelFormat, saveLabelFormat, type LabelFormat } from "@/lib/badge-label";
@@ -73,6 +74,7 @@ const fromHelpEntry = (entry: HelpEntry): SearchHit => ({
   isCancelled: false,
   isDedicated: false,
   scannedAt: entry.scannedAt,
+  scannedBy: null,
   labelCount: 0,
   labelDeliveredAt: entry.labelDeliveredAt,
 });
@@ -136,6 +138,33 @@ function whereToFind(entry: WithdrawalEntry): string {
   return `Au guichet ${counter}, ${entry.state === "READY" ? "prêt" : "à chercher"}`;
 }
 
+/** Whether the arrival is recorded (#826): a person at the desk may never have met the Scan station. */
+function scanStatus(person: SearchHit): string {
+  if (!person.scannedAt) return "Pas encore scanné";
+  return `Scanné à ${formatTime(person.scannedAt)}${person.scannedBy ? ` par ${person.scannedBy}` : ""}`;
+}
+
+/** What a ticket read at the desk did (#826), said at the top of the person's page. */
+function scanNotice(outcome: ScanOutcome): string {
+  if (outcome.result === "unknown") return "Code inconnu.";
+  if (outcome.result === "cancelled") return "Billet annulé : pas de badge ni d'étiquette.";
+  const first = outcome.alreadyScanned
+    ? `Déjà scanné à ${formatTime(outcome.alreadyScanned.at)}${outcome.alreadyScanned.by ? ` par ${outcome.alreadyScanned.by}` : ""}.`
+    : `Billet scanné à ${formatTime(new Date().toISOString())}.`;
+  if (outcome.result === "badge" && outcome.badge.state !== "DELIVERED") {
+    return `${first} Envoyez la personne au guichet ${counterOf(outcome.badge.number)}, badge ${formatBadgeNumber(outcome.badge.number)}.`;
+  }
+  return first;
+}
+
+/** When and by whom the ticket counts as scanned, after a scan made at the desk. */
+function firstScanOf(outcome: ScanOutcome): { scannedAt: string; scannedBy: string | null } {
+  if (outcome.result !== "unknown" && outcome.result !== "cancelled" && outcome.alreadyScanned) {
+    return { scannedAt: outcome.alreadyScanned.at, scannedBy: outcome.alreadyScanned.by };
+  }
+  return { scannedAt: new Date().toISOString(), scannedBy: null };
+}
+
 function standing(person: SearchHit, state: BadgeState): string {
   if (person.isCancelled) return "Billet annulé";
   if (person.isDedicated) return "Accueil dédié";
@@ -168,6 +197,11 @@ export default function HelpStation({
   const [isBusy, setIsBusy] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The results fold away once someone is picked, so their page comes into view (#826).
+  const [isHitsOpen, setIsHitsOpen] = useState(true);
+  // Bumped to bring the person's page, and what just happened on it, into view.
+  const [revealRequest, setRevealRequest] = useState(0);
+  const personTitleRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     setFormat(readLabelFormat());
@@ -187,6 +221,15 @@ export default function HelpStation({
     }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(timer);
   }, [edition.id, query]);
+
+  useEffect(() => {
+    const title = personTitleRef.current;
+    if (revealRequest === 0 || !title) return;
+    title.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    title.focus({ preventScroll: true });
+  }, [revealRequest]);
+
+  const reveal = () => setRevealRequest((n) => n + 1);
 
   // The sheet must be in the page before the dialog opens.
   useEffect(() => {
@@ -214,12 +257,15 @@ export default function HelpStation({
     setLabel(null);
     setNotice(null);
     setError(null);
+    setIsHitsOpen(false);
+    reveal();
   }
 
   async function print() {
     if (!person) return;
     if (!isComplete(draft, false)) {
       setError("Le prénom et le nom de l'étiquette sont obligatoires.");
+      reveal();
       return;
     }
     setIsBusy(true);
@@ -228,10 +274,13 @@ export default function HelpStation({
     setIsBusy(false);
     if (!data) {
       setError(failure(status, code));
+      reveal();
       return;
     }
     setLabel(data.label);
     setPerson({ ...person, labelCount: data.printCount });
+    setNotice("Étiquette envoyée à l'imprimante. Remettez-la, puis touchez « Étiquette remise ».");
+    reveal();
     setPrintRequest((n) => n + 1);
   }
 
@@ -259,6 +308,8 @@ export default function HelpStation({
   // opens the person's page.
   async function scanAtDesk(code: string) {
     setIsCameraOpen(false);
+    // The previous person's page closes: an unknown code is not theirs.
+    setPerson(null);
     setIsBusy(true);
     setError(null);
     setNotice(null);
@@ -277,8 +328,12 @@ export default function HelpStation({
     const found = await searchAttendees(edition.id, `${attendee.firstName} ${attendee.lastName}`);
     setIsBusy(false);
     const hit = found.data?.find((h) => h.id === attendee.id);
-    if (hit) select(hit);
-    else setError("Billet lu, mais la fiche de la personne n'a pas pu s'ouvrir : cherchez-la par son nom.");
+    if (!hit) {
+      setError(`${scanNotice(data)} Mais la fiche de la personne n'a pas pu s'ouvrir : cherchez-la par son nom.`);
+      return;
+    }
+    select(hit);
+    setNotice(scanNotice(data));
   }
 
   async function deliver() {
@@ -289,10 +344,13 @@ export default function HelpStation({
     setIsBusy(false);
     if (!data) {
       setError(failure(status, code));
+      reveal();
       return;
     }
-    setPerson({ ...person, labelDeliveredAt: new Date().toISOString() });
+    const now = new Date().toISOString();
+    setPerson({ ...person, labelDeliveredAt: now, scannedAt: person.scannedAt ?? now });
     setNotice(`Arrivée enregistrée : ${person.firstName} ${person.lastName} a son étiquette.`);
+    reveal();
   }
 
   // A badge waiting in its bin: the person goes to their counter, as if scanned.
@@ -304,15 +362,37 @@ export default function HelpStation({
     setIsBusy(false);
     if (!data) {
       setError(failure(status, code));
+      reveal();
       return;
     }
-    setPerson({ ...person, badgeState: "TO_FETCH", scannedAt: person.scannedAt ?? new Date().toISOString() });
+    setPerson({ ...person, badgeState: "TO_FETCH", ...firstScanOf(data) });
     setNotice(`Envoyez la personne au guichet ${counterOf(person.badgeNumber)}, badge ${formatBadgeNumber(person.badgeNumber)}.`);
+    reveal();
+  }
+
+  // No badge waiting for them: the arrival is recorded here, label or not (#826).
+  async function recordArrival() {
+    if (!person) return;
+    setIsBusy(true);
+    setError(null);
+    const { data, status, error: code } = await scanTicket(edition.id, { attendeeId: person.id });
+    setIsBusy(false);
+    if (!data) {
+      setError(failure(status, code));
+      reveal();
+      return;
+    }
+    const scanned = firstScanOf(data);
+    setPerson({ ...person, ...scanned });
+    setNotice(`Arrivée enregistrée à ${formatTime(scanned.scannedAt)}.`);
+    reveal();
   }
 
   const canLabel = person !== null && !person.isCancelled && !person.isDedicated;
   const hasPrinted = person !== null && person.labelCount > 0;
   const isWaitingInBin = person?.badgeNumber != null && liveState === "PRINTED" && !person.labelDeliveredAt;
+  const canRecordArrival =
+    person !== null && canLabel && person.badgeNumber === null && !person.scannedAt && !person.labelDeliveredAt;
 
   return (
     <div className="flex flex-col gap-6">
@@ -419,6 +499,7 @@ export default function HelpStation({
           onChange={(e) => {
             setQuery(e.target.value);
             setError(null);
+            setIsHitsOpen(true);
           }}
           autoComplete="off"
           enterKeyHint="search"
@@ -426,7 +507,13 @@ export default function HelpStation({
         />
       </div>
 
-      {hits && (
+      {hits && !isHitsOpen && person && (
+        <button type="button" onClick={() => setIsHitsOpen(true)} className="self-start text-sm font-medium text-bleu underline">
+          Revenir aux résultats ({hits.length})
+        </button>
+      )}
+
+      {hits && (isHitsOpen || !person) && (
         <ul className="flex flex-col gap-2" aria-label="Résultats de la recherche">
           {hits.length === 0 && <li className="text-sm text-gris">Personne à ce nom.</li>}
           {hits.map((hit) => (
@@ -452,7 +539,7 @@ export default function HelpStation({
         </ul>
       )}
 
-      {error && (
+      {!person && error && (
         <p role="alert" className="rounded-2xl bg-rouge/10 p-4 text-sm text-noir">
           {error}
         </p>
@@ -499,17 +586,43 @@ export default function HelpStation({
       {person && (
         <section aria-labelledby="person-title" className="flex flex-col gap-4 rounded-3xl bg-blanc p-5 shadow-card">
           <div>
-            <h2 id="person-title" className="text-xl font-bold text-noir">
+            <h2
+              id="person-title"
+              ref={personTitleRef}
+              tabIndex={-1}
+              className="scroll-mt-4 text-xl font-bold text-noir focus:outline-none"
+            >
               {person.firstName} {person.lastName}
             </h2>
             {person.company && <p className="text-sm text-gris">{person.company}</p>}
-            <p className="mt-2 font-medium text-noir">{standing(person, liveState)}</p>
           </div>
 
+          {/* What just happened, right under the name the page scrolls to (#826). */}
           {notice && (
-            <p role="status" className="rounded-2xl bg-malachite/10 p-3 text-sm text-noir">
-              {notice}
+            <p role="status" className="rounded-2xl border-2 border-malachite bg-malachite/10 p-4 font-medium text-noir">
+              ✓ {notice}
             </p>
+          )}
+          {error && (
+            <p role="alert" className="rounded-2xl border-2 border-rouge bg-rouge/10 p-4 text-noir">
+              {error}
+            </p>
+          )}
+
+          <div>
+            <p className="font-medium text-noir">{standing(person, liveState)}</p>
+            {!person.isCancelled && <p className="text-sm text-gris">{scanStatus(person)}</p>}
+          </div>
+
+          {canRecordArrival && (
+            <button
+              type="button"
+              onClick={() => void recordArrival()}
+              disabled={isBusy}
+              className="rounded-2xl bg-malachite px-4 py-4 font-bold text-blanc hover:bg-malachite/90 disabled:opacity-60"
+            >
+              Enregistrer l&apos;arrivée
+            </button>
           )}
 
           {isWaitingInBin && (
@@ -531,8 +644,9 @@ export default function HelpStation({
               scannedAt={null}
               isAdmin
               onCancelled={(message) => {
-                setPerson({ ...person, scannedAt: null, badgeState: "PRINTED" });
+                setPerson({ ...person, scannedAt: null, scannedBy: null, badgeState: "PRINTED" });
                 setNotice(message);
+                reveal();
               }}
             />
           )}
