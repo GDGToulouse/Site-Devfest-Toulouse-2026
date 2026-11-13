@@ -202,6 +202,49 @@ complète. Spécifique prod :
   (`NODE_ENV=production`), un secret **est obligatoire** sinon le backend crashe
   au boot (voir *Pièges* §A). `BETTER_AUTH_SECRET` est accepté en repli.
 
+### Réseau du relais mail
+
+Le backend de beta et de prod n'est pas sur le réseau partagé `coolify`, où sont
+les conteneurs de tous les projets : il joint Postfix par un réseau de son
+environnement, `devfest-mail-<ENV_NAME>` (`devfest-mail-beta`,
+`devfest-mail-prod`), déclaré `external` dans `docker-compose.prod.yml` (#677).
+Un réseau par environnement : le backend de la beta ne voit pas celui de la prod.
+
+Compose refuse de démarrer sur un réseau externe absent : **le réseau et Postfix
+se préparent avant le premier déploiement qui le nomme**, beta d'abord.
+
+1. Sur le VPS, créer le réseau (une fois par environnement) :
+
+   ```bash
+   sudo docker network create devfest-mail-beta
+   ```
+
+2. Dans Coolify, service **Postfix** (projet *Infrastructure*), ajouter le réseau
+   au compose du service, avec l'alias `postfix`, puis redéployer le service :
+
+   ```yaml
+   services:
+     postfix:
+       networks:
+         devfest-mail-beta:
+           aliases: [postfix]
+   networks:
+     devfest-mail-beta:
+       external: true
+   ```
+
+   Garder les réseaux que Postfix a déjà : d'autres services (n8n, listmonk…)
+   peuvent l'utiliser par `coolify`. Le retirer de `coolify` est une étape à part,
+   une fois ces usages vérifiés.
+3. Vérifier que Postfix accepte de relayer depuis ce réseau : son `mynetworks`
+   doit couvrir le sous-réseau donné par
+   `sudo docker network inspect devfest-mail-beta -f '{{(index .IPAM.Config 0).Subnet}}'`.
+4. Déployer la beta, puis envoyer le formulaire de contact : le message doit
+   arriver. Un échec se lit dans les logs du backend (`ECONNREFUSED` ou
+   `ENOTFOUND postfix` = réseau ; `Relay access denied` = `mynetworks`).
+5. Recommencer avec `devfest-mail-prod` **avant** la mise en prod qui porte ce
+   compose.
+
 ---
 
 ## 4. Sauvegarder la base prod (si la release contient une migration)

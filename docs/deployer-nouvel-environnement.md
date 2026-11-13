@@ -30,7 +30,7 @@ Ce document explique comment ajouter un nouvel environnement (`dev-x`, `beta`, `
 - Source : repo Git du projet, branche cible (`main`, `dev`, `dev-j`, …).
 - Compose file :
   - **dev / dev-{initiale}** → `docker-compose.dev.yml` (mode dev, Mailpit, seed-dev avec comptes test)
-  - **beta / production** → `docker-compose.prod.yml` (mode prod, Postfix, seed minimal)
+  - **beta / production** → `docker-compose.prod.yml` (mode prod, Postfix, seed minimal). Ce compose attend le réseau `devfest-mail-<ENV_NAME>` : le créer et y brancher Postfix **avant** le premier déploiement, sinon il échoue (`mise-en-production.md` § « Réseau du relais mail », #677)
 
 ## 2. Domains
 

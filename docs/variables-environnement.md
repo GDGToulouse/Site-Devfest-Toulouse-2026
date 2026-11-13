@@ -84,7 +84,7 @@ Utilisé pour le formulaire de contact (Lot 1) et l'envoi des liens de modificat
 | **Local / dev-j** | `docker-compose.local.yml` / `docker-compose.dev.yml` | `mailhog` | `1025` | `false` | `false` | ❌ Capturés par Mailpit, service `mailhog` (UI sur `:8025`, protégée par mot de passe sur dev-j) |
 | **Beta / Prod** | `docker-compose.prod.yml` | `postfix` | `25` | `false` | `false` | ✅ Vrais emails via le service Postfix standalone Coolify |
 
-> ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend joint le réseau `coolify` (configuré dans `docker-compose.prod.yml`) pour résoudre l'hostname `postfix`.
+> ⚠️ **Beta / Prod** : le service `postfix` n'est plus défini dans `docker-compose.prod.yml`. Il est désormais déployé en **service standalone Coolify** au niveau de l'instance, partagé par tous les projets. Le backend le joint par le réseau de son environnement, `devfest-mail-<ENV_NAME>`, et non plus par le réseau partagé `coolify` (#677) : le réseau se crée sur le VPS avant le premier déploiement, cf. [`mise-en-production.md`](mise-en-production.md) § « Réseau du relais mail ».
 
 ### Mailpit sur dev-j
 
