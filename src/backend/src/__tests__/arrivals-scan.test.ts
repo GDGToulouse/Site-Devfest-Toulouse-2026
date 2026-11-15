@@ -1,0 +1,430 @@
+process.env.BASE_URL = process.env.BASE_URL || "http://localhost:4000";
+
+import { createHash } from "node:crypto";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
+import Fastify, { type FastifyInstance } from "fastify";
+
+import arrivalsRoutes from "../routes/arrivals.js";
+import { checkInPending, isCheckInRunning } from "../lib/billetweb-checkin.js";
+import { generateApiKey, resolveApiKeyEnv } from "../lib/api-key.js";
+import { prisma } from "../lib/prisma.js";
+
+// The entrance (#642): scan, name search, Billetweb check-in, degraded-mode
+// table. Billetweb is a stub here: no test ever reaches the real API. This file
+// owns the edition year 1647.
+const YEAR = 1647;
+
+let app: FastifyInstance;
+let editionId: number;
+let inFlowTierId: number;
+let dedicatedTierId: number;
+let headers: Record<string, string>;
+let volunteerName: string;
+const userIds: string[] = [];
+let stamp = 0;
+
+// What Billetweb was sent, and what it answers.
+const checkInCalls: Array<{ url: string; data: Array<{ id: number; used: number; lane: string }> }> = [];
+let isBilletwebDown = false;
+const billetwebStub = vi.fn(async (url: string, init?: RequestInit) => {
+  const body = JSON.parse(String(init?.body)) as { data: Array<{ id: number; used: number; lane: string }> };
+  checkInCalls.push({ url, data: body.data });
+  if (isBilletwebDown) throw new Error("ECONNREFUSED");
+  // As measured on the test event (2026-11-04): `state` echoes the `used` sent.
+  return new Response(JSON.stringify(body.data.map((t) => ({ product_id: String(t.id), state: String(t.used) }))));
+});
+
+async function createTicket(options: {
+  number?: number | null;
+  tier?: "inFlow" | "dedicated" | "none";
+  isCancelled?: boolean;
+  firstName?: string;
+  lastName?: string;
+}) {
+  const id = String(9_000_000 + stamp++);
+  const tier = options.tier ?? "inFlow";
+  return prisma.attendee.create({
+    data: {
+      editionId,
+      billetwebId: id,
+      barcode: `${YEAR}${id}`,
+      firstName: options.firstName ?? "Camille",
+      lastName: options.lastName ?? `Test${id}`,
+      email: `camille-${id}@example.org`,
+      company: "ACME",
+      billetwebTicketId: "t1",
+      ticketTierId: tier === "inFlow" ? inFlowTierId : tier === "dedicated" ? dedicatedTierId : null,
+      orderId: id,
+      orderDate: new Date("2026-09-01T10:00:00Z"),
+      badgeNumber: options.number ?? null,
+      isCancelled: options.isCancelled ?? false,
+    },
+  });
+}
+
+function scan(payload: Record<string, unknown>, as = headers) {
+  return app.inject({ method: "POST", url: `/api/arrivals/${editionId}/scan`, headers: as, payload });
+}
+
+const waitForCheckIns = () => vi.waitFor(() => expect(isCheckInRunning(editionId)).toBe(false));
+
+beforeAll(async () => {
+  process.env.BILLETWEB_USER = "stub-user";
+  process.env.BILLETWEB_KEY = "stub-key";
+  vi.stubGlobal("fetch", billetwebStub);
+
+  app = Fastify({ logger: false });
+  app.decorateRequest("authContext");
+  await app.register(arrivalsRoutes, { prefix: "/api" });
+  await app.ready();
+
+  editionId = (
+    await prisma.edition.create({
+      data: { year: YEAR, billetwebEventId: "777", endDate: new Date("2026-11-20T17:00:00Z") },
+    })
+  ).id;
+  const tier = (sortOrder: number, isOutsideFlow: boolean) =>
+    prisma.ticketTier.create({
+      data: { editionId, nameFr: isOutsideFlow ? "Speaker" : "Standard", nameEn: "x", price: 0, sortOrder, isOutsideFlow },
+    });
+  inFlowTierId = (await tier(1, false)).id;
+  dedicatedTierId = (await tier(2, true)).id;
+
+  volunteerName = `Léa Scan ${Date.now()}`;
+  const email = `scan-${Date.now()}@example.org`;
+  const user = await prisma.user.create({ data: { email, name: volunteerName, role: "GUEST", emailVerified: true } });
+  userIds.push(user.id);
+  await prisma.arrivalsAccess.create({ data: { editionId, email, userId: user.id } });
+  const key = await generateApiKey(resolveApiKeyEnv());
+  await prisma.apiKey.create({ data: { name: `test-${email}`, prefix: key.prefix, hashedKey: key.hashedKey, userId: user.id } });
+  headers = { authorization: `Bearer ${key.raw}` };
+});
+
+afterAll(async () => {
+  vi.unstubAllGlobals();
+  await app.close();
+  if (editionId !== undefined) {
+    await prisma.attendee.deleteMany({ where: { editionId } });
+    await prisma.ticketTier.deleteMany({ where: { editionId } });
+    await prisma.edition.deleteMany({ where: { id: editionId } });
+  }
+  if (userIds.length) {
+    await prisma.apiKey.deleteMany({ where: { userId: { in: userIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: userIds } } });
+  }
+});
+
+beforeEach(() => {
+  isBilletwebDown = false;
+});
+
+describe("Scanning a ticket at the entrance (#642)", () => {
+  it("should give the number, send the badge to its counter and check the ticket in", async () => {
+    const ticket = await createTicket({ number: 2105 });
+
+    const res = await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+
+    expect(res.json()).toMatchObject({
+      result: "badge",
+      attendee: { firstName: "Camille", company: "ACME", tierName: "Standard" },
+      badge: { number: 2105, state: "TO_FETCH" },
+      alreadyScanned: null,
+    });
+    expect(JSON.stringify(res.json())).not.toContain("@example.org");
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    expect(stored.scannedByLabel).toBe(volunteerName);
+    expect(stored.checkedInAt).not.toBeNull();
+    const call = checkInCalls.find((c) => c.data.some((t) => t.id === Number(ticket.billetwebId)));
+    expect(call?.url).toContain("/event/777/check?");
+    expect(call?.data.find((t) => t.id === Number(ticket.billetwebId))).toEqual({
+      id: Number(ticket.billetwebId),
+      used: 1,
+      lane: volunteerName,
+    });
+  });
+
+  it("should alert on a second scan with the first one's time and volunteer, without moving the badge", async () => {
+    const ticket = await createTicket({ number: 2106 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { badgeState: "READY", badgeStateVersion: 2 } });
+
+    const res = await scan({ code: ticket.barcode });
+
+    expect(res.json()).toMatchObject({
+      result: "badge",
+      badge: { state: "READY" },
+      alreadyScanned: { by: volunteerName },
+    });
+  });
+
+  it("should send a ticket without a number to the help desk", async () => {
+    const ticket = await createTicket({ number: null });
+
+    const res = await scan({ code: ticket.barcode });
+
+    expect(res.json()).toMatchObject({ result: "help", alreadyScanned: null });
+  });
+
+  it("should send a ticket of an unknown tier to the help desk too", async () => {
+    const ticket = await createTicket({ number: null, tier: "none" });
+
+    expect((await scan({ code: ticket.barcode })).json()).toMatchObject({ result: "help" });
+  });
+
+  it("should tell the dedicated flow apart", async () => {
+    const ticket = await createTicket({ number: null, tier: "dedicated" });
+
+    expect((await scan({ code: ticket.barcode })).json()).toMatchObject({ result: "dedicated", attendee: { tierName: "Speaker" } });
+  });
+
+  it("should refuse a cancelled ticket, and not check it in", async () => {
+    const ticket = await createTicket({ number: 2107, isCancelled: true });
+
+    const res = await scan({ code: ticket.barcode });
+
+    expect(res.json()).toMatchObject({ result: "cancelled" });
+    expect((await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } })).scannedAt).toBeNull();
+  });
+
+  it("should answer unknown for a code no ticket carries", async () => {
+    expect((await scan({ code: "0000000000" })).json()).toEqual({ result: "unknown" });
+  });
+
+  it("should scan an attendee picked from a name search", async () => {
+    const ticket = await createTicket({ number: 2108, firstName: "Hélène", lastName: "Dépôt-Scan" });
+
+    const search = await app.inject({ method: "GET", url: `/api/arrivals/${editionId}/search?q=helene%20depot`, headers });
+    const res = await scan({ attendeeId: search.json()[0].id });
+
+    expect(search.json()).toHaveLength(1);
+    expect(search.json()[0]).toMatchObject({ id: ticket.id, badgeNumber: 2108, isCancelled: false });
+    expect(res.json()).toMatchObject({ result: "badge", badge: { number: 2108, state: "TO_FETCH" } });
+  });
+
+  it("should tell the help desk when and by whom a ticket was scanned (#826)", async () => {
+    const ticket = await createTicket({ number: 2150, firstName: "Hélène", lastName: "Déjà-Vue" });
+    await scan({ attendeeId: ticket.id });
+
+    const search = await app.inject({ method: "GET", url: `/api/arrivals/${editionId}/search?q=helene%20deja`, headers });
+
+    const [hit] = search.json();
+    expect(hit.scannedAt).not.toBeNull();
+    expect(typeof hit.scannedBy).toBe("string");
+    expect(hit.scannedBy.length).toBeGreaterThan(0);
+  });
+
+  it("should refuse an account without the permission", async () => {
+    const outsider = `outsider-${Date.now()}@example.org`;
+    const user = await prisma.user.create({ data: { email: outsider, name: outsider, role: "GUEST", emailVerified: true } });
+    userIds.push(user.id);
+    const key = await generateApiKey(resolveApiKeyEnv());
+    await prisma.apiKey.create({ data: { name: `test-${outsider}`, prefix: key.prefix, hashedKey: key.hashedKey, userId: user.id } });
+
+    const res = await scan({ code: "whatever" }, { authorization: `Bearer ${key.raw}` });
+
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+describe("Checking tickets in on Billetweb (RG-ARR-37)", () => {
+  it("should not hold the scan when Billetweb is down, and send the check-in on a later run", async () => {
+    isBilletwebDown = true;
+    const ticket = await createTicket({ number: 2109 });
+
+    const res = await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+    const whileDown = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    isBilletwebDown = false;
+    await checkInPending(editionId);
+    const afterRetry = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+
+    expect(res.json()).toMatchObject({ result: "badge", badge: { state: "TO_FETCH" } });
+    expect(whileDown).toMatchObject({ checkedInAt: null, checkInError: "network" });
+    expect(afterRetry.checkedInAt).not.toBeNull();
+    expect(afterRetry.checkInError).toBeNull();
+  });
+});
+
+describe("Cancelling a scan (#797)", () => {
+  async function accountHeaders(role: "ADMIN" | "GUEST") {
+    const email = `cancel-${role}-${Date.now()}-${stamp++}@example.org`;
+    const user = await prisma.user.create({ data: { email, name: `Other ${email}`, role, emailVerified: true } });
+    userIds.push(user.id);
+    if (role === "GUEST") await prisma.arrivalsAccess.create({ data: { editionId, email, userId: user.id } });
+    const key = await generateApiKey(resolveApiKeyEnv());
+    await prisma.apiKey.create({ data: { name: `test-${email}`, prefix: key.prefix, hashedKey: key.hashedKey, userId: user.id } });
+    return { authorization: `Bearer ${key.raw}` };
+  }
+
+  function cancel(attendeeId: number, as = headers) {
+    return app.inject({ method: "POST", url: `/api/arrivals/${editionId}/attendees/${attendeeId}/cancel-scan`, headers: as });
+  }
+
+  const usedFor = (billetwebId: string) =>
+    checkInCalls.flatMap((c) => c.data).filter((t) => t.id === Number(billetwebId)).map((t) => t.used);
+
+  it("should undo the entrance's own scan: badge back in its bin, ticket taken back on Billetweb, a new scan counts as first", async () => {
+    const ticket = await createTicket({ number: 2141 });
+    await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+
+    const res = await cancel(ticket.id);
+    await waitForCheckIns();
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    const again = await scan({ code: ticket.barcode });
+
+    expect(res.statusCode).toBe(200);
+    expect(stored).toMatchObject({ scannedAt: null, scannedByLabel: null, badgeState: "PRINTED", checkedInAt: null });
+    expect(usedFor(ticket.billetwebId)).toEqual([1, 0]);
+    expect(again.json()).toMatchObject({ result: "badge", badge: { state: "TO_FETCH" }, alreadyScanned: null });
+  });
+
+  it("should refuse the entrance after a minute, and let an admin do it", async () => {
+    const ticket = await createTicket({ number: 2142 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { scannedAt: new Date(Date.now() - 2 * 60_000) } });
+
+    const late = await cancel(ticket.id);
+    const byAdmin = await cancel(ticket.id, await accountHeaders("ADMIN"));
+
+    expect([late.statusCode, late.json().error]).toEqual([409, "too_late"]);
+    expect(byAdmin.statusCode).toBe(200);
+  });
+
+  it("should refuse to undo another volunteer's scan", async () => {
+    const ticket = await createTicket({ number: 2143 });
+    await scan({ code: ticket.barcode });
+
+    const res = await cancel(ticket.id, await accountHeaders("GUEST"));
+
+    expect([res.statusCode, res.json().error]).toEqual([403, "not_yours"]);
+  });
+
+  it("should never undo a scan whose badge was handed over, even for an admin", async () => {
+    const ticket = await createTicket({ number: 2144 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { badgeState: "DELIVERED" } });
+
+    const res = await cancel(ticket.id, await accountHeaders("ADMIN"));
+
+    expect([res.statusCode, res.json().error]).toEqual([409, "delivered"]);
+    expect((await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } })).scannedAt).not.toBeNull();
+  });
+
+  it("should take the ticket back on Billetweb on a later run when Billetweb was down", async () => {
+    const ticket = await createTicket({ number: null });
+    await scan({ code: ticket.barcode });
+    await waitForCheckIns();
+    isBilletwebDown = true;
+
+    await cancel(ticket.id);
+    await waitForCheckIns();
+    const whileDown = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    isBilletwebDown = false;
+    await checkInPending(editionId);
+    const afterRetry = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+
+    expect(whileDown.checkedInAt).not.toBeNull();
+    expect(afterRetry.checkedInAt).toBeNull();
+  });
+});
+
+describe("The degraded-mode table (RG-ARR-64, RG-ARR-65)", () => {
+  it("should map a code's digest to its number or the dedicated flow, with no name and no code", async () => {
+    const numbered = await createTicket({ number: 3101 });
+    const dedicated = await createTicket({ number: null, tier: "dedicated" });
+    const cancelled = await createTicket({ number: 3102, isCancelled: true });
+    const key = (code: string) => createHash("sha256").update(`devfest-arrivals:${editionId}:${code}`).digest("hex").slice(0, 6);
+
+    const res = await app.inject({ method: "GET", url: `/api/arrivals/${editionId}/offline-table`, headers });
+    const table = res.json();
+
+    expect(table.entries[key(numbered.barcode)]).toBe(3101);
+    expect(table.entries[key(dedicated.barcode)]).toBe(0);
+    expect(table.entries[key(cancelled.barcode)]).toBeUndefined();
+    expect(table.expiresAt).toBe("2026-11-21T17:00:00.000Z");
+    const text = JSON.stringify(table);
+    expect(text).not.toContain(numbered.barcode);
+    expect(text).not.toContain(numbered.lastName);
+  });
+});
+
+describe("Scans made during an outage, sent afterwards (RG-ARR-67, #645)", () => {
+  const key = (code: string) => createHash("sha256").update(`devfest-arrivals:${editionId}:${code}`).digest("hex").slice(0, 6);
+  // In the past: a time ahead of the server's clock is brought back to now.
+  const OUTAGE = "2026-01-15T08:05:00.000Z";
+  const replay = (scans: Array<{ id: string; key: string; number: number; scannedAt?: string }>) =>
+    app.inject({
+      method: "POST",
+      url: `/api/arrivals/${editionId}/offline-scans`,
+      headers,
+      payload: { scans: scans.map((s) => ({ scannedAt: OUTAGE, ...s })) },
+    });
+
+  it("should record each scan at its own time, find the ticket from the digest and the number, and check it in", async () => {
+    const numbered = await createTicket({ number: 3201 });
+    const dedicated = await createTicket({ number: null, tier: "dedicated" });
+
+    const res = await replay([
+      { id: "a", key: key(numbered.barcode), number: 3201 },
+      { id: "b", key: key(dedicated.barcode), number: 0 },
+      { id: "c", key: "abcdef", number: 3202 },
+    ]);
+    await waitForCheckIns();
+
+    expect(res.json().results).toEqual([
+      { id: "a", result: "recorded" },
+      { id: "b", result: "recorded" },
+      { id: "c", result: "unmatched" },
+    ]);
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: numbered.id } });
+    expect(stored).toMatchObject({ badgeState: "TO_FETCH", scannedOffline: true, scannedByLabel: volunteerName });
+    expect(stored.scannedAt?.toISOString()).toBe(OUTAGE);
+    const history = await prisma.badgeTransition.findMany({ where: { attendeeId: numbered.id } });
+    expect(history.map((t) => [t.toState, t.createdAt.toISOString()])).toEqual([["TO_FETCH", OUTAGE]]);
+    expect(checkInCalls.some((c) => c.data.some((t) => t.id === Number(numbered.billetwebId)))).toBe(true);
+  });
+
+  it("should record a scan sent twice only once", async () => {
+    const ticket = await createTicket({ number: 3203 });
+    const scanned = { id: "d", key: key(ticket.barcode), number: 3203 };
+
+    await replay([scanned]);
+    const again = await replay([scanned]);
+
+    expect(again.json().results).toEqual([{ id: "d", result: "already_scanned" }]);
+    expect(await prisma.badgeTransition.count({ where: { attendeeId: ticket.id } })).toBe(1);
+  });
+
+  it("should leave alone a ticket scanned online since, its badge included", async () => {
+    const ticket = await createTicket({ number: 3204 });
+    await scan({ code: ticket.barcode });
+    await prisma.attendee.update({ where: { id: ticket.id }, data: { badgeState: "DELIVERED", badgeStateVersion: 3 } });
+
+    const res = await replay([{ id: "e", key: key(ticket.barcode), number: 3204 }]);
+
+    expect(res.json().results).toEqual([{ id: "e", result: "already_scanned" }]);
+    const stored = await prisma.attendee.findUniqueOrThrow({ where: { id: ticket.id } });
+    expect([stored.badgeState, stored.scannedOffline]).toEqual(["DELIVERED", false]);
+  });
+
+  it("should let the counter mark a badge scanned offline as handed over in one touch, and only such a badge", async () => {
+    const offline = await createTicket({ number: 3205 });
+    const online = await createTicket({ number: 3206 });
+    await replay([{ id: "f", key: key(offline.barcode), number: 3205 }]);
+    await scan({ code: online.barcode });
+    const handOver = (attendeeId: number) =>
+      app.inject({
+        method: "POST",
+        url: `/api/arrivals/${editionId}/badges/${attendeeId}/move`,
+        headers,
+        payload: { from: "TO_FETCH", to: "DELIVERED" },
+      });
+
+    const [fromOutage, fromQueue] = [await handOver(offline.id), await handOver(online.id)];
+
+    expect(fromOutage.json()).toMatchObject({ applied: true, badge: { state: "DELIVERED", scannedOffline: true } });
+    expect(fromQueue.json()).toMatchObject({ applied: false, badge: { state: "TO_FETCH" } });
+  });
+});

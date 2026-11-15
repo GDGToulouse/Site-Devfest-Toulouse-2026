@@ -8,6 +8,7 @@ import { adminFetch, getAdminSession, signOut } from "@/lib/admin-api";
 import AdminLogin from "./AdminLogin";
 import AdminSidebar from "./AdminSidebar";
 import { isAdminPathAllowed, type AdminRole } from "./nav-items";
+import { pickCurrentEdition, type CurrentEdition, type EditionSummary } from "./current-edition";
 
 interface AdminUser {
   id: string;
@@ -17,28 +18,6 @@ interface AdminUser {
   role: AdminRole;
 }
 
-interface CurrentEdition {
-  id: number;
-  year: number;
-}
-
-interface EditionSummary {
-  id: number;
-  year: number;
-  status: string;
-}
-
-// The "current edition" is the one being actively worked on: an edition in its
-// last stretch (#576, #577) or announced, otherwise one in PREPARATION,
-// otherwise the most recent.
-function pickCurrentEdition(editions: EditionSummary[]): CurrentEdition | null {
-  if (editions.length === 0) return null;
-  const byPriority =
-    editions.find((e) => ["EVENT_DAY", "PROGRAMME", "TICKETING", "ANNOUNCEMENT"].includes(e.status)) ??
-    editions.find((e) => e.status === "PREPARATION") ??
-    [...editions].sort((a, b) => b.year - a.year)[0];
-  return { id: byPriority.id, year: byPriority.year };
-}
 
 // Public admin paths that render their own content without requiring a session.
 // A user resetting their password precisely does NOT have a valid session.

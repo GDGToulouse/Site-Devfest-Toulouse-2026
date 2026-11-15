@@ -1,0 +1,694 @@
+import type { FastifyInstance } from "fastify";
+import { APIError } from "better-auth/api";
+
+import { prisma } from "../lib/prisma.js";
+import { auth } from "../lib/auth.js";
+import { getAuthContext } from "../lib/auth-context.js";
+import { authorizeArrivals, resolveArrivalsPrincipal } from "../lib/arrivals-principal.js";
+import { checkStationToken, isBadgeInScope, stationCookie, stationPath } from "../lib/arrivals-station.js";
+import { maskEmail, normalizeEmail, signUpWithInvitation } from "../lib/sponsor-invitation.js";
+import { canAccessArrivals, findCurrentEdition, findPendingArrivalsInvitation } from "../lib/arrivals-access.js";
+import { subscribeToArrivals, type ArrivalsEvent } from "../lib/arrivals-stream.js";
+import {
+  BADGE_STATES,
+  isCounterMove,
+  isHandedOverDuringOutage,
+  isStepBack,
+  loadArrivalsSnapshot,
+  moveBadge,
+  withdrawBadge,
+} from "../lib/badge-state.js";
+import {
+  OFFLINE_KEY_HEX_LENGTH,
+  buildOfflineTable,
+  cancelScan,
+  replayOfflineScans,
+  scanTicket,
+  searchAttendees,
+  type CancelScanRefusal,
+} from "../lib/arrivals-scan.js";
+import { requestCheckIn } from "../lib/billetweb-checkin.js";
+import { deliverLabel, printFreeLabel, printLabel, type LabelRefusal, type LabelText } from "../lib/help-desk.js";
+import { loadTrackingSummary, type TrackingSummary } from "../lib/arrivals-tracking.js";
+import { arrivalsRateLimit } from "../lib/rate-limit-options.js";
+import type { BadgeState } from "../generated/prisma/client.js";
+
+// The volunteers' side of the arrivals permission (#640): accepting an
+// invitation, and knowing whether the signed-in account may open the event-day
+// screens. Built like the sponsor invitation (routes/sponsor-invitation.ts),
+// whose comments explain each guard. Then the screens' live state (#641): one
+// event stream per screen, and the moves of the badges.
+
+/**
+ * A ping on an idle stream. Under the relays' idle cut (30 s for Next's
+ * rewrite proxy, measured on #639) and frequent enough for a screen to notice
+ * a silent break within a few beats (RG-ARR-60).
+ */
+export const STREAM_HEARTBEAT_MS = 15_000;
+
+/** How long the browser waits before reconnecting after a break. */
+const STREAM_RETRY_MS = 2_000;
+
+/** Scans one replay takes: a phone sends its queue in batches of this size. */
+const OFFLINE_REPLAY_MAX = 500;
+
+/** How long the tracking screen's totals may trail an event: one read per burst. */
+const TRACKING_REFRESH_MS = 500;
+
+/** Longest line a label takes: well beyond any real name, short of abuse. */
+const LABEL_LINE_MAX = 100;
+
+const LABEL_TEXT_INVALID = {
+  error: "invalid_label_text",
+  message: "Prénom et nom sont obligatoires (et l'entreprise pour une étiquette sans billet), 100 caractères au plus.",
+};
+
+/** The text of a label typed at the help desk; null when it does not hold. */
+function labelTextOf(body: unknown): LabelText | null {
+  if (!body || typeof body !== "object") return null;
+  const line = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+  const { firstName, lastName, company } = body as Record<string, unknown>;
+  const text = { firstName: line(firstName), lastName: line(lastName), company: line(company) || null };
+  const lines = [text.firstName, text.lastName, text.company ?? ""];
+  if (!text.firstName || !text.lastName || lines.some((l) => l.length > LABEL_LINE_MAX)) return null;
+  return text;
+}
+
+const CANCEL_SCAN_REFUSALS: Record<CancelScanRefusal, { status: number; message: string }> = {
+  not_found: { status: 404, message: "Billet introuvable." },
+  not_scanned: { status: 409, message: "Ce billet n'est pas scanné : rien à annuler." },
+  delivered: { status: 409, message: "Le badge a déjà été remis : récupérez-le, puis demandez à un admin." },
+  not_yours: { status: 403, message: "Seul le poste qui a scanné ce billet, ou un admin, peut annuler le scan." },
+  too_late: { status: 409, message: "Plus d'une minute depuis le scan : demandez à un admin de l'annuler." },
+};
+
+const tokenParamsSchema = {
+  type: "object",
+  required: ["token"],
+  properties: { token: { type: "string" } },
+} as const;
+
+const editionParamsSchema = {
+  type: "object",
+  required: ["editionId"],
+  properties: { editionId: { type: "integer", minimum: 1 } },
+} as const;
+
+const attendeeParamsSchema = {
+  type: "object",
+  required: ["editionId", "attendeeId"],
+  properties: {
+    editionId: { type: "integer", minimum: 1 },
+    attendeeId: { type: "integer", minimum: 1 },
+  },
+} as const;
+
+const LABEL_REFUSALS: Record<LabelRefusal, string> = {
+  cancelled: "Ce billet est annulé : pas d'étiquette.",
+  dedicated: "Ce billet passe par l'accueil dédié, qui a ses propres badges.",
+  not_printed: "Imprimez l'étiquette avant de la remettre.",
+};
+
+const labelRefusal = (refused: LabelRefusal) => ({ error: refused, message: LABEL_REFUSALS[refused] });
+
+// The event-day screens' own budget (rate-limit-options.ts): the whole venue
+// shares one address. The invitation routes keep the general API budget.
+const config = { rateLimit: arrivalsRateLimit };
+
+export default async function arrivalsRoutes(app: FastifyInstance) {
+  // GET /api/arrivals/current — the edition the screens work on, whether the
+  // caller may, and whether they may take a badge back (RG-ARR-46): the
+  // screen offers it, the move route decides. 401 tells the page to sign in.
+  app.get("/arrivals/current", { config }, async (request, reply) => {
+    const access = await resolveArrivalsPrincipal(request);
+    if (!access.ok) return reply.code(access.status).send(access.body);
+    const { principal } = access;
+
+    // A station is locked to its own edition and screen (RG-ARR-72): the page
+    // opens that station and offers no other.
+    if (principal.kind === "station") {
+      const edition = await prisma.edition.findUnique({
+        where: { id: principal.editionId },
+        select: { id: true, year: true },
+      });
+      return {
+        edition,
+        hasAccess: edition !== null,
+        canStepBack: false,
+        canTrack: false,
+        station: principal.station,
+      };
+    }
+
+    const { user } = principal;
+    const canStepBack = user.role === "ADMIN";
+    // The tracking screen's guard, told ahead (RG-ARR-26, #644).
+    const canTrack = user.role === "ADMIN" || user.role === "EDITOR";
+    const edition = await findCurrentEdition();
+    if (!edition) return { edition: null, hasAccess: false, canStepBack, canTrack, station: null };
+    return {
+      edition: { id: edition.id, year: edition.year },
+      hasAccess: await canAccessArrivals(user, edition.id),
+      canStepBack,
+      canTrack,
+      station: null,
+    };
+  });
+
+  // POST /api/arrivals/station-session — a station's QR code becomes its
+  // session (RG-ARR-70): the token in the link is checked, then travels as an
+  // HttpOnly cookie bound to /api/arrivals until the window closes.
+  app.post<{ Body: { token: string } }>(
+    "/arrivals/station-session",
+    {
+      config,
+      schema: {
+        body: {
+          type: "object",
+          required: ["token"],
+          additionalProperties: false,
+          properties: { token: { type: "string", minLength: 1, maxLength: 200 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { token } = request.body;
+      const check = await checkStationToken(token);
+      if (!check.ok) return reply.code(403).send({ error: `station_${check.reason}`, message: check.message });
+      reply.header("set-cookie", stationCookie(token, check.until));
+      return { editionId: check.editionId, station: check.station, path: stationPath(check.station) };
+    },
+  );
+
+  // GET /api/arrivals/:editionId/stream — Server-Sent Events: the full state
+  // first, on every (re)connection (RG-ARR-61), then each badge that moves,
+  // and a ping when nothing does.
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/stream",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "stream");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      // Subscribe before reading: a move committed while the snapshot loads is
+      // queued, not lost. Sent after it, it may repeat what the snapshot
+      // already holds; the version on each badge lets the screen skip it.
+      const queued: ArrivalsEvent[] = [];
+      let isLive = false;
+      const send = (event: string, data: unknown) => {
+        if (!reply.raw.destroyed) reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      };
+      const unsubscribe = subscribeToArrivals(editionId, (event) => {
+        if (event.type === "counts") return;
+        if (isLive) send(event.type, event.data);
+        else queued.push(event);
+      });
+
+      const snapshot = await loadArrivalsSnapshot(editionId).catch((err: unknown) => {
+        unsubscribe();
+        throw err;
+      });
+      if (!snapshot) {
+        unsubscribe();
+        return reply.code(404).send({ error: "Not found" });
+      }
+
+      // From here the response is ours, outside Fastify's reply cycle: no
+      // compression (it would hold events back until a buffer fills), no
+      // serializer. `no-transform` and X-Accel-Buffering ask the relays the same.
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      reply.raw.write(`retry: ${STREAM_RETRY_MS}\n\n`);
+      send("snapshot", snapshot);
+      isLive = true;
+      for (const event of queued) send(event.type, event.data);
+
+      const heartbeat = setInterval(() => {
+        send("ping", { at: Date.now() });
+        // A station's stream ends with its window or its regeneration: the
+        // screen reconnects and meets the refusal (RG-ARR-75).
+        if (principal.kind === "station") {
+          checkStationToken(principal.token)
+            .then((check) => {
+              if (!check.ok) reply.raw.end();
+            })
+            .catch((err: unknown) => request.log.error({ err, editionId }, "Station stream check failed"));
+        }
+      }, STREAM_HEARTBEAT_MS);
+      // The response's close, not the request's: the request one fires once
+      // its (empty) body is read, long before the screen goes away.
+      reply.raw.on("close", () => {
+        clearInterval(heartbeat);
+        unsubscribe();
+      });
+    },
+  );
+
+  // GET /api/arrivals/:editionId/tracking — the team's tracking screen
+  // (RG-ARR-62, #644): Server-Sent Events of totals, recomputed after what
+  // changes them and on every beat. ADMIN and EDITOR only (RG-ARR-26): the
+  // arrivals permission does not open it.
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/tracking",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "tracking");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+
+      const first = await loadTrackingSummary(editionId);
+      if (!first) return reply.code(404).send({ error: "Not found" });
+
+      reply.hijack();
+      reply.raw.writeHead(200, {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
+      });
+      reply.raw.write(`retry: ${STREAM_RETRY_MS}\n\n`);
+      const send = (summary: TrackingSummary) => {
+        if (!reply.raw.destroyed) reply.raw.write(`event: summary\ndata: ${JSON.stringify(summary)}\n\n`);
+      };
+      send(first);
+
+      // A burst of scans recomputes once: the totals trail by a fraction of a
+      // second, and the database is spared one read per event.
+      let pending: ReturnType<typeof setTimeout> | undefined;
+      const refresh = () => {
+        pending ??= setTimeout(() => {
+          pending = undefined;
+          loadTrackingSummary(editionId)
+            .then((summary) => summary && send(summary))
+            .catch((err: unknown) => request.log.error({ err, editionId }, "Tracking summary failed"));
+        }, TRACKING_REFRESH_MS);
+      };
+      const unsubscribe = subscribeToArrivals(editionId, refresh);
+      // Each beat is a fresh total: it also catches what no event announces,
+      // such as an attendee import.
+      const heartbeat = setInterval(refresh, STREAM_HEARTBEAT_MS);
+      reply.raw.on("close", () => {
+        clearInterval(heartbeat);
+        clearTimeout(pending);
+        unsubscribe();
+      });
+    },
+  );
+
+  // POST /api/arrivals/:editionId/badges/:attendeeId/move — a counter touching
+  // a card (RG-ARR-43), or an admin taking one back (RG-ARR-46). Answers the
+  // badge as it stands, applied or not: a move that lost the race is not an
+  // error, the screen just catches up (RG-ARR-44).
+  app.post<{ Params: { editionId: number; attendeeId: number }; Body: { from: BadgeState; to: BadgeState } }>(
+    "/arrivals/:editionId/badges/:attendeeId/move",
+    {
+      config,
+      schema: {
+        params: {
+          type: "object",
+          required: ["editionId", "attendeeId"],
+          properties: {
+            editionId: { type: "integer", minimum: 1 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+        body: {
+          type: "object",
+          required: ["from", "to"],
+          additionalProperties: false,
+          properties: {
+            from: { type: "string", enum: [...BADGE_STATES] },
+            to: { type: "string", enum: [...BADGE_STATES] },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const { from, to } = request.body;
+      const access = await authorizeArrivals(request, editionId, "move");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const isOutageHandOver = isHandedOverDuringOutage(from, to);
+      const isAllowed =
+        isCounterMove(from, to) ||
+        isOutageHandOver ||
+        (principal.kind === "user" && principal.user.role === "ADMIN" && isStepBack(from, to));
+      if (!isAllowed) {
+        return reply.code(400).send({ error: "move_not_allowed", message: "Ce passage n'est pas possible depuis cet écran." });
+      }
+
+      const current = await prisma.attendee.findFirst({
+        where: { id: attendeeId, editionId },
+        select: { badgeNumber: true, isCancelled: true, badgeWithdrawnAt: true },
+      });
+      // A counter's station touches its own badges only (RG-ARR-72).
+      if (principal.kind === "station" && current && !isBadgeInScope(principal.station, current.badgeNumber)) {
+        return reply.code(403).send({ error: "Forbidden", message: "Ce badge n'est pas à votre guichet." });
+      }
+      // Refunded since it was printed (#800): never handed over, the help desk takes it back.
+      if (to === "DELIVERED" && current?.isCancelled) {
+        return reply.code(409).send({ error: "refunded", message: "Billet remboursé : ne remettez pas ce badge, le poste Cas particuliers vient le récupérer." });
+      }
+
+      const result = await moveBadge(editionId, attendeeId, from, to, principal.actor, {
+        onlyIfScannedOffline: isOutageHandOver,
+      });
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/scan — the entrance (#642): a code read by
+  // the camera or typed, or an attendee picked from a name search. Answers
+  // what to tell the person; the check-in on Billetweb follows on its own.
+  app.post<{ Params: { editionId: number }; Body: { code?: string; attendeeId?: number } }>(
+    "/arrivals/:editionId/scan",
+    {
+      config,
+      schema: {
+        params: editionParamsSchema,
+        body: {
+          type: "object",
+          additionalProperties: false,
+          minProperties: 1,
+          maxProperties: 1,
+          properties: {
+            code: { type: "string", minLength: 1, maxLength: 200 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "scan");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const { code, attendeeId } = request.body;
+      const target = code !== undefined ? { barcode: code.trim() } : { attendeeId: attendeeId! };
+      const { outcome, isFirstScan } = await scanTicket(editionId, target, principal.actor);
+      if (isFirstScan) requestCheckIn(editionId, request.log);
+      return outcome;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/cancel-scan — undo a
+  // scan (#797): the entrance its own within a minute, an admin any. The
+  // check-in job takes the ticket back on Billetweb, never this request.
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/cancel-scan",
+    {
+      config,
+      schema: {
+        params: {
+          type: "object",
+          required: ["editionId", "attendeeId"],
+          properties: {
+            editionId: { type: "integer", minimum: 1 },
+            attendeeId: { type: "integer", minimum: 1 },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "cancel-scan");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const isAdmin = principal.kind === "user" && principal.user.role === "ADMIN";
+      const result = await cancelScan(editionId, attendeeId, principal.actor, { isAdmin });
+      if (!result.ok) {
+        const { status, message } = CANCEL_SCAN_REFUSALS[result.reason];
+        return reply.code(status).send({ error: result.reason, message });
+      }
+      requestCheckIn(editionId, request.log);
+      return { cancelled: true };
+    },
+  );
+
+  // POST /api/arrivals/:editionId/offline-scans — what a Scan phone recorded
+  // during an outage, sent once the backend is back (RG-ARR-67, #645). Answers
+  // each scan, so the phone empties its queue of what was taken.
+  app.post<{
+    Params: { editionId: number };
+    Body: { scans: Array<{ id: string; key: string; number: number; scannedAt: string }> };
+  }>(
+    "/arrivals/:editionId/offline-scans",
+    {
+      config,
+      schema: {
+        params: editionParamsSchema,
+        body: {
+          type: "object",
+          required: ["scans"],
+          additionalProperties: false,
+          properties: {
+            scans: {
+              type: "array",
+              minItems: 1,
+              // A long outage at the peak: some 25 arrivals a minute per phone.
+              maxItems: OFFLINE_REPLAY_MAX,
+              items: {
+                type: "object",
+                required: ["id", "key", "number", "scannedAt"],
+                additionalProperties: false,
+                properties: {
+                  id: { type: "string", minLength: 1, maxLength: 64 },
+                  key: { type: "string", pattern: `^[0-9a-f]{${OFFLINE_KEY_HEX_LENGTH}}$` },
+                  number: { type: "integer", minimum: 0 },
+                  scannedAt: { type: "string", format: "date-time" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "offline");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const scans = request.body.scans.map((s) => ({ ...s, scannedAt: new Date(s.scannedAt) }));
+      const { results, hasNewScans } = await replayOfflineScans(editionId, scans, principal.actor);
+      if (hasNewScans) requestCheckIn(editionId, request.log);
+      return { results };
+    },
+  );
+
+  // GET /api/arrivals/:editionId/search?q= — for whoever comes without their
+  // confirmation (RG-ARR-31).
+  app.get<{ Params: { editionId: number }; Querystring: { q: string } }>(
+    "/arrivals/:editionId/search",
+    {
+      config,
+      schema: {
+        params: editionParamsSchema,
+        querystring: {
+          type: "object",
+          required: ["q"],
+          properties: { q: { type: "string", minLength: 2, maxLength: 100 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "search");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+      return searchAttendees(editionId, request.query.q);
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/label — the help desk
+  // prints a label (RG-ARR-51): the trace first, then the text to print. A
+  // reprint is the same call (RG-ARR-54).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/label",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      // Optional: the text the desk corrected (#801); without it, the ticket's.
+      const text = request.body === undefined || request.body === null ? undefined : labelTextOf(request.body);
+      if (text === null) return reply.code(400).send(LABEL_TEXT_INVALID);
+      const result = await printLabel(editionId, attendeeId, principal.actor, text);
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
+      return result;
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/withdrawn — the help
+  // desk took back the badge of a ticket refunded since it was printed (#800).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/withdrawn",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+
+      const badge = await withdrawBadge(editionId, attendeeId);
+      if (!badge) return reply.code(404).send({ error: "Not found" });
+      return { withdrawn: true };
+    },
+  );
+
+  // POST /api/arrivals/:editionId/free-labels — a label for a person with no
+  // ticket (#801): first name, last name and company, all three required.
+  app.post<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/free-labels",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const text = labelTextOf(request.body);
+      if (!text?.company) return reply.code(400).send(LABEL_TEXT_INVALID);
+      return printFreeLabel(editionId, principal.actor, text);
+    },
+  );
+
+  // POST /api/arrivals/:editionId/attendees/:attendeeId/label/delivered — the
+  // label is in the person's hands (RG-ARR-52).
+  app.post<{ Params: { editionId: number; attendeeId: number } }>(
+    "/arrivals/:editionId/attendees/:attendeeId/label/delivered",
+    { config, schema: { params: attendeeParamsSchema } },
+    async (request, reply) => {
+      const { editionId, attendeeId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "label");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+
+      const result = await deliverLabel(editionId, attendeeId, principal.actor);
+      if (!result) return reply.code(404).send({ error: "Not found" });
+      if ("refused" in result) return reply.code(409).send(labelRefusal(result.refused));
+      if (result.isFirstScan) requestCheckIn(editionId, request.log);
+      return { delivered: true };
+    },
+  );
+
+  // GET /api/arrivals/:editionId/offline-table — what a Scan phone keeps for
+  // when the backend is gone (RG-ARR-64, RG-ARR-65).
+  app.get<{ Params: { editionId: number } }>(
+    "/arrivals/:editionId/offline-table",
+    { config, schema: { params: editionParamsSchema } },
+    async (request, reply) => {
+      const { editionId } = request.params;
+      const access = await authorizeArrivals(request, editionId, "offline");
+      if (!access.ok) return reply.code(access.status).send(access.body);
+      const { principal } = access;
+      const table = await buildOfflineTable(editionId);
+      if (!table) return reply.code(404).send({ error: "Not found" });
+      return table;
+    },
+  );
+
+  // GET /api/arrivals-invitation/:token — which edition, and which mailbox.
+  app.get<{ Params: { token: string } }>(
+    "/arrivals-invitation/:token",
+    { schema: { params: tokenParamsSchema } },
+    async (request, reply) => {
+      const access = await findPendingArrivalsInvitation(request.params.token);
+      // One answer for expired, consumed and unknown alike.
+      if (!access) return reply.code(404).send({ error: "invitation_invalid" });
+      return { editionYear: access.edition.year, emailHint: maskEmail(access.email) };
+    },
+  );
+
+  // POST /api/arrivals-invitation/:token/sign-up — open the invited account,
+  // for the invited address only. The sign-up hook makes it GUEST (auth.ts).
+  app.post<{ Params: { token: string }; Body: { password: string } }>(
+    "/arrivals-invitation/:token/sign-up",
+    {
+      schema: {
+        params: tokenParamsSchema,
+        body: {
+          type: "object",
+          required: ["password"],
+          properties: { password: { type: "string", minLength: 1, maxLength: 128 } },
+        },
+      },
+    },
+    async (request, reply) => {
+      const access = await findPendingArrivalsInvitation(request.params.token);
+      if (!access) return reply.code(404).send({ error: "invitation_invalid" });
+
+      // better-auth's sign-up neither signs in nor reports an existing account
+      // any more (#673): as on the sponsor route, this one says so itself — the
+      // token holder owns the mailbox — and signs in afterwards.
+      const existing = await prisma.user.findFirst({
+        where: { email: { equals: access.email, mode: "insensitive" } },
+        select: { id: true },
+      });
+      if (existing) {
+        return reply.code(409).send({
+          error: "account_exists",
+          message: "Un compte existe déjà pour cette adresse : connectez-vous, ou demandez un lien de connexion.",
+        });
+      }
+
+      try {
+        const { email } = access;
+        const { password } = request.body;
+        await signUpWithInvitation(email, () => auth.api.signUpEmail({ body: { email, password, name: email } }));
+        const { headers } = await auth.api.signInEmail({ body: { email, password }, returnHeaders: true });
+        const cookies = headers.getSetCookie();
+        if (cookies.length) reply.header("set-cookie", cookies);
+        return { success: true };
+      } catch (err) {
+        if (err instanceof APIError) {
+          return reply.code(err.statusCode).send({ error: err.body?.code ?? "sign_up_failed", message: err.body?.message });
+        }
+        throw err;
+      }
+    },
+  );
+
+  // POST /api/arrivals-invitation/:token/accept — grant the signed-in account.
+  app.post<{ Params: { token: string } }>(
+    "/arrivals-invitation/:token/accept",
+    { schema: { params: tokenParamsSchema } },
+    async (request, reply) => {
+      const access = await findPendingArrivalsInvitation(request.params.token);
+      if (!access) return reply.code(404).send({ error: "invitation_invalid" });
+
+      const ctx = await getAuthContext(request);
+      if (!ctx) return reply.code(401).send({ error: "Unauthenticated" });
+      // Only the invited mailbox: a forwarded link must not grant a stranger.
+      if (normalizeEmail(ctx.user.email) !== access.email) {
+        return reply.code(403).send({ error: "email_mismatch" });
+      }
+
+      // Clearing the token consumes it: a racing second call finds nothing.
+      const updated = await prisma.arrivalsAccess.updateMany({
+        where: { id: access.id, userId: null, invitationAcceptedAt: null },
+        data: { userId: ctx.user.id, invitationToken: null, invitationAcceptedAt: new Date() },
+      });
+      if (updated.count === 0) return reply.code(404).send({ error: "invitation_invalid" });
+
+      // The token reached this mailbox: without this, the first magic link
+      // would clear the password of an unverified account (RG-ARR-24, #514).
+      await prisma.user.update({ where: { id: ctx.user.id }, data: { emailVerified: true } });
+      return { editionYear: access.edition.year };
+    },
+  );
+}

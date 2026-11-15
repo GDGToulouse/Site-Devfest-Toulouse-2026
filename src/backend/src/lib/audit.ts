@@ -17,8 +17,15 @@ import { getRequestContext } from "./request-context.js";
 // The OAuth tables of the MCP connector (#514) are the same kind of plumbing,
 // and Jwks holds the private signing key. TalkFeedback is the audience's
 // anonymous votes (#564): hundreds in two days, by nobody the history could
-// name, they would bury the team's edits under browser ids.
+// name, they would bury the team's edits under browser ids. Attendee rows are
+// imported from Billetweb by the hundred (#638) and hold personal data the log
+// would keep past its 18-month retention. BadgeTransition is already a history
+// of its own (#641), several thousand lines on event day.
 const EXCLUDED_MODELS = new Set([
+  "Attendee",
+  "BadgeTransition",
+  "BadgeLabel",
+  "SponsorScan",
   "AuditLog",
   "Session",
   "Account",
@@ -39,6 +46,8 @@ const EXCLUDED_MODELS = new Set([
 const NOISE_ONLY_FIELDS: Record<string, readonly string[]> = {
   // Refreshed on API key use (auth-context.ts): one line per minute per key.
   ApiKey: ["lastUsedAt"],
+  // Written by every attendee import, every five minutes on event day (#800).
+  Edition: ["attendeesSyncedAt", "attendeesSyncError"],
 };
 
 // Set by Prisma on every write: never the change anyone asked for.

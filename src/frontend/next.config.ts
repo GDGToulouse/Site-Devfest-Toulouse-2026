@@ -105,6 +105,15 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/sponsor-invitation/:path*`,
       },
       {
+        // The volunteers' event-day zone and its invitations (#640).
+        source: "/api/arrivals/:path*",
+        destination: `${backendUrl}/api/arrivals/:path*`,
+      },
+      {
+        source: "/api/arrivals-invitation/:path*",
+        destination: `${backendUrl}/api/arrivals-invitation/:path*`,
+      },
+      {
         source: "/api/talks/:path*",
         destination: `${backendUrl}/api/talks/:path*`,
       },
@@ -208,6 +217,14 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store" },
         ],
       },
+      // The event-day zone (#640) likewise. Its offline copy is the service
+      // worker's (#641), which the Cache API keeps whatever this header says.
+      {
+        source: "/arrivees/:path*",
+        headers: [
+          { key: "Cache-Control", value: "no-store" },
+        ],
+      },
       // Cache-Control: homepage — short cache (5 min)
       // Both public rules stand aside in draft preview (#618): Next sends that
       // page `private, no-store`, which these rules would otherwise overwrite
@@ -276,7 +293,10 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
+              // 'wasm-unsafe-eval' lets the Scan screen compile its barcode
+              // reader (zxing-wasm, #642, served from our origin). It allows
+              // WebAssembly only, not eval().
+              `script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'${isDev ? " 'unsafe-eval'" : ""}${plausibleOrigin ? ` ${plausibleOrigin}` : ""}`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               // blob: is required by the admin image picker (#371): the preview
@@ -289,6 +309,27 @@ const nextConfig: NextConfig = {
               "frame-src https://www.youtube.com",
               "frame-ancestors 'none'",
             ].join("; "),
+          },
+        ],
+      },
+      // The Scan screen reads tickets with the camera (#642), and a sponsor's
+      // booth reads badges (#813): the only places the site may ask for it.
+      // Listed after the rule above, which they override.
+      {
+        source: "/arrivees/:path*",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=()",
+          },
+        ],
+      },
+      {
+        source: "/sponsor/:sponsorId/scan",
+        headers: [
+          {
+            key: "Permissions-Policy",
+            value: "camera=(self), microphone=(), geolocation=()",
           },
         ],
       },

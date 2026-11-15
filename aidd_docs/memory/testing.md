@@ -4,11 +4,11 @@
 
 - Tests unitaires et d'intégration colocalisés ; l'intégration est préférée dès qu'un flux de données est en jeu
 - Les tests d'intégration backend tapent une vraie base PostgreSQL, partagée et en parallèle, et lisent les données de démo que **seul `seed-dev.ts` crée**
-- Pas de suite e2e automatisée : le parcours réel se vérifie dans le navigateur
+- Une seule suite e2e, limitée aux écrans du jour J (`/arrivees`, #777) : § End-to-end tests. Ailleurs, le parcours réel se vérifie dans le navigateur
 
 ## Tools
 
-- Vitest partout, Testing Library côté frontend
+- Vitest partout, Testing Library côté frontend ; Playwright Test (`@playwright/test`) pour la suite e2e des arrivées
 - Vérification navigateur : MCP Chrome DevTools, et MCP Playwright en trois instances (`playwright-chrome`, `playwright-firefox`, `playwright-webkit` pour Safari), déclarés dans `.mcp.json` ; Playwright écrit ses sorties dans `.playwright-mcp/` (ignoré par git). Firefox et WebKit demandent une fois `npx playwright install firefox webkit`
 
 ## Conventions
@@ -26,6 +26,21 @@
 ## Run
 
 - Commandes et ordre : `coding-assertions.md`
+
+## End-to-end tests
+
+Playwright dans Chrome en émulation mobile (Pixel 7 et iPhone 14 : écran, tactile, user agent, moteur Chromium), `src/frontend/e2e/`. Ils rejouent le parcours des postes (connexion par QR, Scan par caméra truquée et par nom, cas du scan, Guichet, Aide, coupure réseau, mise en page) en ~1 minute, 3 minutes quand `next dev` doit tout recompiler (juste après un redémarrage du conteneur frontend, qu'il faut faire après toute modification du code : rien ne se recharge à chaud).
+
+- Prérequis : l'environnement local démarré (`docker compose -f docker-compose.local.yml up -d`), Chrome installé sur la machine (`E2E_CHANNEL=chromium` pour le Chromium de Playwright après `pnpm exec playwright install chromium`)
+- Lancer, depuis `src/frontend` : `pnpm e2e` (tout), `pnpm e2e --project=pixel` (le parcours sans la coupure ni la mise en page), `pnpm e2e --project=outage` (la coupure seule)
+- La fixture est posée avant chaque lancement (`src/backend/scripts/e2e-arrivals-fixture.ts`, lancé par `docker exec`) : une édition **2007**, deux guichets de deux présentoirs, dix billets fictifs (normal, annulé, déjà scanné, accueil dédié, sans badge…), badges gelés, fenêtre des postes ouverte. Elle écrit directement en base : rien n'appelle Billetweb (l'édition n'a pas d'événement lié, donc le compostage ne sort pas non plus). L'édition 2026 n'est pas touchée. Pour la retirer : `docker exec devfest-local-backend pnpm exec tsx scripts/e2e-arrivals-fixture.ts clean`
+- Les liens de poste sont lus par l'API admin (`admin@devfesttoulouse.fr`), comme le fait l'écran « QR codes des postes » ; chaque poste est un contexte de navigateur à part, car la session est un cookie
+- La caméra est truquée par `getUserMedia` → `canvas.captureStream()` où l'on dessine le QR du billet (`support/test.ts`) ; `window.print` est remplacé par un compteur, et l'étiquette se vérifie en média `print` puis par `page.pdf` (taille du rouleau)
+- La coupure arrête **vraiment** le conteneur backend (`docker stop`), puis le relance et attend `/api/health` : c'est le test le plus long (~25 s) et le seul qui touche à l'environnement, d'où son projet à part. Si le test est interrompu, `docker start devfest-local-backend`
+- Un test qui échoue laisse une trace : `pnpm exec playwright show-trace e2e/.run/results/<test>/trace.zip`
+- Ce que la suite ne voit pas : la vraie caméra, Safari/iOS, la Zebra, le service worker (absent sous `next dev`), la charge. Un essai sur un vrai iPhone et un vrai Android reste à faire avant le jour J
+- Piège : la première touche d'un guichet retire la bannière « Son coupé » et décale les cartes, la touche sur une carte est perdue (test `fixme`, `counter.spec.ts`). Les tests touchent le titre d'abord
+- Vérifier qu'elle détecte une casse : en casser un maillon (le calcul du guichet dans `src/frontend/src/lib/arrivals-live.ts`, par exemple), voir le test rouge, défaire
 
 ## Browser QA
 
@@ -52,4 +67,8 @@ Le code local ment souvent ; l'environnement avant le code. Test discriminant : 
 - **Le compose local ne migre ni ne seede** (pas de `db-boot.sh`) : sur un volume `pgdata` neuf, toutes les tables manquent (`The table … does not exist`). `docker exec devfest-local-backend sh -c 'pnpm exec prisma migrate deploy && pnpm exec tsx prisma/seed.ts && pnpm exec tsx prisma/seed-dev.ts'`
 - **Aucune purge de cache en local** sans `REVALIDATE_SECRET` dans `.env` (il n'y a pas de `.env` par défaut) : un enregistrement admin ne change la page qu'au bout d'une heure. Vider `.next/cache/fetch-cache` puis redémarrer le frontend, ou poser le secret dans `.env`
 - **Changer une dépendance du frontend** : `pnpm add` dans le conteneur qui tourne tue `next dev` en pleine installation, et rien n'est écrit. Arrêter le service, puis `docker compose -f docker-compose.local.yml run --rm --no-deps -T frontend sh -c 'corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm add …'` (l'image nue n'a pas pnpm). Pour une dépendance transitive : `pnpm update --no-save --depth Infinity <paquet>` ; sans `--no-save`, pnpm réécrit aussi les plages des dépendances directes
+- **Service worker de `/arrivees`** (#641) : absent sous `next dev`. Après le build de production dans le conteneur, servir ce build à côté, sur le port 3001 (même cookie de session : un cookie `localhost` ignore le port) : `MSYS_NO_PATHCONV=1 docker run -d --name devfest-pwa-check -p 127.0.0.1:3001:3000 --network site-devfest-toulouse-2026_default -v "<dépôt>/src/frontend:/app" -v site-devfest-toulouse-2026_frontend_node_modules:/app/node_modules -v site-devfest-toulouse-2026_frontend_next:/app/.next -w /app -e NODE_ENV=production -e BACKEND_URL=http://backend:4000 node:22-alpine sh -c "corepack enable && corepack prepare pnpm@9.15.4 --activate && pnpm start"`, puis `docker rm -f devfest-pwa-check`. L'émulation « Offline » de Chrome ne coupe pas un flux SSE déjà ouvert : simuler une panne en arrêtant le backend
+- **Caméra de l'écran Scan** (#642) : sans webcam, remplacer `navigator.mediaDevices.getUserMedia` dans la page par une fonction qui rend `canvas.captureStream()` d'un canvas où l'on dessine un QR code ou un code-barres (générés par `zxing-wasm/writer`) ; tout le composant tourne alors pour de vrai. Chrome sous Windows n'a pas `BarcodeDetector` : c'est le chemin zxing d'iOS qui s'exécute. WebKit de Playwright sous Windows n'a pas `navigator.mediaDevices` du tout : la caméra ne s'y teste pas, seul un vrai iPhone le fait
+- Une édition de test se crée **sous 2016**, même temporaire : `getSeededEdition()` prend la plus récente à partir de 2016, et une édition 2646 créée puis supprimée par une suite a fait échouer d'autres fichiers par clé étrangère
+- Un échec intermittent n'est pas toujours une collision entre fichiers : celui de `admin-badges` (#639) était un vrai défaut, un gel refusé qui gelait quand même juste après sa réponse (`api.md`, reply thenable). Une écriture « fantôme » dans un test se trace en journalisant chaque appel de la route dans un fichier du conteneur, horodaté à côté des `beforeEach` : la valeur écrite date la requête qui l'a produite
 - `.next/dev/types/{routes.d.ts,validator.ts}` se régénèrent tronqués et font échouer `tsc` sur du code sain : les supprimer, charger une page, relancer

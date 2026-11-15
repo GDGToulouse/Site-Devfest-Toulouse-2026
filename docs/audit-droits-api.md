@@ -91,6 +91,18 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/articles/:id/translate-fields` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/attendees/import/:editionId` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/attendees/list/:editionId` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/attendees/summary/:editionId` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/badges/:editionId` | ADMIN ; refusé aux agents IA |
+| PUT | `/api/admin/badges/:editionId/settings` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/badges/:editionId/pdf` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/badges/:editionId/freeze` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/badges/:editionId/billetweb` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/arrivals-access/:editionId` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/invite` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/:accessId/resend` | ADMIN ; refusé aux agents IA |
+| DELETE | `/api/admin/arrivals-access/:editionId/:accessId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/audit` | ADMIN |
 | POST | `/api/admin/cache/purge` | ADMIN |
 | GET | `/api/admin/categories` | Équipe (ADMIN, EDITOR) |
@@ -233,6 +245,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/tickets/:id` | ADMIN |
 | PUT | `/api/admin/tickets/:id` | ADMIN |
 | GET | `/api/admin/tickets/billetweb/events` | ADMIN |
+| DELETE | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
+| GET | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
 | POST | `/api/admin/tickets/import/billetweb` | ADMIN |
 | POST | `/api/admin/translate` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/translate/stats` | Équipe (ADMIN, EDITOR) |
@@ -275,6 +289,10 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/sponsor-space/:sponsorId/job-offers/:offerId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | PUT | `/api/sponsor-space/:sponsorId/job-offers/:offerId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/private` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
+| POST | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/scans/export` | Contact du sponsor (STAND et plus) ou ADMIN |
+| PUT | `/api/sponsor-space/:sponsorId/scans/:scanId/note` | Contact du sponsor (STAND et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | POST | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | DELETE | `/api/sponsor-space/:sponsorId/team/:contactId` | Contact du sponsor (RESPONSABLE) ou ADMIN |
@@ -359,6 +377,22 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsor-invitation/:token` | Public |
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
 | POST | `/api/sponsor-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule |
+| GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
+| GET | `/api/arrivals/:editionId/stream` | Contrôlé dans la route : flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals) |
+| GET | `/api/arrivals/:editionId/tracking` | Contrôlé dans la route : écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas |
+| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne |
+| POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/cancel-scan` | Contrôlé dans la route : annulation d'un scan (#797) : session, ou session du poste Scan, puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/withdrawn` | Contrôlé dans la route : badge d'un billet remboursé récupéré par l'Aide (#800) : session, ou session du poste Aide, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/free-labels` | Contrôlé dans la route : étiquette d'une personne sans billet (#801) : session, ou session du poste Aide, puis permission « arrivées » de l'édition ; prénom, nom et entreprise obligatoires |
+| POST | `/api/arrivals/:editionId/offline-scans` | Contrôlé dans la route : scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label/delivered` | Contrôlé dans la route : étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals/:editionId/offline-table` | Contrôlé dans la route : table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals-invitation/:token` | Public |
+| POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
+| POST | `/api/arrivals-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule |
 | GET | `/api/sponsors` | Public |
 | GET | `/api/sponsors/:slug` | Public |
 | GET | `/api/sponsors/hall-of-fame` | Public |

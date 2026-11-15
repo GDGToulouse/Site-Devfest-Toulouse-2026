@@ -22,6 +22,14 @@ export const adminNavGroups: AdminNavGroup[] = [
     ],
   },
   {
+    // What the team runs on the day itself (#638 onward). Attendees are
+    // personal data, ADMIN-only like their API.
+    title: "Jour J",
+    items: [
+      { label: "Arrivées", path: "/admin/arrivals", icon: "id-badge", roles: ["ADMIN"] },
+    ],
+  },
+  {
     title: "Données",
     items: [
       { label: "Speakers", path: "/admin/speakers", icon: "user", roles: ["ADMIN", "EDITOR"] },
