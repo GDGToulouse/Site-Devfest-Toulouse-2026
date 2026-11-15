@@ -44,7 +44,9 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 |---|---|---|
 | L'URL de la brochure FR est publique (`GET /api/editions/current`), le formulaire ne conditionne donc pas le téléchargement et le compteur sous-compte. | Faible | **Accepté** (décision du 4 octobre 2026) : la brochure n'est pas un outil de collecte. |
 
-**Note de conception.** L'agent d'un ADMIN a tous les pouvoirs ADMIN, hors comptes et clés : corbeille, paramètres, purge. C'est le principe retenu (l'agent agit avec les droits de la personne). Le resserrer passerait par des scopes OAuth par domaine.
+**Note de conception.** L'agent d'un ADMIN a tous les pouvoirs ADMIN, hors comptes et clés : corbeille, paramètres, purge.
+
+**Accueil du jour J (#638, #830).** L'agent d'un ADMIN règle les badges : vue d'ensemble (des nombres, aucun nom), guichets et présentoirs, design et type de badge de chaque tarif, aperçu sur des personnes fictives. Il ne peut ni lire les participants, ni télécharger les vrais badges (noms, entreprises, QR codes), ni figer la numérotation, ni écrire sur Billetweb, ni dégeler ou réinitialiser, ni gérer les accès et les postes du jour J : `refuseAgentsAtReception`, avec son propre message (« Réservé à une personne »). Verrouillé par `route-guards.test.ts` et `agent-badges.test.ts`. Sur la prod, un agent peut donc changer le design et les types de badge réels de l'édition. C'est le principe retenu (l'agent agit avec les droits de la personne). Le resserrer passerait par des scopes OAuth par domaine.
 
 **Écarté après vérification.** La revue signalait qu'une purge déclenchée par un agent serait inscrite au canal ADMIN de l'historique. C'est faux : le canal MCP, fixé par le jeton, n'est jamais remplacé par la route.
 
@@ -77,14 +79,22 @@ Aucun ne concerne le connecteur en propre. Ils existaient avant lui, et un agent
 
 ## Inventaire
 
-Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés refusent en plus tout jeton d'agent.
+Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conteneur backend). À régénérer quand les routes changent. « Équipe » désigne les comptes ADMIN et EDITOR. Les routes de comptes et de clés, et celles de l'accueil du jour J qui touchent aux personnes, refusent en plus tout jeton d'agent.
 
-### Back-office (167)
+
+### Back-office (209)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
 | GET | `/api/admin/api-keys` | ADMIN ; refusé aux agents IA et aux clés d'API |
 | DELETE | `/api/admin/api-keys/:id` | ADMIN ; refusé aux agents IA et aux clés d'API |
+| GET | `/api/admin/arrivals-access/:editionId` | ADMIN ; refusé aux agents IA |
+| DELETE | `/api/admin/arrivals-access/:editionId/:accessId` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/:accessId/resend` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-access/:editionId/invite` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/arrivals-stations/:editionId` | ADMIN ; refusé aux agents IA |
+| POST | `/api/admin/arrivals-stations/:editionId/regenerate` | ADMIN ; refusé aux agents IA |
+| PUT | `/api/admin/arrivals-stations/:editionId/window` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/articles` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/articles` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/articles/:id` | Équipe (ADMIN, EDITOR) |
@@ -94,16 +104,16 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/attendees/import/:editionId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/attendees/list/:editionId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/attendees/summary/:editionId` | ADMIN ; refusé aux agents IA |
-| GET | `/api/admin/badges/:editionId` | ADMIN ; refusé aux agents IA |
-| PUT | `/api/admin/badges/:editionId/settings` | ADMIN ; refusé aux agents IA |
-| GET | `/api/admin/badges/:editionId/pdf` | ADMIN ; refusé aux agents IA |
-| POST | `/api/admin/badges/:editionId/freeze` | ADMIN ; refusé aux agents IA |
-| POST | `/api/admin/badges/:editionId/billetweb` | ADMIN ; refusé aux agents IA |
-| GET | `/api/admin/arrivals-access/:editionId` | ADMIN ; refusé aux agents IA |
-| POST | `/api/admin/arrivals-access/:editionId/invite` | ADMIN ; refusé aux agents IA |
-| POST | `/api/admin/arrivals-access/:editionId/:accessId/resend` | ADMIN ; refusé aux agents IA |
-| DELETE | `/api/admin/arrivals-access/:editionId/:accessId` | ADMIN ; refusé aux agents IA |
 | GET | `/api/admin/audit` | ADMIN |
+| GET | `/api/admin/badges/:editionId` | ADMIN |
+| POST | `/api/admin/badges/:editionId/billetweb` | ADMIN ; refusé aux agents IA |
+| PUT | `/api/admin/badges/:editionId/design` | ADMIN |
+| POST | `/api/admin/badges/:editionId/freeze` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/badges/:editionId/pdf` | ADMIN ; refusé aux agents IA |
+| GET | `/api/admin/badges/:editionId/preview` | ADMIN |
+| POST | `/api/admin/badges/:editionId/reset` | ADMIN ; refusé aux agents IA |
+| PUT | `/api/admin/badges/:editionId/settings` | ADMIN |
+| POST | `/api/admin/badges/:editionId/unfreeze` | ADMIN ; refusé aux agents IA |
 | POST | `/api/admin/cache/purge` | ADMIN |
 | GET | `/api/admin/categories` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/categories` | Équipe (ADMIN, EDITOR) |
@@ -118,6 +128,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/contact/messages/:id` | ADMIN |
 | POST | `/api/admin/contact/messages/:id/forward` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/contact/messages/:id/read` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/contact/messages/:id/release` | ADMIN |
 | POST | `/api/admin/contact/messages/:id/retry-webhook` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/edition-photos/:photoId` | ADMIN |
 | PUT | `/api/admin/edition-photos/:photoId` | ADMIN |
@@ -136,6 +147,12 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/editions/:id/photos` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/editions/:id/photos` | ADMIN |
 | PUT | `/api/admin/editions/:id/photos/order` | ADMIN |
+| GET | `/api/admin/editions/:id/sponsor-guests` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/editions/:id/sponsor-guests/billetweb` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/editions/:id/sponsor-guests/billetweb` | ADMIN |
+| GET | `/api/admin/editions/:id/sponsor-guests/billetweb/preview` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/editions/:id/sponsor-guests/billetweb/sync` | ADMIN |
+| GET | `/api/admin/editions/:id/sponsor-guests/billetweb/tickets` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/editions/:id/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
 | PUT | `/api/admin/editions/:id/sponsor-tiers/:tierId` | ADMIN |
@@ -202,6 +219,11 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/speakers/:id/editions/:editionId` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/speakers/bulk` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/speakers/rotate-featured` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/sponsor-guest-adjustments/:adjustmentId` | Équipe (ADMIN, EDITOR) |
+| DELETE | `/api/admin/sponsor-guests/:guestId` | Équipe (ADMIN, EDITOR) |
+| PUT | `/api/admin/sponsor-guests/:guestId` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsor-guests/:guestId/cancel-ticket` | ADMIN |
+| GET | `/api/admin/sponsor-guests/template` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/sponsor-tiers` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsor-tiers` | ADMIN |
 | DELETE | `/api/admin/sponsor-tiers/:id` | ADMIN |
@@ -220,6 +242,11 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | POST | `/api/admin/sponsors/:id/contacts/:contactId/invite` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/:id/editions` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/sponsors/:id/editions/:editionId` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsors/:id/editions/:editionId/guest-adjustments` | Équipe (ADMIN, EDITOR) |
+| GET | `/api/admin/sponsors/:id/editions/:editionId/guests` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsors/:id/editions/:editionId/guests` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/sponsors/:id/editions/:editionId/guests/attach` | ADMIN |
+| POST | `/api/admin/sponsors/:id/editions/:editionId/guests/import` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/sponsors/:id/editions/:editionId/job-offers` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/:id/editions/:editionId/job-offers` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/sponsors/bulk` | Équipe (ADMIN, EDITOR) |
@@ -248,6 +275,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
 | GET | `/api/admin/tickets/billetweb/link/:editionId` | ADMIN |
 | POST | `/api/admin/tickets/import/billetweb` | ADMIN |
+| GET | `/api/admin/tickets/sales-end` | ADMIN |
+| PUT | `/api/admin/tickets/sales-end` | ADMIN |
 | POST | `/api/admin/translate` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/translate/stats` | Équipe (ADMIN, EDITOR) |
 | GET | `/api/admin/trash` | Équipe (ADMIN, EDITOR) |
@@ -278,12 +307,18 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | DELETE | `/api/me/api-keys/:id` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
 | POST | `/api/me/api-keys/:id/rotate` | Équipe (ADMIN, EDITOR) ; refusé aux agents IA et aux clés d'API |
 
-### Espace partenaire (14)
+### Espace partenaire (24)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
 | GET | `/api/sponsor-space/:sponsorId` | Contact du sponsor (STAND et plus) ou ADMIN |
 | PUT | `/api/sponsor-space/:sponsorId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/guests` | Contact du sponsor (STAND et plus) ou ADMIN |
+| POST | `/api/sponsor-space/:sponsorId/guests` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| DELETE | `/api/sponsor-space/:sponsorId/guests/:guestId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| PUT | `/api/sponsor-space/:sponsorId/guests/:guestId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| POST | `/api/sponsor-space/:sponsorId/guests/import` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/guests/template` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/job-offers` | Contact du sponsor (STAND et plus) ou ADMIN |
 | POST | `/api/sponsor-space/:sponsorId/job-offers` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | DELETE | `/api/sponsor-space/:sponsorId/job-offers/:offerId` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
@@ -291,8 +326,8 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsor-space/:sponsorId/private` | Contact du sponsor (EDITEUR et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
 | POST | `/api/sponsor-space/:sponsorId/scans` | Contact du sponsor (STAND et plus) ou ADMIN |
-| GET | `/api/sponsor-space/:sponsorId/scans/export` | Contact du sponsor (STAND et plus) ou ADMIN |
 | PUT | `/api/sponsor-space/:sponsorId/scans/:scanId/note` | Contact du sponsor (STAND et plus) ou ADMIN |
+| GET | `/api/sponsor-space/:sponsorId/scans/export` | Contact du sponsor (STAND et plus) ou ADMIN |
 | GET | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | POST | `/api/sponsor-space/:sponsorId/team` | Contact du sponsor (RESPONSABLE) ou ADMIN |
 | DELETE | `/api/sponsor-space/:sponsorId/team/:contactId` | Contact du sponsor (RESPONSABLE) ou ADMIN |
@@ -319,10 +354,27 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/mcp` | Contrôlé dans la route : toujours 405 : le serveur MCP est sans état |
 | POST | `/api/mcp` | Contrôlé dans la route : jeton OAuth d'un agent IA, vérifié par la route |
 
-### Public et divers (63)
+### Public et divers (81)
 
 | Méthode | Route | Qui peut l'appeler |
 |---|---|---|
+| GET | `/api/arrivals-invitation/:token` | Public |
+| POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
+| POST | `/api/arrivals-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/cancel-scan` | Contrôlé dans la route : annulation d'un scan (#797) : session, ou session du poste Scan (QR code), puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label/delivered` | Contrôlé dans la route : étiquette remise, le participant passe en Distribué : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/attendees/:attendeeId/withdrawn` | Contrôlé dans la route : badge d'un billet remboursé récupéré par l'Aide (#800) : session, ou session du poste Aide (QR code), puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne |
+| POST | `/api/arrivals/:editionId/free-labels` | Contrôlé dans la route : étiquette d'une personne sans billet (#801) : session, ou session du poste Aide (QR code), puis permission « arrivées » de l'édition ; prénom, nom et entreprise obligatoires |
+| POST | `/api/arrivals/:editionId/offline-scans` | Contrôlé dans la route : scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals/:editionId/offline-table` | Contrôlé dans la route : table du mode dégradé (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition |
+| GET | `/api/arrivals/:editionId/stream` | Contrôlé dans la route : flux temps réel de l'accueil : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition (canAccessArrivals) |
+| GET | `/api/arrivals/:editionId/tracking` | Contrôlé dans la route : écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas |
+| GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
+| POST | `/api/arrivals/station-session` | Contrôlé dans la route : QR code d'un poste (#775) : le jeton signé du lien est l'accès, vérifié contre la génération et la fenêtre de l'édition ; pose le cookie de poste |
 | GET | `/api/articles` | Public |
 | GET | `/api/articles/:slug` | Public |
 | GET | `/api/articles/latest` | Public |
@@ -377,22 +429,6 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/sponsor-invitation/:token` | Public |
 | POST | `/api/sponsor-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation, puis l'e-mail de la session doit correspondre |
 | POST | `/api/sponsor-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule |
-| GET | `/api/arrivals/current` | Contrôlé dans la route : dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même |
-| GET | `/api/arrivals/:editionId/stream` | Contrôlé dans la route : flux temps réel de l'accueil : session, puis permission « arrivées » de l'édition (canAccessArrivals) |
-| GET | `/api/arrivals/:editionId/tracking` | Contrôlé dans la route : écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas |
-| POST | `/api/arrivals/:editionId/badges/:attendeeId/move` | Contrôlé dans la route : transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne |
-| POST | `/api/arrivals/:editionId/scan` | Contrôlé dans la route : scan d'un billet à l'entrée : session, puis permission « arrivées » de l'édition |
-| POST | `/api/arrivals/:editionId/attendees/:attendeeId/cancel-scan` | Contrôlé dans la route : annulation d'un scan (#797) : session, ou session du poste Scan, puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué |
-| POST | `/api/arrivals/:editionId/attendees/:attendeeId/withdrawn` | Contrôlé dans la route : badge d'un billet remboursé récupéré par l'Aide (#800) : session, ou session du poste Aide, puis permission « arrivées » de l'édition |
-| POST | `/api/arrivals/:editionId/free-labels` | Contrôlé dans la route : étiquette d'une personne sans billet (#801) : session, ou session du poste Aide, puis permission « arrivées » de l'édition ; prénom, nom et entreprise obligatoires |
-| POST | `/api/arrivals/:editionId/offline-scans` | Contrôlé dans la route : scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
-| GET | `/api/arrivals/:editionId/search` | Contrôlé dans la route : recherche par nom à l'entrée : session, puis permission « arrivées » de l'édition |
-| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label` | Contrôlé dans la route : impression d'une étiquette au guichet d'aide, tracée : session, puis permission « arrivées » de l'édition |
-| POST | `/api/arrivals/:editionId/attendees/:attendeeId/label/delivered` | Contrôlé dans la route : étiquette remise, le participant passe en Distribué : session, puis permission « arrivées » de l'édition |
-| GET | `/api/arrivals/:editionId/offline-table` | Contrôlé dans la route : table du mode dégradé (empreintes et numéros, sans nom) : session, puis permission « arrivées » de l'édition |
-| GET | `/api/arrivals-invitation/:token` | Public |
-| POST | `/api/arrivals-invitation/:token/accept` | Contrôlé dans la route : jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre |
-| POST | `/api/arrivals-invitation/:token/sign-up` | Contrôlé dans la route : jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule |
 | GET | `/api/sponsors` | Public |
 | GET | `/api/sponsors/:slug` | Public |
 | GET | `/api/sponsors/hall-of-fame` | Public |

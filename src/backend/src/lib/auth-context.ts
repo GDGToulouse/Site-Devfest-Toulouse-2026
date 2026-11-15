@@ -205,6 +205,25 @@ export async function refuseAgents(_request: FastifyRequest, reply: FastifyReply
 }
 
 /**
+ * preHandler that keeps AI agents away from the event-day reception's people
+ * and irreversible steps (#638, #830): attendees imported from Billetweb, the
+ * printed badges with their names and QR codes, the freeze that numbers the
+ * edition, writes to Billetweb, and who may open the event-day screens. The
+ * badge configuration (counters, layout, design, tier types, preview with
+ * made-up people) stays open to an ADMIN's agent. Its own message: the
+ * accounts-and-keys wording of refuseAgents was wrong here.
+ */
+export async function refuseAgentsAtReception(_request: FastifyRequest, reply: FastifyReply) {
+  if (getRequestContext()?.channel === "MCP") {
+    reply.code(403).send({
+      error: "Forbidden",
+      message:
+        "Réservé à une personne : un agent IA ne peut ni lire les participants, ni imprimer, figer ou réinitialiser les badges, ni écrire sur Billetweb, ni gérer les accès du jour J.",
+    });
+  }
+}
+
+/**
  * preHandler that keeps API keys away from managing keys (#658). A key that
  * could mint, rotate or revoke keys would outlive its own expiry and
  * revocation. Keys are a person's gesture, from the browser; AI agents are

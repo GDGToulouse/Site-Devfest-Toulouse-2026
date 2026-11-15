@@ -133,7 +133,9 @@ export function accessOf(route: InventoryRoute): string {
   // The last guard is the route's own, which narrows its group's: a trash
   // purge runs the editors' requireAdmin, then requireAdminRole.
   const guard = [...route.preHandlers].reverse().find((name) => KNOWN_GUARDS[name]);
-  const agents = route.preHandlers.includes("refuseAgents") ? " ; refusé aux agents IA" : "";
+  const agents = route.preHandlers.some((name) => name === "refuseAgents" || name === "refuseAgentsAtReception")
+    ? " ; refusé aux agents IA"
+    : "";
   const keys = route.preHandlers.includes("refuseApiKeys") ? " et aux clés d'API" : "";
   if (guard) return `${KNOWN_GUARDS[guard]}${agents}${keys}`;
   const self = SELF_GUARDED[`${route.method} ${route.path}`];
