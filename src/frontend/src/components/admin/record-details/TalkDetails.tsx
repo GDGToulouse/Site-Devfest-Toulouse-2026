@@ -18,6 +18,7 @@ interface TalkDetail {
   videoUrl: string | null;
   publicationStatus: "PUBLISHED" | "DRAFT" | "CANCELLED";
   isSpeakerEditable: boolean;
+  isManual: boolean;
   startsAt: string | null;
   endsAt: string | null;
   roomLabel: string | null;
@@ -121,6 +122,7 @@ export default function TalkDetails({ talkId, onClose }: { talkId: number | null
             <DetailList
               rows={[
                 ["Modifiable par le speaker", talk.isSpeakerEditable ? "Oui" : "Non"],
+                ["Origine", talk.isManual ? "Saisie à la main" : "Sessionize"],
                 [
                   "Vidéo",
                   talk.videoUrl && (

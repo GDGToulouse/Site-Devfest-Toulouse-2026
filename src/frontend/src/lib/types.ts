@@ -559,6 +559,8 @@ export interface Talk {
   publicationStatus: "DRAFT" | "PUBLISHED" | "CANCELLED";
   // Whether the speaker may edit the wording from their magic link (#289).
   isSpeakerEditable: boolean;
+  // Entered by hand: the Sessionize import leaves it alone (#828).
+  isManual: boolean;
   // The replay, a YouTube URL (#636).
   videoUrl: string | null;
   editionId: number;

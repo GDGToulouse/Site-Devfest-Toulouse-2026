@@ -1361,6 +1361,11 @@ model Talk {
   // by talk. Format, level and language stay with the organizers regardless.
   isSpeakerEditable Boolean @default(false)
 
+  // Entered by hand in the admin, outside Sessionize (#828). The import never
+  // touches it: a Sessionize session with the same title is skipped rather
+  // than written over it, and it is not listed as absent from Sessionize.
+  isManual Boolean @default(false)
+
   // Room and time slot (#105). Optional (RG-216): the 244 imported historical
   // talks have neither, and a talk exists long before it is scheduled.
   //

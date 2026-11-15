@@ -59,6 +59,16 @@ describe("TalksDataPage (#573)", () => {
     expect(Object.fromEntries(sent)).toEqual({ page: "1", limit: "50", editionId: "1", scheduled: "no", speakers: "none" });
   });
 
+  it("should filter on the origin and label the talks entered by hand (#828)", async () => {
+    searchParams = new URLSearchParams("origin=manual");
+    items = [{ ...talk, isManual: true }];
+    render(<TalksDataPage />);
+
+    expect(await screen.findByText("Saisie à la main", { selector: "span" })).toBeInTheDocument();
+    const sent = new URLSearchParams(listCalls().at(-1)!.split("?")[1]);
+    expect(sent.get("origin")).toBe("manual");
+  });
+
   it("should show an unscheduled session as such once an edition is chosen", async () => {
     searchParams = new URLSearchParams("year=2026");
     render(<TalksDataPage />);
