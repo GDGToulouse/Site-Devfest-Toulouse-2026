@@ -146,11 +146,13 @@ export default function BadgesSection({
 
   // Fetched rather than linked: a refusal (capacity, unknown tier) comes back as
   // a message on this screen instead of raw JSON in a new tab.
-  async function handleDownload(kind: "pdf" | "preview") {
+  // "bare": the same badges without the "Guichet / Présentoir" pages (#835).
+  async function handleDownload(kind: "pdf" | "bare" | "preview") {
     setActionError(null);
     setIsBusy(true);
     try {
-      const res = await fetch(`/api/admin/badges/${editionId}/${kind}`, { credentials: "include" });
+      const path = kind === "bare" ? "pdf?separators=false" : kind;
+      const res = await fetch(`/api/admin/badges/${editionId}/${path}`, { credentials: "include" });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
         setActionError(body?.message || "Le PDF n'a pas pu être généré.");
@@ -388,6 +390,14 @@ export default function BadgesSection({
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
           {isFrozen ? "Télécharger le PDF d'impression" : "Télécharger tous les badges (provisoire)"}
+        </button>
+        <button
+          onClick={() => handleDownload("bare")}
+          disabled={isBusy || (!isFrozen && isBlocked)}
+          title="Recto et verso de chaque badge, sans les pages Guichet / Présentoir ni celles des types"
+          className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+        >
+          Télécharger les badges sans séparateurs
         </button>
         {!isFrozen && (
           <div className="flex flex-wrap items-center gap-3">

@@ -268,6 +268,20 @@ describe("Badge numbering and freeze (#639)", () => {
     expect(res.headers["content-type"]).toBe("application/pdf");
     expect(res.rawPayload.subarray(0, 5).toString()).toBe("%PDF-");
   });
+
+  it("should leave out the bin pages when asked, keeping each badge's front and back (#835)", async () => {
+    await seed(3);
+    const pages = async (url: string) => (await PDFDocument.load((await call("GET", url)).rawPayload)).getPageCount();
+
+    const withSeparators = await pages(`/api/admin/badges/${editionId}/pdf`);
+    const bare = await call("GET", `/api/admin/badges/${editionId}/pdf?separators=false`);
+
+    // Three badges, recto and verso: six pages. The seed spreads them over three bins, so the
+    // print file adds three separators, each with its blank back.
+    expect(await pages(`/api/admin/badges/${editionId}/pdf?separators=false`)).toBe(6);
+    expect(withSeparators).toBe(12);
+    expect(bare.headers["content-disposition"]).toContain("sans-separateurs");
+  });
 });
 
 describe("Badge design and preview (#639, #749)", () => {

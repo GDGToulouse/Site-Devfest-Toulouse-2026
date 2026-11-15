@@ -397,10 +397,18 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   // GET /api/admin/badges/:editionId/pdf — the print file (RG-ARR-19): the
   // numbering it would freeze before the freeze, the frozen one after; then
   // the dedicated flow's badges, which carry no number.
-  app.get<{ Params: { editionId: string } }>(
+  app.get<{ Params: { editionId: string }; Querystring: { separators?: "false" } }>(
     "/badges/:editionId/pdf",
     // The real badges: every attendee's name, company and QR code (#830).
-    { preHandler: [refuseAgentsAtReception], schema: { params: editionIdParams } },
+    // `?separators=false`: the same badges in the same order, without the
+    // "Guichet / Présentoir" and type pages (#835).
+    {
+      preHandler: [refuseAgentsAtReception],
+      schema: {
+        params: editionIdParams,
+        querystring: { type: "object", additionalProperties: false, properties: { separators: { type: "string", enum: ["false"] } } },
+      },
+    },
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
@@ -434,10 +442,13 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         ...dedicated.map((r) => ({ ...r, type: badgeTypeOf(r.ticketTier), badgeNumber: null })),
       ];
 
+      const withSeparators = request.query.separators !== "false";
       const pdf = await renderBadgePdf(edition.year, badges, readBadgeDesign(edition.badgeDesign), {
         badgesPerBin: edition.badgesPerBin,
+        separators: withSeparators,
       });
-      return pdfReply(reply, pdf, `badges-${edition.year}${edition.badgesFrozenAt ? "" : "-apercu"}.pdf`);
+      const suffix = `${edition.badgesFrozenAt ? "" : "-apercu"}${withSeparators ? "" : "-sans-separateurs"}`;
+      return pdfReply(reply, pdf, `badges-${edition.year}${suffix}.pdf`);
     },
   );
 

@@ -120,3 +120,23 @@ describe("BadgesSection, the preview legend", () => {
     vi.unstubAllGlobals();
   });
 });
+
+describe("BadgesSection, the badges without separators (#835)", () => {
+  it("should ask for the print file without the bin pages", async () => {
+    renderWith({ frozenAt: "2026-11-03T21:25:30.010Z" });
+    const download = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "Content-Disposition": 'attachment; filename="badges-2026-sans-separateurs.pdf"' }),
+      blob: async () => new Blob(["pdf"]),
+    });
+    vi.stubGlobal("fetch", download);
+    URL.createObjectURL = vi.fn(() => "blob:badges");
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    fireEvent.click(await screen.findByRole("button", { name: "Télécharger les badges sans séparateurs" }));
+
+    await vi.waitFor(() => expect(download).toHaveBeenCalledWith("/api/admin/badges/1/pdf?separators=false", { credentials: "include" }));
+    vi.unstubAllGlobals();
+  });
+});
