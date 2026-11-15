@@ -2,6 +2,7 @@ import type { FastifyBaseLogger, FastifyInstance, FastifyReply } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { notDeleted, notFound } from "../../lib/admin-helpers.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
+import { refuseAgentsAtReception } from "../../lib/auth-context.js";
 import { isProductionEnvironment } from "../../lib/environment.js";
 import { BILLETWEB_API, getBilletwebParams } from "../../lib/billetweb.js";
 import {
@@ -398,7 +399,8 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   // the dedicated flow's badges, which carry no number.
   app.get<{ Params: { editionId: string } }>(
     "/badges/:editionId/pdf",
-    { schema: { params: editionIdParams } },
+    // The real badges: every attendee's name, company and QR code (#830).
+    { preHandler: [refuseAgentsAtReception], schema: { params: editionIdParams } },
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
@@ -444,6 +446,8 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   app.post<{ Params: { editionId: string }; Body: { confirm: true } }>(
     "/badges/:editionId/freeze",
     {
+      // Numbers the edition for good: a person's call (#830).
+      preHandler: [refuseAgentsAtReception],
       schema: {
         params: editionIdParams,
         body: {
@@ -498,7 +502,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   // yet: a retry picks up the failures and nothing else. Answers 202 at once.
   app.post<{ Params: { editionId: string } }>(
     "/badges/:editionId/billetweb",
-    { schema: { params: editionIdParams } },
+    { preHandler: [refuseAgentsAtReception], schema: { params: editionIdParams } },
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
@@ -578,7 +582,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
     "/badges/:editionId/unfreeze",
     {
-      preHandler: [requireAdminRole],
+      preHandler: [requireAdminRole, refuseAgentsAtReception],
       schema: {
         params: editionIdParams,
         body: {
@@ -642,7 +646,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   app.post<{ Params: { editionId: string }; Body: { confirm: string } }>(
     "/badges/:editionId/reset",
     {
-      preHandler: [requireAdminRole],
+      preHandler: [requireAdminRole, refuseAgentsAtReception],
       schema: {
         params: editionIdParams,
         body: {

@@ -9,7 +9,7 @@ const WALL_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+
 const HAS_OFFSET = /(?:Z|[+-]\d{2}:?\d{2})$/;
 
 /** Milliseconds `timeZone` is ahead of UTC at `instant`. */
-function offsetAt(instant: Date, timeZone: string): number {
+export function offsetAt(instant: Date, timeZone: string): number {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     hourCycle: "h23",

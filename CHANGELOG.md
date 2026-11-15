@@ -15,6 +15,8 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 ### Ajouté
 
 - **Conférences saisies à la main** : une case sur la fiche, une colonne et un filtre « Origine » dans la liste. L'import Sessionize ne modifie plus ces conférences, ignore une session Sessionize du même titre en le disant dans son rapport, et ne les compte plus parmi les absents de Sessionize (#828).
+- **Programme dans les applis de conférence** : le programme est publié au format standard `schedule.xml` (celui de frab et pretalx, validé contre le schéma du c3voc), et le menu Exporter du programme propose « Ouvrir dans Giggity » pour l'avoir sur Android, hors connexion, avec favoris et rappels (#827).
+- **Agents IA et badges** : l'agent d'un administrateur peut régler les badges du jour J (guichets, présentoirs, design, type de badge de chaque tarif, aperçu). Il reste refusé sur les participants, les vrais badges, la numérotation, l'écriture Billetweb, la réinitialisation et les accès, avec un message qui dit pourquoi (#830).
 
 ## [1.14.0] - 2026-11-11
 

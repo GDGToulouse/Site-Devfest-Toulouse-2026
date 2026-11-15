@@ -465,6 +465,8 @@
     "shareEmptyChoose": "Choisir des favoris",
     "shareEmptyConfirm": "Partager sans favoris",
     "calendar": "Calendrier",
+    "giggity": "Ouvrir dans Giggity",
+    "giggityTitle": "Le programme complet dans l'appli Giggity (Android), même hors connexion",
     "printByTimeAction": "Imprimer par heure",
     "printByRoomAction": "Imprimer par salle",
     "filterZone": "Filtrer le programme",

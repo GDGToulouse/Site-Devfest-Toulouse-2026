@@ -48,6 +48,8 @@ export interface ControlLabels {
   shareEmptyConfirm: string;
   calendar: string;
   exportTitle: string;
+  giggity: string;
+  giggityTitle: string;
   printByTimeAction: string;
   printByRoomAction: string;
   printTitle: string;
@@ -64,6 +66,8 @@ interface ProgrammeControlsProps {
   languages: string[];
   labels: ControlLabels;
   icsHref: string;
+  /** The whole programme as a schedule.xml (#827), path on this site. */
+  scheduleXmlPath: string;
   /** Whether anything is starred — what `Partager les favoris` shares (#460). */
   hasFavourites: boolean;
   printGrouping: PrintGrouping;
@@ -85,6 +89,7 @@ export default function ProgrammeControls({
   languages,
   labels,
   icsHref,
+  scheduleXmlPath,
   hasFavourites,
   printGrouping,
   onChangePrintGrouping,
@@ -105,6 +110,13 @@ export default function ProgrammeControls({
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  // Giggity's deep link (#827) needs the file's absolute address, and the
+  // site's origin is only known in the browser: the entry appears once mounted
+  // rather than rendering a server/client mismatch.
+  const [giggityHref, setGiggityHref] = useState<string | null>(null);
+  useEffect(() => {
+    setGiggityHref(`https://ggt.gaa.st/#url=${window.location.origin}${scheduleXmlPath}`);
+  }, [scheduleXmlPath]);
   // Sharing with nothing starred asks before it acts (#460). The entry says
   // "share my favourites", so doing nothing would look broken and sharing the
   // whole programme silently would send something other than what it promised.
@@ -470,6 +482,20 @@ export default function ProgrammeControls({
               >
                 {labels.calendar}
               </a>
+              {/* The whole programme in a conference app (#827): Giggity on
+                  Android opens it, other phones land on its download page. */}
+              {giggityHref && (
+                <a
+                  href={giggityHref}
+                  title={labels.giggityTitle}
+                  onClick={closeMenu}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`${ITEM} block`}
+                >
+                  {labels.giggity}
+                </a>
+              )}
               {/* Two entries rather than a dropdown wedged inside the button
                   (#449, #459): a sheet pinned on a door and a programme folded
                   into a pocket are not the same document, and each entry now

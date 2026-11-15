@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { requireAdmin, requireAdminRole, requireTeamBrowserSession } from "../../lib/admin-guard.js";
-import { refuseAgents, refuseApiKeys } from "../../lib/auth-context.js";
+import { refuseAgents, refuseAgentsAtReception, refuseApiKeys } from "../../lib/auth-context.js";
 import adminAuthRoutes from "./auth.js";
 import adminCacheRoutes from "./cache.js";
 import adminArticleRoutes from "./articles.js";
@@ -89,12 +89,14 @@ export default async function adminRoutes(app: FastifyInstance) {
     adminApp.addHook("preHandler", requireAdminRole);
     await adminApp.register(adminCacheRoutes);
     await adminApp.register(adminTicketRoutes);
+    // Badges: the configuration is open to an ADMIN's agent (#830); the routes
+    // that print names, freeze, write to Billetweb or reset refuse it one by one.
+    await adminApp.register(adminBadgeRoutes);
     // Attendees are personal data imported from Billetweb (#638): a person's
     // action, never an agent's.
     await adminApp.register(async (attendeesApp) => {
-      attendeesApp.addHook("preHandler", refuseAgents);
+      attendeesApp.addHook("preHandler", refuseAgentsAtReception);
       await attendeesApp.register(adminAttendeeRoutes);
-      await attendeesApp.register(adminBadgeRoutes);
       // Who may open the event-day screens (#640): an admin's call, not an agent's.
       await attendeesApp.register(adminArrivalsAccessRoutes);
       await attendeesApp.register(adminArrivalsStationRoutes);
