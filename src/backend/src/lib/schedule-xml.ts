@@ -69,6 +69,11 @@ export function stableUuid(key: string): string {
   return `${s.slice(0, 8)}-${s.slice(8, 12)}-${s.slice(12, 16)}-${s.slice(16, 20)}-${s.slice(20)}`;
 }
 
+// The schema's slug: a prefix and at least four characters after the dash.
+// Optional in the format, so a slug that cannot match is left out rather than
+// made up: a talk created as "TBD" keeps the slug `tbd` once renamed (#827).
+const SCHEDULE_SLUG = /^[a-z0-9_]{4,}-[a-z0-9_-]{4,}$/;
+
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** The instant as Toulouse reads it: date, time and the offset of that day. */
@@ -86,6 +91,10 @@ function paris(instant: Date) {
 function duration(start: Date, end: Date | null): string {
   const minutes = end ? Math.max(0, Math.round((end.getTime() - start.getTime()) / 60000)) : 0;
   return `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
+}
+
+function slugLine(slug: string): string[] {
+  return SCHEDULE_SLUG.test(slug) ? [`        <slug>${slug}</slug>`] : [];
 }
 
 export function buildScheduleXml(conference: ScheduleConference, talks: ScheduleTalk[]): string {
@@ -146,7 +155,7 @@ export function buildScheduleXml(conference: ScheduleConference, talks: Schedule
           `        <start>${at.time}</start>`,
           `        <duration>${duration(talk.start, talk.end)}</duration>`,
           `        <room>${escapeXml(talk.room)}</room>`,
-          `        <slug>${escapeXml(`devfesttoulouse${conference.year}-${talk.slug}`)}</slug>`,
+          ...slugLine(`devfesttoulouse${conference.year}-${talk.slug}`),
           `        <title>${escapeXml(talk.title)}</title>`,
           `        <track>${escapeXml(talk.track ?? "")}</track>`,
           `        <type>${TYPES[talk.format]}</type>`,

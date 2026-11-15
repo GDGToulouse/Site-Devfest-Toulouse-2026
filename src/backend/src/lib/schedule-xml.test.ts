@@ -65,6 +65,19 @@ describe("buildScheduleXml (#827)", () => {
     expect(xml.indexOf('<room name="Amphithéâtre"')).toBeLessThan(xml.indexOf('<room name="Pastel"'));
   });
 
+  it("should leave out a slug too short for the schema, keeping the event", () => {
+    const xml = buildScheduleXml(conference, [talk({ slug: "tbd", title: "Créer son premier HomeLab" })]);
+
+    expect(xml).not.toContain("<slug>");
+    expect(xml).toContain("<title>Créer son premier HomeLab</title>");
+  });
+
+  it("should give the session's slug under the conference's prefix", () => {
+    const xml = buildScheduleXml(conference, [talk()]);
+
+    expect(xml).toContain("<slug>devfesttoulouse2026-kubernetes-en-production</slug>");
+  });
+
   it("should escape what XML would read as markup", () => {
     const xml = buildScheduleXml(conference, [talk({ title: 'Tests & "mocks" <enfin>' })]);
 
