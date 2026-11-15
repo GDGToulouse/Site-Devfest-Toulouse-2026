@@ -1,17 +1,29 @@
+"use client";
+
 import { useTranslations } from "next-intl";
 
 import { localizedField } from "@/lib/i18n-helpers";
 import { surfaceBgClass, type SectionSurface } from "./section-surface";
 import type { TicketTier } from "@/lib/types";
+import TicketSalesCountdown from "@/components/ticketing/TicketSalesCountdown";
+import { effectiveStatus, useSalesDeadline } from "@/components/ticketing/use-sales-deadline";
 
 interface TicketingSectionProps {
   tiers: TicketTier[];
   locale: string;
   surface?: SectionSurface;
+  /** The edition's registration deadline (#822), null when none is set. */
+  salesEndAt?: string | null;
 }
 
-export default function TicketingSection({ tiers, locale, surface = "blanc-casse" }: TicketingSectionProps) {
+// A client component since #822: the tiers close in the browser at the
+// deadline, the home page being cached.
+export default function TicketingSection({ tiers, locale, surface = "blanc-casse", salesEndAt = null }: TicketingSectionProps) {
   const t = useTranslations("home.ticketing");
+  const tSales = useTranslations("ticketSales");
+  const clock = useSalesDeadline(salesEndAt);
+  // A page rendered after the deadline is closed from its first paint.
+  const isClosed = clock.isClosed || tiers.some((tier) => tier.status === "CLOSED");
 
   if (tiers.length === 0) return null;
 
@@ -32,20 +44,25 @@ export default function TicketingSection({ tiers, locale, surface = "blanc-casse
           {t("title")}
         </h2>
 
+        {salesEndAt && <TicketSalesCountdown salesEndAt={salesEndAt} deadline={{ ...clock, isClosed }} />}
+
         <div
           className={`grid grid-cols-1 ${smCols} ${lgCols} gap-6 mb-10 justify-center mx-auto`}
           style={{ maxWidth: tiers.length < 3 ? `${tiers.length * 360}px` : undefined }}
         >
           {tiers.map((tier) => {
             const name = localizedField(tier, "name", locale);
-            const isAvailable = tier.status === "AVAILABLE";
-            const isSoldOut = tier.status === "SOLD_OUT";
-            const isComingSoon = tier.status === "COMING_SOON";
+            const status = effectiveStatus(tier, isClosed);
+            const isAvailable = status === "AVAILABLE";
+            const isSoldOut = status === "SOLD_OUT";
+            const isComingSoon = status === "COMING_SOON";
+            const isTierClosed = status === "CLOSED";
 
             return (
               <div
                 key={tier.id}
-                className="bg-blanc rounded-3xl shadow-card p-8 flex flex-col items-center"
+                data-status={status}
+                className={`bg-blanc rounded-3xl shadow-card p-8 flex flex-col items-center ${isTierClosed ? "opacity-60 grayscale" : ""}`}
               >
                 <h3 className="text-2xl font-bold text-noir">{name}</h3>
                 <p className="mt-4 text-4xl font-bold text-noir">
@@ -53,14 +70,22 @@ export default function TicketingSection({ tiers, locale, surface = "blanc-casse
                 </p>
                 <span
                   className={`mt-4 inline-block px-4 py-1 rounded-full text-sm font-bold ${
-                    isSoldOut
-                      ? "bg-rouge/10 text-bismarck"
-                      : isComingSoon
-                        ? "bg-bleu/10 text-bleu"
-                        : "bg-malachite/10 text-[#0A6B4B]"
+                    isTierClosed
+                      ? "bg-noir/10 text-noir"
+                      : isSoldOut
+                        ? "bg-rouge/10 text-bismarck"
+                        : isComingSoon
+                          ? "bg-bleu/10 text-bleu"
+                          : "bg-malachite/10 text-[#0A6B4B]"
                   }`}
                 >
-                  {isSoldOut ? t("soldOut") : isComingSoon ? t("comingSoon") : t("available")}
+                  {isTierClosed
+                    ? tSales("status")
+                    : isSoldOut
+                      ? t("soldOut")
+                      : isComingSoon
+                        ? t("comingSoon")
+                        : t("available")}
                 </span>
                 {tier.externalUrl && isAvailable && (
                   <a
@@ -77,7 +102,7 @@ export default function TicketingSection({ tiers, locale, surface = "blanc-casse
           })}
         </div>
 
-        {billetwebUrl && (
+        {billetwebUrl && !isClosed && (
           <a
             href={billetwebUrl}
             target="_blank"

@@ -56,6 +56,25 @@ describe("Public pages are statically rendered (#700)", () => {
     expect(rel(readingHeaders)).toEqual([]);
   });
 
+  // A getTranslations("ns") that runs before setRequestLocale reads the locale
+  // from the headers: the partner job offers page answered 500
+  // (DYNAMIC_SERVER_USAGE) on every visit from 1.12.1 to 1.13.0.
+  it("should tell next-intl the locale before any translation in a page's functions", () => {
+    const offenders = files(LOCALE, /^page\.tsx$/).flatMap((page) => {
+      const source = read(page);
+      const bodies = [...source.matchAll(/async function (\w+)\s*\([^)]*\)[^{]*\{([\s\S]*?)\n\}/g)];
+      return bodies
+        .filter(([, , body]) => {
+          const translation = body.search(/getTranslations\("/);
+          const locale = body.indexOf("setRequestLocale(");
+          return translation >= 0 && (locale < 0 || translation < locale);
+        })
+        .map(([, name]) => `${relative(APP, page)} ${name}`);
+    });
+
+    expect(offenders.sort()).toEqual([]);
+  });
+
   it("should only read the querystring on the server in pages that opt out of the cache", () => {
     const offenders = files(LOCALE, /^page\.tsx$/).filter((page) => {
       const source = read(page);

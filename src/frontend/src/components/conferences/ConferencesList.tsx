@@ -4,6 +4,7 @@ import type { EditionTalk } from "@/lib/types";
 import { localizedField } from "@/lib/i18n-helpers";
 import SpeakerAvatars from "@/components/speakers/SpeakerAvatars";
 import FavouriteButton from "@/components/FavouriteButton";
+import FormatBadge from "./FormatBadge";
 
 interface ConferencesListProps {
   talks: EditionTalk[];
@@ -40,12 +41,12 @@ export default function ConferencesList({
                 stays pinned to the bottom whatever the title length. */}
             <Link
               href={`/conferences/${talk.slug}`}
-              className="flex h-full flex-col rounded-2xl bg-blanc shadow-card p-5 transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50"
+              className={`flex h-full flex-col rounded-2xl p-5 shadow-card ${
+                talk.format === "KEYNOTE" ? "border-2 border-terre-cuite bg-blanc-casse" : "bg-blanc"
+              } transition-shadow hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-malachite/50`}
             >
               <div className="flex flex-wrap items-center gap-2 pr-8">
-                <span className="rounded-full bg-bleu/10 px-3 py-1 text-sm font-bold text-bleu">
-                  {formatLabels[talk.format]}
-                </span>
+                <FormatBadge format={talk.format} label={formatLabels[talk.format]} />
                 {categoryName && (
                   <span
                     className="rounded-full px-3 py-1 text-sm font-bold"

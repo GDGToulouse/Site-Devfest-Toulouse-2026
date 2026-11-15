@@ -115,7 +115,7 @@ const INVITATION_COPY: Record<ContactLocale, InvitationCopy> = {
       "mettre à jour votre fiche publique : logo, description en français et en anglais, site web, réseaux sociaux ;",
       "publier vos offres d'emploi, affichées sur la page « Offres d'emploi » du site ;",
       "nous transmettre votre kit de communication : logos web et impression, charte graphique ;",
-      "inviter vos collègues, dont l'équipe présente sur votre stand.",
+      "inviter vos collègues.",
     ],
     live: "Vos modifications sont en ligne dès l'enregistrement.",
     ctaLead: "Créez votre compte ici :",
@@ -137,7 +137,7 @@ const INVITATION_COPY: Record<ContactLocale, InvitationCopy> = {
       "update your public listing: logo, description in French and English, website, social networks;",
       "publish your job offers, shown on the website's \"Job offers\" page;",
       "send us your communication kit: web and print logos, brand guidelines;",
-      "invite your colleagues, including the team on your booth.",
+      "invite your colleagues.",
     ],
     live: "Your changes go live as soon as you save them.",
     ctaLead: "Create your account here:",
@@ -158,13 +158,18 @@ const INVITATION_COPY: Record<ContactLocale, InvitationCopy> = {
 // It explains what the space is for and how to get back to it (#505): the
 // first version only said "you have been invited", and the team had to chase
 // sponsors by hand. It asks for replies, so SMTP_FROM must be a read mailbox.
+// Also what the admin copies to send by hand when the email went astray (#799).
+export function sponsorInvitationUrl(token: string): string {
+  return `${baseUrl}/sponsor/invitation/${token}`;
+}
+
 export async function sendSponsorInvitationEmail(opts: {
   to: string;
   sponsorName: string;
   token: string;
   locale?: string | null;
 }) {
-  const url = `${baseUrl}/sponsor/invitation/${opts.token}`;
+  const url = sponsorInvitationUrl(opts.token);
   const spaceUrl = `${baseUrl}/sponsor`;
   const lang = normalizeLocale(opts.locale);
   const c = INVITATION_COPY[lang];

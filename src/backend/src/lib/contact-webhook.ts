@@ -113,8 +113,9 @@ export async function sendContactWebhook(
 export async function buildPayloadFromStored(messageId: number): Promise<ContactWebhookPayload | null> {
   // findFirst so the trash filter fits (#147): re-sending the webhook for a
   // message the organizers deleted would push it back out to third parties.
+  // Same for one still in quarantine (#767): its link must not reach Slack.
   const m = await prisma.contactMessage.findFirst({
-    where: { id: messageId, ...notDeleted },
+    where: { id: messageId, ...notDeleted, quarantinedAt: null },
     include: { category: true },
   });
   if (!m) return null;

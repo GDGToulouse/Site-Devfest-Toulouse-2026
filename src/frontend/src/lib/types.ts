@@ -39,6 +39,8 @@ export interface Edition {
   sponsorHeroImageUrl: string | null;
   sponsorPageStatus: SponsorPageStatus;
   sponsorTemporaryFormUrl: string | null;
+  /** When registrations close (#822); null = no deadline. */
+  ticketSalesEndAt: string | null;
   isProgramPublished: boolean;
   isScheduleReady: boolean;
   /** At least one published FAQ question (#111), site-wide. */
@@ -99,7 +101,8 @@ export interface TicketTier {
   nameFr: string;
   nameEn: string;
   price: number;
-  status: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
+  // CLOSED: the edition's registration deadline has passed (#822).
+  status: "AVAILABLE" | "SOLD_OUT" | "COMING_SOON" | "CLOSED";
   externalUrl: string | null;
   sortOrder: number;
   saleStartDate: string | null;

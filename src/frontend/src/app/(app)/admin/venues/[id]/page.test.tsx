@@ -24,6 +24,31 @@ vi.mock("@/components/admin/RichTextEditor", () => ({
   default: ({ name }: { name: string }) => <textarea data-testid={name} />,
 }));
 
+// Leaflet does not render under jsdom: the location map (#710) is replaced by a
+// stand-in that shows what it was given and drops a pin with the precision a
+// mouse gives.
+vi.mock("next/dynamic", () => ({
+  default: () =>
+    function FakeLocationPicker({
+      lat,
+      lng,
+      onPick,
+    }: {
+      lat: number | null;
+      lng: number | null;
+      onPick: (lat: number, lng: number) => void;
+    }) {
+      return (
+        <div>
+          <p>{lat === null ? "pas d'épingle" : `épingle ${lat} ${lng}`}</p>
+          <button type="button" onClick={() => onPick(43.542378812345678, 1.513611498765432)}>
+            placer
+          </button>
+        </div>
+      );
+    },
+}));
+
 const { default: VenueDetailPage } = await import("./page");
 
 const VENUE = {
@@ -106,5 +131,58 @@ describe("Venue page — editing a room (#554)", () => {
 
     expect(roomUpdates()).toHaveLength(0);
     expect(screen.getByRole("button", { name: "Modifier Amphithéâtre" })).toBeInTheDocument();
+  });
+});
+
+// #710 — the coordinates were those of the metro stop next door, and two bare
+// number fields gave no way to see it.
+describe("Venue page — location map (#710)", () => {
+  const PLACED = { ...VENUE, lat: 43.5441601, lng: 1.5096314 };
+
+  beforeEach(() => {
+    adminFetch.mockImplementation(() => Promise.resolve({ data: PLACED, status: 200 }));
+  });
+
+  function venueUpdates() {
+    return adminFetch.mock.calls.filter(([path, options]) => path === "/venues/7" && options?.method === "PUT");
+  }
+
+  it("should show the stored coordinates on the map", async () => {
+    render(<VenueDetailPage />);
+
+    expect(await screen.findByText("épingle 43.5441601 1.5096314")).toBeInTheDocument();
+  });
+
+  it("should fill latitude and longitude from a pin placed on the map, rounded", async () => {
+    render(<VenueDetailPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "placer" }));
+
+    expect(screen.getByLabelText("Latitude")).toHaveValue("43.5423788");
+    expect(screen.getByLabelText("Longitude")).toHaveValue("1.5136115");
+  });
+
+  it("should move the pin with the coordinates typed in the fields", async () => {
+    render(<VenueDetailPage />);
+    const lat = await screen.findByLabelText("Latitude");
+    await userEvent.clear(lat);
+    await userEvent.type(lat, "43.6");
+
+    expect(screen.getByText("épingle 43.6 1.5096314")).toBeInTheDocument();
+  });
+
+  it("should show no pin while a coordinate is missing", async () => {
+    render(<VenueDetailPage />);
+    await userEvent.clear(await screen.findByLabelText("Longitude"));
+
+    expect(screen.getByText("pas d'épingle")).toBeInTheDocument();
+  });
+
+  it("should save the placed pin as numbers", async () => {
+    render(<VenueDetailPage />);
+    await userEvent.click(await screen.findByRole("button", { name: "placer" }));
+    const info = screen.getByRole("heading", { name: "Informations pratiques" }).closest("section") as HTMLElement;
+    await userEvent.click(within(info).getByRole("button", { name: "Enregistrer" }));
+
+    expect(JSON.parse(venueUpdates()[0][1].body)).toMatchObject({ lat: 43.5423788, lng: 1.5136115 });
   });
 });

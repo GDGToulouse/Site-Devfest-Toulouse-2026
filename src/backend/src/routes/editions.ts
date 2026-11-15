@@ -7,10 +7,13 @@ import { getEditionSponsorWall } from "../lib/sponsor-archive.js";
 import { editionGallery } from "../lib/edition-photos.js";
 import { yearParamsSchema } from "../lib/public-params.js";
 
-type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON";
+// CLOSED is computed only (#822): it is never stored as a manual status.
+export type TicketStatus = "AVAILABLE" | "SOLD_OUT" | "COMING_SOON" | "CLOSED";
 
 // Resolves the effective ticket status by priority:
-//   1. manualStatus — admin override, always wins when set
+//   0. salesEndAt   — the edition's registration deadline (#822). Once it has
+//                     passed Billetweb sells nothing, so it beats the override
+//   1. manualStatus — admin override, wins over everything below
 //   2. isSoldOut    — synced from BilletWeb (/event/:id/avail)
 //   3. dates        — sale window fallback
 export function computeTicketStatus(tier: {
@@ -18,7 +21,8 @@ export function computeTicketStatus(tier: {
   isSoldOut?: boolean | null;
   saleStartDate: Date | null;
   saleEndDate: Date | null;
-}, now: Date): TicketStatus {
+}, now: Date, salesEndAt: Date | null = null): TicketStatus {
+  if (salesEndAt && salesEndAt <= now) return "CLOSED";
   if (tier.manualStatus) return tier.manualStatus;
   if (tier.isSoldOut) return "SOLD_OUT";
   if (tier.saleEndDate && tier.saleEndDate < now) return "SOLD_OUT";
@@ -512,6 +516,8 @@ export default async function editionRoutes(app: FastifyInstance) {
       sponsorHeroImageUrl: edition.sponsorHeroImageUrl,
       sponsorPageStatus: edition.sponsorPageStatus,
       sponsorTemporaryFormUrl: edition.sponsorTemporaryFormUrl,
+      // The ticketing countdown, and the tiers closing in the browser (#822).
+      ticketSalesEndAt: edition.ticketSalesEndAt,
       isProgramPublished: publishedTalkCount > 0,
       isScheduleReady: scheduledTalkCount > 0,
       hasSpeakers: publishedSpeakerCount > 0,
@@ -579,7 +585,7 @@ export default async function editionRoutes(app: FastifyInstance) {
       nameFr: tier.nameFr,
       nameEn: tier.nameEn,
       price: Number(tier.price),
-      status: computeTicketStatus(tier, now),
+      status: computeTicketStatus(tier, now, edition.ticketSalesEndAt),
       externalUrl: tier.externalUrl,
       sortOrder: tier.sortOrder,
       // Feeds Schema.org Offer.validFrom on the home page (#185).

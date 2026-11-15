@@ -1,10 +1,8 @@
 import type { FastifyInstance } from "fastify";
 import { prisma } from "../lib/prisma.js";
-import { sendEmail, interpolate, interpolateHtml, escapeHtml } from "../lib/email.js";
-import { emailHeading } from "../lib/email-template.js";
-import { makeToken } from "../lib/brochure-token.js";
-import { sendContactWebhook } from "../lib/contact-webhook.js";
-import { getFeaturedEdition } from "./editions.js";
+import { deliverContactMessage } from "../lib/contact-delivery.js";
+import { loadSpamConfig, scoreContactMessage } from "../lib/contact-spam.js";
+import { sendQuarantineAlert } from "../lib/contact-quarantine-alert.js";
 import { notDeleted } from "../lib/admin-helpers.js";
 import { brochureIpRetryAfter, claimAddress, consumeBrochureIpBudget, hasRecentBrochureRequest } from "../lib/brochure-limits.js";
 
@@ -150,21 +148,15 @@ export default async function contactRoutes(app: FastifyInstance) {
         .send({ success: false, error: "Too Many Requests", message: "Too many brochure requests, try again later" });
     }
 
-    // Resolve recipients from the category we already fetched above.
-    let recipients: string[] = [];
-    let categoryLabel: string | null = null;
-    if (category) {
-      recipients = category.emailRecipients.split(",").map((e: string) => e.trim());
-      categoryLabel = category.nameFr;
-    }
-
-    // Fallback to default email
-    if (recipients.length === 0) {
-      const defaultEmail = await prisma.siteSetting.findUnique({
-        where: { key: "contact_default_email" },
-      });
-      recipients = [defaultEmail?.value || "contact@devfesttoulouse.fr"];
-    }
+    // Scored before anything is stored or sent (#767). A suspicious message is
+    // kept for an organizer to judge, and nothing leaves: no mail to the team
+    // (Reply-To on the sender), no confirmation to an address nobody proved,
+    // no webhook carrying the link to Slack.
+    const verdict = scoreContactMessage(
+      { firstName, lastName, email, company, jobTitle, message },
+      await loadSpamConfig(),
+    );
+    const categoryLabel = category?.nameFr ?? null;
 
     // Store message in DB. A brochure request for an address that had one in the
     // last hour is answered like a success, so the form reveals nothing, but
@@ -192,133 +184,28 @@ export default async function contactRoutes(app: FastifyInstance) {
           message: message.trim(),
           locale: locale || null,
           categoryId: categoryId || null,
+          spamScore: verdict.score,
+          spamReasons: verdict.reasons,
+          quarantinedAt: verdict.isSuspicious ? new Date() : null,
         },
       });
     } finally {
       release?.();
     }
 
-    // --- Send notification email to recipients (existing behaviour) ---
-    try {
-      const subject = `Nouveau message de contact — ${firstName.trim()} ${lastName.trim()}`;
-      const text = [
-        `De: ${firstName.trim()} ${lastName.trim()}`,
-        `Email: ${email.trim()}`,
-        phone ? `Téléphone: ${phone.trim()}` : null,
-        company?.trim() ? `Entreprise: ${company.trim()}` : null,
-        jobTitle?.trim() ? `Poste: ${jobTitle.trim()}` : null,
-        categoryLabel ? `Catégorie: ${categoryLabel}` : null,
-        "",
-        message.trim(),
-      ]
-        .filter(Boolean)
-        .join("\n");
-
-      // Everything below comes from a public form: escape it all before it
-      // reaches an inbox as HTML.
-      const html = `
-        ${emailHeading("Nouveau message de contact")}
-        <p><strong>De:</strong> ${escapeHtml(`${firstName.trim()} ${lastName.trim()}`)}</p>
-        <p><strong>Email:</strong> <a href="mailto:${encodeURIComponent(email.trim())}">${escapeHtml(email.trim())}</a></p>
-        ${phone ? `<p><strong>Téléphone:</strong> ${escapeHtml(phone.trim())}</p>` : ""}
-        ${company?.trim() ? `<p><strong>Entreprise:</strong> ${escapeHtml(company.trim())}</p>` : ""}
-        ${jobTitle?.trim() ? `<p><strong>Poste:</strong> ${escapeHtml(jobTitle.trim())}</p>` : ""}
-        ${categoryLabel ? `<p><strong>Catégorie:</strong> ${escapeHtml(categoryLabel)}</p>` : ""}
-        <hr style="border:0;border-top:1px solid #E8E0DC;margin:20px 0;">
-        <p>${escapeHtml(message.trim()).replace(/\n/g, "<br>")}</p>
-      `;
-
-      // Reply-To = the visitor, so the organizers can answer the message
-      // directly without copy-pasting the address out of the body.
-      await sendEmail({ to: recipients, subject, text, html, replyTo: email.trim() });
-    } catch (err) {
-      app.log.error("Failed to send contact email: %s", String(err));
+    // The visitor gets the same answer either way: telling a sender it was
+    // filtered teaches it what to change.
+    if (stored.quarantinedAt) {
+      request.log.warn({ messageId: stored.id, reasons: verdict.reasons }, "[contact] message quarantined");
+      sendQuarantineAlert()
+        .then((result) => {
+          if (result.status === "failed") app.log.warn("Quarantine alert failed: %s", result.error);
+        })
+        .catch((err) => app.log.warn("Quarantine alert crashed: %s", String(err)));
+      return { success: true };
     }
 
-    // --- Send confirmation email to the person who submitted the form ---
-    if (category) {
-      const lang = locale === "en" ? "en" : "fr";
-      const tplSubject = lang === "en" ? category.confirmationSubjectEn : category.confirmationSubjectFr;
-      const tplBody = lang === "en" ? category.confirmationBodyEn : category.confirmationBodyFr;
-
-      if (tplSubject && tplBody) {
-        try {
-          const edition = await getFeaturedEdition();
-          const baseUrl = process.env.BASE_URL || "http://localhost:3000";
-          // Per-message tracked link if both the brochure and the signing
-          // secret are configured; falls back to the raw URL otherwise so
-          // the email stays useful in dev.
-          const brochureToken = makeToken(stored.id);
-          // Untracked fallback only: the tracked link resolves the language
-          // itself from the stored locale (#401), so it needs no variant here.
-          const directBrochureUrl =
-            (lang === "en" ? edition?.sponsorBrochureUrlEn : null) ??
-            edition?.sponsorBrochureUrl ??
-            edition?.sponsorBrochureUrlEn ??
-            null;
-          const brochureUrl = directBrochureUrl
-            ? brochureToken
-              ? `${baseUrl}/api/brochure/${brochureToken}`
-              : `${baseUrl}${directBrochureUrl}`
-            : "";
-
-          const vars = {
-            firstName: firstName.trim(),
-            lastName: lastName.trim(),
-            brochureUrl,
-          };
-
-          // Subject is plain-text, use plain interpolation (values not HTML-escaped).
-          // Body has two renderings: plain-text for `text` (strip tags after
-          // interpolation) and HTML for `html` (escape values to avoid XSS).
-          const renderedSubject = interpolate(tplSubject, vars);
-          const renderedTextBody = interpolate(tplBody, vars).replace(/<[^>]+>/g, "");
-          const renderedHtmlBody = interpolateHtml(tplBody, vars).replace(/\n/g, "<br>");
-
-          // Keep the organizers (the category recipients) in CC of the
-          // brochure confirmation so they see exactly what the requester got,
-          // with the tracked brochure link. Brochure requests only.
-          const cc = requiresCompanyInfo && recipients.length > 0 ? recipients : undefined;
-
-          // The body stays exactly as authored in the admin; the layout only
-          // wraps it, in the requester's language.
-          await sendEmail({
-            to: [email.trim()],
-            subject: renderedSubject,
-            text: renderedTextBody,
-            html: renderedHtmlBody,
-            cc,
-            locale: lang,
-          });
-        } catch (err) {
-          app.log.error("Failed to send confirmation email: %s", String(err));
-        }
-      }
-    }
-
-    // --- Fire webhook (async, fire-and-forget) ---
-    // sendContactWebhook records the outcome on the ContactMessage so the
-    // admin can see failures and retry them. We don't await — the form
-    // response shouldn't block on a slow third-party endpoint.
-    sendContactWebhook({
-      id: stored.id,
-      submittedAt: stored.createdAt.toISOString(),
-      data: {
-        firstName: firstName.trim(),
-        lastName: lastName.trim(),
-        email: email.trim(),
-        phone: phone?.trim() || null,
-        company: company?.trim() || "",
-        jobTitle: jobTitle?.trim() || "",
-        categoryId: categoryId || null,
-        categorySlug: category?.slug || null,
-        categoryLabel: categoryLabel || null,
-        message: message.trim(),
-        locale: locale || null,
-      },
-    }).catch((err) => {
-      app.log.warn("Contact webhook helper crashed: %s", String(err));
-    });
+    await deliverContactMessage(stored.id, app.log);
 
     return { success: true };
   });

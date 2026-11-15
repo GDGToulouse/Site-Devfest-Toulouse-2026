@@ -144,7 +144,9 @@ async function seedDev() {
   // `hasVenueInfo` stayed false, /fr/lieu answered 404 and the "Lieu" menu
   // entry never appeared. A dev seed has to converge on the state it describes,
   // or "replay the seed" stops meaning anything.
-  const diagoraFields = { address: "Labège", lat: 43.5497, lng: 1.5119 };
+  // The congress centre itself (OSM way 67894325), not the "Diagora" metro stop
+  // nearby that a search returns first (#710).
+  const diagoraFields = { address: "Labège", lat: 43.5423788, lng: 1.5136115 };
   const diagora = await prisma.venue.upsert({
     where: { name: "Diagora" },
     update: diagoraFields,

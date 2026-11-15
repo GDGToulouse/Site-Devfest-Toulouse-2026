@@ -9,6 +9,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { buildTalkEventJsonLd, buildVideoJsonLd, canonicalLocaleFor, isCompleteEvent, jsonLdScript } from "@/lib/seo";
 import Breadcrumb from "@/components/Breadcrumb";
 import AddToCalendar from "@/components/conferences/AddToCalendar";
+import FormatBadge from "@/components/conferences/FormatBadge";
 import TalkFeedback from "@/components/conferences/TalkFeedback";
 import TalkSlot from "@/components/conferences/TalkSlot";
 import SpeakerPhoto from "@/components/speakers/SpeakerPhoto";
@@ -115,9 +116,7 @@ export default async function TalkDetailPage({
 
         {/* Meta badges */}
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-bleu/10 px-3 py-1 text-sm font-bold text-bleu">
-            {t(`format.${talk.format}`)}
-          </span>
+          <FormatBadge format={talk.format} label={t(`format.${talk.format}`)} />
           {talk.level && (
             <span className="rounded-full bg-gris/10 px-3 py-1 text-sm text-noir">
               {t(`level.${talk.level}`)}

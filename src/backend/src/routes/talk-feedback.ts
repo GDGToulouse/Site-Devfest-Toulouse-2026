@@ -4,9 +4,10 @@ import { notDeleted } from "../lib/admin-helpers.js";
 import {
   FEEDBACK_MESSAGE_MAX_LENGTH,
   TALK_FEEDBACK_CODES,
-  feedbackPhase,
   isTestVote,
-  publicTrend,
+  publicResults,
+  sessionFeedbackOpensAt,
+  sessionFeedbackPhase,
 } from "../lib/talk-feedback.js";
 import { getFeaturedEdition } from "./editions.js";
 
@@ -32,21 +33,21 @@ interface MessageBody {
   message: string;
 }
 
-/** A published session of the featured edition, with the edition's dates. */
+/** A published session of the featured edition, with its times and the edition's dates. */
 async function findTalk(slug: string) {
   const edition = await getFeaturedEdition();
   if (!edition) return null;
   const talk = await prisma.talk.findFirst({
     where: { editionId: edition.id, slug, publicationStatus: "PUBLISHED", ...notDeleted },
-    select: { id: true },
+    select: { id: true, startsAt: true, endsAt: true },
   });
-  return talk ? { talkId: talk.id, edition } : null;
+  return talk ? { talkId: talk.id, talk, edition } : null;
 }
 
 export default async function talkFeedbackRoutes(app: FastifyInstance) {
   // GET /api/talks/:slug/feedback?voterId= — where voting stands for this
-  // browser, and the public trend once it may be shown: after one has voted
-  // (so it does not steer the vote) or once voting is over.
+  // browser, and the results: to everyone, from the first vote, whether this
+  // browser has voted or not (#803). Never the messages.
   app.get<{ Params: { slug: string }; Querystring: { voterId?: string } }>("/talks/:slug/feedback", {
     schema: {
       params: SLUG_PARAMS,
@@ -56,10 +57,12 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
     const found = await findTalk(request.params.slug);
     if (!found) return reply.code(404).send({ error: "Talk not found" });
 
-    const phase = feedbackPhase(found.edition);
+    const phase = sessionFeedbackPhase(found.edition, found.talk);
     // Tells the page to say so: what is cast now will be wiped (#566).
     const isTest = isTestVote(found.edition);
-    if (phase === "upcoming") return { phase, isTest, hasVoted: false, hasMessage: false, trend: null };
+    // The page shows the form greyed out until then (#809).
+    const opensAt = sessionFeedbackOpensAt(found.talk)?.toISOString() ?? null;
+    if (phase === "upcoming") return { phase, isTest, opensAt, hasVoted: false, hasMessage: false, results: null };
 
     const { voterId } = request.query;
     const mine = voterId
@@ -68,18 +71,15 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
           select: { message: true },
         })
       : null;
-    const hasVoted = mine !== null;
-    const mayShowTrend = hasVoted || phase === "closed";
-    const votes = mayShowTrend
-      ? await prisma.talkFeedback.findMany({ where: { talkId: found.talkId }, select: { items: true } })
-      : [];
+    const votes = await prisma.talkFeedback.findMany({ where: { talkId: found.talkId }, select: { items: true } });
 
     return {
       phase,
       isTest,
-      hasVoted,
+      opensAt,
+      hasVoted: mine !== null,
       hasMessage: Boolean(mine?.message),
-      trend: mayShowTrend ? publicTrend(votes) : null,
+      results: publicResults(votes),
     };
   });
 
@@ -106,7 +106,7 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const found = await findTalk(request.params.slug);
     if (!found) return reply.code(404).send({ error: "Talk not found" });
-    if (feedbackPhase(found.edition) !== "open") {
+    if (sessionFeedbackPhase(found.edition, found.talk) !== "open") {
       return reply.code(403).send({ error: "feedback_closed", message: "Les avis ne sont pas ouverts pour cette session." });
     }
 
@@ -150,7 +150,7 @@ export default async function talkFeedbackRoutes(app: FastifyInstance) {
   }, async (request, reply) => {
     const found = await findTalk(request.params.slug);
     if (!found) return reply.code(404).send({ error: "Talk not found" });
-    if (feedbackPhase(found.edition) !== "open") {
+    if (sessionFeedbackPhase(found.edition, found.talk) !== "open") {
       return reply.code(403).send({ error: "feedback_closed", message: "Les avis ne sont pas ouverts pour cette session." });
     }
 

@@ -7,6 +7,7 @@ import ImportFromUrl from "@/components/admin/ImportFromUrl";
 import { altGenerationErrorMessage } from "@/lib/alt-text-errors";
 import { useDialog } from "@/lib/use-dialog";
 import GenerateAltButton from "./GenerateAltButton";
+import FileSearch, { EMPTY_FILE_SEARCH, fileSearchParams, type FileSearchValue } from "./FileSearch";
 
 const PICKER_PAGE_SIZE = 24;
 
@@ -76,10 +77,15 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   const [pendingUploadedFilename, setPendingUploadedFilename] = useState<string | null>(null);
   const [isPreUploading, setIsPreUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [search, setSearch] = useState<FileSearchValue>(EMPTY_FILE_SEARCH);
+  // Only the latest list request lands: an earlier search answering late would
+  // show results for words no longer in the field (#768).
+  const latestRequest = useRef(0);
 
   useEffect(() => {
     if (open) {
-      loadImages();
+      setSearch(EMPTY_FILE_SEARCH);
+      loadImages(true, EMPTY_FILE_SEARCH);
       setSelected(null);
       setError(null);
       setNotice(null);
@@ -104,13 +110,19 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
   // A page at a time, newest first (#416): the picker used to load the whole
   // library, documents included, and render every image. `reset` reloads from
   // the first page, where a fresh upload lands.
-  async function loadImages(reset = true) {
+  async function loadImages(reset = true, searchValue = search) {
     const nextPage = reset ? 1 : Math.floor(images.length / PICKER_PAGE_SIZE) + 1;
     if (reset) setIsLoading(true);
     else setIsLoadingMore(true);
-    const { data } = await adminFetch<{ total: number; items: ImageInfo[] }>(
-      `/files?type=images&page=${nextPage}&limit=${PICKER_PAGE_SIZE}`,
-    );
+    const request = ++latestRequest.current;
+    const query = new URLSearchParams({
+      type: "images",
+      page: String(nextPage),
+      limit: String(PICKER_PAGE_SIZE),
+      ...fileSearchParams(searchValue),
+    });
+    const { data } = await adminFetch<{ total: number; items: ImageInfo[] }>(`/files?${query}`);
+    if (request !== latestRequest.current) return;
     if (data) {
       setImages((prev) => (reset ? data.items : [...prev, ...data.items]));
       setTotal(data.total);
@@ -224,7 +236,9 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
 
       // Auto-select the uploaded image and switch to library
       cancelPending();
-      await loadImages();
+      // A search could hide the new image: show it where uploads land.
+      setSearch(EMPTY_FILE_SEARCH);
+      await loadImages(true, EMPTY_FILE_SEARCH);
       setSelected(finalUrl);
       setTab("library");
     } catch {
@@ -330,8 +344,21 @@ export default function ImagePickerDialog({ open, onClose, onSelect }: ImagePick
         <div className="flex-1 overflow-y-auto p-4">
           {tab === "library" && (
             <>
+              <div className="mb-3">
+                <FileSearch
+                  value={search}
+                  onChange={(next) => {
+                    setSearch(next);
+                    void loadImages(true, next);
+                  }}
+                />
+              </div>
               {isLoading ? (
                 <p className="text-gris text-center py-8">Chargement…</p>
+              ) : images.length === 0 && search.text ? (
+                <p role="status" className="text-gris text-center py-8">
+                  Aucune image ne correspond à « {search.text} ».
+                </p>
               ) : images.length === 0 ? (
                 <p className="text-gris text-center py-8">Aucune image. Uploadez-en une !</p>
               ) : (

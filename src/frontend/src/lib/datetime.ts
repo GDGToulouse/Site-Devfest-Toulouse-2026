@@ -103,6 +103,24 @@ export function formatEventDay(iso: string, locale: string): string {
   return day.charAt(0).toUpperCase() + day.slice(1);
 }
 
+/**
+ * UTC instant → `lundi 16 novembre à 23:55` / `Monday 16 November at 23:55`,
+ * in the event's zone: the registration deadline (#822) is Toulouse time
+ * wherever the reader is.
+ */
+export function formatEventDateTime(iso: string, locale: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+    timeZone: EVENT_TIME_ZONE,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 // `YYYY-MM-DD` of an instant on the event's calendar (en-CA formats that way).
 const eventDayFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: EVENT_TIME_ZONE,

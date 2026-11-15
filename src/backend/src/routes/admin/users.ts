@@ -4,6 +4,9 @@ import { sendEmail, escapeHtml } from "../../lib/email.js";
 import { emailButton, emailHeading } from "../../lib/email-template.js";
 import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import { revokeAgents } from "../../lib/agent-grants.js";
+import { auth } from "../../lib/auth.js";
+import { refuseApiKeys } from "../../lib/auth-context.js";
+import { captureResetLink } from "../../lib/password-reset-email.js";
 
 const BASE_URL = process.env.BASE_URL || "http://localhost:3000";
 
@@ -108,6 +111,9 @@ export default async function adminUserRoutes(app: FastifyInstance) {
             take: 1,
             select: { createdAt: true },
           },
+          // No password and no linked Google/GitHub: the invitation was never
+          // taken up (#799). Sessions can't tell, they are deleted on ban.
+          _count: { select: { accounts: true } },
           // The companies a sponsor contact acts for (#500), so the screen can
           // tell them apart from the team. Trashed sponsors are left out.
           sponsorContacts: {
@@ -127,6 +133,8 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       emailVerified: u.emailVerified,
       createdAt: u.createdAt,
       lastLogin: u.sessions[0]?.createdAt || null,
+      // A sponsor's invitation lives on the sponsor's contact, not here.
+      isPending: u.role !== "SPONSOR" && u._count.accounts === 0,
       sponsors: u.sponsorContacts.map((c) => ({ id: c.sponsor.id, name: c.sponsor.name, accessRole: c.accessRole })),
     }));
     return q.page ? { page, limit, total, items: rows } : rows;
@@ -185,6 +193,33 @@ export default async function adminUserRoutes(app: FastifyInstance) {
       name: user.name,
       role: user.role,
     });
+  });
+
+  // POST /api/admin/users/:id/invitation-link — the link an invited team
+  // member uses to choose a password, returned instead of mailed, for the admin
+  // to send by hand when the invitation never arrived (#799). "Mot de passe
+  // oublié" mails too, so without this they could only come in through OAuth.
+  //
+  // Only for an account nobody has taken up yet: on a live one it would let an
+  // admin set someone else's password and walk in as them. Never for an API
+  // key (agents are already refused on this area).
+  app.post<{ Params: { id: string } }>("/users/:id/invitation-link", { preHandler: [refuseApiKeys] }, async (request, reply) => {
+    const user = await prisma.user.findFirst({
+      where: { id: request.params.id, ...notDeleted },
+      select: { id: true, email: true, role: true, banned: true, _count: { select: { accounts: true } } },
+    });
+    if (!user) return reply.code(404).send({ error: "User not found" });
+    // A sponsor contact's invitation lives on the sponsor's contact.
+    if (user.role === "SPONSOR" || user.banned || user._count.accounts > 0) {
+      return reply.code(409).send({ error: "not_pending", message: "Ce compte n'est pas en attente d'activation." });
+    }
+
+    const url = await captureResetLink(user.id, () => auth.api.requestPasswordReset({ body: { email: user.email } }));
+    if (!url) {
+      request.log.error({ userId: user.id }, "Password reset link was not produced");
+      return reply.code(500).send({ error: "link_failed", message: "Le lien n'a pas pu être créé. Réessayez." });
+    }
+    return { url };
   });
 
   // PUT /api/admin/users/:id — update user role or name

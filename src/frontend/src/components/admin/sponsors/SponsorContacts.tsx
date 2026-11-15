@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { adminFetch, humanError } from "@/lib/admin-api";
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import StatusBadge from "@/components/admin/StatusBadge";
+import InvitationLinkNotice, { copyToClipboard, type CopiedInvitation } from "@/components/admin/InvitationLinkNotice";
 import { SPONSOR_ROLE_OPTIONS } from "@/lib/sponsor-roles";
 import type { SponsorAccessRole } from "@/lib/sponsor-api";
 
@@ -34,6 +35,7 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [removeTarget, setRemoveTarget] = useState<Contact | null>(null);
+  const [invitation, setInvitation] = useState<(CopiedInvitation & { email: string }) | null>(null);
 
   async function load() {
     const { data } = await adminFetch<Contact[]>(`/sponsors/${sponsorId}/contacts`);
@@ -89,6 +91,27 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
       return;
     }
     setMsg({ ok: false, text: inviteError(status, error) });
+  }
+
+  // The invitation email never arrived (#799): a fresh link, copied for the
+  // admin to send by hand, and no email. Only the token's hash is stored, so
+  // the link already sent cannot be shown again — this one replaces it.
+  async function copyInvitationLink(contact: Contact) {
+    setBusy(true);
+    setMsg(null);
+    setInvitation(null);
+    const result = await adminFetch<{ url: string }>(
+      `/sponsors/${sponsorId}/contacts/${contact.id}/invitation-link`,
+      { method: "POST" },
+    );
+    setBusy(false);
+    if (result.status !== 200 || !result.data) {
+      setMsg({ ok: false, text: inviteError(result.status, result.error) });
+      return;
+    }
+    const isCopied = await copyToClipboard(result.data.url);
+    setInvitation({ url: result.data.url, isCopied, email: contact.email });
+    void load();
   }
 
   async function changeAccessRole(contact: Contact, next: SponsorAccessRole) {
@@ -183,6 +206,11 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
                   <span className="sr-only"> {c.email}</span>
                 </button>
               )}
+              {!c.hasAccount && (
+                <button type="button" onClick={() => copyInvitationLink(c)} disabled={busy} className={`${rowActionClass} text-bleu focus:ring-bleu/50`}>
+                  Copier le lien<span className="sr-only"> d&apos;invitation de {c.email}</span>
+                </button>
+              )}
               <button type="button" onClick={() => setRemoveTarget(c)} disabled={busy} className={`${rowActionClass} text-terre-cuite focus:ring-terre-cuite/50`}>
                 Retirer<span className="sr-only"> le contact {c.email}</span>
               </button>
@@ -215,6 +243,16 @@ export default function SponsorContacts({ sponsorId }: { sponsorId: number }) {
           équipe depuis son espace.
         </p>
       </div>
+
+      {invitation && (
+        <InvitationLinkNotice
+          invitation={invitation}
+          recipient={invitation.email}
+          validity="7 jours"
+          note="Le lien envoyé avant ne fonctionne plus."
+          onDismiss={() => setInvitation(null)}
+        />
+      )}
 
       {msg && (
         <p

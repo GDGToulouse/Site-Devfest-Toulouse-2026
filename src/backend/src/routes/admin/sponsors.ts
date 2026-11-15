@@ -16,7 +16,8 @@ import { revalidateSponsor, revalidateSponsors } from "../../lib/revalidate.js";
 import { slugify } from "../../lib/slug.js";
 import { generateInvitationToken, hashLinkToken, isInvitationExpired } from "../../lib/edit-token.js";
 import { invalidInvitationBody, invitationEmailSchema, resolveInitialAccessRole } from "../../lib/sponsor-invitation.js";
-import { sendSponsorInvitationEmail, normalizeLocale } from "../../lib/edit-link-email.js";
+import { sendSponsorInvitationEmail, normalizeLocale, sponsorInvitationUrl } from "../../lib/edit-link-email.js";
+import { refuseAgents, refuseApiKeys } from "../../lib/auth-context.js";
 import { sanitizeRichHtml, unsafeUrlRefusal } from "../../lib/sanitize.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 
@@ -852,6 +853,48 @@ export default async function adminSponsorRoutes(app: FastifyInstance) {
         },
       });
       return serializeContact(updated);
+    },
+  );
+
+  // POST /api/admin/sponsors/:id/contacts/:contactId/invitation-link — a fresh
+  // invitation, returned instead of mailed, for the admin to send by hand when
+  // the email never arrived (#799). Only a hash is stored (#672), so the link
+  // already sent cannot be shown again: this rotates the token, and the old
+  // link stops working. Same promotion rule as /invite.
+  //
+  // A link that opens an account is asked for by a person in a browser, never
+  // by an agent or a script.
+  app.post<{ Params: SponsorIdParams & { contactId: string } }>(
+    "/sponsors/:id/contacts/:contactId/invitation-link",
+    {
+      preHandler: [refuseAgents, refuseApiKeys],
+      schema: { params: { type: "object", required: ["id", "contactId"], properties: { id: { type: "string" }, contactId: { type: "string" } } } },
+    },
+    async (request, reply) => {
+      const contact = await prisma.sponsorContact.findUnique({
+        where: { id: Number(request.params.contactId) },
+        include: { sponsor: true },
+      });
+      if (!contact || contact.sponsorId !== Number(request.params.id)) {
+        return notFound(reply, "Contact");
+      }
+      if (contact.sponsor.deletedAt) return notFound(reply, "Sponsor");
+      if (contact.userId) {
+        return reply.code(409).send({ error: "already_has_account" });
+      }
+
+      const token = generateInvitationToken();
+      const promoted = await resolveInitialAccessRole(contact.sponsorId, contact.id);
+      const updated = await prisma.sponsorContact.update({
+        where: { id: contact.id },
+        data: {
+          invitationToken: hashLinkToken(token),
+          invitationSentAt: new Date(),
+          invitationAcceptedAt: null,
+          ...(promoted ? { accessRole: promoted } : {}),
+        },
+      });
+      return { url: sponsorInvitationUrl(token), contact: serializeContact(updated) };
     },
   );
 

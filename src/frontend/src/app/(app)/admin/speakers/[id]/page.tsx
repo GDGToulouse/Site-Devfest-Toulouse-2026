@@ -101,11 +101,11 @@ export default function SpeakerEditorPage() {
       // handles those, so this payload carries identity fields only.
       editionId,
       name: form.name.trim(),
-      photoUrl: form.photoUrl || undefined,
-      company: form.company || undefined,
-      city: form.city || undefined,
-      bioFr: form.bioFr || undefined,
-      bioEn: form.bioEn || undefined,
+      photoUrl: form.photoUrl,
+      company: form.company,
+      city: form.city,
+      bioFr: form.bioFr,
+      bioEn: form.bioEn,
       socialLinks,
       locale: form.locale,
     };

@@ -95,13 +95,21 @@ En cas d'écart, on retente **une fois** avec `temperature=0`. Si toujours KO �
 
 ## RGPD & confidentialité
 
-⚠️ **Free tier Gemini** : les données envoyées peuvent être utilisées pour l'entraînement des modèles Google. Ne pas utiliser pour :
+⚠️ **Free tier Gemini** : les données envoyées peuvent être utilisées pour l'entraînement des modèles Google. On l'accepte parce que **tout ce qui part vers Gemini est destiné à être publié** sur le site. Ce qui part aujourd'hui (#668) :
 
-- contenu confidentiel (brouillons internes non destinés au public)
-- données personnelles
-- secrets, références internes, textes pré-publication sensibles
+| Usage | Ce qui est envoyé | Pourquoi c'est acceptable |
+|---|---|---|
+| Traduction d'un article (`POST /api/admin/articles/:id/translate-fields`) | Titre, chapô et corps, **brouillon compris** | Un brouillon d'article est un texte en cours de rédaction pour publication, pas une note interne. Il part avant sa sortie : un article sous embargo ne se traduit pas par l'IA |
+| Texte alternatif d'une image (`lib/alt-text.ts`, bouton « Générer » de la médiathèque) | L'image réduite à 768 px, **photos de speakers et de l'événement comprises** | Les images de la médiathèque sont faites pour être affichées sur le site public ; leurs visages y sont déjà publiés |
+| `POST /api/admin/translate` | Le texte fourni par l'appelant | Aucun écran ne l'appelle ; un appel par l'API ou le MCP engage son auteur sur la même règle |
 
-Pour notre usage (articles de blog, descriptions sponsors, contenu CMS public), c'est acceptable : tout ce qui passe par cet endpoint est destiné à être publié sur le site.
+Ne **jamais** envoyer à Gemini, même par un nouvel usage :
+
+- messages du formulaire de contact et messages libres des avis ;
+- données de comptes (adresses, noms des contacts sponsors, rôles), jetons, secrets ;
+- notes internes de l'équipe, et tout texte qui n'a pas vocation à devenir public.
+
+Un nouvel appel à Gemini se range dans ce tableau avant d'être livré.
 
 **Migration vers Tier 1 payant** si besoin un jour : 0,10 $/M tokens input sur Flash-Lite (= coût négligeable pour notre volume), garantit la non-utilisation des données pour training. Aucun changement de code requis : juste activer un compte de facturation sur la même clé API.
 

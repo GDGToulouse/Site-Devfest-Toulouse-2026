@@ -15,7 +15,9 @@ interface CfpBody {
   notificationEmail?: string;
 }
 
-const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_", "about_"];
+// `alert_` carries alert_webhook_url (#118): without it the admin field saved
+// nothing, silently (#769).
+const GENERAL_PREFIXES = ["contact_", "social_", "seo_", "identity_", "ecosystem_", "about_", "alert_"];
 
 export default async function adminSettingsRoutes(app: FastifyInstance) {
   // GET /api/admin/settings/general

@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { prisma } from "../../lib/prisma.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
 import { notDeleted, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
+import { deliverContactMessage } from "../../lib/contact-delivery.js";
 
 interface ContactCategoryBody {
   nameFr: string;
@@ -134,16 +135,35 @@ export default async function adminContactRoutes(app: FastifyInstance) {
 
   // GET /api/admin/contact/messages — list messages with pagination
   app.get<{
-    Querystring: { page?: string; limit?: string; unreadOnly?: string };
-  }>("/contact/messages", async (request) => {
+    Querystring: { page?: string; limit?: string; unreadOnly?: string; filter?: "quarantine" };
+  }>("/contact/messages", {
+    schema: {
+      querystring: {
+        type: "object",
+        properties: {
+          page: { type: "string" },
+          limit: { type: "string" },
+          unreadOnly: { type: "string" },
+          filter: { type: "string", enum: ["quarantine"] },
+        },
+      },
+    },
+  }, async (request) => {
     const page = Math.max(Number(request.query.page) || 1, 1);
     const limit = Math.min(Number(request.query.limit) || 20, 100);
     const unreadOnly = request.query.unreadOnly === "true";
+    // Quarantined messages (#767) have their own list: the inbox, and every
+    // count built on it (the dashboard card), only shows what was delivered.
+    const isQuarantine = request.query.filter === "quarantine";
 
     // Shared by the list and the count below, so both stay consistent (#147).
-    const where = unreadOnly ? { isRead: false, ...notDeleted } : { ...notDeleted };
+    const where = {
+      ...notDeleted,
+      quarantinedAt: isQuarantine ? { not: null } : null,
+      ...(unreadOnly ? { isRead: false } : {}),
+    };
 
-    const [messages, total] = await Promise.all([
+    const [messages, total, quarantineCount] = await Promise.all([
       prisma.contactMessage.findMany({
         where,
         orderBy: { createdAt: "desc" },
@@ -152,6 +172,7 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         include: { category: { select: { nameFr: true, slug: true } } },
       }),
       prisma.contactMessage.count({ where }),
+      prisma.contactMessage.count({ where: { ...notDeleted, quarantinedAt: { not: null } } }),
     ]);
 
     return {
@@ -174,8 +195,13 @@ export default async function adminContactRoutes(app: FastifyInstance) {
         webhookStatus: m.webhookStatus,
         webhookAttemptedAt: m.webhookAttemptedAt,
         webhookError: m.webhookError,
+        quarantinedAt: m.quarantinedAt,
+        releasedAt: m.releasedAt,
+        spamScore: m.spamScore,
+        spamReasons: m.spamReasons,
       })),
       total,
+      quarantineCount,
       page,
       totalPages: Math.ceil(total / limit),
     };
@@ -232,6 +258,9 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     // findFirst: findUnique cannot carry the deletedAt filter (#147).
     const msg = await prisma.contactMessage.findFirst({ where: { id, ...notDeleted } });
     if (!msg) return reply.status(404).send({ error: "Message not found" });
+    // Forwarding would push a suspicious message out before anyone judged it
+    // (#767): release it first.
+    if (msg.quarantinedAt) return reply.status(409).send({ error: "Message is in quarantine" });
 
     const emails = request.body.emails
       .split(",")
@@ -287,11 +316,39 @@ export default async function adminContactRoutes(app: FastifyInstance) {
     const id = Number(request.params.id);
     if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
 
+    const held = await prisma.contactMessage.findFirst({ where: { id, ...notDeleted }, select: { quarantinedAt: true } });
+    if (held?.quarantinedAt) return reply.status(409).send({ error: "Message is in quarantine" });
+
     const { buildPayloadFromStored, sendContactWebhook } = await import("../../lib/contact-webhook.js");
     const payload = await buildPayloadFromStored(id);
     if (!payload) return reply.status(404).send({ error: "Message not found" });
 
     const result = await sendContactWebhook(payload);
     return result;
+  });
+
+  // POST /api/admin/contact/messages/:id/release — let a quarantined message
+  // out (#767): the mail to the team, the confirmation and the webhook leave
+  // exactly as they would have on submission. ADMIN only, like the delete that
+  // "Confirmer spam" stands for.
+  app.post<{ Params: { id: string } }>("/contact/messages/:id/release", { preHandler: [requireAdminRole] }, async (request, reply) => {
+    const id = Number(request.params.id);
+    if (isNaN(id)) return reply.status(400).send({ error: "Invalid ID" });
+
+    // Conditional update: of two clicks, or two organizers, only one finds
+    // the message still held, so everything goes out once.
+    const { count } = await prisma.contactMessage.updateMany({
+      where: { id, ...notDeleted, quarantinedAt: { not: null } },
+      data: { quarantinedAt: null, releasedAt: new Date() },
+    });
+    if (count === 0) {
+      const exists = await prisma.contactMessage.findFirst({ where: { id, ...notDeleted }, select: { id: true } });
+      return exists
+        ? reply.status(409).send({ error: "Message is not in quarantine" })
+        : reply.status(404).send({ error: "Message not found" });
+    }
+
+    await deliverContactMessage(id, request.log);
+    return { success: true };
   });
 }

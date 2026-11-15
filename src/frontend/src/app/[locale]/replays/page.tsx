@@ -45,7 +45,8 @@ export default async function ReplaysPage({
     q: first(sp.q),
     // Not a year: no filter, rather than a backend 400 shown as a 500 (#703).
     year: parseEditionYear(first(sp.year)) === null ? "" : first(sp.year),
-    format: first(sp.format),
+    // Same for a format the backend does not know (#752).
+    format: TALK_FORMATS.includes(first(sp.format) as TalkFormat) ? first(sp.format) : "",
     category: first(sp.category),
   };
 

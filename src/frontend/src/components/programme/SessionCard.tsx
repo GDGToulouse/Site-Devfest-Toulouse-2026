@@ -5,6 +5,7 @@ import { localizedField } from "@/lib/i18n-helpers";
 import { formatEventDuration, formatEventTime } from "@/lib/datetime";
 import FavouriteButton from "@/components/FavouriteButton";
 import SpeakerAvatars from "@/components/speakers/SpeakerAvatars";
+import FormatBadge from "@/components/conferences/FormatBadge";
 
 interface SessionCardProps {
   talk: ScheduleTalk;
@@ -67,6 +68,12 @@ export default function SessionCard({
   const isGrid = variant === "grid";
   const duration = formatEventDuration(talk.startsAt, talk.endsAt ?? null);
   const hasFaces = isGrid && talk.speakers.length > 0;
+  // The keynote stands out in the grid and the agenda alike, alone in its slot
+  // or not (#808), in the brand's terre cuite on cream: the bright yellow first
+  // used is the Gold sponsors' colour, and read as loud. The grey text takes
+  // its cream shade to keep AA on that background.
+  const isKeynote = talk.format === "KEYNOTE";
+  const secondaryText = isKeynote ? "text-gris-sur-creme" : "text-gris";
 
   return (
     // The card is no longer a link (#463): the speaker bubbles inside it are
@@ -77,9 +84,13 @@ export default function SessionCard({
     // correctly-labelled <a> and every pixel of the card still opens the talk.
     <div
       className={`relative flex h-full flex-col rounded-2xl p-3 transition-shadow hover:shadow-lg ${
-        isSimulcast
-          ? "border border-dashed border-gris/40 bg-blanc-casse"
-          : "bg-blanc shadow-card"
+        isKeynote
+          ? isSimulcast
+            ? "border-2 border-dashed border-terre-cuite bg-blanc-casse"
+            : "border-2 border-terre-cuite bg-blanc-casse shadow-card"
+          : isSimulcast
+            ? "border border-dashed border-gris/40 bg-blanc-casse"
+            : "bg-blanc shadow-card"
       }`}
     >
       {/* The right padding keeps the badges clear of the star.
@@ -97,11 +108,9 @@ export default function SessionCard({
             opacity — colour spent everywhere signals nothing. The category
             keeps its badge because it is the only one carrying meaning; the
             format moved to the last line, in words. */}
-        {!isGrid && (
-          <span className="whitespace-nowrap rounded-full bg-bleu/10 px-2 py-0.5 text-xs font-bold text-bleu">
-            {formatLabels[talk.format]}
-          </span>
-        )}
+        {/* The keynote keeps its badge in the grid too (#808): one strong
+            pill on two or three cards of the day is the signal #457 left room for. */}
+        {(!isGrid || isKeynote) && <FormatBadge format={talk.format} label={formatLabels[talk.format]} size="sm" />}
         {categoryName && (
           <span
             className={`max-w-full rounded-full px-2 py-0.5 text-xs font-bold ${
@@ -118,7 +127,7 @@ export default function SessionCard({
           Its link carries no focus style of its own: globals.css draws the
           site-wide `:focus-visible` outline, and opting out to ring the
           pseudo-element only stacked a second indicator on the first (#350). */}
-      <p className="mt-2 text-sm font-bold leading-snug text-noir">
+      <p className={`mt-2 font-bold leading-snug text-noir ${isKeynote ? "text-base" : "text-sm"}`}>
         <Link
           href={`/conferences/${talk.slug}`}
           className="after:absolute after:inset-0 after:rounded-2xl"
@@ -128,7 +137,7 @@ export default function SessionCard({
       </p>
 
       {!isGrid && talk.speakers.length > 0 && (
-        <p className="mt-1 text-xs text-gris">{talk.speakers.map((s) => s.name).join(", ")}</p>
+        <p className={`mt-1 text-xs ${secondaryText}`}>{talk.speakers.map((s) => s.name).join(", ")}</p>
       )}
 
       {isSimulcast && simulcastLabel && (
@@ -148,9 +157,10 @@ export default function SessionCard({
           `justify-between` spends the leftover width between the two, so the
           eye sees ~43 px either way. */}
       <div className="mt-auto flex flex-wrap items-center justify-between gap-x-1 gap-y-1 pt-2">
-        <p className="text-xs tabular-nums text-gris">
+        <p className={`text-xs tabular-nums ${secondaryText}`}>
           {isGrid ? (
-            [formatLabels[talk.format], duration, roomName].filter(Boolean).join(" · ")
+            // The keynote's badge already names the format.
+            [isKeynote ? null : formatLabels[talk.format], duration, roomName].filter(Boolean).join(" · ")
           ) : (
             <>
               {formatEventTime(talk.startsAt)}

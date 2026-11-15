@@ -134,7 +134,7 @@ services:
   # old name: Coolify binds dev-j's mail domain to it, and SMTP_HOST points at
   # it. Pinned by digest, bumped by Dependabot.
   mailhog:
-    image: axllent/mailpit:v1.32.0@sha256:0790692be935ea4420d085694f7985b1f692ca6a8771ab0e0bd8ba75ac180498
+    image: axllent/mailpit:v1.33.0@sha256:9b3a463be15354c0f0eba91697d80e3e0d8a5623ef0e627cacc836bc17fd5231
     container_name: devfest-${ENV_NAME:-local}-mailhog
     # Its UI and API are public behind Traefik and hold every e-mail the
     # environment sends, sign-in links included: HTTP auth is mandatory here

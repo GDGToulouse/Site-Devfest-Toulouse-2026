@@ -190,6 +190,9 @@ function ContactsTab({
   const [form, setForm] = useState({
     contact_default_email: settings.contact_default_email || "",
     contact_webhook_url: settings.contact_webhook_url || "",
+    contact_spam_threshold: settings.contact_spam_threshold || "",
+    contact_spam_allowed_domains: settings.contact_spam_allowed_domains || "",
+    contact_quarantine_webhook_url: settings.contact_quarantine_webhook_url || "",
     alert_webhook_url: settings.alert_webhook_url || "",
     social_linkedin: settings.social_linkedin || "",
     social_youtube: settings.social_youtube || "",
@@ -274,6 +277,62 @@ function ContactsTab({
               {webhookTestResult}
             </p>
           )}
+        </div>
+
+        {/* #767 — what holds a suspicious message back, and who hears about it. */}
+        <h2 className="text-lg font-bold text-noir mb-4">Messages suspects</h2>
+        <div className="mb-6">
+          <label htmlFor="contact-spam-threshold" className="block text-sm font-medium text-noir mb-1">
+            Seuil de mise en quarantaine
+          </label>
+          <input
+            id="contact-spam-threshold"
+            type="number"
+            min={1}
+            value={form.contact_spam_threshold}
+            onChange={(e) => handleChange("contact_spam_threshold", e.target.value)}
+            placeholder="3"
+            className="w-24 rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            Un message atteint ce score, il est mis de côté au lieu d&apos;être envoyé. Un lien vers un site extérieur
+            vaut 2, une extension douteuse (.online, .top…) 2, une adresse jetable 2, la reprise de notre description 1 ;
+            un lien dans le nom suffit à lui seul. Vide : 3.
+          </p>
+        </div>
+        <div className="mb-6">
+          <label htmlFor="contact-spam-allowed-domains" className="block text-sm font-medium text-noir mb-1">
+            Domaines autorisés dans les messages
+          </label>
+          <input
+            id="contact-spam-allowed-domains"
+            type="text"
+            value={form.contact_spam_allowed_domains}
+            onChange={(e) => handleChange("contact_spam_allowed_domains", e.target.value)}
+            placeholder="gdgtoulouse.fr, sessionize.com"
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            Séparés par des virgules, sous-domaines compris. Un lien vers ces domaines ne compte pas. devfesttoulouse.fr
+            est toujours autorisé.
+          </p>
+        </div>
+        <div className="mb-6">
+          <label htmlFor="contact-quarantine-webhook-url" className="block text-sm font-medium text-noir mb-1">
+            URL webhook des messages suspects
+          </label>
+          <input
+            id="contact-quarantine-webhook-url"
+            type="url"
+            value={form.contact_quarantine_webhook_url}
+            onChange={(e) => handleChange("contact_quarantine_webhook_url", e.target.value)}
+            placeholder="https://hooks.slack.com/services/..."
+            className="w-full max-w-md rounded-lg border border-gris/30 px-3 py-2 text-sm text-noir bg-blanc focus:outline-none focus:ring-2 focus:ring-malachite/50"
+          />
+          <p className="mt-1 text-xs text-gris">
+            Reçoit « Message suspect à vérifier » et le lien vers la quarantaine, sans rien du message. Un webhook entrant
+            Slack convient tel quel. Vide : la quarantaine ne se voit que dans l&apos;admin.
+          </p>
         </div>
 
         <h2 className="text-lg font-bold text-noir mb-4">Monitoring</h2>

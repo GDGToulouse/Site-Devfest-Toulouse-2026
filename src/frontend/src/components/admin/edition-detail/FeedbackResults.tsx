@@ -6,8 +6,8 @@ import SaveFeedback, { type SaveState } from "@/components/admin/SaveFeedback";
 import fr from "../../../../messages/fr.json";
 
 // The audience feedback of every session of an edition (#565): vote counts,
-// the full spread of appreciations — negatives included, unlike the public
-// trend — and the private messages, which the team can hide when out of place.
+// the full spread of appreciations — public too since #803 — and the private
+// messages, which the team can hide when out of place.
 
 const ITEM_LABELS: Record<string, string> = fr.feedback.items;
 

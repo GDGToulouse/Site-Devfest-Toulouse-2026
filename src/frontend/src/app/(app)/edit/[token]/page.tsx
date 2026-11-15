@@ -101,7 +101,7 @@ const T = {
     feedback: {
       heading: "Retours du public",
       intro:
-        "Ce que le public a coché sur vos sessions, points à améliorer compris, et les messages qu'il vous a laissés. Ce détail n'est pas publié : la page de la conférence n'affiche qu'une tendance.",
+        "Ce que le public a coché sur vos sessions, points à améliorer compris, et les messages qu'il vous a laissés. Les cases cochées s'affichent aussi sur la page de la conférence ; les messages, jamais.",
       votes: (n: number) => `${n} avis`,
       messages: "Messages",
       noMessage: "Aucun message pour l'instant.",
@@ -167,7 +167,7 @@ const T = {
     feedback: {
       heading: "Audience feedback",
       intro:
-        "What the audience ticked about your sessions, areas to improve included, and the messages they left you. This detail is not published: the talk page only shows a trend.",
+        "What the audience ticked about your sessions, areas to improve included, and the messages they left you. The ticked boxes also show on the talk page; the messages never do.",
       votes: (n: number) => `${n} vote${n > 1 ? "s" : ""}`,
       messages: "Messages",
       noMessage: "No message yet.",

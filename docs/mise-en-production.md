@@ -212,13 +212,24 @@ supprime des données est **irrécupérable**.
 
 Sans migration, le dump reste conseillé : il prend moins d'une minute.
 
-Le VPS n'a **pas de copie du dépôt** : on lance `pg_dump` directement dans le
-conteneur de la base. Bloc à coller tel quel dans le shell du VPS, en ajustant
-les deux premières lignes :
+Sur le VPS, une fois `devfest-backup` installé (§ « Sauvegardes » ci-dessous) :
+
+```bash
+sudo devfest-backup prod avant-vX.Y.Z    # la version qu'on s'apprête à déployer
+```
+
+Il trouve le conteneur de la base, vérifie que le dump est complet, le chiffre,
+le copie sur le Drive et affiche la commande de restauration. Il **s'arrête en
+erreur** sur un dump incomplet : ne pas déployer. Un code de sortie `2` veut dire
+dump local bon, copie hors VPS ratée : on peut déployer, et regarder rclone
+ensuite.
+
+Pour une restauration, il faut le conteneur `db` **actuel**, dont le nom change
+au redéploiement. Bloc à coller dans le shell du VPS, en ajustant la première
+ligne :
 
 ```bash
 ENV_URL=https://devfesttoulouse.fr   # beta : https://beta.site.devfesttoulouse.fr
-VERSION=vX.Y.Z                       # la version qu'on s'apprête à déployer
 
 # Le conteneur se trouve par le BASE_URL de son backend, jamais par le hash
 # Coolify, qui change à chaque redéploiement. Le db du même déploiement porte
@@ -232,30 +243,65 @@ echo "Base    : $(sudo docker ps --format '{{.Names}}' | grep -x "$DB" || echo A
 ```
 
 **S'arrêter** si une ligne affiche `AUCUN`, ou si `Backend` liste plusieurs
-conteneurs. Sinon :
+conteneurs.
 
-```bash
-DUMP=~/backups/prod-$(date +%Y%m%d-%H%M%S)-avant-$VERSION.sql
-mkdir -p ~/backups
-sudo docker exec "$DB" pg_dump -U devfest -d devfest --no-owner --no-privileges > "$DUMP"
+### Sauvegardes (#678)
 
-grep -c "PostgreSQL database dump complete" "$DUMP"   # doit afficher 1
-ls -lh "$DUMP"
-```
+`scripts/backup-prod-db.sh`, installé sur le VPS sous `/usr/local/sbin/devfest-backup` :
 
-Le `grep` est la seule vérification qui compte : un dump tronqué pèse lourd et
-ne vaut rien. S'il n'affiche pas `1`, **ne pas déployer**. Le fichier appartient
-au compte connecté, dans `~/backups/` : la redirection est faite par votre
-shell, pas par `sudo`.
+- **chiffre** chaque dump avec [age](https://github.com/FiloSottile/age) pour une
+  clé publique : le VPS ne garde **aucun dump en clair**, et le clair intermédiaire
+  est effacé même sur une erreur ;
+- n'écrit que des fichiers lisibles par root (`umask 077`), dans `/root/backups/` ;
+- garde les `BACKUP_KEEP` derniers dumps de chaque environnement (14 par défaut) ;
+- copie chaque dump sur le Google Drive du GDG par rclone, et y supprime ceux de
+  plus de `BACKUP_REMOTE_KEEP_DAYS` jours (90 par défaut).
 
-Le nom du conteneur `db` change au redéploiement : pour une restauration,
-relancer le premier bloc après le déploiement pour retrouver le nouveau.
+La clé privée age est elle-même chiffrée par une **phrase de passe**, à ranger
+dans le gestionnaire de mots de passe de l'équipe : sans elle, aucune sauvegarde
+ne se relit. Sa version chiffrée peut rester sur le VPS, pour restaurer sans rien
+y copier.
 
-Garder au moins le dernier dump avant chaque déploiement à migration. En cas de
-problème, il sert au rollback (voir section dédiée).
+**Installation, une fois** (le VPS n'a pas de copie du dépôt) :
 
-`scripts/backup-prod-db.sh` fait la même chose une fois copié sur le VPS, mais
-écrit dans `/root/backups/`.
+1. Copier le script depuis un poste qui a le dépôt :
+   `scp scripts/backup-prod-db.sh <vps>:/tmp/`, puis sur le VPS
+   `sudo install -m 700 /tmp/backup-prod-db.sh /usr/local/sbin/devfest-backup`.
+2. `sudo apt install age rclone`.
+3. Créer la clé, chiffrée par une phrase de passe (age la demande deux fois), et
+   en extraire la clé publique :
+
+   ```bash
+   sudo mkdir -p -m 700 /root/.config/devfest-backup
+   age-keygen | sudo sh -c 'age -p -o /root/.config/devfest-backup/identity.age'
+   ```
+
+   `age-keygen` affiche la clé publique (`Public key: age1…`) sur la sortie
+   d'erreur : la coller dans `/etc/devfest-backup.recipients`. Garder aussi une
+   copie de `identity.age` hors du VPS (gestionnaire de mots de passe) : si le
+   VPS disparaît, c'est elle qui ouvre les copies du Drive.
+4. Créer le remote rclone vers le Drive du GDG avec `sudo rclone config` (type
+   `drive`, accès `drive.file`, « auto config » : **non**). Le VPS n'a pas de
+   navigateur : rclone donne une commande `rclone authorize "drive" …` à lancer
+   sur un poste qui en a un, connecté au compte Google du GDG, puis à recoller le
+   jeton obtenu.
+5. Écrire `/etc/devfest-backup.conf` :
+
+   ```sh
+   BACKUP_RCLONE_REMOTE=gdg-drive:devfest-backups   # <remote>:<dossier>
+   # BACKUP_KEEP=14
+   # BACKUP_REMOTE_KEEP_DAYS=90
+   ```
+
+6. Essai : `sudo devfest-backup prod essai`, puis vérifier le fichier dans le
+   dossier du Drive et le relire (§ Rollback, cas 2).
+7. Une sauvegarde chaque nuit, dans `sudo crontab -e` :
+
+   ```cron
+   30 2 * * * /usr/local/sbin/devfest-backup prod >> /var/log/devfest-backup.log 2>&1
+   ```
+
+Après une modification du script dans le dépôt, refaire l'étape 1.
 
 ---
 
@@ -561,11 +607,12 @@ Redéployer l'ancien code **ne suffit pas** : la base a déjà changé (une colo
 `DROP` est perdue). Il faut **restaurer le dump** pris à l'étape 4.
 
 ```bash
-PROD_DB=<db-prod>                       # le db actuel : premier bloc de l'étape 4
-DUMP=~/backups/prod-<STAMP>-avant-<VERSION>.sql   # le dump d'avant CE déploiement
+PROD_DB=<db-prod>                       # le db actuel : bloc de l'étape 4
+DUMP=/root/backups/prod-<STAMP>-avant-<VERSION>.sql.age   # le dump d'avant CE déploiement
 
-# Restauration COMPLÈTE (écrase l'état courant)
-cat "$DUMP" | sudo docker exec -i "$PROD_DB" psql -U devfest -d devfest
+# Restauration COMPLÈTE (écrase l'état courant). age demande la phrase de passe.
+sudo sh -c "age -d -i /root/.config/devfest-backup/identity.age '$DUMP' \
+  | docker exec -i '$PROD_DB' psql -U devfest -d devfest"
 
 # Puis redéployer le code de la version précédente (cas 1)
 ```

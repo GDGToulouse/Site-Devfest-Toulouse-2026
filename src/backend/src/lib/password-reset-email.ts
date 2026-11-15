@@ -1,3 +1,5 @@
+import { AsyncLocalStorage } from "node:async_hooks";
+
 import { prisma } from "./prisma.js";
 import { sendEmail, escapeHtml } from "./email.js";
 import { emailButton, emailHeading } from "./email-template.js";
@@ -27,6 +29,12 @@ export async function sendPasswordResetEmail({
         : { path: "admin", where: "du back-office DevFest Toulouse" };
 
   const resetUrl = `${baseUrl}/${target.path}/reset-password?token=${token}`;
+
+  const capture = capturedLink.getStore();
+  if (capture && capture.userId === user.id) {
+    capture.url = resetUrl;
+    return;
+  }
   const where = target.where;
 
   await sendEmail({
@@ -42,4 +50,17 @@ export async function sendPasswordResetEmail({
       <p><em>Si vous n'avez pas demandé cette réinitialisation, ignorez cet email.</em></p>
     `,
   });
+}
+
+// A reset link handed to the caller instead of mailed (#799): the admin sends
+// it by hand to an invited team member whose email never arrived. Asked through
+// better-auth's own reset endpoint, so the token is minted, stored and expires
+// exactly as a mailed one; only the delivery changes. Scoped to one account, so
+// a reset requested meanwhile for anyone else still goes out by email.
+const capturedLink = new AsyncLocalStorage<{ userId: string; url?: string }>();
+
+export async function captureResetLink(userId: string, request: () => Promise<unknown>): Promise<string | undefined> {
+  const capture: { userId: string; url?: string } = { userId };
+  await capturedLink.run(capture, request);
+  return capture.url;
 }

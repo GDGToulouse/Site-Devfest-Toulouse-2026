@@ -90,11 +90,11 @@ export default function ContactCategories() {
     const payload = {
       nameFr: form.nameFr, nameEn: form.nameEn, emailRecipients: form.emailRecipients,
       sortOrder: Number(form.sortOrder), isActive: form.isActive,
-      slug: form.slug || undefined,
-      confirmationSubjectFr: form.confirmationSubjectFr || undefined,
-      confirmationSubjectEn: form.confirmationSubjectEn || undefined,
-      confirmationBodyFr: form.confirmationBodyFr || undefined,
-      confirmationBodyEn: form.confirmationBodyEn || undefined,
+      slug: form.slug,
+      confirmationSubjectFr: form.confirmationSubjectFr,
+      confirmationSubjectEn: form.confirmationSubjectEn,
+      confirmationBodyFr: form.confirmationBodyFr,
+      confirmationBodyEn: form.confirmationBodyEn,
     };
 
     if (editingId) {

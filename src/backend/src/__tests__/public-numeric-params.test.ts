@@ -63,6 +63,22 @@ describe("public routes with a number in the query string (#703)", () => {
     }
   });
 
+  // Not a number, but the same fault (#752): an unknown format reached Prisma
+  // as an enum value it refuses.
+  it("rejects a replay format filter that is not a talk format", async () => {
+    for (const format of ["FOO", "keynote", "KEYNOTE "]) {
+      const res = await app.inject({ method: "GET", url: `/api/replays?format=${encodeURIComponent(format)}` });
+      expect({ format, status: res.statusCode }).toEqual({ format, status: 400 });
+    }
+  });
+
+  it("accepts a known replay format, or none", async () => {
+    for (const format of ["KEYNOTE", ""]) {
+      const res = await app.inject({ method: "GET", url: `/api/replays?format=${format}` });
+      expect({ format, status: res.statusCode }).toEqual({ format, status: 200 });
+    }
+  });
+
   // The article list degrades to its defaults rather than refusing: these are
   // the page's own controls, and the page reads them from its own URL.
   it("falls back to the first page for a page number that is not one", async () => {

@@ -170,6 +170,21 @@ describe("Sponsor sheet — a save that never left says so (#428)", () => {
   });
 });
 
+describe("Sponsor sheet — an emptied field is saved empty (#817)", () => {
+  it("sends the cleared website so the backend erases it", async () => {
+    const user = userEvent.setup();
+    render(<SponsorEditorPage />);
+    await user.clear(await screen.findByLabelText("Site web"));
+    await user.click(screen.getByRole("button", { name: "Enregistrer" }));
+
+    // `undefined` drops the key from the JSON, and the route keeps what it
+    // does not receive: the save said "enregistré" and the old URL came back.
+    await screen.findByText("Modifications enregistrées.");
+    const put = adminFetch.mock.calls.find(([, init]) => init?.method === "PUT");
+    expect(JSON.parse(put?.[1].body)).toMatchObject({ websiteUrl: "" });
+  });
+});
+
 describe("Sponsor sheet — a blocked save explains itself (#393)", () => {
   it("says which field is missing and where it lives", async () => {
     const user = userEvent.setup();

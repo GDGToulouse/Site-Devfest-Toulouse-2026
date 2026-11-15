@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { formatEventDate, formatEventTime } from "@/lib/datetime";
 import { getFeedbackVoterId } from "@/lib/feedback-voter";
 
 // The audience's opinion of a session (#563, #564), on the model of OpenFeedback
@@ -26,15 +27,23 @@ interface FeedbackStatus {
   phase: "upcoming" | "open" | "closed";
   /** The edition's test mode is on (#566): what is cast now will be wiped. */
   isTest: boolean;
+  /** When this session's vote opens: ten minutes before its end (#809). */
+  opensAt: string | null;
   hasVoted: boolean;
   hasMessage: boolean;
-  trend: { code: string; percent: number }[] | null;
+  /** Every appreciation's count, shown to everyone from the first vote (#803). */
+  results: { votes: number; items: { code: string; count: number }[] } | null;
 }
 
 const LINK = "font-bold text-bleu underline";
 
+// A page left open past the opening reloads the form by itself, but not for a
+// session days away: a timer that long would only drift (#809).
+const MAX_OPENING_WAIT_MS = 12 * 60 * 60 * 1000;
+
 export default function TalkFeedback({ slug }: { slug: string }) {
   const t = useTranslations("feedback");
+  const locale = useLocale();
   const [voterId, setVoterId] = useState<string | null>(null);
   const [status, setStatus] = useState<FeedbackStatus | null>(null);
   const [picked, setPicked] = useState<string[]>([]);
@@ -60,10 +69,20 @@ export default function TalkFeedback({ slug }: { slug: string }) {
     load(id);
   }, [load]);
 
-  if (!status || !voterId || status.phase === "upcoming") return null;
-  // Over and nothing to show: under five votes there is no trend, and the
-  // page stays as it was.
-  if (status.phase === "closed" && !status.trend) return null;
+  const opensAt = status?.phase === "upcoming" ? status.opensAt : null;
+  useEffect(() => {
+    if (!opensAt || !voterId) return;
+    const wait = new Date(opensAt).getTime() - Date.now();
+    if (wait <= 0 || wait > MAX_OPENING_WAIT_MS) return;
+    // A second late, so the server agrees the vote is open.
+    const timer = setTimeout(() => load(voterId), wait + 1000);
+    return () => clearTimeout(timer);
+  }, [opensAt, voterId, load]);
+
+  if (!status || !voterId) return null;
+  const votes = status.results?.votes ?? 0;
+  // Over and nobody voted: the page stays as it was.
+  if (status.phase === "closed" && votes === 0) return null;
 
   function toggle(code: string) {
     setPicked((current) => (current.includes(code) ? current.filter((c) => c !== code) : [...current, code]));
@@ -108,6 +127,7 @@ export default function TalkFeedback({ slug }: { slug: string }) {
     setError(code === 403 ? t("closedError") : t("messageError"));
   }
 
+  const isUpcoming = status.phase === "upcoming";
   const canVote = status.phase === "open" && !status.hasVoted;
   const canWrite = status.phase === "open" && status.hasVoted && !status.hasMessage && !isMessageSent;
 
@@ -117,8 +137,32 @@ export default function TalkFeedback({ slug }: { slug: string }) {
         <p className="mb-3 rounded-[12px] bg-jaune-clair px-3 py-2 text-sm font-bold text-noir">{t("testBanner")}</p>
       )}
       <h2 id="talk-feedback-title" className="text-xl font-bold text-noir">
-        {canVote ? t("title") : status.hasVoted ? t("thanks") : t("trendTitle")}
+        {canVote || isUpcoming ? t("title") : status.hasVoted ? t("thanks") : t("trendTitle")}
       </h2>
+
+      {/* Shown greyed out before it opens (#809), so the audience knows it is
+          coming. The buttons are disabled, not merely styled: nothing can be sent. */}
+      {isUpcoming && (
+        <>
+          <p className="mt-1 text-sm text-gris">
+            {status.opensAt
+              ? t("opensAt", { day: formatEventDate(status.opensAt, locale), time: formatEventTime(status.opensAt) })
+              : t("opensDuring")}
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {FEEDBACK_ITEMS.map((code) => (
+              <button
+                key={code}
+                type="button"
+                disabled
+                className="cursor-not-allowed rounded-full border border-gris/20 bg-blanc-casse px-4 py-2 text-sm font-bold text-gris opacity-70"
+              >
+                {t(`items.${code}`)}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {canVote && (
         <>
@@ -185,22 +229,20 @@ export default function TalkFeedback({ slug }: { slug: string }) {
         <p role="alert" className="mt-4 text-sm font-bold text-rouge">{error}</p>
       )}
 
-      {!canVote && (
-        <div className="mt-4">
-          {status.trend ? (
-            <>
-              {status.hasVoted && <h3 className="text-base font-bold text-noir">{t("trendTitle")}</h3>}
-              <ul className="mt-2 space-y-1">
-                {status.trend.map(({ code, percent }) => (
-                  <li key={code} className="text-sm text-noir">
-                    <span className="font-bold">{percent} %</span> — {t(`items.${code}`)}
-                  </li>
-                ))}
-              </ul>
-            </>
-          ) : (
-            <p className="text-sm text-gris">{t("trendPending")}</p>
-          )}
+      {votes > 0 && (
+        <div className="mt-6">
+          {/* The heading already says it once voting is over and this browser did not vote. */}
+          {(canVote || status.hasVoted) && <h3 className="text-base font-bold text-noir">{t("trendTitle")}</h3>}
+          <p className="text-sm text-gris">{t("votes", { count: votes })}</p>
+          <ul className="mt-2 space-y-1">
+            {status.results!.items
+              .filter(({ count }) => count > 0)
+              .map(({ code, count }) => (
+                <li key={code} className="text-sm text-noir">
+                  <span className="font-bold">{count}</span> — {t(`items.${code}`)}
+                </li>
+              ))}
+          </ul>
         </div>
       )}
 

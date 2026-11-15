@@ -1,8 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { feedbackPhase, feedbackWindow, isTestVote, publicTrend } from "./talk-feedback.js";
+import {
+  feedbackPhase,
+  feedbackWindow,
+  isTestVote,
+  publicResults,
+  sessionFeedbackOpensAt,
+  sessionFeedbackPhase,
+} from "./talk-feedback.js";
 
-// #564 — votes open the day of the event and the next, on Paris clocks; the
-// public trend needs five votes and shows positive appreciations only.
+// #564 — votes open the day of the event and the next, on Paris clocks. #803 —
+// the public sees every appreciation's count, from the first vote.
 
 const EDITION = { startDate: new Date("2026-11-19T00:00:00.000Z"), endDate: new Date("2026-11-19T00:00:00.000Z") };
 
@@ -43,28 +50,34 @@ describe("feedbackPhase", () => {
   });
 });
 
-describe("publicTrend", () => {
-  const votes = (n: number, items: string[]) => Array.from({ length: n }, () => ({ items }));
-
-  it("should show nothing under five votes", () => {
-    expect(publicTrend(votes(4, ["learned"]))).toBeNull();
+describe("publicResults (#803)", () => {
+  it("should count a single vote", () => {
+    expect(publicResults([{ items: ["learned"] }])).toMatchObject({
+      votes: 1,
+      items: expect.arrayContaining([{ code: "learned", count: 1 }]),
+    });
   });
 
-  it("should give the three most ticked positive appreciations as a share of the votes", () => {
-    const trend = publicTrend([
-      ...votes(3, ["learned", "interesting", "fun"]),
-      ...votes(2, ["learned", "speaker"]),
-    ]);
-    expect(trend).toEqual([
-      { code: "learned", percent: 100 },
-      { code: "fun", percent: 60 },
-      { code: "interesting", percent: 60 },
-    ]);
+  it("should count every appreciation, negatives included, in the fixed order", () => {
+    const results = publicResults([{ items: ["learned", "tooComplex"] }, { items: ["tooComplex"] }]);
+
+    expect(results).toEqual({
+      votes: 2,
+      items: [
+        { code: "fun", count: 0 },
+        { code: "learned", count: 1 },
+        { code: "interesting", count: 0 },
+        { code: "speaker", count: 0 },
+        { code: "notClear", count: 0 },
+        { code: "tooTechnical", count: 0 },
+        { code: "lackOfDemo", count: 0 },
+        { code: "tooComplex", count: 2 },
+      ],
+    });
   });
 
-  it("should never show a negative appreciation, however ticked", () => {
-    const trend = publicTrend([...votes(5, ["tooComplex", "notClear"]), ...votes(1, ["learned"])]);
-    expect(trend).toEqual([{ code: "learned", percent: 17 }]);
+  it("should give zero votes when nobody has voted", () => {
+    expect(publicResults([]).votes).toBe(0);
   });
 });
 
@@ -85,5 +98,42 @@ describe("test mode (#566)", () => {
 
   it("should not reopen voting once it is over", () => {
     expect(feedbackPhase(TEST, new Date("2026-11-21T10:00:00.000Z"))).toBe("closed");
+  });
+});
+
+describe("sessionFeedbackPhase (#809)", () => {
+  // 10:00-10:45 in Paris on the event day.
+  const SESSION = { startsAt: new Date("2026-11-19T09:00:00.000Z"), endsAt: new Date("2026-11-19T09:45:00.000Z") };
+
+  it("should open ten minutes before the session ends", () => {
+    expect(sessionFeedbackOpensAt(SESSION)).toEqual(new Date("2026-11-19T09:35:00.000Z"));
+  });
+
+  it("should open at its start a session without an end", () => {
+    expect(sessionFeedbackOpensAt({ ...SESSION, endsAt: null })).toEqual(SESSION.startsAt);
+  });
+
+  it("should stay upcoming on the day until then", () => {
+    expect(sessionFeedbackPhase(EDITION, SESSION, new Date("2026-11-19T09:34:00.000Z"))).toBe("upcoming");
+  });
+
+  it("should be open from then", () => {
+    expect(sessionFeedbackPhase(EDITION, SESSION, new Date("2026-11-19T09:35:00.000Z"))).toBe("open");
+  });
+
+  it("should close with the edition's window", () => {
+    expect(sessionFeedbackPhase(EDITION, SESSION, new Date("2026-11-20T23:00:00.000Z"))).toBe("closed");
+  });
+
+  it("should never open a session without any time", () => {
+    expect(sessionFeedbackPhase(EDITION, { startsAt: null, endsAt: null }, new Date("2026-11-19T20:00:00.000Z"))).toBe("upcoming");
+  });
+
+  it("should open every session in the test mode, before the event", () => {
+    expect(sessionFeedbackPhase({ ...EDITION, feedbackTestMode: true }, SESSION, new Date("2026-10-07T10:00:00.000Z"))).toBe("open");
+  });
+
+  it("should apply the ten minutes on the day, even with the test mode left on", () => {
+    expect(sessionFeedbackPhase({ ...EDITION, feedbackTestMode: true }, SESSION, new Date("2026-11-19T09:00:00.000Z"))).toBe("upcoming");
   });
 });
