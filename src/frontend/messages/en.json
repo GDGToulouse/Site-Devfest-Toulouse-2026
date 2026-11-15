@@ -465,6 +465,8 @@
     "shareEmptyChoose": "Pick some favourites",
     "shareEmptyConfirm": "Share without favourites",
     "calendar": "Calendar",
+    "giggity": "Open in Giggity",
+    "giggityTitle": "The whole programme in the Giggity app (Android), offline too",
     "printByTimeAction": "Print by time",
     "printByRoomAction": "Print by room",
     "filterZone": "Filter the schedule",

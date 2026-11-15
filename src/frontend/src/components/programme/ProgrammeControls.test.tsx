@@ -37,6 +37,8 @@ const labels: ControlLabels = {
   shareEmptyChoose: "Choisir des favoris",
   shareEmptyConfirm: "Partager sans favoris",
   calendar: "Calendrier",
+  giggity: "Ouvrir dans Giggity",
+  giggityTitle: "Le programme complet dans l'appli Giggity (Android)",
   exportTitle: "Exporter tout le programme vers mon agenda",
   printByTimeAction: "Imprimer par heure",
   printByRoomAction: "Imprimer par salle",
@@ -57,6 +59,7 @@ function setup(over: Partial<React.ComponentProps<typeof ProgrammeControls>> = {
       languages={["fr"]}
       labels={labels}
       icsHref="/api/editions/2026/schedule.ics"
+      scheduleXmlPath="/api/editions/2026/schedule.xml"
       hasFavourites
       printGrouping="time"
       onChangePrintGrouping={() => {}}
@@ -165,6 +168,18 @@ describe("the export menu", () => {
     );
     expect(screen.getByRole("button", { name: "Imprimer par heure" })).toBeVisible();
     expect(screen.getByRole("button", { name: "Imprimer par salle" })).toBeVisible();
+  });
+
+  it("opens the whole programme in Giggity through its deep link (#827)", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await user.click(screen.getByRole("button", { name: /Exporter/ }));
+
+    expect(screen.getByRole("link", { name: "Ouvrir dans Giggity" })).toHaveAttribute(
+      "href",
+      `https://ggt.gaa.st/#url=${window.location.origin}/api/editions/2026/schedule.xml`,
+    );
   });
 
   it("closes on Escape and hands focus back", async () => {
