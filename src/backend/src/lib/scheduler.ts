@@ -8,6 +8,9 @@ import { disableExpiredTestModes } from "./talk-feedback-test-mode.js";
 import { applyScheduledStatus } from "./edition-status-schedule.js";
 import { purgeExpiredTrash } from "./trash-purge.js";
 import { PERSONAL_DATA_RETENTION_MONTHS, anonymizeExpiredPersonalData } from "./personal-data-retention.js";
+import { editionsWithPendingCheckIns, requestCheckIn } from "./billetweb-checkin.js";
+import { ATTENDEE_RETENTION_MONTHS, purgeExpiredAttendees } from "./attendee-retention.js";
+import { runAttendeeSync } from "./attendee-sync.js";
 
 // 1 AM Paris time — the cron expression is evaluated in that timezone, so it
 // holds across DST instead of drifting between 2 AM and 3 AM local (#214).
@@ -18,12 +21,20 @@ const PERSONAL_DATA_CRON = "30 3 * * *";
 // 4 AM Paris time, after the audit purge: the quietest hour, and the last of the
 // nightly clean-ups.
 const TRASH_PURGE_CRON = "0 4 * * *";
+// 3:45 AM Paris time, after the personal data's anonymisation (RG-ARR-66).
+const ATTENDEE_PURGE_CRON = "45 3 * * *";
 // Midnight Paris time, when the event day starts and real votes open (#566).
 const FEEDBACK_TEST_MODE_CRON = "0 0 * * *";
 // Every quarter of an hour past midnight, Paris time (#585): a redeploy at
 // midnight would otherwise skip the day's switch. Not all day long, so a team
 // that moves the status back by hand on a trigger day is not overruled.
 const STATUS_SCHEDULE_CRON = "0,15,30,45 0 * * *";
+// Every minute: the check-ins Billetweb missed are retried while the entrance
+// keeps scanning (RG-ARR-37, #642). Idle the rest of the year, one query.
+const CHECK_IN_RETRY_CRON = "* * * * *";
+// Every five minutes: the attendees follow Billetweb while the stations are
+// open (#800). Billetweb allows 10 calls a minute on /attendees.
+const ATTENDEE_SYNC_CRON = "*/5 * * * *";
 const TIMEZONE = "Europe/Paris";
 
 /**
@@ -125,6 +136,21 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
   // several replicas: the purge is idempotent, a second run finds nothing.
   cron.schedule(TRASH_PURGE_CRON, () => runTrashPurge(log), { name: "trash-purge", timezone: TIMEZONE, noOverlap: true });
 
+  // Attendees are deleted 18 months after their event (RG-ARR-66). Daily, so
+  // a missed run costs a day; idempotent, an edition is purged once.
+  cron.schedule(
+    ATTENDEE_PURGE_CRON,
+    async () => {
+      try {
+        const purged = await runInContext(systemContext("Purge des participants"), async () => await purgeExpiredAttendees());
+        if (purged.length > 0) log.info({ purged, retentionMonths: ATTENDEE_RETENTION_MONTHS }, "Attendees purged");
+      } catch (err) {
+        log.error({ err }, "Attendee purge failed");
+      }
+    },
+    { name: "attendee-purge", timezone: TIMEZONE, noOverlap: true },
+  );
+
   // A feedback test mode left on is switched off when real voting opens, and
   // the votes of the trial go with it (#566). Every night, not only on the
   // day: a run missed at midnight (a redeploy) is caught by the next. Votes
@@ -160,8 +186,39 @@ export function startScheduledTasks(log: FastifyBaseLogger): void {
     { name: "edition-status-schedule", timezone: TIMEZONE, noOverlap: true },
   );
 
+  cron.schedule(
+    CHECK_IN_RETRY_CRON,
+    async () => {
+      try {
+        for (const editionId of await editionsWithPendingCheckIns()) requestCheckIn(editionId, log);
+      } catch (err) {
+        log.error({ err }, "Billetweb check-in retry failed");
+      }
+    },
+    { name: "billetweb-check-in-retry", timezone: TIMEZONE, noOverlap: true },
+  );
+
+  cron.schedule(ATTENDEE_SYNC_CRON, () => runAttendeeSync(log), {
+    name: "billetweb-attendee-sync",
+    timezone: TIMEZONE,
+    noOverlap: true,
+  });
+
   log.info(
-    { cron: [FEATURED_ROTATION_CRON, AUDIT_PURGE_CRON, PERSONAL_DATA_CRON, TRASH_PURGE_CRON, FEEDBACK_TEST_MODE_CRON, STATUS_SCHEDULE_CRON], timezone: TIMEZONE },
+    {
+      cron: [
+        FEATURED_ROTATION_CRON,
+        AUDIT_PURGE_CRON,
+        PERSONAL_DATA_CRON,
+        ATTENDEE_PURGE_CRON,
+        TRASH_PURGE_CRON,
+        FEEDBACK_TEST_MODE_CRON,
+        STATUS_SCHEDULE_CRON,
+        CHECK_IN_RETRY_CRON,
+        ATTENDEE_SYNC_CRON,
+      ],
+      timezone: TIMEZONE,
+    },
     "Scheduled tasks started",
   );
 }

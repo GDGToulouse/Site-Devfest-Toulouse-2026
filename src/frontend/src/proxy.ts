@@ -21,7 +21,15 @@ export default function proxy(request: NextRequest) {
   // /connect (#514): where an AI agent sends a person to sign in. Its URL is
   // configured in the OAuth provider and must not gain a locale prefix.
   const isAgentConnect = pathname === "/connect" || pathname.startsWith("/connect/");
-  if (pathname.startsWith("/admin") || pathname.startsWith("/edit/") || isSponsorSpace || isAgentConnect) {
+  // /arrivees (#640): the volunteers' event-day zone, French only.
+  const isArrivalsZone = pathname === "/arrivees" || pathname.startsWith("/arrivees/");
+  if (
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/edit/") ||
+    isSponsorSpace ||
+    isAgentConnect ||
+    isArrivalsZone
+  ) {
     return NextResponse.next();
   }
 

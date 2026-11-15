@@ -33,8 +33,10 @@ import talkRoutes from "./routes/talks.js";
 import replayRoutes from "./routes/replays.js";
 import editRoutes from "./routes/edit.js";
 import sponsorInvitationRoutes from "./routes/sponsor-invitation.js";
+import arrivalsRoutes from "./routes/arrivals.js";
 import sponsorSpaceRoutes from "./routes/sponsor-space.js";
 import sponsorSpaceGuestRoutes from "./routes/sponsor-space-guests.js";
+import sponsorSpaceScanRoutes from "./routes/sponsor-space-scans.js";
 import maintenanceRoutes from "./routes/maintenance.js";
 import myApiKeysRoutes from "./routes/me/api-keys.js";
 import myAgentsRoutes from "./routes/me/agents.js";
@@ -309,6 +311,8 @@ export async function buildServer() {
   await app.register(sponsorInvitationRoutes, { prefix: "/api" });
   await app.register(sponsorSpaceRoutes, { prefix: "/api" });
   await app.register(sponsorSpaceGuestRoutes, { prefix: "/api" });
+  await app.register(sponsorSpaceScanRoutes, { prefix: "/api" });
+  await app.register(arrivalsRoutes, { prefix: "/api" });
 
   // Per-user routes (any authenticated back-office user — own resources only)
   await app.register(myApiKeysRoutes, { prefix: "/api/me" });

@@ -160,10 +160,10 @@ export function changeSponsorPassword(currentPassword: string, newPassword: stri
 // The emailed link is built by the backend from the account's role, so a
 // sponsor lands on /sponsor/reset-password whatever redirectTo says (#411).
 // Callers show the same message whether or not the address has an account.
-export function requestSponsorPasswordReset(email: string) {
+export function requestSponsorPasswordReset(email: string, resetPath = "/sponsor/reset-password") {
   return call<unknown>("/api/auth/request-password-reset", {
     method: "POST",
-    body: JSON.stringify({ email, redirectTo: `${window.location.origin}/sponsor/reset-password` }),
+    body: JSON.stringify({ email, redirectTo: `${window.location.origin}${resetPath}` }),
   });
 }
 
@@ -272,13 +272,15 @@ export async function uploadSponsorFile(
 //
 // Through the invitation's token, not better-auth's sign-up: the token proves
 // the mailbox, and the account is created for the invited address, whatever
-// the form says (#658). The answer carries the new session's cookie.
+// the form says (#658). The answer carries the new session's cookie. The
+// volunteers' invitation (#640) works the same, under its own route.
 export async function signUpWithInvitation(
   token: string,
   password: string,
+  invitationApi: "sponsor-invitation" | "arrivals-invitation" = "sponsor-invitation",
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const res = await fetch(`/api/sponsor-invitation/${encodeURIComponent(token)}/sign-up`, {
+    const res = await fetch(`/api/${invitationApi}/${encodeURIComponent(token)}/sign-up`, {
       method: "POST",
       credentials: "include",
       headers: { "Content-Type": "application/json" },
@@ -391,4 +393,45 @@ export async function importSponsorGuests(
   } catch {
     return { status: 0 };
   }
+}
+
+// --- Badge scans at the booth (#813) ---
+
+export interface SponsorScan {
+  id: number;
+  scannedAt: string;
+  scannedBy: string;
+  // The person, when the code is a live ticket of the edition.
+  attendee: { firstName: string; lastName: string; company: string | null } | null;
+  // The code as read, only when it names no live ticket.
+  code: string | null;
+  // What the booth noted of the talk (#815): the last change, with its author.
+  note: { text: string; updatedAt: string; updatedBy: string } | null;
+}
+
+/** As the backend checks it (lib/sponsor-scans.ts). */
+export const SCAN_NOTE_MAX = 500;
+
+// Blank text clears the note.
+export function saveSponsorScanNote(sponsorId: number, scanId: number, note: string) {
+  return call<{ scan: SponsorScan }>(`/api/sponsor-space/${sponsorId}/scans/${scanId}/note`, {
+    method: "PUT",
+    body: JSON.stringify({ note }),
+  });
+}
+
+export function getSponsorScans(sponsorId: number) {
+  return call<{ year: number; scans: SponsorScan[] }>(`/api/sponsor-space/${sponsorId}/scans`);
+}
+
+export function recordSponsorScan(sponsorId: number, code: string) {
+  return call<{ scan: SponsorScan; isDuplicate: boolean }>(`/api/sponsor-space/${sponsorId}/scans`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+}
+
+// A plain link: the session cookie goes with it, and the browser saves the file.
+export function sponsorScansExportUrl(sponsorId: number) {
+  return `/api/sponsor-space/${sponsorId}/scans/export`;
 }

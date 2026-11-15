@@ -1,0 +1,370 @@
+import { createHash } from "node:crypto";
+
+import { prisma } from "./prisma.js";
+import { publishArrivals } from "./arrivals-stream.js";
+import { HELP_ENTRY_SELECT, LIVE_BADGE_SELECT, moveBadge, toHelpEntry, toLiveBadge, type LiveBadge } from "./badge-state.js";
+import type { BadgeState, Prisma } from "../generated/prisma/client.js";
+
+// The entrance (RG-ARR-30 to RG-ARR-35, #642): a ticket read or picked by
+// name becomes an answer to say out loud — a number and a counter, or where
+// else to send the person — and the badge shows up on its counter's screen.
+
+/** What the volunteer reads back to check who stands in front of them. Never the email. */
+export interface ScanAttendee {
+  id: number;
+  firstName: string;
+  lastName: string;
+  company: string | null;
+  tierName: string | null;
+}
+
+export interface FirstScan {
+  at: Date;
+  by: string | null;
+}
+
+export type ScanOutcome =
+  | { result: "unknown" }
+  | { result: "cancelled"; attendee: ScanAttendee }
+  | { result: "dedicated"; attendee: ScanAttendee; alreadyScanned: FirstScan | null }
+  | { result: "help"; attendee: ScanAttendee; alreadyScanned: FirstScan | null }
+  | { result: "badge"; attendee: ScanAttendee; badge: LiveBadge; alreadyScanned: FirstScan | null };
+
+const SCAN_SELECT = {
+  ...LIVE_BADGE_SELECT,
+  isCancelled: true,
+  scannedAt: true,
+  scannedByLabel: true,
+  ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
+} as const;
+
+/**
+ * Scan a ticket, by its code or by the attendee picked in a name search. The
+ * first scan is recorded; a later one only reports it (RG-ARR-34), without
+ * blocking. `isFirstScan` tells the caller to check the ticket in.
+ *
+ * `offlineAt` replays a scan the phone made during an outage (RG-ARR-67,
+ * #645): recorded at that time and marked offline, and only if nothing
+ * recorded the person since; a replay never moves a badge scanned meanwhile.
+ */
+export async function scanTicket(
+  editionId: number,
+  target: { barcode: string } | { attendeeId: number },
+  actor: { id: string | null; label: string },
+  offlineAt?: Date,
+): Promise<{ outcome: ScanOutcome; isFirstScan: boolean }> {
+  // A code shared by a live and a cancelled ticket (an exchange) means the live one.
+  const row = await prisma.attendee.findFirst({
+    where: { editionId, ...("barcode" in target ? { barcode: target.barcode } : { id: target.attendeeId }) },
+    select: SCAN_SELECT,
+    orderBy: [{ isCancelled: "asc" }, { id: "asc" }],
+  });
+  if (!row) return { outcome: { result: "unknown" }, isFirstScan: false };
+
+  const attendee: ScanAttendee = {
+    id: row.id,
+    firstName: row.firstName,
+    lastName: row.lastName,
+    company: row.company,
+    tierName: row.ticketTier?.nameFr ?? null,
+  };
+  if (row.isCancelled) return { outcome: { result: "cancelled", attendee }, isFirstScan: false };
+
+  let alreadyScanned: FirstScan | null = row.scannedAt ? { at: row.scannedAt, by: row.scannedByLabel } : null;
+  let isFirstScan = false;
+  if (!alreadyScanned) {
+    // Two phones reading the same ticket at once: one records it, the other
+    // gets the alert.
+    const claimed = await prisma.attendee.updateMany({
+      where: { id: row.id, scannedAt: null },
+      data: { scannedAt: offlineAt ?? new Date(), scannedByLabel: actor.label, scannedOffline: offlineAt !== undefined },
+    });
+    isFirstScan = claimed.count === 1;
+    if (!isFirstScan) {
+      const first = await prisma.attendee.findUnique({ where: { id: row.id }, select: { scannedAt: true, scannedByLabel: true } });
+      if (first?.scannedAt) alreadyScanned = { at: first.scannedAt, by: first.scannedByLabel };
+    }
+  }
+
+  if (row.ticketTier?.isOutsideFlow) {
+    if (isFirstScan) publishArrivals(editionId, { type: "counts", data: null });
+    return { outcome: { result: "dedicated", attendee, alreadyScanned }, isFirstScan };
+  }
+
+  if (row.badgeNumber === null) {
+    if (isFirstScan) {
+      const entry = await prisma.attendee.findUnique({ where: { id: row.id }, select: HELP_ENTRY_SELECT });
+      if (entry) publishArrivals(editionId, { type: "help", data: toHelpEntry(entry) });
+    }
+    return { outcome: { result: "help", attendee, alreadyScanned }, isFirstScan };
+  }
+
+  // A badge an admin sent back to Imprimé goes back to its counter on the
+  // next scan, alert or not: the person is here.
+  let badge = toLiveBadge(row);
+  if (badge.state === "PRINTED" && (offlineAt === undefined || isFirstScan)) {
+    const moved = await moveBadge(editionId, row.id, "PRINTED", "TO_FETCH", actor, { at: offlineAt });
+    if (moved) badge = moved.badge;
+  }
+  return { outcome: { result: "badge", attendee, badge, alreadyScanned }, isFirstScan };
+}
+
+/**
+ * How long the entrance may undo its own scan (#797): long enough to notice a
+ * wrong name picked in the search, short enough that the person has not yet
+ * reached a counter.
+ */
+export const CANCEL_SCAN_WINDOW_MS = 60_000;
+
+export type CancelScanRefusal = "not_found" | "not_scanned" | "delivered" | "not_yours" | "too_late";
+
+/**
+ * Undo a scan (#797): the person is no longer counted as arrived, their card
+ * leaves the counter (or the help desk's list), and the next run of the
+ * check-in job uncompostes the ticket on Billetweb. A badge already handed
+ * over is refused, whoever asks: it must be fetched back first. Only an admin
+ * may undo another's scan, or one older than the window.
+ */
+export async function cancelScan(
+  editionId: number,
+  attendeeId: number,
+  actor: { id: string | null; label: string },
+  { isAdmin, now = new Date() }: { isAdmin: boolean; now?: Date },
+): Promise<{ ok: true } | { ok: false; reason: CancelScanRefusal }> {
+  const row = await prisma.attendee.findFirst({
+    where: { id: attendeeId, editionId },
+    select: {
+      scannedAt: true,
+      scannedByLabel: true,
+      badgeNumber: true,
+      badgeState: true,
+      labelDeliveredAt: true,
+      ticketTier: { select: { isOutsideFlow: true } },
+    },
+  });
+  if (!row) return { ok: false, reason: "not_found" };
+  if (!row.scannedAt) return { ok: false, reason: "not_scanned" };
+  if (row.badgeState === "DELIVERED" || row.labelDeliveredAt) return { ok: false, reason: "delivered" };
+  if (!isAdmin) {
+    if (row.scannedByLabel !== actor.label) return { ok: false, reason: "not_yours" };
+    if (now.getTime() - row.scannedAt.getTime() > CANCEL_SCAN_WINDOW_MS) return { ok: false, reason: "too_late" };
+  }
+
+  // The scan seen above, and only it: a second cancel, or one racing a fresh
+  // scan of the same ticket, finds nothing to undo.
+  const undone = await prisma.attendee.updateMany({
+    where: { id: attendeeId, editionId, scannedAt: row.scannedAt },
+    data: { scannedAt: null, scannedByLabel: null, scannedOffline: false },
+  });
+  if (undone.count === 0) return { ok: false, reason: "not_scanned" };
+
+  if (row.badgeNumber !== null && row.badgeState !== "PRINTED") {
+    await moveBadge(editionId, attendeeId, row.badgeState, "PRINTED", actor);
+  } else if (row.badgeNumber === null && !row.ticketTier?.isOutsideFlow) {
+    publishArrivals(editionId, { type: "help-withdrawn", data: { id: attendeeId } });
+  }
+  publishArrivals(editionId, { type: "counts", data: null });
+  return { ok: true };
+}
+
+export interface SearchHit extends ScanAttendee {
+  badgeNumber: number | null;
+  /** Meaningful with a number only (RG-ARR-50). */
+  badgeState: BadgeState;
+  isCancelled: boolean;
+  isDedicated: boolean;
+  scannedAt: Date | null;
+  /** Who recorded the arrival: the help desk shows it (#826). */
+  scannedBy: string | null;
+  /** The help desk's labels (#713): how many printed, and whether one was handed over. */
+  labelCount: number;
+  labelDeliveredAt: Date | null;
+}
+
+/** Results one search returns: the volunteer narrows down by typing more. */
+const SEARCH_RESULT_LIMIT = 20;
+
+// "Hélène" must come up for "helene": typed on a phone, in a queue.
+export const fold = (text: string) =>
+  text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+
+/**
+ * Search by badge number, or by first and/or last name (RG-ARR-31): every word typed must start a
+ * word of the name. Filtered here rather than in SQL because Postgres has no
+ * accent folding without the unaccent extension; the read is bounded by the
+ * edition's tickets (about 1,500 short rows).
+ */
+export async function searchAttendees(editionId: number, query: string): Promise<SearchHit[]> {
+  // A badge number, typed as printed ("2 1 47") or not ("2147"): a counter
+  // volunteer reads it off a badge (#802).
+  const digits = query.replace(/\s+/g, "");
+  if (BADGE_NUMBER_QUERY.test(digits)) {
+    return toHits(await prisma.attendee.findMany({ where: { editionId, badgeNumber: Number(digits) }, select: SEARCH_SELECT }));
+  }
+
+  const words = fold(query).split(/[\s'-]+/).filter((w) => w.length > 0);
+  if (words.length === 0) return [];
+
+  const rows = await prisma.attendee.findMany({
+    where: { editionId },
+    select: SEARCH_SELECT,
+  });
+  return toHits(
+    rows.filter((row) => {
+      const nameWords = fold(`${row.firstName} ${row.lastName}`).split(/[\s'-]+/);
+      return words.every((w) => nameWords.some((n) => n.startsWith(w)));
+    }),
+  );
+}
+
+export const BADGE_NUMBER_QUERY = /^[1-9]\d{3}$/;
+
+const SEARCH_SELECT = {
+  id: true,
+  firstName: true,
+  lastName: true,
+  company: true,
+  badgeNumber: true,
+  badgeState: true,
+  isCancelled: true,
+  scannedAt: true,
+  scannedByLabel: true,
+  labelDeliveredAt: true,
+  _count: { select: { badgeLabels: true } },
+  ticketTier: { select: { nameFr: true, isOutsideFlow: true } },
+} as const;
+
+function toHits(rows: Array<Prisma.AttendeeGetPayload<{ select: typeof SEARCH_SELECT }>>): SearchHit[] {
+  return rows
+    .sort((a, b) => Number(a.isCancelled) - Number(b.isCancelled) || a.lastName.localeCompare(b.lastName, "fr"))
+    .slice(0, SEARCH_RESULT_LIMIT)
+    .map((row) => ({
+      id: row.id,
+      firstName: row.firstName,
+      lastName: row.lastName,
+      company: row.company,
+      tierName: row.ticketTier?.nameFr ?? null,
+      badgeNumber: row.badgeNumber,
+      badgeState: row.badgeState,
+      isCancelled: row.isCancelled,
+      isDedicated: row.ticketTier?.isOutsideFlow ?? false,
+      scannedAt: row.scannedAt,
+      scannedBy: row.scannedByLabel,
+      labelCount: row._count.badgeLabels,
+      labelDeliveredAt: row.labelDeliveredAt,
+    }));
+}
+
+/**
+ * Hex digits of the code's digest the degraded-mode table keeps (RG-ARR-65):
+ * 24 bits. A lost phone's table then matches some 900,000 of the ten billion
+ * possible 10-digit codes for 1,500 real ones, so it does not hand out valid
+ * tickets; and two real codes rarely share a key (marked ambiguous if so).
+ */
+export const OFFLINE_KEY_HEX_LENGTH = 6;
+
+/** In the table: a badge number, or one of these. */
+export const OFFLINE_DEDICATED = 0;
+export const OFFLINE_AMBIGUOUS = -1;
+
+/** Same computation in the browser (lib/arrivals-offline.ts): edition, then the code as read. */
+export function offlineKey(editionId: number, code: string): string {
+  return createHash("sha256")
+    .update(`devfest-arrivals:${editionId}:${code.trim()}`)
+    .digest("hex")
+    .slice(0, OFFLINE_KEY_HEX_LENGTH);
+}
+
+export interface OfflineTable {
+  editionId: number;
+  keyLength: number;
+  /** When the phone must erase it: the day after the event, null while the date is unknown. */
+  expiresAt: Date | null;
+  entries: Record<string, number>;
+}
+
+/**
+ * The degraded mode's table (RG-ARR-64, RG-ARR-65): code digest → badge
+ * number, or the dedicated flow. No name, no code. A ticket without a number
+ * is left out: the phone then sends that person to the help desk, which is
+ * where the backend would have sent them too.
+ */
+export async function buildOfflineTable(editionId: number): Promise<OfflineTable | null> {
+  const edition = await prisma.edition.findUnique({
+    where: { id: editionId },
+    select: { startDate: true, endDate: true },
+  });
+  if (!edition) return null;
+  const rows = await prisma.attendee.findMany({
+    where: {
+      editionId,
+      isCancelled: false,
+      OR: [{ badgeNumber: { not: null } }, { ticketTier: { isOutsideFlow: true } }],
+    },
+    select: { barcode: true, badgeNumber: true },
+  });
+
+  const entries: Record<string, number> = {};
+  for (const row of rows) {
+    const key = offlineKey(editionId, row.barcode);
+    const value = row.badgeNumber ?? OFFLINE_DEDICATED;
+    entries[key] = key in entries && entries[key] !== value ? OFFLINE_AMBIGUOUS : value;
+  }
+
+  const eventDay = edition.endDate ?? edition.startDate;
+  const expiresAt = eventDay ? new Date(eventDay.getTime() + 24 * 60 * 60 * 1000) : null;
+  return { editionId, keyLength: OFFLINE_KEY_HEX_LENGTH, expiresAt, entries };
+}
+
+/**
+ * A scan made during an outage, as the phone kept it (RG-ARR-67, #645): the
+ * same digest and value as its table, no name and no code. `id` is the
+ * phone's, so a resent queue is recognized in the answer.
+ */
+export interface OfflineScan {
+  id: string;
+  key: string;
+  /** The badge number the phone showed, or OFFLINE_DEDICATED. */
+  number: number;
+  scannedAt: Date;
+}
+
+export type ReplayResult = "recorded" | "already_scanned" | "unmatched";
+
+/**
+ * Record scans made during an outage. The digest alone may match several
+ * codes; with the number the phone showed it names one ticket, as the table
+ * did. A scan sent twice is recorded once: the second finds it scanned.
+ */
+export async function replayOfflineScans(
+  editionId: number,
+  scans: OfflineScan[],
+  actor: { id: string | null; label: string },
+): Promise<{ results: Array<{ id: string; result: ReplayResult }>; hasNewScans: boolean }> {
+  const results: Array<{ id: string; result: ReplayResult }> = [];
+  let hasNewScans = false;
+  for (const scan of scans) {
+    const candidates = await prisma.attendee.findMany({
+      where: {
+        editionId,
+        isCancelled: false,
+        ...(scan.number === OFFLINE_DEDICATED ? { ticketTier: { isOutsideFlow: true } } : { badgeNumber: scan.number }),
+      },
+      select: { id: true, barcode: true },
+    });
+    const matches = candidates.filter((c) => offlineKey(editionId, c.barcode) === scan.key);
+    if (matches.length !== 1) {
+      results.push({ id: scan.id, result: "unmatched" });
+      continue;
+    }
+    // Never later than now: a phone's clock may run ahead.
+    const at = new Date(Math.min(scan.scannedAt.getTime(), Date.now()));
+    const { isFirstScan } = await scanTicket(editionId, { attendeeId: matches[0].id }, actor, at);
+    hasNewScans ||= isFirstScan;
+    results.push({ id: scan.id, result: isFirstScan ? "recorded" : "already_scanned" });
+  }
+  return { results, hasNewScans };
+}

@@ -53,6 +53,7 @@ Consulter avant de faire des hypothèses sur le métier ou l'architecture. `docs
 | `audit-droits-api.md` | Qui peut appeler chaque route, constats de l'audit avant le connecteur MCP (#514) |
 | `variables-environnement.md` | Variables d'environnement |
 | `comptes-dev-local.md` | Comptes de test, Mailpit |
+| `recette-arrivees.md` | Guide de test de l'accueil du jour J pour les admins (`dev-arrivals`, Mailpit, comptes bénévoles) |
 | `priorisation-developpement.md` | Lots de développement, rétroplanning 2026 |
 | `mise-en-production.md` | Procédure de déploiement en production |
 | `deployer-nouvel-environnement.md` | Ajouter un environnement (`dev-x`, beta, prod) |

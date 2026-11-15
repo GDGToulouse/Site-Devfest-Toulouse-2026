@@ -9,6 +9,7 @@ import PrivateTab from "@/components/sponsor-space/PrivateTab";
 import TeamTab from "@/components/sponsor-space/TeamTab";
 import JobOffersTab from "@/components/sponsor-space/JobOffersTab";
 import GuestsTab from "@/components/sponsor-space/GuestsTab";
+import ScansTab from "@/components/sponsor-space/ScansTab";
 import SponsorAccountBar from "@/components/sponsor-space/SponsorAccountBar";
 import { getSponsorGuests, getSponsorProfile, type SponsorSpaceProfile } from "@/lib/sponsor-api";
 import { SPONSOR_ROLE_LABELS } from "@/lib/sponsor-roles";
@@ -98,8 +99,10 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
 
   // Job offers are published on the public site, so STAND reads them like the
   // public tab; only EDITEUR and above may write (#251).
+  // Every role scans badges at the booth (#813).
   const tabs = [
     { key: "public", label: "Fiche publique" },
+    { key: "scans", label: "Contacts scannés" },
     { key: "job-offers", label: "Offres d'emploi" },
     ...(hasGuestsTab ? [{ key: "guests", label: "Invités" }] : []),
     ...(canEdit ? [{ key: "private", label: "Informations privées" }] : []),
@@ -122,6 +125,7 @@ export default function SponsorSpacePage({ params }: { params: Promise<{ sponsor
 
       <div id={`sponsor-panel-${activeTab}`} role="tabpanel" aria-labelledby={`tab-${activeTab}`}>
         {activeTab === "public" && <PublicTab profile={profile} canEdit={canEdit} onSaved={load} />}
+        {activeTab === "scans" && <ScansTab sponsorId={id} />}
         {activeTab === "job-offers" && <JobOffersTab sponsorId={id} canEdit={canEdit} />}
         {activeTab === "guests" && hasGuestsTab && <GuestsTab sponsorId={id} canManageTeam={canManageTeam} />}
         {activeTab === "private" && canEdit && <PrivateTab sponsorId={id} />}
