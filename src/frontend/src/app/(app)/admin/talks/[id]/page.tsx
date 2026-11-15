@@ -67,6 +67,7 @@ export default function TalkEditorPage() {
           speakerIds: data.speakerIds,
           publicationStatus: data.publicationStatus,
           isSpeakerEditable: data.isSpeakerEditable,
+          isManual: data.isManual,
           videoUrl: data.videoUrl ?? "",
           roomId: data.roomId ? String(data.roomId) : "",
           simulcastRoomIds: data.simulcastRoomIds ?? [],
@@ -126,6 +127,7 @@ export default function TalkEditorPage() {
       speakerIds: form.speakerIds,
       publicationStatus: form.publicationStatus,
       isSpeakerEditable: form.isSpeakerEditable,
+      isManual: form.isManual,
       // Empty clears the replay (#636); the backend keeps YouTube only.
       videoUrl: form.videoUrl.trim() || null,
       // `null` unschedules; a blank date clears the slot (#105).

@@ -8,6 +8,14 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [Non publié]
+
+> **Une migration** : le marqueur « saisie à la main » des conférences (#828). Après le déploiement, cocher « Saisie à la main, hors Sessionize » sur chaque conférence ajoutée à la main, avant le prochain import Sessionize.
+
+### Ajouté
+
+- **Conférences saisies à la main** : une case sur la fiche, une colonne et un filtre « Origine » dans la liste. L'import Sessionize ne modifie plus ces conférences, ignore une session Sessionize du même titre en le disant dans son rapport, et ne les compte plus parmi les absents de Sessionize (#828).
+
 ## [1.14.0] - 2026-11-11
 
 Dernière version de fonctionnalités avant le DevFest : la billetterie affiche un **compte à rebours jusqu'à la fin des inscriptions** et se ferme seule à l'heure dite, les **keynotes ressortent** dans tout le programme, les **avis du public** s'affichent dès le premier vote et la zone de vote annonce son heure d'ouverture. Côté admin, on peut **copier un lien d'invitation** à envoyer soi-même, l'éditeur de texte permet enfin de **relire et corriger un lien**, et un champ facultatif vidé est bien enregistré vide.

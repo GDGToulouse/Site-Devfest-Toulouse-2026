@@ -55,6 +55,7 @@ const LIST_KEYS = [
   "speakers",
   "video",
   "editable",
+  "origin",
   "sort",
   "order",
 ] as const;
@@ -120,6 +121,7 @@ export default function TalksDataPage() {
   if (params.speakers) query.set("speakers", params.speakers);
   if (params.video) query.set("video", params.video);
   if (params.editable) query.set("speakerEditable", params.editable);
+  if (params.origin) query.set("origin", params.origin);
   if (params.sort) {
     query.set("sort", params.sort);
     query.set("order", params.order || "asc");
@@ -243,6 +245,14 @@ export default function TalksDataPage() {
       ),
     },
     { key: "edition", label: "Édition", sortable: true, render: (t: TalkRow) => t.edition?.year ?? "—" },
+    // Which talks the Sessionize import leaves alone (#828). A label: the flag
+    // is set on the talk's form.
+    {
+      key: "origin",
+      label: "Origine",
+      render: (t: TalkRow) =>
+        t.isManual ? <StatusBadge status="Saisie à la main" variant="gray" /> : <span className="text-gris">Sessionize</span>,
+    },
   ];
 
   const hasFilters = LIST_KEYS.some((key) => key !== "sort" && key !== "order" && params[key]);
@@ -351,6 +361,11 @@ export default function TalksDataPage() {
           <option value="">Modifiable par le speaker : tous</option>
           <option value="yes">Modifiable par le speaker</option>
           <option value="no">Non modifiable</option>
+        </select>
+        <select aria-label="Origine" value={params.origin} onChange={(e) => update({ origin: e.target.value })} className={SELECT_CLASS}>
+          <option value="">Origine : toutes</option>
+          <option value="sessionize">Sessionize</option>
+          <option value="manual">Saisie à la main</option>
         </select>
         {hasFilters && (
           <button

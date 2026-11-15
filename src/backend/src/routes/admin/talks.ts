@@ -32,6 +32,8 @@ interface TalkCreateBody {
   // CANCELLED (#726) only through an update: a talk is not created cancelled.
   publicationStatus?: TalkStatus;
   isSpeakerEditable?: boolean;
+  // Entered by hand: the Sessionize import leaves it alone (#828).
+  isManual?: boolean;
   // The replay (#636): a YouTube URL, stored in its canonical form; null or ""
   // clears it.
   videoUrl?: string | null;
@@ -71,6 +73,7 @@ interface TalkListQuery {
   speakers?: "none";
   video?: "with" | "without";
   speakerEditable?: "yes" | "no";
+  origin?: "manual" | "sessionize";
   sort?: TalkSort;
   order?: "asc" | "desc";
 }
@@ -178,6 +181,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
           speakers: { type: "string", enum: ["none"] },
           video: { type: "string", enum: ["with", "without"] },
           speakerEditable: { type: "string", enum: ["yes", "no"] },
+          origin: { type: "string", enum: ["manual", "sessionize"] },
           sort: { type: "string", enum: [...TALK_SORTS] },
           order: { type: "string", enum: ["asc", "desc"] },
         },
@@ -205,6 +209,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
       speakers: q.speakers,
       video: q.video,
       speakerEditable: q.speakerEditable,
+      origin: q.origin,
     });
     const include = {
       // Nested reads need their own filter: a query extension would not reach
@@ -319,6 +324,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         categoryId: body.categoryId ?? null,
         publicationStatus: body.publicationStatus === "PUBLISHED" ? "PUBLISHED" : "DRAFT",
         isSpeakerEditable: body.isSpeakerEditable === true,
+        isManual: body.isManual === true,
         videoUrl: video ?? null,
         ...(body.speakerIds && body.speakerIds.length > 0
           ? { speakers: { connect: body.speakerIds.map((id) => ({ id })) } }
@@ -412,6 +418,7 @@ export default async function adminTalkRoutes(app: FastifyInstance) {
         ...(body.categoryId !== undefined && { categoryId: body.categoryId ?? null }),
         ...(body.publicationStatus !== undefined && { publicationStatus: body.publicationStatus }),
         ...(body.isSpeakerEditable !== undefined && { isSpeakerEditable: body.isSpeakerEditable }),
+        ...(body.isManual !== undefined && { isManual: body.isManual === true }),
         ...(video !== undefined && { videoUrl: video }),
         ...(body.speakerIds !== undefined && {
           speakers: { set: body.speakerIds.map((sid) => ({ id: sid })) },

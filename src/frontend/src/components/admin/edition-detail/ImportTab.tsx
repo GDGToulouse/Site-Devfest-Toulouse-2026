@@ -244,6 +244,11 @@ export default function ImportTab({ editionId }: ImportTabProps) {
               Sessions&nbsp;: <strong>{report.talks.created}</strong> créées,{" "}
               <strong>{report.talks.updated}</strong> mises à jour, dont{" "}
               <strong>{report.talks.scheduled}</strong> avec un créneau
+              {report.talks.skippedManual > 0 && (
+                <>
+                  , <strong>{report.talks.skippedManual}</strong> ignorée(s) car saisie(s) à la main sur le site
+                </>
+              )}
             </li>
             {report.scheduleEntries && (
               <li>
@@ -288,6 +293,8 @@ export default function ImportTab({ editionId }: ImportTabProps) {
               Présents sur le site pour cette édition, mais pas dans Sessionize&nbsp;: désistement,
               session annulée, ou fiche créée à la main. Rien n&apos;a été modifié&nbsp;: marquez annulé
               ou retiré ce qui n&apos;aura pas lieu, ou mettez à la corbeille ce qui doit l&apos;être.
+              Une conférence créée à la main se coche «&nbsp;Saisie à la main&nbsp;» sur sa fiche&nbsp;:
+              elle ne sera plus listée ici.
             </p>
           </div>
           {report.absent.talks.length > 0 && (
