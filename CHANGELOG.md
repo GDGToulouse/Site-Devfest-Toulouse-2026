@@ -8,12 +8,19 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.15.0] - 2026-11-15
 
-> **Une migration** : le marqueur « saisie à la main » des conférences (#828). Après le déploiement, cocher « Saisie à la main, hors Sessionize » sur chaque conférence ajoutée à la main, avant le prochain import Sessionize.
+La version du jour J : l'**accueil des participants** arrive sur le site, de l'import des billets Billetweb jusqu'à la remise du badge, avec des postes Scan, Guichet et Aide qui s'ouvrent par un QR code et tiennent hors connexion, et les **sponsors scannent les badges** sur leur stand. Le programme s'ouvre aussi dans les **applis de conférence** comme Giggity, l'import Sessionize **laisse tranquilles les conférences saisies à la main**, et l'agent IA d'un administrateur peut **régler les badges** sans jamais toucher aux participants.
+
+> **20 migrations**, sans perte pour les données existantes : elles créent les tables de l'accueil (participants, badges, étiquettes, accès, scans sponsors) et ajoutent des colonnes. Sauvegarder la base avant le déploiement. Aucune nouvelle variable d'environnement ; `SESSION_SECRET` signe désormais les QR codes des postes, le changer invalide ceux qui sont imprimés. Rien n'est écrit sur Billetweb (numéros de badge, compostage, synchronisation toutes les 5 minutes) tant que l'édition n'est pas reliée à son événement : c'est l'import des tarifs, dans l'onglet Billetterie, qui la relie. Après le déploiement, cocher « Saisie à la main, hors Sessionize » sur chaque conférence ajoutée à la main, avant le prochain import Sessionize.
 
 ### Ajouté
 
+- **Accueil du jour J** (`/arrivees`) : import des participants depuis Billetweb, synchronisé toutes les 5 minutes, et purge des données des participants au bout de 18 mois (#638, #800).
+- **Badges** : numérotation par guichet et par présentoir, PDF d'impression recto verso aux six types de badge (Participant, Sponsor, Staff, Speaker, Bénévole, Prestataire), aperçu sur des personnes fictives, gel avant impression et numéro écrit dans le billet Billetweb (#639, #749, #774).
+- **Postes Scan, Guichet et Aide**, ouverts par un QR code sans compte, avec un suivi en temps réel des badges scannés et remis et un mode dégradé hors connexion. Le Scan composte le billet sur Billetweb et sait annuler un scan ; le Guichet range les badges en À chercher, Prêt, Distribué ; l'Aide retrouve une personne et imprime une étiquette modifiable ou libre sur la Zebra, en confirmant chaque action (#640-#645, #713, #775, #797, #801, #826).
+- **Billetterie reliée à son événement Billetweb** : l'import met les tarifs à jour en place et distingue les tarifs hors flux (Speaker, Bénévole, Staff, Prestataire) (#637).
+- **Scan des badges sur les stands** dans l'espace partenaire : liste des contacts scannés, export CSV et note sur chaque contact (#813, #815).
 - **Conférences saisies à la main** : une case sur la fiche, une colonne et un filtre « Origine » dans la liste. L'import Sessionize ne modifie plus ces conférences, ignore une session Sessionize du même titre en le disant dans son rapport, et ne les compte plus parmi les absents de Sessionize (#828).
 - **Programme dans les applis de conférence** : le programme est publié au format standard `schedule.xml` (celui de frab et pretalx, validé contre le schéma du c3voc), et le menu Exporter du programme propose « Ouvrir dans Giggity » pour l'avoir sur Android, hors connexion, avec favoris et rappels (#827).
 - **Agents IA et badges** : l'agent d'un administrateur peut régler les badges du jour J (guichets, présentoirs, design, type de badge de chaque tarif, aperçu). Il reste refusé sur les participants, les vrais badges, la numérotation, l'écriture Billetweb, la réinitialisation et les accès, avec un message qui dit pourquoi (#830).
