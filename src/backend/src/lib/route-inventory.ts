@@ -45,6 +45,70 @@ export const SELF_GUARDED: Record<string, { why: string; anonymous?: number[] }>
     why: "jeton d'invitation : crée le compte de l'adresse invitée, et d'elle seule",
     anonymous: [400, 404],
   },
+  "GET /api/arrivals/current": {
+    why: "dit si l'appelant peut ouvrir l'accueil de l'édition en cours ; vérifie la session elle-même",
+    anonymous: [401],
+  },
+  "POST /api/arrivals/station-session": {
+    why: "QR code d'un poste (#775) : le jeton signé du lien est l'accès, vérifié contre la génération et la fenêtre de l'édition ; pose le cookie de poste",
+    anonymous: [400],
+  },
+  "GET /api/arrivals/:editionId/stream": {
+    why: "flux temps réel de l'accueil : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition (canAccessArrivals)",
+    anonymous: [401],
+  },
+  "GET /api/arrivals/:editionId/tracking": {
+    why: "écran de suivi de l'accueil (totaux, sans nom) : session ADMIN ou EDITOR, la permission « arrivées » ne suffit pas",
+    anonymous: [401],
+  },
+  "POST /api/arrivals/:editionId/badges/:attendeeId/move": {
+    why: "transition d'un badge : session, permission « arrivées » de l'édition, retour à Imprimé réservé à ADMIN, saut À chercher → Distribué réservé aux scans faits pendant une panne",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/scan": {
+    why: "scan d'un billet à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/cancel-scan": {
+    why: "annulation d'un scan (#797) : session, ou session du poste Scan (QR code), puis permission « arrivées » de l'édition ; le scan d'un autre ou de plus d'une minute réservé à ADMIN, jamais un badge distribué",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/withdrawn": {
+    why: "badge d'un billet remboursé récupéré par l'Aide (#800) : session, ou session du poste Aide (QR code), puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/free-labels": {
+    why: "étiquette d'une personne sans billet (#801) : session, ou session du poste Aide (QR code), puis permission « arrivées » de l'édition ; prénom, nom et entreprise obligatoires",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/offline-scans": {
+    why: "scans faits pendant une panne, envoyés au retour (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "GET /api/arrivals/:editionId/search": {
+    why: "recherche par nom à l'entrée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [400, 401],
+  },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/label": {
+    why: "impression d'une étiquette au guichet d'aide, tracée : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
+  "POST /api/arrivals/:editionId/attendees/:attendeeId/label/delivered": {
+    why: "étiquette remise, le participant passe en Distribué : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
+  "GET /api/arrivals/:editionId/offline-table": {
+    why: "table du mode dégradé (empreintes et numéros, sans nom) : session, ou session de poste (QR code) dans sa portée, puis permission « arrivées » de l'édition",
+    anonymous: [401],
+  },
+  "POST /api/arrivals-invitation/:token/accept": {
+    why: "jeton d'invitation bénévole, puis l'e-mail de la session doit correspondre",
+    anonymous: [404],
+  },
+  "POST /api/arrivals-invitation/:token/sign-up": {
+    why: "jeton d'invitation bénévole : crée le compte GUEST de l'adresse invitée, et d'elle seule",
+    anonymous: [400, 404],
+  },
   "POST /api/contact/send": { why: "formulaire de contact public : tout le monde peut écrire, débit limité" },
   "POST /api/talks/:slug/feedback": {
     why: "avis du public (#564) : anonyme, un par navigateur et par session, ouvert le jour J et le lendemain, débit limité",
@@ -69,7 +133,9 @@ export function accessOf(route: InventoryRoute): string {
   // The last guard is the route's own, which narrows its group's: a trash
   // purge runs the editors' requireAdmin, then requireAdminRole.
   const guard = [...route.preHandlers].reverse().find((name) => KNOWN_GUARDS[name]);
-  const agents = route.preHandlers.includes("refuseAgents") ? " ; refusé aux agents IA" : "";
+  const agents = route.preHandlers.some((name) => name === "refuseAgents" || name === "refuseAgentsAtReception")
+    ? " ; refusé aux agents IA"
+    : "";
   const keys = route.preHandlers.includes("refuseApiKeys") ? " et aux clés d'API" : "";
   if (guard) return `${KNOWN_GUARDS[guard]}${agents}${keys}`;
   const self = SELF_GUARDED[`${route.method} ${route.path}`];

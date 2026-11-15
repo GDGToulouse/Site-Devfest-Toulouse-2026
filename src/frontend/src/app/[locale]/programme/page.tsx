@@ -139,6 +139,8 @@ export default async function ProgrammePage({
                 shareEmptyChoose: t("shareEmptyChoose"),
                 shareEmptyConfirm: t("shareEmptyConfirm"),
                 calendar: t("calendar"),
+                giggity: t("giggity"),
+                giggityTitle: t("giggityTitle"),
                 exportAllTitle: tcal("exportAll"),
                 exportMineTitle: tcal("exportMine"),
                 exportTitle: tcal("exportAll"),

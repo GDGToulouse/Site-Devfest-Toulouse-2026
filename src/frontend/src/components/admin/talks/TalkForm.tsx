@@ -32,6 +32,8 @@ export interface TalkFormValue {
   speakerIds: number[];
   publicationStatus: TalkStatus;
   isSpeakerEditable: boolean;
+  // Entered by hand, outside Sessionize: the import leaves it alone (#828).
+  isManual: boolean;
   // The replay (#636): a YouTube URL, empty when there is none.
   videoUrl: string;
 }
@@ -50,6 +52,9 @@ export const emptyTalkForm: TalkFormValue = {
   speakerIds: [],
   publicationStatus: "DRAFT",
   isSpeakerEditable: false,
+  // A talk created here is entered by hand by definition (#828). Untick it for
+  // one Sessionize will bring, or the import will skip that session.
+  isManual: true,
   videoUrl: "",
 };
 
@@ -253,6 +258,22 @@ export default function TalkForm({ value, onChange, categories, speakers, rooms,
         <span className="block text-xs text-gris mt-1">
           Le speaker pourra modifier le titre et la description depuis son lien de
           modification. Le format, le niveau et la langue restent réservés aux organisateurs.
+        </span>
+      </div>
+
+      <div>
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={value.isManual}
+            onChange={(e) => onChange({ ...value, isManual: e.target.checked })}
+            className="rounded border-gris/30 text-malachite focus:ring-malachite"
+          />
+          <span className="text-sm text-noir">Saisie à la main, hors Sessionize</span>
+        </label>
+        <span className="block text-xs text-gris mt-1">
+          L&apos;import Sessionize ne modifiera pas cette conférence et ne la signalera pas comme
+          absente. Une session Sessionize du même titre sera ignorée.
         </span>
       </div>
     </div>

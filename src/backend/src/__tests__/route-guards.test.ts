@@ -85,6 +85,26 @@ describe("API route guards (#514)", () => {
     expect(open).toEqual([]);
   });
 
+  it("should keep AI agents away from the event-day people, but not from the badge setup (#830)", () => {
+    // Attendees, printed badges, freeze, Billetweb writes and resets are a
+    // person's; counters, design and preview are configuration.
+    const PEOPLE_AREAS = ["/api/admin/attendees", "/api/admin/arrivals-access", "/api/admin/arrivals-stations"];
+    const BADGE_ACTIONS = ["/pdf", "/freeze", "/billetweb", "/unfreeze", "/reset"];
+    const refused = (r: InventoryRoute) => r.preHandlers.includes("refuseAgentsAtReception");
+    const mustRefuse = routes.filter(
+      (r) =>
+        PEOPLE_AREAS.some((area) => r.path.startsWith(area)) ||
+        (r.path.startsWith("/api/admin/badges/") && BADGE_ACTIONS.some((action) => r.path.endsWith(action))),
+    );
+    const config = routes.filter(
+      (r) => r.path.startsWith("/api/admin/badges/") && !BADGE_ACTIONS.some((action) => r.path.endsWith(action)),
+    );
+
+    expect(mustRefuse.filter((r) => !refused(r)).map(key)).toEqual([]);
+    expect(config.filter(refused).map(key)).toEqual([]);
+    expect(config.length).toBeGreaterThanOrEqual(4);
+  });
+
   it("should keep API keys away from managing keys", () => {
     // A key minting a key would survive its own expiry and revocation (#658).
     const KEY_AREAS = ["/api/me/api-keys", "/api/admin/api-keys"];

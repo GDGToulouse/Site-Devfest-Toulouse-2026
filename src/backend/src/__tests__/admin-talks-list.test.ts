@@ -44,7 +44,7 @@ beforeAll(async () => {
   // Draft, a time but no room, no speaker.
   await talk("Bravo", { startsAt: new Date(`${YEAR}-11-19T08:00:00Z`), format: "QUICKIE" });
   // Draft, nothing scheduled, editable by its speaker.
-  await talk("Charlie", { isSpeakerEditable: true, format: "WORKSHOP" });
+  await talk("Charlie", { isSpeakerEditable: true, format: "WORKSHOP", isManual: true });
 });
 
 afterAll(async () => {
@@ -87,6 +87,20 @@ describe("Admin talks list (#573)", () => {
     expect(titles((await list({ format: "QUICKIE" })).json())).toEqual(["Bravo"]);
     expect(titles((await list({ roomId: String(roomId) })).json())).toEqual(["Alpha"]);
     expect(titles((await list({ speakerEditable: "yes" })).json())).toEqual(["Charlie"]);
+  });
+
+  it("should tell the talks entered by hand from those of Sessionize (#828)", async () => {
+    expect(titles((await list({ origin: "manual" })).json())).toEqual(["Charlie"]);
+    expect(titles((await list({ origin: "sessionize" })).json())).toEqual(["Alpha", "Bravo"]);
+  });
+
+  it("should mark a talk as entered by hand on update (#828)", async () => {
+    const bravo = (await list({ format: "QUICKIE" })).json().items[0];
+
+    const res = await app.inject({ method: "PUT", url: `/api/admin/talks/${bravo.id}`, payload: { isManual: true } });
+
+    expect(res.json().isManual).toBe(true);
+    await prisma.talk.update({ where: { id: bravo.id }, data: { isManual: false } });
   });
 
   it("should find the sessions without a speaker and those still waiting for their replay", async () => {

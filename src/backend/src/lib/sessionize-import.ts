@@ -67,7 +67,9 @@ interface SessionizeData {
 
 export interface ImportReport {
   speakers: { created: number; updated: number };
-  talks: { created: number; updated: number; scheduled: number };
+  // `skippedManual`: Sessionize sessions that fell on a talk entered by hand
+  // (#828), left as the admin wrote it.
+  talks: { created: number; updated: number; scheduled: number; skippedManual: number };
   // Breaks, lunch, keynotes without a speaker (#546). Null when the import had
   // no GridSmart view to read them from: nothing was touched then.
   scheduleEntries: ServiceSlotsReport | null;
@@ -239,7 +241,7 @@ export async function importSessionize(
 ): Promise<ImportReport> {
   const report: ImportReport = {
     speakers: { created: 0, updated: 0 },
-    talks: { created: 0, updated: 0, scheduled: 0 },
+    talks: { created: 0, updated: 0, scheduled: 0, skippedManual: 0 },
     scheduleEntries: null,
     categories: { created: 0, reused: 0 },
     links: 0,
@@ -401,8 +403,11 @@ export async function importSessionize(
   // 4. Upsert sessions (talks), keyed by slug, linking speakers + category.
   const existingTalks = await prisma.talk.findMany({
     where: { editionId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, isManual: true },
   });
+  // Talks entered by hand (#828) keep their slug taken, so a session of the
+  // same title is not created beside them as `<slug>-2`: it is skipped.
+  const manualTalkIds = new Set(existingTalks.filter((t) => t.isManual).map((t) => t.id));
   const takenTalkSlugs = new Set(existingTalks.map((t) => t.slug));
   const talkSlugToId = new Map(existingTalks.map((t) => [t.slug, t.id]));
   const importedTalkIds = new Set<number>();
@@ -454,6 +459,11 @@ export async function importSessionize(
     }
 
     const existingId = talkSlugToId.get(baseSlug);
+    if (existingId && manualTalkIds.has(existingId)) {
+      report.talks.skippedManual++;
+      report.warnings.push(`Session « ${title} » ignorée : la conférence du même titre est saisie à la main sur le site.`);
+      continue;
+    }
     if (existingId) {
       await prisma.talk.update({
         where: { id: existingId },
@@ -558,8 +568,9 @@ async function warnOnRoomClash(editionId: number, report: ImportReport): Promise
 }
 
 // What the edition holds that the payload no longer does (#509): withdrawn
-// speakers, cancelled sessions, and also sessions created by hand outside
-// Sessionize, hence the neutral "absent from the import" wording in the admin.
+// speakers, cancelled sessions, and sessions created by hand outside
+// Sessionize that nobody has marked as such yet. Talks marked by hand (#828)
+// are expected to be absent, so they are not listed.
 async function listAbsent(
   editionId: number,
   importedTalkIds: Set<number> | null,
@@ -568,7 +579,7 @@ async function listAbsent(
 ): Promise<void> {
   if (importedTalkIds) {
     const talks = await prisma.talk.findMany({
-      where: { editionId, deletedAt: null, id: { notIn: [...importedTalkIds] } },
+      where: { editionId, deletedAt: null, isManual: false, id: { notIn: [...importedTalkIds] } },
       select: { id: true, title: true, publicationStatus: true, startsAt: true, roomLabel: true },
       orderBy: { title: "asc" },
     });

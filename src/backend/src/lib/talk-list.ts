@@ -26,6 +26,7 @@ export interface TalkListFilters {
   speakers?: "none";
   video?: "with" | "without";
   speakerEditable?: "yes" | "no";
+  origin?: "manual" | "sessionize";
 }
 
 export function talkWhere(f: TalkListFilters): Prisma.TalkWhereInput {
@@ -55,6 +56,8 @@ export function talkWhere(f: TalkListFilters): Prisma.TalkWhereInput {
   if (f.video === "with") and.push({ videoUrl: { not: null }, NOT: { videoUrl: "" } });
   if (f.video === "without") and.push({ OR: [{ videoUrl: null }, { videoUrl: "" }] });
   if (f.speakerEditable) and.push({ isSpeakerEditable: f.speakerEditable === "yes" });
+  // Entered by hand, outside Sessionize (#828).
+  if (f.origin) and.push({ isManual: f.origin === "manual" });
   return { AND: and };
 }
 
