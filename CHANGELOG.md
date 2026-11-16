@@ -13,6 +13,7 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 ### Ajouté
 
 - **Badges vierges** : un nombre de badges vierges par type de badge, réglé dans l'apparence des badges. Ils s'impriment à la fin du PDF, ou seuls par leur propre bouton, avec les fonds de leur type et rien d'autre (ni nom, ni QR code, ni numéro), pour le guichet spécial qui y colle une étiquette imprimée (#841).
+- **Noms homogènes sur les badges et les étiquettes** : le prénom s'imprime avec une majuscule à chaque partie (« Jean-Pierre »), le nom tout en majuscules (« DE LA FONTAINE »), quelle que soit la saisie sur Billetweb ; rien n'est modifié dans les données (#843).
 - **Badges sans séparateurs** : un second téléchargement du PDF des badges, sans les pages « Guichet / Présentoir » ni celles des types (#835).
 
 ### Corrigé

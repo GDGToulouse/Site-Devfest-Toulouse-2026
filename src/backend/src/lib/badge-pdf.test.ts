@@ -127,6 +127,12 @@ describe("the badge's text geometry (#774)", () => {
     },
   );
 
+  it("should print the first name with capital initials and the last name in capitals (#843)", () => {
+    const { lines } = layoutBadgeText(fonts(), person("jEAN-pierre", "de la fontaine", "GDG"));
+
+    expect(lines.filter((l) => l.role !== "company").map((l) => l.text)).toEqual(["Jean-Pierre", "DE LA FONTAINE"]);
+  });
+
   it("should keep the lines in order, none over the next", () => {
     const { lines } = layoutBadgeText(fonts(), people[1]);
 
