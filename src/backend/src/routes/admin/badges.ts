@@ -397,21 +397,44 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   // GET /api/admin/badges/:editionId/pdf — the print file (RG-ARR-19): the
   // numbering it would freeze before the freeze, the frozen one after; then
   // the dedicated flow's badges, which carry no number.
-  app.get<{ Params: { editionId: string }; Querystring: { separators?: "false" } }>(
+  app.get<{ Params: { editionId: string }; Querystring: { separators?: "false"; only?: "blanks" } }>(
     "/badges/:editionId/pdf",
     // The real badges: every attendee's name, company and QR code (#830).
     // `?separators=false`: the same badges in the same order, without the
-    // "Guichet / Présentoir" and type pages (#835).
+    // "Guichet / Présentoir" and type pages (#835). The blank badges set in the
+    // design come last (#841); `?only=blanks` gives them alone, to reprint some
+    // on the day without touching the numbering.
     {
       preHandler: [refuseAgentsAtReception],
       schema: {
         params: editionIdParams,
-        querystring: { type: "object", additionalProperties: false, properties: { separators: { type: "string", enum: ["false"] } } },
+        querystring: {
+          type: "object",
+          additionalProperties: false,
+          properties: { separators: { type: "string", enum: ["false"] }, only: { type: "string", enum: ["blanks"] } },
+        },
       },
     },
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
+      const withSeparators = request.query.separators !== "false";
+      const design = readBadgeDesign(edition.badgeDesign);
+
+      if (request.query.only === "blanks") {
+        if (BADGE_TYPES.every((type) => design.types[type].blanks === 0)) {
+          return reply.status(409).send({
+            error: "no_blank_badges",
+            message: "Aucun badge vierge n'est demandé : indiquez un nombre par type dans l'apparence des badges, puis enregistrez.",
+          });
+        }
+        const pdf = await renderBadgePdf(edition.year, [], design, {
+          badgesPerBin: edition.badgesPerBin,
+          separators: withSeparators,
+          blanks: true,
+        });
+        return pdfReply(reply, pdf, `badges-${edition.year}-vierges${withSeparators ? "" : "-sans-separateurs"}.pdf`);
+      }
 
       let participants: PrintedBadge[];
       if (edition.badgesFrozenAt) {
@@ -442,10 +465,10 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         ...dedicated.map((r) => ({ ...r, type: badgeTypeOf(r.ticketTier), badgeNumber: null })),
       ];
 
-      const withSeparators = request.query.separators !== "false";
-      const pdf = await renderBadgePdf(edition.year, badges, readBadgeDesign(edition.badgeDesign), {
+      const pdf = await renderBadgePdf(edition.year, badges, design, {
         badgesPerBin: edition.badgesPerBin,
         separators: withSeparators,
+        blanks: true,
       });
       const suffix = `${edition.badgesFrozenAt ? "" : "-apercu"}${withSeparators ? "" : "-sans-separateurs"}`;
       return pdfReply(reply, pdf, `badges-${edition.year}${suffix}.pdf`);

@@ -329,6 +329,33 @@ describe("Badge design and preview (#639, #749)", () => {
     });
   });
 
+  it("should print the blank badges set in the design, alone or after the others, numbering untouched (#841)", async () => {
+    await seed(2);
+    const base = design();
+    const blanks = { ...base, types: { ...base.types, SPEAKER: { ...base.types.SPEAKER, blanks: 3 } } };
+    await call("PUT", `/api/admin/badges/${editionId}/design`, { design: blanks, tierTypes: [] });
+    const numberedBefore = (await status()).json().numbered;
+
+    const alone = await call("GET", `/api/admin/badges/${editionId}/pdf?only=blanks&separators=false`);
+    const all = await call("GET", `/api/admin/badges/${editionId}/pdf?separators=false`);
+
+    expect(alone.statusCode).toBe(200);
+    expect(alone.headers["content-disposition"]).toContain("vierges");
+    expect(await pageCount(alone.rawPayload)).toBe(6);
+    // The two seeded badges and the three blank ones, each with its back.
+    expect(await pageCount(all.rawPayload)).toBe(10);
+    expect((await status()).json()).toMatchObject({ numbered: numberedBefore, design: { types: { SPEAKER: { blanks: 3 } } } });
+  });
+
+  it("should refuse the blank badges alone when none is asked for (#841)", async () => {
+    await call("PUT", `/api/admin/badges/${editionId}/design`, { design: design(), tierTypes: [] });
+
+    const res = await call("GET", `/api/admin/badges/${editionId}/pdf?only=blanks`);
+
+    expect(res.statusCode).toBe(409);
+    expect(res.json().message).toMatch(/Aucun badge vierge/);
+  });
+
   it("should refuse a badge type the tier's flow does not allow", async () => {
     const outsideWithParticipant = await call("PUT", `/api/admin/badges/${editionId}/design`, {
       design: design(),

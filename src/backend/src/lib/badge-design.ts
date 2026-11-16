@@ -53,10 +53,18 @@ const UPLOAD_PATH = /^\/uploads\/[A-Za-z0-9._-]+\.(png|jpe?g|svg|pdf)$/i;
 const backgroundSchema = z.string().regex(UPLOAD_PATH).nullable();
 const colorSchema = z.string().regex(HEX_COLOR);
 
+// Blank badges of each type added to the print file (#841): no name, no QR
+// code and no number, handed out at the dedicated desk with a printed label.
+// The ceiling only guards the file's size: a handful is what a desk needs.
+export const MAX_BLANK_BADGES = 200;
+const blanksSchema = z.number().int().min(0).max(MAX_BLANK_BADGES);
+
 const typeDesignSchema = z.object({
   background: backgroundSchema,
   backBackground: backgroundSchema,
   color: colorSchema,
+  // Optional on the way in: a client saving only the look keeps none.
+  blanks: blanksSchema.default(0),
 });
 
 export const badgeDesignSchema = z.object({
@@ -72,7 +80,7 @@ export const DEFAULT_BADGE_DESIGN: BadgeDesign = {
   qrContent: "TICKET",
   qrColor: DEFAULT_QR_COLOR,
   types: Object.fromEntries(
-    BADGE_TYPES.map((type) => [type, { background: null, backBackground: null, color: DEFAULT_BADGE_COLOR }]),
+    BADGE_TYPES.map((type) => [type, { background: null, backBackground: null, color: DEFAULT_BADGE_COLOR, blanks: 0 }]),
   ) as BadgeDesign["types"],
 };
 
@@ -104,6 +112,7 @@ export function readBadgeDesign(stored: unknown): BadgeDesign {
           background: validOr(backgroundSchema, own.background, null),
           backBackground: validOr(backgroundSchema, own.backBackground, null),
           color: color.toUpperCase() === LEGACY_BADGE_COLOR ? DEFAULT_BADGE_COLOR : color,
+          blanks: validOr(blanksSchema, own.blanks, 0),
         },
       ];
     }),

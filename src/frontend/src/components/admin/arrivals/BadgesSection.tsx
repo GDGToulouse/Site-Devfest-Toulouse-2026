@@ -146,12 +146,13 @@ export default function BadgesSection({
 
   // Fetched rather than linked: a refusal (capacity, unknown tier) comes back as
   // a message on this screen instead of raw JSON in a new tab.
-  // "bare": the same badges without the "Guichet / Présentoir" pages (#835).
-  async function handleDownload(kind: "pdf" | "bare" | "preview") {
+  // "bare": the same badges without the "Guichet / Présentoir" pages (#835);
+  // "blanks": the blank badges alone, to reprint some on the day (#841).
+  async function handleDownload(kind: "pdf" | "bare" | "blanks" | "preview") {
     setActionError(null);
     setIsBusy(true);
     try {
-      const path = kind === "bare" ? "pdf?separators=false" : kind;
+      const path = kind === "bare" ? "pdf?separators=false" : kind === "blanks" ? "pdf?only=blanks" : kind;
       const res = await fetch(`/api/admin/badges/${editionId}/${path}`, { credentials: "include" });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -237,6 +238,8 @@ export default function BadgesSection({
   if (!status) return null;
 
   const isFrozen = status.frozenAt !== null;
+  // Blank badges set in the design, all types together (#841).
+  const blankCount = Object.values(status.design?.types ?? {}).reduce((sum, own) => sum + (own.blanks ?? 0), 0);
   // Why the badges cannot be numbered yet, same order as the backend's refusal; shown beside the
   // buttons it greys out, since a button greyed without a word was taken for a bug (#776).
   const blockedReason = status.withoutTier > 0
@@ -398,6 +401,14 @@ export default function BadgesSection({
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
           Télécharger les badges sans séparateurs
+        </button>
+        <button
+          onClick={() => handleDownload("blanks")}
+          disabled={isBusy || blankCount === 0}
+          title={blankCount === 0 ? "Indiquez un nombre de badges vierges par type dans l'apparence des badges" : undefined}
+          className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+        >
+          Télécharger les badges vierges{blankCount > 0 ? ` (${blankCount})` : ""}
         </button>
         {!isFrozen && (
           <div className="flex flex-wrap items-center gap-3">
