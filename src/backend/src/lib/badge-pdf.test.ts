@@ -255,3 +255,24 @@ describe("the printer's A4 plates (#846)", () => {
     expect(design.types.SPEAKER.blanks).toBe(1);
   });
 });
+
+describe("the event loop while the file renders (#849)", () => {
+  it("should never hold the loop for the whole drawing, so other requests are served", async () => {
+    const badges: PrintedBadge[] = Array.from({ length: 150 }, (_, i) => ({ ...person(`P${i}`, `N${i}`, "Société"), badgeNumber: 1100 + i }));
+    let last = Date.now();
+    let longestWait = 0;
+    const timer = setInterval(() => {
+      const now = Date.now();
+      longestWait = Math.max(longestWait, now - last);
+      last = now;
+    }, 1);
+
+    const started = Date.now();
+    await renderBadgePdf(2026, badges, DEFAULT_BADGE_DESIGN, { badgesPerBin: 100, separators: false });
+    const total = Date.now() - started;
+    clearInterval(timer);
+
+    // Handing back every eight badges: no wait comes near the whole drawing.
+    expect(longestWait).toBeLessThan(total / 3);
+  });
+});

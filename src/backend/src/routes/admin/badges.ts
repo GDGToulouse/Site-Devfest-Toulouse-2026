@@ -17,6 +17,7 @@ import {
   type BadgeLayout,
 } from "../../lib/badge-numbering.js";
 import { OTHER_TYPES_ORDER, renderBadgePdf, type PrintedBadge } from "../../lib/badge-pdf.js";
+import { oneAtATime } from "../../lib/one-at-a-time.js";
 import {
   BADGE_TYPES,
   MAX_BLANK_BADGES,
@@ -161,6 +162,9 @@ async function numberingRefusal(
   }
   return null;
 }
+
+// One badge PDF at a time (#849): each takes seconds and ~800 MB.
+const pdfQueue = oneAtATime();
 
 // One Billetweb write per edition at a time: a second click would send the
 // same numbers twice and race on the report.
@@ -432,12 +436,12 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
 
       // At least one blank badge of each type (#846): never an empty file.
       if (request.query.only === "blanks") {
-        const pdf = await renderBadgePdf(edition.year, [], design, {
+        const pdf = await pdfQueue(() => renderBadgePdf(edition.year, [], design, {
           badgesPerBin: edition.badgesPerBin,
           separators: withSeparators,
           blanks: true,
           format,
-        });
+        }));
         return pdfReply(reply, pdf, `badges-${edition.year}-vierges${formatSuffix}.pdf`);
       }
 
@@ -470,12 +474,12 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         ...dedicated.map((r) => ({ ...r, type: badgeTypeOf(r.ticketTier), badgeNumber: null })),
       ];
 
-      const pdf = await renderBadgePdf(edition.year, badges, design, {
+      const pdf = await pdfQueue(() => renderBadgePdf(edition.year, badges, design, {
         badgesPerBin: edition.badgesPerBin,
         separators: withSeparators,
         blanks: true,
         format,
-      });
+      }));
       return pdfReply(reply, pdf, `badges-${edition.year}${edition.badgesFrozenAt ? "" : "-apercu"}${formatSuffix}.pdf`);
     },
   );

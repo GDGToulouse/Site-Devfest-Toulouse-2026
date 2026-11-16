@@ -8,6 +8,16 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [1.15.2] - 2026-11-16
+
+Correctif du PDF des badges en production : le fichier complet de l'édition se télécharge de nouveau, en A6 comme en A4, et le site reste réactif pendant sa génération.
+
+> Aucune migration, aucune nouvelle variable d'environnement.
+
+### Corrigé
+
+- **PDF des badges en production** : le téléchargement de tous les badges échouait (« Le PDF n'a pas pu être généré ») parce que le relais du site coupait la requête au bout de 30 s, alors que le fichier de l'édition prend plus longtemps sur le serveur. Le délai passe à 2 minutes, un seul PDF est généré à la fois, et le reste du site, postes de l'accueil compris, continue de répondre pendant la génération (#849).
+
 ## [1.15.1] - 2026-11-16
 
 Les derniers outils d'impression avant le jour J : les badges sortent aussi en **plaques A4 de 4 badges d'un même type**, le format attendu par l'imprimeur, avec des **badges vierges** par type pour le guichet spécial, un export **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
