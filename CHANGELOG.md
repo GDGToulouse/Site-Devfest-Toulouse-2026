@@ -10,6 +10,16 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 ## [Non publié]
 
+### Corrigé
+
+- **PDF des badges en production** : le téléchargement de tous les badges échouait (« Le PDF n'a pas pu être généré ») parce que le relais du site coupait la requête au bout de 30 s, alors que le fichier de l'édition prend plus longtemps sur le serveur. Le délai passe à 2 minutes, un seul PDF est généré à la fois, et le reste du site, postes de l'accueil compris, continue de répondre pendant la génération (#849).
+
+## [1.15.1] - 2026-11-16
+
+Les derniers outils d'impression avant le jour J : les badges sortent aussi en **plaques A4 de 4 badges d'un même type**, le format attendu par l'imprimeur, avec des **badges vierges** par type pour le guichet spécial, un export **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
+
+> Aucune migration, aucune nouvelle variable d'environnement. Après le déploiement, régler le nombre de badges vierges par type dans l'apparence des badges (1 au minimum), puis choisir le format A4 pour le fichier de l'imprimeur.
+
 ### Ajouté
 
 - **Badges vierges** : un nombre de badges vierges par type de badge, réglé dans l'apparence des badges. Ils s'impriment à la fin du PDF, ou seuls par leur propre bouton, avec les fonds de leur type et rien d'autre (ni nom, ni QR code, ni numéro), pour le guichet spécial qui y colle une étiquette imprimée (#841).
