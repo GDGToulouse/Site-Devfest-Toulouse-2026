@@ -14,8 +14,12 @@ export type BadgeType = "PARTICIPANT" | "SPONSOR" | "STAFF" | "SPEAKER" | "VOLUN
 export interface BadgeDesign {
   qrContent: "TICKET" | "VCARD";
   qrColor: string;
-  types: Record<BadgeType, { background: string | null; backBackground: string | null; color: string }>;
+  // `blanks`: blank badges of the type added to the print file (#841).
+  types: Record<BadgeType, { background: string | null; backBackground: string | null; color: string; blanks: number }>;
 }
+
+// The backend's ceiling (`MAX_BLANK_BADGES`, badge-design.ts).
+const MAX_BLANK_BADGES = 200;
 
 export interface TierBadge {
   id: number;
@@ -186,6 +190,22 @@ export default function BadgeDesignSection({
                 className="h-8 w-12 rounded border border-gris/30"
               />
               <span className="font-mono text-xs">{design.types[type].color}</span>
+            </label>
+            {/* Without name, QR code or number: handed out at the dedicated desk
+                with a printed label (#841). */}
+            <label className="flex items-center gap-2 text-sm text-gris">
+              Badges vierges à imprimer
+              <input
+                type="number"
+                min={0}
+                max={MAX_BLANK_BADGES}
+                value={design.types[type].blanks ?? 0}
+                onChange={(e) => {
+                  const value = Math.trunc(Number(e.target.value));
+                  setType(type, { blanks: Number.isFinite(value) ? Math.min(MAX_BLANK_BADGES, Math.max(0, value)) : 0 });
+                }}
+                className="w-20 px-2 py-1 rounded-lg border border-gris/30 text-noir"
+              />
             </label>
           </li>
         ))}

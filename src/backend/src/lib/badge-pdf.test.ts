@@ -82,7 +82,7 @@ describe("a design stored before V3 (#774)", () => {
 
     expect(design.qrContent).toBe("VCARD");
     expect(design.qrColor).toBe(DEFAULT_QR_COLOR);
-    expect(design.types.PARTICIPANT).toEqual({ background: "/uploads/fond.png", backBackground: null, color: "#123456" });
+    expect(design.types.PARTICIPANT).toEqual({ background: "/uploads/fond.png", backBackground: null, color: "#123456", blanks: 0 });
     expect(design.types.SPONSOR).toEqual(DEFAULT_BADGE_DESIGN.types.SPONSOR);
   });
 
@@ -147,5 +147,41 @@ describe("the print file's recto-verso (#774)", () => {
 
     // Two bin separators and the speakers' one, three badges: six pages' worth of fronts and as many backs.
     expect(pdf.getPageCount()).toBe(12);
+  });
+});
+
+describe("blank badges (#841)", () => {
+  const withBlanks = (counts: Partial<Record<"PARTICIPANT" | "SPEAKER" | "VOLUNTEER", number>>) => ({
+    ...DEFAULT_BADGE_DESIGN,
+    types: Object.fromEntries(
+      Object.entries(DEFAULT_BADGE_DESIGN.types).map(([type, own]) => [type, { ...own, blanks: counts[type as keyof typeof counts] ?? 0 }]),
+    ) as typeof DEFAULT_BADGE_DESIGN.types,
+  });
+
+  it("should add each type's blank badges, front and back, after a separator", async () => {
+    const pdf = await PDFDocument.load(
+      await renderBadgePdf(2026, [], withBlanks({ SPEAKER: 2, VOLUNTEER: 1 }), { badgesPerBin: 99, blanks: true }),
+    );
+
+    // Two separators with their backs, three blank badges with theirs.
+    expect(pdf.getPageCount()).toBe(10);
+  });
+
+  it("should give the blank badges alone without their separators", async () => {
+    const pdf = await PDFDocument.load(
+      await renderBadgePdf(2026, [], withBlanks({ PARTICIPANT: 3 }), { badgesPerBin: 99, blanks: true, separators: false }),
+    );
+
+    expect(pdf.getPageCount()).toBe(6);
+  });
+
+  it("should leave them out of a file that does not ask for them, the preview's", async () => {
+    const speaker: PrintedBadge = { ...person("Eve", "Roux", null), type: "SPEAKER", badgeNumber: null };
+
+    const pdf = await PDFDocument.load(
+      await renderBadgePdf(2026, [speaker], withBlanks({ SPEAKER: 5 }), { badgesPerBin: 99, separators: false }),
+    );
+
+    expect(pdf.getPageCount()).toBe(2);
   });
 });
