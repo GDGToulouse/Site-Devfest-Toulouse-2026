@@ -55,16 +55,18 @@ const colorSchema = z.string().regex(HEX_COLOR);
 
 // Blank badges of each type added to the print file (#841): no name, no QR
 // code and no number, handed out at the dedicated desk with a printed label.
-// The ceiling only guards the file's size: a handful is what a desk needs.
+// At least one of each type (#846), even a type without a ticket. The ceiling
+// only guards the file's size: a handful is what a desk needs.
+export const MIN_BLANK_BADGES = 1;
 export const MAX_BLANK_BADGES = 200;
-const blanksSchema = z.number().int().min(0).max(MAX_BLANK_BADGES);
+const blanksSchema = z.number().int().min(MIN_BLANK_BADGES).max(MAX_BLANK_BADGES);
 
 const typeDesignSchema = z.object({
   background: backgroundSchema,
   backBackground: backgroundSchema,
   color: colorSchema,
-  // Optional on the way in: a client saving only the look keeps none.
-  blanks: blanksSchema.default(0),
+  // Optional on the way in: a client saving only the look keeps the minimum.
+  blanks: blanksSchema.default(MIN_BLANK_BADGES),
 });
 
 export const badgeDesignSchema = z.object({
@@ -80,7 +82,7 @@ export const DEFAULT_BADGE_DESIGN: BadgeDesign = {
   qrContent: "TICKET",
   qrColor: DEFAULT_QR_COLOR,
   types: Object.fromEntries(
-    BADGE_TYPES.map((type) => [type, { background: null, backBackground: null, color: DEFAULT_BADGE_COLOR, blanks: 0 }]),
+    BADGE_TYPES.map((type) => [type, { background: null, backBackground: null, color: DEFAULT_BADGE_COLOR, blanks: MIN_BLANK_BADGES }]),
   ) as BadgeDesign["types"],
 };
 
@@ -112,7 +114,8 @@ export function readBadgeDesign(stored: unknown): BadgeDesign {
           background: validOr(backgroundSchema, own.background, null),
           backBackground: validOr(backgroundSchema, own.backBackground, null),
           color: color.toUpperCase() === LEGACY_BADGE_COLOR ? DEFAULT_BADGE_COLOR : color,
-          blanks: validOr(blanksSchema, own.blanks, 0),
+          // A design stored with 0 (#841) reads as the minimum (#846).
+          blanks: validOr(blanksSchema, own.blanks, MIN_BLANK_BADGES),
         },
       ];
     }),
