@@ -8,7 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.15.1] - 2026-11-16
+
+Les derniers outils d'impression avant le jour J : des **badges vierges** par type pour le guichet spécial, un export des badges **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
+
+> Aucune migration, aucune nouvelle variable d'environnement. Après le déploiement, régler le nombre de badges vierges par type dans l'apparence des badges si l'accueil en a besoin.
 
 ### Ajouté
 
