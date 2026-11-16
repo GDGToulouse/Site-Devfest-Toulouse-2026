@@ -146,10 +146,24 @@ describe("BadgesSection, the blank badges (#841)", () => {
     types: { SPEAKER: { background: null, backBackground: null, color: "#FFFFFF", blanks: speaker } },
   });
 
-  it("should keep the download off while no blank badge is asked for", async () => {
-    renderWith({ design: blankDesign(0) });
+  it("should ask for the printer's A4 plates once A4 is chosen, without the separators button (#846)", async () => {
+    renderWith({ frozenAt: "2026-11-03T21:25:30.010Z", design: blankDesign(1) });
+    const download = vi.fn().mockResolvedValue({
+      ok: true,
+      headers: new Headers({ "Content-Disposition": 'attachment; filename="badges-2026-a4.pdf"' }),
+      blob: async () => new Blob(["pdf"]),
+    });
+    vi.stubGlobal("fetch", download);
+    URL.createObjectURL = vi.fn(() => "blob:badges");
+    URL.revokeObjectURL = vi.fn();
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
 
-    expect(await screen.findByRole("button", { name: "Télécharger les badges vierges" })).toBeDisabled();
+    fireEvent.click(await screen.findByLabelText(/A4, plaques de 4/));
+    fireEvent.click(screen.getByRole("button", { name: "Télécharger le PDF d'impression" }));
+
+    await vi.waitFor(() => expect(download).toHaveBeenCalledWith("/api/admin/badges/1/pdf?format=a4", { credentials: "include" }));
+    expect(screen.queryByRole("button", { name: "Télécharger les badges sans séparateurs" })).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it("should download the blank badges alone, and say how many", async () => {

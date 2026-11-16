@@ -3,7 +3,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { PDFDocument, type PDFFont } from "pdf-lib";
 import { beforeAll, describe, it, expect } from "vitest";
 
-import { badgeVCard, fitLines, layoutBadgeText, renderBadgePdf, type PrintedBadge } from "./badge-pdf.js";
+import { badgeVCard, fitLines, layoutBadgeText, plateItems, renderBadgePdf, type PrintedBadge } from "./badge-pdf.js";
 import { DEFAULT_BADGE_DESIGN, DEFAULT_QR_COLOR, badgeTypeOf, isBadgeTypeAllowed, readBadgeDesign } from "./badge-design.js";
 
 let bold: PDFFont;
@@ -82,7 +82,7 @@ describe("a design stored before V3 (#774)", () => {
 
     expect(design.qrContent).toBe("VCARD");
     expect(design.qrColor).toBe(DEFAULT_QR_COLOR);
-    expect(design.types.PARTICIPANT).toEqual({ background: "/uploads/fond.png", backBackground: null, color: "#123456", blanks: 0 });
+    expect(design.types.PARTICIPANT).toEqual({ background: "/uploads/fond.png", backBackground: null, color: "#123456", blanks: 1 });
     expect(design.types.SPONSOR).toEqual(DEFAULT_BADGE_DESIGN.types.SPONSOR);
   });
 
@@ -189,5 +189,69 @@ describe("blank badges (#841)", () => {
     );
 
     expect(pdf.getPageCount()).toBe(2);
+  });
+});
+
+describe("the printer's A4 plates (#846)", () => {
+  const designWith = (blanks: Partial<Record<string, number>>) => ({
+    ...DEFAULT_BADGE_DESIGN,
+    types: Object.fromEntries(
+      Object.entries(DEFAULT_BADGE_DESIGN.types).map(([type, own]) => [type, { ...own, blanks: blanks[type] ?? 1 }]),
+    ) as typeof DEFAULT_BADGE_DESIGN.types,
+  });
+  const numbered = (n: number, type: "PARTICIPANT" | "SPONSOR" = "PARTICIPANT"): PrintedBadge => ({
+    ...person(`P${n}`, `N${n}`, null),
+    type,
+    badgeNumber: n,
+  });
+  const describePlate = (plate: ReturnType<typeof plateItems>[number]) =>
+    plate.map((item) => (item.badge ? `${item.type}:${item.badge.badgeNumber ?? item.badge.lastName}` : `${item.type}:blank`));
+
+  it("should put four badges of one type on each plate, participants then sponsors in number order", () => {
+    const plates = plateItems([numbered(2101, "SPONSOR"), numbered(1102), numbered(1100), numbered(1101)], designWith({}));
+
+    expect(plates.slice(0, 2).map(describePlate)).toEqual([
+      ["PARTICIPANT:1100", "PARTICIPANT:1101", "PARTICIPANT:1102", "PARTICIPANT:blank"],
+      ["SPONSOR:2101", "SPONSOR:blank", "SPONSOR:blank", "SPONSOR:blank"],
+    ]);
+  });
+
+  it("should print at least the blank badges set, then up to three more to fill the last plate", () => {
+    const people = Array.from({ length: 5 }, (_, i) => numbered(1100 + i));
+
+    const participants = plateItems(people, designWith({ PARTICIPANT: 2 })).filter((p) => p[0].type === "PARTICIPANT");
+
+    // 5 badges + 2 blanks = 7, padded to 8 with one more blank.
+    expect(participants.flat().filter((item) => item.badge === null)).toHaveLength(3);
+    expect(participants).toHaveLength(2);
+  });
+
+  it("should give a type without any ticket one plate of four blank badges", () => {
+    const plates = plateItems([], designWith({}));
+
+    expect(plates).toHaveLength(6);
+    expect(plates.every((plate) => plate.length === 4 && plate.every((item) => item.badge === null))).toBe(true);
+  });
+
+  it("should sort the dedicated types by name, in their usual order", () => {
+    const speaker = (last: string): PrintedBadge => ({ ...person("A", last, null), type: "SPEAKER", badgeNumber: null });
+
+    const plates = plateItems([speaker("Roux"), speaker("Abel")], designWith({}));
+
+    expect(plates.map((plate) => plate[0].type)).toEqual(["PARTICIPANT", "SPONSOR", "STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"]);
+    expect(describePlate(plates[3]).slice(0, 2)).toEqual(["SPEAKER:Abel", "SPEAKER:Roux"]);
+  });
+
+  it("should render each plate as an A4 front page and an A4 back page", async () => {
+    const pdf = await PDFDocument.load(await renderBadgePdf(2026, [numbered(1100)], designWith({}), { badgesPerBin: 100, format: "a4" }));
+
+    expect(pdf.getPageCount()).toBe(12);
+    expect(pdf.getPage(0).getSize()).toEqual({ width: 595.276, height: 841.89 });
+  });
+
+  it("should read a design stored with no blank badge as one of each type", () => {
+    const design = readBadgeDesign({ types: { SPEAKER: { blanks: 0 } } });
+
+    expect(design.types.SPEAKER.blanks).toBe(1);
   });
 });

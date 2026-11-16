@@ -10,14 +10,15 @@ Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la sectio
 
 ## [1.15.1] - 2026-11-16
 
-Les derniers outils d'impression avant le jour J : des **badges vierges** par type pour le guichet spécial, un export des badges **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
+Les derniers outils d'impression avant le jour J : les badges sortent aussi en **plaques A4 de 4 badges d'un même type**, le format attendu par l'imprimeur, avec des **badges vierges** par type pour le guichet spécial, un export **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
 
-> Aucune migration, aucune nouvelle variable d'environnement. Après le déploiement, régler le nombre de badges vierges par type dans l'apparence des badges si l'accueil en a besoin.
+> Aucune migration, aucune nouvelle variable d'environnement. Après le déploiement, régler le nombre de badges vierges par type dans l'apparence des badges (1 au minimum), puis choisir le format A4 pour le fichier de l'imprimeur.
 
 ### Ajouté
 
 - **Badges vierges** : un nombre de badges vierges par type de badge, réglé dans l'apparence des badges. Ils s'impriment à la fin du PDF, ou seuls par leur propre bouton, avec les fonds de leur type et rien d'autre (ni nom, ni QR code, ni numéro), pour le guichet spécial qui y colle une étiquette imprimée (#841).
 - **Noms homogènes sur les badges et les étiquettes** : le prénom s'imprime avec une majuscule à chaque partie (« Jean-Pierre »), le nom tout en majuscules (« DE LA FONTAINE »), quelle que soit la saisie sur Billetweb ; rien n'est modifié dans les données (#843).
+- **Plaques A4 pour l'imprimeur** : le PDF des badges, et celui des seuls vierges, sortent aussi en A4, en plaques de 4 badges d'un même type (recto, puis verso de la plaque), sans marge ni page de séparation, comme le fichier attendu par l'imprimeur. Participants puis sponsors dans l'ordre des numéros, puis les autres types par nom ; chaque type finit par ses vierges, complétés de 0 à 3 pour remplir sa dernière plaque. Au moins un badge vierge par type, en A6 comme en A4 (#846).
 - **Badges sans séparateurs** : un second téléchargement du PDF des badges, sans les pages « Guichet / Présentoir » ni celles des types (#835).
 
 ### Corrigé
