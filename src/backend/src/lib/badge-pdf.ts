@@ -323,6 +323,14 @@ function drawSeparator(page: PDFPage, fonts: Fonts, lines: Array<{ text: string;
   }
 }
 
+// The whole file is CPU work that blocks the event loop for ten seconds or
+// more (#849): every other request, the event-day stations included, waited
+// behind it. Handing the loop back every few badges keeps the API answering.
+// A multiple of the plate's four (#846), so the A4 file hands back between
+// plates. It only paces the work: the order and the plates are unchanged.
+const BADGES_PER_TURN = 8;
+const yieldToEventLoop = () => new Promise<void>((resolve) => setImmediate(resolve));
+
 /** A cell of a plate: a person's badge, or a blank one of the plate's type (#841). */
 export interface PlateItem {
   type: BadgeType;
@@ -410,7 +418,9 @@ export async function renderBadgePdf(
       }
       page.pushOperators(popGraphicsState());
     };
+    let plateCount = 0;
     for (const plate of plateItems(badges, design)) {
+      if (++plateCount % (BADGES_PER_TURN / BADGES_PER_PLATE) === 0) await yieldToEventLoop();
       const front = doc.addPage(A4_PAGE);
       for (const [slot, item] of plate.entries()) await drawInCell(front, slot, item, "front");
       const back = doc.addPage(A4_PAGE);
@@ -421,7 +431,9 @@ export async function renderBadgePdf(
 
   // A badge's front, then its back; a separator's blank back: the file prints
   // recto-verso, so every front stays on an odd page.
+  let drawn = 0;
   const addBadge = async (badge: PrintedBadge) => {
+    if (++drawn % BADGES_PER_TURN === 0) await yieldToEventLoop();
     const front = doc.addPage(PAGE);
     (await backgroundOf(badge.type, "front"))(front);
     drawBadge(front, badge, fonts, colorOf(badge.type), qrColor, design.qrContent);
@@ -482,6 +494,7 @@ export async function renderBadgePdf(
         ]);
       }
       for (let i = 0; i < count; i++) {
+        if (++drawn % BADGES_PER_TURN === 0) await yieldToEventLoop();
         (await backgroundOf(type, "front"))(doc.addPage(PAGE));
         (await backgroundOf(type, "back"))(doc.addPage(PAGE));
       }

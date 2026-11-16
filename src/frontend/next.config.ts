@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
   // the multipart envelope overhead.
   experimental: {
     proxyClientMaxBodySize: 25 * 1024 * 1024, // 25 MB
+    // The relay to the backend cut every request at 30 s by default: the
+    // edition's badge PDF takes longer on the VPS (#849). The arrivals' SSE
+    // stream keeps its 15 s ping regardless.
+    proxyTimeout: 120_000,
   },
   async redirects() {
     return [
