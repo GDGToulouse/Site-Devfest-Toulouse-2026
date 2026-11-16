@@ -19,6 +19,8 @@ import {
 import { OTHER_TYPES_ORDER, renderBadgePdf, type PrintedBadge } from "../../lib/badge-pdf.js";
 import {
   BADGE_TYPES,
+  MAX_BLANK_BADGES,
+  MIN_BLANK_BADGES,
   BADGE_TYPE_NAMES,
   badgeDesignSchema,
   badgeTypeOf,
@@ -340,7 +342,7 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
       if (!parsed.success) {
         return reply.status(400).send({
           error: "invalid_design",
-          message: "Réglage invalide : un fond doit être un fichier de la médiathèque (PNG, JPG, SVG ou PDF), une couleur au format #RRGGBB.",
+          message: `Réglage invalide : un fond doit être un fichier de la médiathèque (PNG, JPG, SVG ou PDF), une couleur au format #RRGGBB, et le nombre de badges vierges entre ${MIN_BLANK_BADGES} et ${MAX_BLANK_BADGES}.`,
         });
       }
       // Participant or sponsor through the counters, the four others outside.
@@ -397,13 +399,14 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
   // GET /api/admin/badges/:editionId/pdf — the print file (RG-ARR-19): the
   // numbering it would freeze before the freeze, the frozen one after; then
   // the dedicated flow's badges, which carry no number.
-  app.get<{ Params: { editionId: string }; Querystring: { separators?: "false"; only?: "blanks" } }>(
+  app.get<{ Params: { editionId: string }; Querystring: { separators?: "false"; only?: "blanks"; format?: "a6" | "a4" } }>(
     "/badges/:editionId/pdf",
     // The real badges: every attendee's name, company and QR code (#830).
     // `?separators=false`: the same badges in the same order, without the
     // "Guichet / Présentoir" and type pages (#835). The blank badges set in the
     // design come last (#841); `?only=blanks` gives them alone, to reprint some
-    // on the day without touching the numbering.
+    // on the day without touching the numbering. `?format=a4`: the printer's
+    // plates of four badges of one type, never with separators (#846).
     {
       preHandler: [refuseAgentsAtReception],
       schema: {
@@ -411,29 +414,31 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         querystring: {
           type: "object",
           additionalProperties: false,
-          properties: { separators: { type: "string", enum: ["false"] }, only: { type: "string", enum: ["blanks"] } },
+          properties: {
+            separators: { type: "string", enum: ["false"] },
+            only: { type: "string", enum: ["blanks"] },
+            format: { type: "string", enum: ["a6", "a4"] },
+          },
         },
       },
     },
     async (request, reply) => {
       const edition = await findEdition(Number(request.params.editionId));
       if (!edition) return notFound(reply, "Edition");
-      const withSeparators = request.query.separators !== "false";
+      const format = request.query.format ?? "a6";
+      const withSeparators = format === "a6" && request.query.separators !== "false";
       const design = readBadgeDesign(edition.badgeDesign);
+      const formatSuffix = format === "a4" ? "-a4" : withSeparators ? "" : "-sans-separateurs";
 
+      // At least one blank badge of each type (#846): never an empty file.
       if (request.query.only === "blanks") {
-        if (BADGE_TYPES.every((type) => design.types[type].blanks === 0)) {
-          return reply.status(409).send({
-            error: "no_blank_badges",
-            message: "Aucun badge vierge n'est demandé : indiquez un nombre par type dans l'apparence des badges, puis enregistrez.",
-          });
-        }
         const pdf = await renderBadgePdf(edition.year, [], design, {
           badgesPerBin: edition.badgesPerBin,
           separators: withSeparators,
           blanks: true,
+          format,
         });
-        return pdfReply(reply, pdf, `badges-${edition.year}-vierges${withSeparators ? "" : "-sans-separateurs"}.pdf`);
+        return pdfReply(reply, pdf, `badges-${edition.year}-vierges${formatSuffix}.pdf`);
       }
 
       let participants: PrintedBadge[];
@@ -469,9 +474,9 @@ export default async function adminBadgeRoutes(app: FastifyInstance) {
         badgesPerBin: edition.badgesPerBin,
         separators: withSeparators,
         blanks: true,
+        format,
       });
-      const suffix = `${edition.badgesFrozenAt ? "" : "-apercu"}${withSeparators ? "" : "-sans-separateurs"}`;
-      return pdfReply(reply, pdf, `badges-${edition.year}${suffix}.pdf`);
+      return pdfReply(reply, pdf, `badges-${edition.year}${edition.badgesFrozenAt ? "" : "-apercu"}${formatSuffix}.pdf`);
     },
   );
 

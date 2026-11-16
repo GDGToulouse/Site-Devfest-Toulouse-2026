@@ -276,10 +276,10 @@ describe("Badge numbering and freeze (#639)", () => {
     const withSeparators = await pages(`/api/admin/badges/${editionId}/pdf`);
     const bare = await call("GET", `/api/admin/badges/${editionId}/pdf?separators=false`);
 
-    // Three badges, recto and verso: six pages. The seed spreads them over three bins, so the
-    // print file adds three separators, each with its blank back.
-    expect(await pages(`/api/admin/badges/${editionId}/pdf?separators=false`)).toBe(6);
-    expect(withSeparators).toBe(12);
+    // Three badges and one blank of each of the six types (#846), recto and verso: eighteen pages.
+    // With separators: one per bin (the seed uses three) and one per type of blank, each with its back.
+    expect(await pages(`/api/admin/badges/${editionId}/pdf?separators=false`)).toBe(18);
+    expect(withSeparators).toBe(36);
     expect(bare.headers["content-disposition"]).toContain("sans-separateurs");
   });
 });
@@ -341,19 +341,36 @@ describe("Badge design and preview (#639, #749)", () => {
 
     expect(alone.statusCode).toBe(200);
     expect(alone.headers["content-disposition"]).toContain("vierges");
-    expect(await pageCount(alone.rawPayload)).toBe(6);
-    // The two seeded badges and the three blank ones, each with its back.
-    expect(await pageCount(all.rawPayload)).toBe(10);
+    // Three blank speakers and the minimum of one for the five other types (#846), each with its back.
+    expect(await pageCount(alone.rawPayload)).toBe(16);
+    // The two seeded badges and those eight blank ones.
+    expect(await pageCount(all.rawPayload)).toBe(20);
     expect((await status()).json()).toMatchObject({ numbered: numberedBefore, design: { types: { SPEAKER: { blanks: 3 } } } });
   });
 
-  it("should refuse the blank badges alone when none is asked for (#841)", async () => {
+  it("should give one blank badge of each type by default, and refuse fewer (#846)", async () => {
     await call("PUT", `/api/admin/badges/${editionId}/design`, { design: design(), tierTypes: [] });
+    const base = design();
+    const none = { ...base, types: { ...base.types, SPEAKER: { ...base.types.SPEAKER, blanks: 0 } } };
 
-    const res = await call("GET", `/api/admin/badges/${editionId}/pdf?only=blanks`);
+    const blanks = await call("GET", `/api/admin/badges/${editionId}/pdf?only=blanks&separators=false`);
+    const refused = await call("PUT", `/api/admin/badges/${editionId}/design`, { design: none, tierTypes: [] });
 
-    expect(res.statusCode).toBe(409);
-    expect(res.json().message).toMatch(/Aucun badge vierge/);
+    expect(await pageCount(blanks.rawPayload)).toBe(12);
+    expect(refused.statusCode).toBe(400);
+  });
+
+  it("should print plates of four badges of one type on A4 pages (#846)", async () => {
+    await seed(3);
+
+    const res = await call("GET", `/api/admin/badges/${editionId}/pdf?format=a4`);
+    const pdf = await PDFDocument.load(res.rawPayload);
+
+    // Participants: three seeded and one blank make one plate; five other types, one blank
+    // padded to four, one plate each. A plate is a front page and a back page.
+    expect(pdf.getPageCount()).toBe(12);
+    expect(pdf.getPage(0).getSize()).toEqual({ width: 595.276, height: 841.89 });
+    expect(res.headers["content-disposition"]).toContain("badges-1643-apercu-a4.pdf");
   });
 
   it("should refuse a badge type the tier's flow does not allow", async () => {
@@ -395,8 +412,9 @@ describe("Badge design and preview (#639, #749)", () => {
 
     const res = await call("GET", `/api/admin/badges/${editionId}/pdf`);
 
-    // Recto-verso: two bins with a separator and a badge each, then the speakers' separator and badge, each followed by a back.
-    expect(await pageCount(res.rawPayload)).toBe(12);
+    // Recto-verso: two bins with a separator and a badge each, then the speakers' separator and badge,
+    // then one blank badge of each of the six types after its separator (#846), each followed by a back.
+    expect(await pageCount(res.rawPayload)).toBe(36);
   });
 });
 

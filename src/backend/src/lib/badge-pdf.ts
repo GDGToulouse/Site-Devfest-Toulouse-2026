@@ -1,7 +1,16 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import fontkit from "@pdf-lib/fontkit";
-import { PDFDocument, rgb, type PDFFont, type PDFPage, type RGB } from "pdf-lib";
+import {
+  PDFDocument,
+  concatTransformationMatrix,
+  popGraphicsState,
+  pushGraphicsState,
+  rgb,
+  type PDFFont,
+  type PDFPage,
+  type RGB,
+} from "pdf-lib";
 import QRCode from "qrcode";
 import sharp from "sharp";
 
@@ -20,6 +29,15 @@ import { formatFirstName, formatLastName } from "./person-name.js";
 
 const PAGE: [number, number] = [297.638, 419.528];
 const [W, H] = PAGE;
+
+// The printer's plate (#846): A4 portrait, no margin, cut into 2 × 2 cells of
+// 105 × 148.5 mm, as the file the printer took in 2025. The badge (105 × 148
+// mm) sits in its cell at its own size, centred: 0.25 mm of white above and
+// below, under the cut.
+export const A4_PAGE: [number, number] = [595.276, 841.89];
+const CELL_HEIGHT = A4_PAGE[1] / 2;
+const CELL_MARGIN = (CELL_HEIGHT - H) / 2;
+export const BADGES_PER_PLATE = 4;
 // Measured on the designer's V3 file (#774), PDF origin bottom-left. The light
 // square holding the QR code belongs to the backgrounds; the QR code is
 // centred in it, on the 29 modules' footprint of the design.
@@ -305,6 +323,37 @@ function drawSeparator(page: PDFPage, fonts: Fonts, lines: Array<{ text: string;
   }
 }
 
+/** A cell of a plate: a person's badge, or a blank one of the plate's type (#841). */
+export interface PlateItem {
+  type: BadgeType;
+  badge: PrintedBadge | null;
+}
+
+const byBadgeName = (a: PrintedBadge, b: PrintedBadge) =>
+  a.lastName.localeCompare(b.lastName, "fr") || a.firstName.localeCompare(b.firstName, "fr");
+
+/**
+ * The plates of the A4 file (#846), four badges of one type each, so a
+ * plate's backs are all alike. Participants then sponsors in number order,
+ * then the dedicated types by name. Each type ends on its blank badges: the
+ * number set in the design, then 0 to 3 more to fill its last plate.
+ */
+export function plateItems(badges: PrintedBadge[], design: BadgeDesign): PlateItem[][] {
+  const byNumber = (a: PrintedBadge, b: PrintedBadge) =>
+    (a.badgeNumber ?? Number.MAX_SAFE_INTEGER) - (b.badgeNumber ?? Number.MAX_SAFE_INTEGER) || byBadgeName(a, b);
+  const plates: PlateItem[][] = [];
+  for (const type of BLANK_TYPES_ORDER) {
+    const isNumbered = type === "PARTICIPANT" || type === "SPONSOR";
+    const people = badges.filter((b) => b.type === type).sort(isNumbered ? byNumber : byBadgeName);
+    const items: PlateItem[] = people.map((badge) => ({ type, badge }));
+    const blanks = design.types[type].blanks;
+    const padding = (BADGES_PER_PLATE - ((items.length + blanks) % BADGES_PER_PLATE)) % BADGES_PER_PLATE;
+    for (let i = 0; i < blanks + padding; i++) items.push({ type, badge: null });
+    for (let i = 0; i < items.length; i += BADGES_PER_PLATE) plates.push(items.slice(i, i + BADGES_PER_PLATE));
+  }
+  return plates;
+}
+
 /**
  * The whole print file, or the preview (#749) when given one sample badge per
  * type: `separators` false leaves out the bin and type separator pages.
@@ -313,7 +362,7 @@ export async function renderBadgePdf(
   editionYear: number,
   badges: PrintedBadge[],
   design: BadgeDesign,
-  options: { badgesPerBin: number; separators?: boolean; blanks?: boolean },
+  options: { badgesPerBin: number; separators?: boolean; blanks?: boolean; format?: "a6" | "a4" },
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Badges DevFest Toulouse ${editionYear}`);
@@ -342,6 +391,33 @@ export async function renderBadgePdf(
   const colorOf = (type: BadgeType) => hexToRgb(design.types[type].color);
   const qrColor = hexToRgb(design.qrColor);
   const withSeparators = options.separators ?? true;
+
+  if (options.format === "a4") {
+    // One badge drawn in a cell of an A4 page: the A6 drawing, moved there.
+    const drawInCell = async (page: PDFPage, slot: number, item: PlateItem, side: "front" | "back") => {
+      const row = Math.floor(slot / 2);
+      // A back goes behind its front: duplex flips the sheet sideways, so
+      // its column is the other one. On a plate of one type the four backs
+      // are alike anyway, which is the point of the rule.
+      const column = side === "front" ? slot % 2 : 1 - (slot % 2);
+      page.pushOperators(
+        pushGraphicsState(),
+        concatTransformationMatrix(1, 0, 0, 1, column * W, (1 - row) * CELL_HEIGHT + CELL_MARGIN),
+      );
+      (await backgroundOf(item.type, side))(page);
+      if (side === "front" && item.badge) {
+        drawBadge(page, item.badge, fonts, colorOf(item.type), qrColor, design.qrContent);
+      }
+      page.pushOperators(popGraphicsState());
+    };
+    for (const plate of plateItems(badges, design)) {
+      const front = doc.addPage(A4_PAGE);
+      for (const [slot, item] of plate.entries()) await drawInCell(front, slot, item, "front");
+      const back = doc.addPage(A4_PAGE);
+      for (const [slot, item] of plate.entries()) await drawInCell(back, slot, item, "back");
+    }
+    return doc.save();
+  }
 
   // A badge's front, then its back; a separator's blank back: the file prints
   // recto-verso, so every front stays on an odd page.
@@ -380,10 +456,8 @@ export async function renderBadgePdf(
     await addBadge(badge);
   }
 
-  const byName = (a: PrintedBadge, b: PrintedBadge) =>
-    a.lastName.localeCompare(b.lastName, "fr") || a.firstName.localeCompare(b.firstName, "fr");
   for (const type of OTHER_TYPES_ORDER) {
-    const ofType = badges.filter((b) => b.type === type && b.badgeNumber === null).sort(byName);
+    const ofType = badges.filter((b) => b.type === type && b.badgeNumber === null).sort(byBadgeName);
     if (ofType.length === 0) continue;
     if (withSeparators) {
       addSeparator([

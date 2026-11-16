@@ -79,6 +79,8 @@ export default function BadgesSection({
   const [settingsFeedback, setSettingsFeedback] = useState<SaveState>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  // A6, one page per side, or the printer's A4 plates of four badges of one type (#846).
+  const [printFormat, setPrintFormat] = useState<"a6" | "a4">("a6");
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isResizeConfirmOpen, setIsResizeConfirmOpen] = useState(false);
   const [dialog, setDialog] = useState<"unfreeze" | "reset" | null>(null);
@@ -152,7 +154,12 @@ export default function BadgesSection({
     setActionError(null);
     setIsBusy(true);
     try {
-      const path = kind === "bare" ? "pdf?separators=false" : kind === "blanks" ? "pdf?only=blanks" : kind;
+      const query = new URLSearchParams();
+      if (kind === "bare") query.set("separators", "false");
+      if (kind === "blanks") query.set("only", "blanks");
+      if (kind !== "preview" && printFormat === "a4") query.set("format", "a4");
+      const search = query.toString();
+      const path = `${kind === "preview" ? "preview" : "pdf"}${search ? `?${search}` : ""}`;
       const res = await fetch(`/api/admin/badges/${editionId}/${path}`, { credentials: "include" });
       if (!res.ok) {
         const body = await res.json().catch(() => null);
@@ -379,6 +386,21 @@ export default function BadgesSection({
         </div>
       )}
 
+      {/* The printer takes A4 plates of four badges of one type, so every back
+          on a sheet is the same (#846); A6 stays for printing in house. */}
+      <fieldset className="mb-3 flex flex-wrap items-center gap-4 text-sm text-noir">
+        <legend className="sr-only">Format d&apos;impression</legend>
+        <span className="text-gris">Format d&apos;impression :</span>
+        <label className="flex items-center gap-2">
+          <input type="radio" name="badge-print-format" checked={printFormat === "a6"} onChange={() => setPrintFormat("a6")} />
+          A6, une page par face
+        </label>
+        <label className="flex items-center gap-2">
+          <input type="radio" name="badge-print-format" checked={printFormat === "a4"} onChange={() => setPrintFormat("a4")} />
+          A4, plaques de 4 badges du même type pour l&apos;imprimeur
+        </label>
+      </fieldset>
+
       <div className="flex flex-wrap gap-3">
         <button
           onClick={() => handleDownload("preview")}
@@ -394,21 +416,25 @@ export default function BadgesSection({
         >
           {isFrozen ? "Télécharger le PDF d'impression" : "Télécharger tous les badges (provisoire)"}
         </button>
-        <button
-          onClick={() => handleDownload("bare")}
-          disabled={isBusy || (!isFrozen && isBlocked)}
-          title="Recto et verso de chaque badge, sans les pages Guichet / Présentoir ni celles des types"
-          className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
-        >
-          Télécharger les badges sans séparateurs
-        </button>
+        {/* A4 never has separators: the file goes to the printer. */}
+        {printFormat === "a6" && (
+          <button
+            onClick={() => handleDownload("bare")}
+            disabled={isBusy || (!isFrozen && isBlocked)}
+            title="Recto et verso de chaque badge, sans les pages Guichet / Présentoir ni celles des types"
+            className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
+          >
+            Télécharger les badges sans séparateurs
+          </button>
+        )}
+        {/* At least one of each type (#846). On A4 each type's last plate is
+            filled with up to three more, so the count is the A6 one. */}
         <button
           onClick={() => handleDownload("blanks")}
-          disabled={isBusy || blankCount === 0}
-          title={blankCount === 0 ? "Indiquez un nombre de badges vierges par type dans l'apparence des badges" : undefined}
+          disabled={isBusy}
           className="px-4 py-2 rounded-lg border border-gris/30 text-sm text-noir hover:bg-blanc-casse disabled:opacity-50"
         >
-          Télécharger les badges vierges{blankCount > 0 ? ` (${blankCount})` : ""}
+          Télécharger les badges vierges{printFormat === "a6" ? ` (${blankCount})` : ""}
         </button>
         {!isFrozen && (
           <div className="flex flex-wrap items-center gap-3">

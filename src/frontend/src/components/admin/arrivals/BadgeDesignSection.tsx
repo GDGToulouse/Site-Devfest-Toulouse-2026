@@ -18,7 +18,9 @@ export interface BadgeDesign {
   types: Record<BadgeType, { background: string | null; backBackground: string | null; color: string; blanks: number }>;
 }
 
-// The backend's ceiling (`MAX_BLANK_BADGES`, badge-design.ts).
+// The backend's bounds (`MIN_BLANK_BADGES`, `MAX_BLANK_BADGES`, badge-design.ts):
+// at least one blank badge of each type (#846).
+const MIN_BLANK_BADGES = 1;
 const MAX_BLANK_BADGES = 200;
 
 export interface TierBadge {
@@ -197,12 +199,14 @@ export default function BadgeDesignSection({
               Badges vierges à imprimer
               <input
                 type="number"
-                min={0}
+                min={MIN_BLANK_BADGES}
                 max={MAX_BLANK_BADGES}
-                value={design.types[type].blanks ?? 0}
+                value={design.types[type].blanks ?? MIN_BLANK_BADGES}
                 onChange={(e) => {
                   const value = Math.trunc(Number(e.target.value));
-                  setType(type, { blanks: Number.isFinite(value) ? Math.min(MAX_BLANK_BADGES, Math.max(0, value)) : 0 });
+                  setType(type, {
+                    blanks: Number.isFinite(value) ? Math.min(MAX_BLANK_BADGES, Math.max(MIN_BLANK_BADGES, value)) : MIN_BLANK_BADGES,
+                  });
                 }}
                 className="w-20 px-2 py-1 rounded-lg border border-gris/30 text-noir"
               />
