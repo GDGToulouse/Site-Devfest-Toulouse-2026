@@ -8,6 +8,22 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [1.15.1] - 2026-11-16
+
+Les derniers outils d'impression avant le jour J : des **badges vierges** par type pour le guichet spécial, un export des badges **sans les pages de séparation**, et des **noms homogènes** sur les badges et les étiquettes (prénom avec majuscule initiale, nom en capitales). Le `schedule.xml` redevient valide pour les applis de conférence.
+
+> Aucune migration, aucune nouvelle variable d'environnement. Après le déploiement, régler le nombre de badges vierges par type dans l'apparence des badges si l'accueil en a besoin.
+
+### Ajouté
+
+- **Badges vierges** : un nombre de badges vierges par type de badge, réglé dans l'apparence des badges. Ils s'impriment à la fin du PDF, ou seuls par leur propre bouton, avec les fonds de leur type et rien d'autre (ni nom, ni QR code, ni numéro), pour le guichet spécial qui y colle une étiquette imprimée (#841).
+- **Noms homogènes sur les badges et les étiquettes** : le prénom s'imprime avec une majuscule à chaque partie (« Jean-Pierre »), le nom tout en majuscules (« DE LA FONTAINE »), quelle que soit la saisie sur Billetweb ; rien n'est modifié dans les données (#843).
+- **Badges sans séparateurs** : un second téléchargement du PDF des badges, sans les pages « Guichet / Présentoir » ni celles des types (#835).
+
+### Corrigé
+
+- **`schedule.xml`** : une conférence au slug trop court (« tbd ») rendait tout le fichier invalide pour les applis qui vérifient le format ; ce slug est désormais omis (#827).
+
 ## [1.15.0] - 2026-11-15
 
 La version du jour J : l'**accueil des participants** arrive sur le site, de l'import des billets Billetweb jusqu'à la remise du badge, avec des postes Scan, Guichet et Aide qui s'ouvrent par un QR code et tiennent hors connexion, et les **sponsors scannent les badges** sur leur stand. Le programme s'ouvre aussi dans les **applis de conférence** comme Giggity, l'import Sessionize **laisse tranquilles les conférences saisies à la main**, et l'agent IA d'un administrateur peut **régler les badges** sans jamais toucher aux participants.

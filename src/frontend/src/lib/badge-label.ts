@@ -1,3 +1,5 @@
+import { formatFirstName, formatLastName } from "./person-name";
+
 // The help desk's label (RG-ARR-51, #713): first name, last name and company,
 // printed black on white on the Zebra ZD421d through its driver, then stuck
 // on a blank badge. The roll is 10 × 10 or 10 × 15 cm, not yet measured: the
@@ -80,9 +82,9 @@ export function labelLayout(
 ): LabelLayout {
   const usable = format.widthMm - 2 * LABEL_MARGIN_MM;
   return {
-    firstNameMm: fit(text.firstName, usable, SIZES.firstName),
-    // Printed in capitals, which run wider.
-    lastNameMm: fit(text.lastName.toUpperCase(), usable / 1.15, SIZES.lastName),
+    firstNameMm: fit(formatFirstName(text.firstName), usable, SIZES.firstName),
+    // Printed in capitals (#843), which run wider.
+    lastNameMm: fit(formatLastName(text.lastName), usable / 1.15, SIZES.lastName),
     companyMm: text.company ? fit(text.company, usable, SIZES.company) : null,
     qrMm: text.qrSvg ? (format.heightMm >= 150 ? QR_MM.tall : QR_MM.short) : null,
   };

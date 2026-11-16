@@ -9,6 +9,7 @@ import type { BadgeType } from "../generated/prisma/client.js";
 import { NUMBERS_PER_BIN, binRange, formatBadgeNumber, slotOfNumber } from "./badge-numbering.js";
 import { BADGE_TYPE_NAMES, DEFAULT_QR_COLOR, builtInBackground, type BadgeDesign } from "./badge-design.js";
 import { UPLOADS_DIR } from "./image-store.js";
+import { formatFirstName, formatLastName } from "./person-name.js";
 
 // The print file (RG-ARR-19, #639, #774): recto-verso, pages alternating. Each
 // badge's front on its type's background is followed by that type's back; each
@@ -51,6 +52,7 @@ const BACKGROUND_PIXELS = { width: 1240, height: 1748 };
 
 const ASSETS = new URL("../../assets/", import.meta.url);
 export const OTHER_TYPES_ORDER: BadgeType[] = ["STAFF", "SPEAKER", "VOLUNTEER", "CONTRACTOR"];
+const BLANK_TYPES_ORDER: BadgeType[] = ["PARTICIPANT", "SPONSOR", ...OTHER_TYPES_ORDER];
 // The company's font: CC Sign Language in the design (licence pending), Google
 // Sans Bold meanwhile. Swap this one file to change it.
 const BOLD_FONT_FILE = "fonts/GoogleSans-Bold.ttf";
@@ -169,8 +171,9 @@ export function layoutBadgeText(
 ): { lines: TextLine[]; top: number; bottom: number } {
   const width = W - 2 * TEXT_MARGIN;
   const groups = [
-    { role: "first" as const, font: fonts.bold, text: badge.firstName, spec: FIRST_NAME, tracking: 0 },
-    { role: "last" as const, font: fonts.bold, text: badge.lastName, spec: LAST_NAME, tracking: 0 },
+    // Fitted on the printed form (#843): a last name in capitals runs wider.
+    { role: "first" as const, font: fonts.bold, text: formatFirstName(badge.firstName), spec: FIRST_NAME, tracking: 0 },
+    { role: "last" as const, font: fonts.bold, text: formatLastName(badge.lastName), spec: LAST_NAME, tracking: 0 },
     ...(badge.company
       ? [{ role: "company" as const, font: fonts.company, text: badge.company, spec: COMPANY, tracking: COMPANY.tracking }]
       : []),
@@ -310,7 +313,7 @@ export async function renderBadgePdf(
   editionYear: number,
   badges: PrintedBadge[],
   design: BadgeDesign,
-  options: { badgesPerBin: number; separators?: boolean },
+  options: { badgesPerBin: number; separators?: boolean; blanks?: boolean },
 ): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.setTitle(`Badges DevFest Toulouse ${editionYear}`);
@@ -389,6 +392,26 @@ export async function renderBadgePdf(
       ]);
     }
     for (const badge of ofType) await addBadge(badge);
+  }
+
+  // Blank badges last (#841), by type: the type's backgrounds and nothing on
+  // them, not even a number. They are handed out at the dedicated desk with a
+  // printed label, so they never enter the bins.
+  if (options.blanks) {
+    for (const type of BLANK_TYPES_ORDER) {
+      const count = design.types[type].blanks;
+      if (count === 0) continue;
+      if (withSeparators) {
+        addSeparator([
+          { text: BADGE_TYPE_NAMES[type], size: 36 },
+          { text: `${count} badges vierges`, size: 16 },
+        ]);
+      }
+      for (let i = 0; i < count; i++) {
+        (await backgroundOf(type, "front"))(doc.addPage(PAGE));
+        (await backgroundOf(type, "back"))(doc.addPage(PAGE));
+      }
+    }
   }
   return doc.save();
 }

@@ -4,6 +4,7 @@ import { createPortal } from "react-dom";
 
 import type { PrintedLabel } from "@/lib/arrivals-api";
 import { LABEL_MARGIN_MM, labelLayout, type LabelFormat } from "@/lib/badge-label";
+import { formatFirstName, formatLastName } from "@/lib/person-name";
 
 // The label as the Zebra prints it (RG-ARR-51, #713), at its real size in mm.
 // The same drawing serves the on-screen preview and the print: what the
@@ -40,10 +41,9 @@ function Label({ text, format, year }: { text: LabelContent; format: LabelFormat
       <span style={{ fontSize: "3.5mm", letterSpacing: "0.12em", textTransform: "uppercase" }}>
         DevFest Toulouse {year}
       </span>
-      <span style={{ fontSize: `${layout.firstNameMm}mm` }}>{text.firstName}</span>
-      <span style={{ fontSize: `${layout.lastNameMm}mm`, fontWeight: 500, textTransform: "uppercase" }}>
-        {text.lastName}
-      </span>
+      {/* Same rule as the badge (#843): capital initials, last name in capitals. */}
+      <span style={{ fontSize: `${layout.firstNameMm}mm` }}>{formatFirstName(text.firstName)}</span>
+      <span style={{ fontSize: `${layout.lastNameMm}mm`, fontWeight: 500 }}>{formatLastName(text.lastName)}</span>
       {layout.companyMm && text.company && (
         <span style={{ fontSize: `${layout.companyMm}mm`, fontWeight: 500 }}>{text.company}</span>
       )}
