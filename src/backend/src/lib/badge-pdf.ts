@@ -9,6 +9,7 @@ import type { BadgeType } from "../generated/prisma/client.js";
 import { NUMBERS_PER_BIN, binRange, formatBadgeNumber, slotOfNumber } from "./badge-numbering.js";
 import { BADGE_TYPE_NAMES, DEFAULT_QR_COLOR, builtInBackground, type BadgeDesign } from "./badge-design.js";
 import { UPLOADS_DIR } from "./image-store.js";
+import { formatFirstName, formatLastName } from "./person-name.js";
 
 // The print file (RG-ARR-19, #639, #774): recto-verso, pages alternating. Each
 // badge's front on its type's background is followed by that type's back; each
@@ -170,8 +171,9 @@ export function layoutBadgeText(
 ): { lines: TextLine[]; top: number; bottom: number } {
   const width = W - 2 * TEXT_MARGIN;
   const groups = [
-    { role: "first" as const, font: fonts.bold, text: badge.firstName, spec: FIRST_NAME, tracking: 0 },
-    { role: "last" as const, font: fonts.bold, text: badge.lastName, spec: LAST_NAME, tracking: 0 },
+    // Fitted on the printed form (#843): a last name in capitals runs wider.
+    { role: "first" as const, font: fonts.bold, text: formatFirstName(badge.firstName), spec: FIRST_NAME, tracking: 0 },
+    { role: "last" as const, font: fonts.bold, text: formatLastName(badge.lastName), spec: LAST_NAME, tracking: 0 },
     ...(badge.company
       ? [{ role: "company" as const, font: fonts.company, text: badge.company, spec: COMPANY, tracking: COMPANY.tracking }]
       : []),
