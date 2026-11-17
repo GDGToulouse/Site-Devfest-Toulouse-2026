@@ -41,8 +41,10 @@
       "@next/swc-linux-x64-musl"
     ],
     "auditConfig": {
-      "//": {},
-      "ignoreGhsas": []
+      "//": {
+        "GHSA-fc5q-39xc-vjpf": "picomatch ReDoS, no patched version yet. Only reached through @parcel/watcher, next-intl's file watcher for message files in development; no glob pattern ever comes from a visitor. Remove once picomatch ships a fix (2026-11-17)."
+      },
+      "ignoreGhsas": ["GHSA-fc5q-39xc-vjpf"]
     }
   },
   "devDependencies": {

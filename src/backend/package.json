@@ -66,8 +66,10 @@
       "@fastify/busboy": "^3.2.2"
     },
     "auditConfig": {
-      "//": {},
-      "ignoreGhsas": []
+      "//": {
+        "GHSA-fc5q-39xc-vjpf": "picomatch ReDoS, no patched version yet. Only reached through vitest and vite, which better-auth lists as a peer dependency: test tooling, never loaded by the server, and no glob pattern ever comes from a visitor. Remove once picomatch ships a fix (2026-11-17)."
+      },
+      "ignoreGhsas": ["GHSA-fc5q-39xc-vjpf"]
     }
   },
   "devDependencies": {
