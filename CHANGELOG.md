@@ -8,9 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.15.3] - 2026-11-17
 
-> **Une migration** : le marqueur « masquée des moteurs » des pages (#854). Sauvegarder la base avant le déploiement.
+Une page de l'admin peut désormais rester en ligne pour qui a le lien tout en restant hors des moteurs de recherche.
+
+> **Une migration**, additive : le marqueur « masquée des moteurs » des pages (#854). Sauvegarder la base avant le déploiement. Aucune nouvelle variable d'environnement.
 
 ### Ajouté
 
