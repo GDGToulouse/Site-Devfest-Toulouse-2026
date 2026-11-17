@@ -8,7 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.15.2] - 2026-11-16
+
+Correctif du PDF des badges en production : le fichier complet de l'édition se télécharge de nouveau, en A6 comme en A4, et le site reste réactif pendant sa génération.
+
+> Aucune migration, aucune nouvelle variable d'environnement.
 
 ### Corrigé
 
