@@ -10,7 +10,7 @@ vi.mock("nodemailer", () => ({
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { hashLinkToken } from "../lib/edit-token.js";
-import { getSeededEdition } from "./edition-test-helpers.js";
+import { getSeededEdition, pinClockBeforeEditFreeze } from "./edition-test-helpers.js";
 
 // PUT /api/edit/:token/talks/:talkId — a speaker edits the wording of one of
 // their published sessions (#260), and only where the organizers opened editing
@@ -27,6 +27,9 @@ let lockedTalkId: number;
 let draftTalkId: number;
 let foreignTalkId: number;
 
+
+// The modification link freezes 48 h before the event (RG-246).
+pinClockBeforeEditFreeze();
 describe("PUT /api/edit/:token/talks/:talkId — speaker edits a session (#260)", () => {
   beforeAll(async () => {
     const edition = await getSeededEdition();

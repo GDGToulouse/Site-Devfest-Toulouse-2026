@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { hashLinkToken } from "../lib/edit-token.js";
-import { getSeededEdition } from "./edition-test-helpers.js";
+import { getSeededEdition, pinClockBeforeEditFreeze } from "./edition-test-helpers.js";
 
 // Bluesky is part of the shared socialLinks allowlist (#253); an unknown social
 // key stays rejected. Exercised on a speaker: the rule is the same for both, and
@@ -11,6 +11,9 @@ import { getSeededEdition } from "./edition-test-helpers.js";
 const TOKEN = "test-edit-bluesky-speaker-token-a1b2c3d4e5f6a7b8";
 let speakerId: number;
 
+
+// The modification link freezes 48 h before the event (RG-246).
+pinClockBeforeEditFreeze();
 describe("PUT /api/edit/:token — bluesky social link (#253)", () => {
   beforeAll(async () => {
     const edition = await getSeededEdition();
