@@ -180,8 +180,8 @@ describe("sitemap — every article, not the first hundred (#379)", () => {
 describe("sitemap — pages written from the admin (#419)", () => {
   it("lists a published page, in both languages when it has an English version", async () => {
     vi.mocked(getPublishedPages).mockResolvedValue([
-      { id: 3, slug: "recrutement", titleFr: "Recrutement", titleEn: "Jobs", hasEnglish: true, navLocation: "HEADER", navOrder: 0, updatedAt: "2026-06-01T00:00:00Z" },
-      { id: 4, slug: "faq", titleFr: "FAQ", titleEn: "", hasEnglish: false, navLocation: "NONE", navOrder: 0, updatedAt: "2026-06-02T00:00:00Z" },
+      { id: 3, slug: "recrutement", titleFr: "Recrutement", titleEn: "Jobs", hasEnglish: true, navLocation: "HEADER", navOrder: 0, isHiddenFromSearch: false, updatedAt: "2026-06-01T00:00:00Z" },
+      { id: 4, slug: "faq", titleFr: "FAQ", titleEn: "", hasEnglish: false, navLocation: "NONE", navOrder: 0, isHiddenFromSearch: false, updatedAt: "2026-06-02T00:00:00Z" },
     ]);
 
     const entries = await sitemap();
@@ -196,12 +196,24 @@ describe("sitemap — pages written from the admin (#419)", () => {
   // Without the exclusion they would appear twice in the same sitemap.
   it("lists a page that also has its own route only once", async () => {
     vi.mocked(getPublishedPages).mockResolvedValue([
-      { id: 1, slug: "code-de-conduite", titleFr: "Code de conduite", titleEn: "Code of Conduct", hasEnglish: true, navLocation: "NONE", navOrder: 0, updatedAt: "2026-06-01T00:00:00Z" },
+      { id: 1, slug: "code-de-conduite", titleFr: "Code de conduite", titleEn: "Code of Conduct", hasEnglish: true, navLocation: "NONE", navOrder: 0, isHiddenFromSearch: false, updatedAt: "2026-06-01T00:00:00Z" },
     ]);
 
     const entries = await sitemap();
 
     expect(paths(entries).filter((p) => p === "/fr/code-de-conduite")).toHaveLength(1);
+  });
+
+  it("leaves out a page hidden from search engines, keeping the others (#854)", async () => {
+    vi.mocked(getPublishedPages).mockResolvedValue([
+      { id: 5, slug: "consignes-benevoles", titleFr: "Consignes", titleEn: "Briefing", hasEnglish: true, navLocation: "NONE", navOrder: 0, isHiddenFromSearch: true, updatedAt: "2026-11-17T00:00:00Z" },
+      { id: 3, slug: "recrutement", titleFr: "Recrutement", titleEn: "Jobs", hasEnglish: true, navLocation: "HEADER", navOrder: 0, isHiddenFromSearch: false, updatedAt: "2026-06-01T00:00:00Z" },
+    ]);
+
+    const entries = await sitemap();
+
+    expect(paths(entries).some((p) => p.includes("consignes-benevoles"))).toBe(false);
+    expect(paths(entries)).toContain("/fr/recrutement");
   });
 });
 

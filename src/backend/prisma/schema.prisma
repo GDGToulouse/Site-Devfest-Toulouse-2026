@@ -865,6 +865,9 @@ model ContentPage {
   // other free pages (#420). NONE keeps it reachable by its URL only.
   navLocation PageNavLocation @default(NONE)
   navOrder    Int             @default(0)
+  // Online for whoever has the link, but kept out of search engines (#854):
+  // out of the sitemap, and served with `noindex, nofollow`.
+  isHiddenFromSearch Boolean @default(false)
   deletedAt   DateTime?
   updatedAt   DateTime  @updatedAt
 

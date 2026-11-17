@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { hashLinkToken } from "../lib/edit-token.js";
-import { getSeededEdition } from "./edition-test-helpers.js";
+import { getSeededEdition, pinClockBeforeEditFreeze } from "./edition-test-helpers.js";
 
 // GET /api/edit/:token exposes the speaker's accepted sessions read-only (#229):
 // only PUBLISHED talks are surfaced, and a sponsor token carries no `talks`.
@@ -12,6 +12,9 @@ let editionId: number;
 let speakerId: number;
 const talkIds: number[] = [];
 
+
+// The modification link freezes 48 h before the event (RG-246).
+pinClockBeforeEditFreeze();
 describe("GET /api/edit/:token — speaker sessions (#229)", () => {
   beforeAll(async () => {
     const edition = await getSeededEdition();

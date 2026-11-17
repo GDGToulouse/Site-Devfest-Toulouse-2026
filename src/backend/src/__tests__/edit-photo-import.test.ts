@@ -15,7 +15,7 @@ const { buildEditApp } = await import("./test-edit-app.js");
 const { prisma } = await import("../lib/prisma.js");
 const { UPLOADS_DIR } = await import("../lib/image-store.js");
 const { RemoteFetchError } = await import("../lib/safe-fetch.js");
-const { getSeededEdition } = await import("./edition-test-helpers.js");
+const { getSeededEdition, pinClockBeforeEditFreeze } = await import("./edition-test-helpers.js");
 const { hashLinkToken } = await import("../lib/edit-token.js");
 
 // #687 — a photo pasted as a URL in the edit link was saved as that URL: the
@@ -31,6 +31,8 @@ const TOKEN = "test-edit-photo-import-token-0123456789abcdef";
 const LEGACY_URL = "https://legacy.example.org/old-photo.jpg";
 let speakerId: number;
 const written: string[] = [];
+
+pinClockBeforeEditFreeze();
 
 beforeAll(async () => {
   const edition = await getSeededEdition();
