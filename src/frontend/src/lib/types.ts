@@ -139,6 +139,8 @@ export interface ContentPage {
   titleEn: string;
   contentFr: string;
   contentEn: string;
+  /** Kept out of search engines: `noindex, nofollow`, out of the sitemap (#854). */
+  isHiddenFromSearch: boolean;
   updatedAt: string;
 }
 
@@ -154,6 +156,8 @@ export interface ContentPageSummary {
   /** Where the page shows in the navigation, and its rank there (#420). */
   navLocation: "NONE" | "HEADER" | "FOOTER";
   navOrder: number;
+  /** Left out of the sitemap (#854). */
+  isHiddenFromSearch: boolean;
   updatedAt: string;
 }
 

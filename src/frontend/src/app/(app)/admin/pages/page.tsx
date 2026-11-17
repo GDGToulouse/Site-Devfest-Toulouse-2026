@@ -32,6 +32,8 @@ interface PageSummary {
   isPublished: boolean;
   navLocation: NavLocation;
   navOrder: number;
+  // Online but kept out of search engines (#854).
+  isHiddenFromSearch: boolean;
   updatedAt: string;
 }
 
@@ -145,6 +147,7 @@ export default function PagesAdminPage() {
         isPublished: editing.isPublished,
         navLocation: editing.navLocation,
         navOrder: editing.navOrder,
+        isHiddenFromSearch: editing.isHiddenFromSearch,
       }),
     });
     setIsSaving(false);
@@ -339,6 +342,23 @@ export default function PagesAdminPage() {
                 Sponsors…), du plus petit ordre au plus grand. Un brouillon n&apos;apparaît nulle
                 part, quel que soit son emplacement.
               </p>
+
+              {/* Online for whoever has the link, out of Google & co (#854). */}
+              <label className="mt-4 flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={editing.isHiddenFromSearch}
+                  onChange={(e) => setEditing({ ...editing, isHiddenFromSearch: e.target.checked })}
+                  className="mt-0.5 rounded border-gris/30 text-malachite focus:ring-malachite"
+                />
+                <span>
+                  <span className="block text-sm text-noir">Masquer des moteurs de recherche</span>
+                  <span className="block text-xs text-gris">
+                    La page reste accessible par son adresse, mais elle sort du plan du site et demande aux
+                    moteurs de ne pas l&apos;indexer. Une page déjà dans Google en sort à leur prochain passage.
+                  </span>
+                </span>
+              </label>
             </div>
           )}
 
@@ -393,6 +413,11 @@ export default function PagesAdminPage() {
                       >
                         {page.isPublished ? "Publiée" : "Brouillon"}
                       </span>
+                      {page.isHiddenFromSearch && (
+                        <span className="ml-2 inline-block rounded-full bg-gris/15 px-2 py-0.5 text-xs font-medium text-gris">
+                          Masquée des moteurs
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gris text-xs">{new Date(page.updatedAt).toLocaleDateString("fr-FR")}</td>
                     <td className="px-4 py-3 text-right">

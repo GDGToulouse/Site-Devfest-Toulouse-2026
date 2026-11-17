@@ -204,6 +204,7 @@ function page(overrides: Partial<ContentPageSummary> = {}): ContentPageSummary {
     hasEnglish: true,
     navLocation: "HEADER",
     navOrder: 0,
+    isHiddenFromSearch: false,
     updatedAt: "2026-08-25T00:00:00.000Z",
     ...overrides,
   };

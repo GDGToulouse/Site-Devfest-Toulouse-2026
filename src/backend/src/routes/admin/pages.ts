@@ -28,6 +28,7 @@ interface PageBody {
   isPublished?: boolean;
   navLocation?: NavLocation;
   navOrder?: number;
+  isHiddenFromSearch?: boolean;
 }
 
 // The navigation location comes from a select, but it reaches Prisma as an enum
@@ -86,6 +87,7 @@ export default async function adminPageRoutes(app: FastifyInstance) {
       isPublished: p.isPublished,
       navLocation: p.navLocation,
       navOrder: p.navOrder,
+      isHiddenFromSearch: p.isHiddenFromSearch,
       updatedAt: p.updatedAt,
     }));
     return q.page ? { page, limit, total, items: rows } : rows;
@@ -132,6 +134,8 @@ export default async function adminPageRoutes(app: FastifyInstance) {
         isPublished: body.isPublished ?? existing.isPublished,
         navLocation: readNavLocation(body.navLocation, existing.navLocation),
         navOrder: Number.isFinite(body.navOrder) ? Number(body.navOrder) : existing.navOrder,
+        isHiddenFromSearch:
+          typeof body.isHiddenFromSearch === "boolean" ? body.isHiddenFromSearch : existing.isHiddenFromSearch,
       },
     });
 
@@ -159,6 +163,7 @@ export default async function adminPageRoutes(app: FastifyInstance) {
         contentEn: sanitizeRichHtml(body.contentEn),
         // A new page is a draft: publishing is a deliberate second gesture.
         isPublished: body.isPublished === true,
+        isHiddenFromSearch: body.isHiddenFromSearch === true,
       },
     });
 

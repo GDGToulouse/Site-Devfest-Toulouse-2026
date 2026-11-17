@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { buildEditApp } from "./test-edit-app.js";
 import { prisma } from "../lib/prisma.js";
 import { hashLinkToken } from "../lib/edit-token.js";
-import { getSeededEdition } from "./edition-test-helpers.js";
+import { getSeededEdition, pinClockBeforeEditFreeze } from "./edition-test-helpers.js";
 
 // A 1x1 transparent PNG — smallest valid raster image sharp will accept.
 const PNG_1x1 = Buffer.from(
@@ -28,6 +28,9 @@ function multipartBody(filename: string, contentType: string, content: Buffer) {
 const TOKEN = "test-edit-upload-token-abcdef0123456789";
 let speakerId: number;
 
+
+// The modification link freezes 48 h before the event (RG-246).
+pinClockBeforeEditFreeze();
 describe("POST /api/edit/:token/upload", () => {
   beforeAll(async () => {
     const edition = await getSeededEdition();

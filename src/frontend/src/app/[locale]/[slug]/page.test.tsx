@@ -32,6 +32,7 @@ const PAGE = {
   titleEn: "LinkedIn App Privacy Policy",
   contentFr: "<p>Contenu français</p>",
   contentEn: "<p>English content</p>",
+  isHiddenFromSearch: false,
   updatedAt: "2026-08-17T00:00:00Z",
 };
 
@@ -80,6 +81,23 @@ describe("dynamic content page", () => {
       fr: `/fr/${PAGE.slug}`,
       en: `/en/${PAGE.slug}`,
     });
+  });
+
+  it("leaves a page open to search engines by default", async () => {
+    vi.mocked(getContentPage).mockResolvedValue(PAGE);
+
+    const meta = await generateMetadata({ params: params(PAGE.slug) });
+
+    expect(meta.robots).toBeUndefined();
+  });
+
+  it("asks search engines neither to index nor to follow a hidden page (#854)", async () => {
+    vi.mocked(getContentPage).mockResolvedValue({ ...PAGE, isHiddenFromSearch: true });
+
+    const meta = await generateMetadata({ params: params(PAGE.slug) });
+
+    expect(meta.robots).toEqual({ index: false, follow: false });
+    expect(meta.title).toBe(PAGE.titleFr);
   });
 
   // A missing page must not surface "undefined" as a title in <head>.

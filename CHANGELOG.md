@@ -8,6 +8,14 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [Non publié]
+
+> **Une migration** : le marqueur « masquée des moteurs » des pages (#854). Sauvegarder la base avant le déploiement.
+
+### Ajouté
+
+- **Pages masquées des moteurs de recherche** : une case sur la fiche d'une page de l'admin. La page reste accessible par son adresse, mais elle sort du plan du site et demande aux moteurs de ne pas l'indexer (`noindex, nofollow`) (#854).
+
 ## [1.15.2] - 2026-11-16
 
 Correctif du PDF des badges en production : le fichier complet de l'édition se télécharge de nouveau, en A6 comme en A4, et le site reste réactif pendant sa génération.

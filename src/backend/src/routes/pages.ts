@@ -25,6 +25,8 @@ export default async function pageRoutes(app: FastifyInstance) {
       hasEnglish: p.titleEn.trim().length > 0 && p.contentEn.trim().length > 0,
       navLocation: p.navLocation,
       navOrder: p.navOrder,
+      // The sitemap leaves it out (#854); the navigation may still show it.
+      isHiddenFromSearch: p.isHiddenFromSearch,
       updatedAt: p.updatedAt,
     }));
   });
@@ -48,6 +50,8 @@ export default async function pageRoutes(app: FastifyInstance) {
       titleEn: page.titleEn,
       contentFr: page.contentFr,
       contentEn: page.contentEn,
+      // The page puts `noindex, nofollow` in its head (#854).
+      isHiddenFromSearch: page.isHiddenFromSearch,
       updatedAt: page.updatedAt,
     };
   });

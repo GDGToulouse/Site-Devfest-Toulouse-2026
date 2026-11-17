@@ -164,7 +164,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // above have their own path and are excluded here to avoid a duplicate entry.
   const cmsSlugs = new Set<string>(CMS_BACKED_ROUTES.map((r) => r.slug));
   for (const page of await getPublishedPages()) {
-    if (cmsSlugs.has(page.slug)) continue;
+    // Online by its link, but kept out of search engines (#854).
+    if (cmsSlugs.has(page.slug) || page.isHiddenFromSearch) continue;
     const path = `/${page.slug}`;
     const locales: Locale[] = page.hasEnglish ? ["fr", "en"] : ["fr"];
     for (const locale of locales) {
