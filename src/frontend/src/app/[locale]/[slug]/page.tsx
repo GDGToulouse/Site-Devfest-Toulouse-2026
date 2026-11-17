@@ -37,6 +37,8 @@ export async function generateMetadata({
     title,
     description,
     ...(await pageMetadata(locale, `/${slug}`)),
+    // Reachable by its link, kept out of the index (#854).
+    ...(page.isHiddenFromSearch && { robots: { index: false, follow: false } }),
   };
 }
 
