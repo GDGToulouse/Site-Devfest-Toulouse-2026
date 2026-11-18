@@ -339,8 +339,9 @@ Issue optionnelle : sans elle, le mode dégradé (US-ARR-05) donne déjà le num
    irait aux Cas particuliers, plus accessible en fauteuil.
 3. ~~**Impression des étiquettes**~~ : tranchée (pilote d'abord, cf. Contraintes). Reste
    l'essai sur la vraie Zebra.
-4. **Format des étiquettes** : 10 × 10 ou 10 × 15 cm, à mesurer sur le rouleau. Les deux sont
-   prêts, choisis sur le poste Cas particuliers (#713).
+4. **Format des étiquettes** : 10 × 10, 10 × 15 ou 8 × 5 cm (paysage, QR code à droite du texte),
+   à mesurer sur le rouleau. Les trois sont prêts, choisis sur le poste Cas particuliers (#713) ;
+   un autre format s'ajoute dans `LABEL_FORMATS` (`src/frontend/src/lib/badge-label.ts`).
 5. **Maquette du badge** : fournie par l'équipe, pas encore disponible. Bloque le rendu du PDF,
    pas la numérotation.
 6. **Conservation 18 mois** (RG-ARR-66) : toujours sans réponse explicite.
