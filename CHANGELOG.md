@@ -8,7 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.15.4] - 2026-11-18
+
+Les étiquettes de l'écran Aide s'impriment aussi sur rouleau 8 × 5 cm, et chaque information y tient sur une seule ligne. Cette version porte aussi la 1.15.3, jamais déployée seule : les pages masquables des moteurs de recherche.
+
+> **Une migration**, celle de la 1.15.3 (marqueur « masquée des moteurs » des pages, #854), additive. Sauvegarder la base avant le déploiement. Aucune nouvelle variable d'environnement.
 
 ### Ajouté
 
