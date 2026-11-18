@@ -11,10 +11,9 @@ import { formatFirstName, formatLastName } from "./person-name";
 
 export type LabelFormatId = "100x150" | "100x100" | "80x50";
 
-/** Largest and smallest size of a line, in mm of text height. */
+/** Largest size of a line, in mm of text height. A line never wraps: it shrinks. */
 interface LineSize {
   max: number;
-  min: number;
 }
 
 export interface LabelFormat {
@@ -31,11 +30,10 @@ export interface LabelFormat {
   sizes: { firstName: LineSize; lastName: LineSize; company: LineSize };
 }
 
-// Below the smallest size, a line wraps rather than becoming unreadable.
 const LARGE_SIZES = {
-  firstName: { max: 20, min: 9 },
-  lastName: { max: 11, min: 6 },
-  company: { max: 6, min: 4 },
+  firstName: { max: 20 },
+  lastName: { max: 11 },
+  company: { max: 6 },
 } as const;
 
 export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
@@ -44,7 +42,8 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     name: "10 × 15 cm",
     widthMm: 100,
     heightMm: 150,
-    marginMm: 6,
+    // Printed labels showed text close to the edge: 2 mm more than the printer needs.
+    marginMm: 8,
     qrMm: 40,
     qrPlacement: "below",
     sizes: LARGE_SIZES,
@@ -54,26 +53,26 @@ export const LABEL_FORMATS: Record<LabelFormatId, LabelFormat> = {
     name: "10 × 10 cm",
     widthMm: 100,
     heightMm: 100,
-    marginMm: 6,
+    marginMm: 8,
     // Leaves the text its full size on the short roll.
     qrMm: 26,
     qrPlacement: "below",
     sizes: LARGE_SIZES,
   },
-  // Landscape: 8 cm wide, 5 cm high. Four lines and a QR code in 42 mm of
+  // Landscape: 8 cm wide, 5 cm high. Four lines and a QR code in 38 mm of
   // height take smaller text and a thinner margin.
   "80x50": {
     id: "80x50",
     name: "8 × 5 cm",
     widthMm: 80,
     heightMm: 50,
-    marginMm: 4,
+    marginMm: 6,
     qrMm: 22,
     qrPlacement: "beside",
     sizes: {
-      firstName: { max: 11, min: 6 },
-      lastName: { max: 7, min: 4.5 },
-      company: { max: 4.5, min: 3.5 },
+      firstName: { max: 11 },
+      lastName: { max: 7 },
+      company: { max: 4.5 },
     },
   },
 };
@@ -106,15 +105,30 @@ export function saveLabelFormat(id: LabelFormatId): void {
   }
 }
 
-// Average glyph width of a bold sans-serif, as a share of its size: a rough
-// figure, generous enough that a name sized by it stays on one line.
-const GLYPH_WIDTH = 0.6;
+/**
+ * How wide a text runs, in em: its width at a font size of 1. In the browser,
+ * the real font measures it (`useLabelMeasure`); the estimate is the fallback
+ * before the font has loaded, and in tests.
+ */
+export type MeasureText = (text: string, weight: 500 | 700) => number;
 
-const length = (text: string) => [...text.normalize("NFC")].length;
+// Average glyph width of a bold sans-serif, as a share of its size. Counting
+// letters this way wrapped "Clémence" on a printed 8 × 5 label (#713): a rough
+// figure only stands in until the real font is measured.
+const GLYPH_WIDTH = 0.66;
 
-function fit(text: string, usableMm: number, { max, min }: LineSize): number {
-  const fitting = usableMm / (Math.max(length(text), 1) * GLYPH_WIDTH);
-  return Math.round(Math.min(max, Math.max(min, fitting)) * 10) / 10;
+export const estimateTextWidth: MeasureText = (text) => [...text.normalize("NFC")].length * GLYPH_WIDTH;
+
+// Kept off the exact width: rendering and rounding differ by a hair from the
+// measure, and a hair is enough to wrap.
+const SAFETY = 0.94;
+// Below this, a name would be unreadable: only an absurdly long one gets there.
+const FLOOR_MM = 2;
+
+/** As large as the line allows, never wider than its room: a line shrinks, it never wraps. */
+function fit(width: number, usableMm: number, { max }: LineSize): number {
+  const fitting = (usableMm * SAFETY) / Math.max(width, 0.01);
+  return Math.floor(Math.max(FLOOR_MM, Math.min(max, fitting)) * 10) / 10;
 }
 
 export interface LabelLayout {
@@ -129,15 +143,20 @@ export interface LabelLayout {
 export function labelLayout(
   text: { firstName: string; lastName: string; company: string | null; qrSvg?: string | null },
   format: LabelFormat,
+  measure: MeasureText = estimateTextWidth,
 ): LabelLayout {
   const qrMm = text.qrSvg ? format.qrMm : null;
   const besideQr = qrMm !== null && format.qrPlacement === "beside" ? qrMm + QR_GAP_MM : 0;
   const usable = format.widthMm - 2 * format.marginMm - besideQr;
   return {
-    firstNameMm: fit(formatFirstName(text.firstName), usable, format.sizes.firstName),
-    // Printed in capitals (#843), which run wider.
-    lastNameMm: fit(formatLastName(text.lastName), usable / 1.15, format.sizes.lastName),
-    companyMm: text.company ? fit(text.company, usable, format.sizes.company) : null,
+    firstNameMm: fit(measure(formatFirstName(text.firstName), 700), usable, format.sizes.firstName),
+    // Printed in capitals (#843), which the estimate counts wider; the real font measures them as they are.
+    lastNameMm: fit(
+      measure(formatLastName(text.lastName), 500) * (measure === estimateTextWidth ? 1.15 : 1),
+      usable,
+      format.sizes.lastName,
+    ),
+    companyMm: text.company ? fit(measure(text.company, 500), usable, format.sizes.company) : null,
     qrMm,
   };
 }
