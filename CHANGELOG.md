@@ -8,6 +8,20 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [1.15.4] - 2026-11-18
+
+Les étiquettes de l'écran Aide s'impriment aussi sur rouleau 8 × 5 cm, et chaque information y tient sur une seule ligne. Cette version porte aussi la 1.15.3, jamais déployée seule : les pages masquables des moteurs de recherche.
+
+> **Une migration**, celle de la 1.15.3 (marqueur « masquée des moteurs » des pages, #854), additive. Sauvegarder la base avant le déploiement. Aucune nouvelle variable d'environnement.
+
+### Ajouté
+
+- **Rouleau d'étiquettes 8 × 5 cm** pour l'écran Aide, QR code à côté du texte (#713).
+
+### Corrigé
+
+- **Étiquettes de l'Aide** : prénom, nom et entreprise restent chacun sur une ligne (« Clémence » était coupé en deux), la taille se réduisant selon la largeur réelle du texte ; 2 mm de marge en plus sur chaque bord (#713).
+
 ## [1.15.3] - 2026-11-17
 
 Une page de l'admin peut désormais rester en ligne pour qui a le lien tout en restant hors des moteurs de recherche.
