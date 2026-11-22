@@ -21,7 +21,7 @@ beforeEach(() => {
   adminFetch.mockImplementation(async (path: string, options?: { method?: string; body?: string }) => {
     // The tab's other sections (#565, #567) load their own data.
     if (path.endsWith("/feedback")) return { status: 200, data: { talks: [] } };
-    if (path.endsWith("/feedback-recap")) return { status: 200, data: { phase: "upcoming", speakers: 0, withoutEmail: [], lastSentAt: null } };
+    if (path.endsWith("/feedback-recap")) return { status: 200, data: { phase: "upcoming", speakers: [] } };
     if (options?.method === "PUT") {
       const { enabled } = JSON.parse(options.body!);
       const deleted = enabled ? 0 : state.testVotes;

@@ -42,6 +42,7 @@
     "pg": "^8.23.1",
     "prisma": "^7.10.1",
     "qrcode": "1.5.4",
+    "read-excel-file": "9.3.14",
     "sanitize-html": "^2.18.0",
     "sharp": "^0.35.5",
     "zod": "4.6.7"
@@ -67,9 +68,10 @@
     },
     "auditConfig": {
       "//": {
-        "GHSA-fc5q-39xc-vjpf": "picomatch ReDoS, no patched version yet. Only reached through vitest and vite, which better-auth lists as a peer dependency: test tooling, never loaded by the server, and no glob pattern ever comes from a visitor. Remove once picomatch ships a fix (2026-11-17)."
+        "GHSA-fc5q-39xc-vjpf": "picomatch ReDoS, no patched version yet. Only reached through vitest and vite, which better-auth lists as a peer dependency: test tooling, never loaded by the server, and no glob pattern ever comes from a visitor. Remove once picomatch ships a fix (2026-11-17).",
+        "GHSA-7589-6fvf-x4pw": "effect ReDoS in Schema.TemplateLiteral, fixed in 3.22.1, but @prisma/config pins effect 3.20.0 up to Prisma's latest release. It only reads prisma.config.ts for the CLI: no visitor input ever reaches an effect schema. Remove once Prisma ships effect >= 3.22.1 (2026-11-22)."
       },
-      "ignoreGhsas": ["GHSA-fc5q-39xc-vjpf"]
+      "ignoreGhsas": ["GHSA-fc5q-39xc-vjpf", "GHSA-7589-6fvf-x4pw"]
     }
   },
   "devDependencies": {

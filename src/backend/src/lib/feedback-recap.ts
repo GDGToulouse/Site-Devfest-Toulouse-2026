@@ -26,6 +26,9 @@ interface Recipient {
   locale: ContactLocale;
   isLinkLocked: boolean;
   talks: RecapTalk[];
+  // Where this speaker's recap stands for the edition (#865).
+  sentAt: Date | null;
+  failedAt: Date | null;
 }
 
 /** The speakers of an edition with at least one real vote on their sessions. */
@@ -43,6 +46,11 @@ export async function recapRecipients(editionId: number): Promise<Recipient[]> {
     orderBy: { title: "asc" },
   });
   const results = await resultsForTalks(talks.map((t) => t.id), { realOnly: true });
+  const states = await prisma.speakerFeedbackRecap.findMany({
+    where: { editionId },
+    select: { speakerId: true, sentAt: true, failedAt: true },
+  });
+  const stateBySpeaker = new Map(states.map((state) => [state.speakerId, state]));
 
   const bySpeaker = new Map<number, Recipient>();
   for (const talk of talks) {
@@ -56,6 +64,8 @@ export async function recapRecipients(editionId: number): Promise<Recipient[]> {
         locale: normalizeLocale(speaker.locale),
         isLinkLocked: speaker.editLinkLocked,
         talks: [],
+        sentAt: stateBySpeaker.get(speaker.id)?.sentAt ?? null,
+        failedAt: stateBySpeaker.get(speaker.id)?.failedAt ?? null,
       };
       recipient.talks.push({ title: talk.title, results: result });
       bySpeaker.set(speaker.id, recipient);
@@ -141,14 +151,20 @@ export interface RecapReport {
 }
 
 /**
- * Sends every speaker of the edition their recap. Each gets a fresh edit link:
- * the one they have may have expired (30 days), and the details live there.
- * Send first, persist the token second, as for the edit link (#223): a failed
- * send leaves the speaker's current link valid.
+ * Sends the recap to the speakers who have not received it yet, failures
+ * included; with `speakerId`, to that speaker alone, even if already sent
+ * (#865): a second click never writes to a speaker twice.
+ *
+ * Each email carries a fresh edit link: the one they have may have expired
+ * (30 days), and the details live there. Send first, persist the token second,
+ * as for the edit link (#223): a failed send leaves the current link valid.
  */
-export async function sendFeedbackRecaps(editionId: number): Promise<RecapReport> {
+export async function sendFeedbackRecaps(editionId: number, speakerId?: number): Promise<RecapReport> {
   const report: RecapReport = { sent: [], withoutEmail: [], failed: [] };
-  for (const recipient of await recapRecipients(editionId)) {
+  const recipients = (await recapRecipients(editionId)).filter((recipient) =>
+    speakerId === undefined ? recipient.sentAt === null : recipient.id === speakerId,
+  );
+  for (const recipient of recipients) {
     if (!recipient.email) {
       report.withoutEmail.push(recipient.name);
       continue;
@@ -157,19 +173,25 @@ export async function sendFeedbackRecaps(editionId: number): Promise<RecapReport
     // the team closed.
     const token = recipient.isLinkLocked ? null : generateEditToken();
     const email = buildRecapEmail(recipient, token ? `${baseUrl}/edit/${token}` : null);
+    const where = { editionId_speakerId: { editionId, speakerId: recipient.id } };
     try {
       await sendEmail({ to: [recipient.email], subject: email.subject, text: email.text, html: email.html, locale: recipient.locale });
     } catch {
+      const failedAt = new Date();
+      await prisma.speakerFeedbackRecap.upsert({ where, create: { editionId, speakerId: recipient.id, failedAt }, update: { failedAt } });
       report.failed.push(recipient.name);
       continue;
     }
     if (token) {
       await prisma.speaker.update({ where: { id: recipient.id }, data: { editToken: hashLinkToken(token), editTokenSentAt: new Date() } });
     }
+    const sentAt = new Date();
+    await prisma.speakerFeedbackRecap.upsert({
+      where,
+      create: { editionId, speakerId: recipient.id, sentAt },
+      update: { sentAt, failedAt: null },
+    });
     report.sent.push(recipient.name);
-  }
-  if (report.sent.length > 0) {
-    await prisma.edition.update({ where: { id: editionId }, data: { feedbackRecapSentAt: new Date() } });
   }
   return report;
 }

@@ -6,6 +6,11 @@ import { loadServiceSlots, type SzServiceSlot } from "../../lib/sessionize-servi
 import { setChannel } from "../../lib/request-context.js";
 import { notFound } from "../../lib/admin-helpers.js";
 import { requireAdminRole } from "../../lib/admin-guard.js";
+import { sniffOfficeDocument } from "../../lib/file-sniff.js";
+import { importSessionizeContacts, readSessionizeContacts, SpreadsheetError } from "../../lib/sessionize-email-import.js";
+
+// The organizers' export of a whole edition weighs well under a megabyte.
+const SPREADSHEET_MAX_BYTES = 5 * 1024 * 1024;
 
 interface SessionizeImportBody {
   editionId: number;
@@ -104,6 +109,33 @@ export default async function adminImportRoutes(app: FastifyInstance) {
       );
     }
     return report;
+  });
+
+  // POST /api/admin/import/sessionize/emails — the speakers' contact addresses
+  // from the Excel export of Sessionize's organizer app (#866). Fills empty
+  // addresses only, sends nothing. ADMIN only: personal data in bulk.
+  app.post("/import/sessionize/emails", { preHandler: [requireAdminRole] }, async (request, reply) => {
+    const upload = await request.file({ limits: { fileSize: SPREADSHEET_MAX_BYTES } });
+    if (!upload) return reply.code(400).send({ error: "no_file", message: "Aucun fichier reçu." });
+    const buffer = await upload.toBuffer();
+    if (upload.file.truncated) {
+      return reply.code(413).send({ error: "file_too_large", message: "Fichier trop lourd (5 Mo au plus)." });
+    }
+    // The bytes decide, not the name the browser gave: an .xlsx is a zip.
+    if (!sniffOfficeDocument(buffer, ".xlsx")) {
+      return reply.code(400).send({ error: "not_xlsx", message: "Ce fichier n'est pas un export Excel (.xlsx)." });
+    }
+
+    let read;
+    try {
+      read = await readSessionizeContacts(buffer);
+    } catch (err) {
+      if (err instanceof SpreadsheetError) return reply.code(422).send({ error: "invalid_spreadsheet", message: err.message });
+      throw err;
+    }
+    setChannel("IMPORT");
+    const report = await importSessionizeContacts(read.contacts);
+    return { ...report, invalid: read.invalid };
   });
 
   // GET /api/admin/import/sessionize/:editionId/source — the link the edition

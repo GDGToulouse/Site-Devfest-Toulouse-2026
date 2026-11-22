@@ -17,6 +17,7 @@ export interface SpeakerFormValue {
   bluesky: string;
   github: string;
   website: string;
+  contactEmail: string;
   locale: "fr" | "en";
 }
 
@@ -32,6 +33,7 @@ export const emptySpeakerForm: SpeakerFormValue = {
   bluesky: "",
   github: "",
   website: "",
+  contactEmail: "",
   locale: "fr",
 };
 
@@ -126,6 +128,22 @@ export default function SpeakerForm({ value, onChange }: SpeakerFormProps) {
           <input type="url" value={value.website} onChange={(e) => onChange({ ...value, website: e.target.value })} className={inputClass} />
         </label>
       </div>
+
+      {/* Saved with the rest of the form, sending nothing (#865): the edit
+          link and the feedback recap then write to it. */}
+      <label className="block md:w-1/2 md:pr-2">
+        <span className="block text-sm font-medium text-noir mb-1">Email de contact</span>
+        <input
+          type="email"
+          value={value.contactEmail}
+          onChange={(e) => onChange({ ...value, contactEmail: e.target.value })}
+          placeholder="email@exemple.com"
+          className={inputClass}
+        />
+        <span className="block text-xs text-gris mt-1">
+          Jamais affiché sur le site. L&apos;enregistrer n&apos;envoie rien au speaker.
+        </span>
+      </label>
 
       <label className="block max-w-xs">
         <span className="block text-sm font-medium text-noir mb-1">Langue de contact</span>

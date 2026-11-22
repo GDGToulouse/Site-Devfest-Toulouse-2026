@@ -183,8 +183,11 @@ const nextConfig: NextConfig = {
         destination: `${backendUrl}/api/health`,
       },
       {
+        // No trailing slash: with one, the backend writes `./static/…` asset
+        // paths, which the browser (left on `/api/docs`) resolves under
+        // `/api/static/` — a blank Swagger page (#864).
         source: "/api/docs",
-        destination: `${backendUrl}/api/docs/`,
+        destination: `${backendUrl}/api/docs`,
       },
       {
         source: "/api/docs/:path*",
