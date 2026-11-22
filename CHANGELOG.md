@@ -8,6 +8,26 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [Non publié]
+
+_Changements mergés sur `dev` (beta), pas encore en production._
+
+> **Deux migrations** : l'état d'envoi du récapitulatif des avis, speaker par speaker (#865), et l'identifiant Sessionize des speakers (#866). Sauvegarder la base avant le déploiement : `sudo devfest-backup prod avant-vX.Y.Z`. Aucune nouvelle variable d'environnement. **Avant le premier envoi des avis après la mise en production**, relire le tableau de l'onglet Avis : la migration ne retrouve que le dernier envoi déjà fait, et seulement pour les speakers dont le lien n'était pas verrouillé ; les autres speakers déjà servis apparaissent « À envoyer ».
+
+### Ajouté
+
+- **Récapitulatif des avis suivi speaker par speaker** : l'onglet Avis de l'édition montre, pour chaque speaker qui a reçu des avis, son adresse et l'état de son envoi (envoyé le…, échec, à envoyer, sans adresse). Le bouton n'écrit qu'à ceux qui ne l'ont pas encore reçu, et chaque ligne peut renvoyer son récapitulatif (#865).
+- **Adresse de contact d'un speaker dans sa fiche**, enregistrée sans rien envoyer : elle ne se saisissait qu'en envoyant le lien de modification (#865).
+- **Adresses des speakers importées depuis Sessionize** : l'export Excel des sessions de Sessionize, déposé sur la page Import, complète les adresses vides sans toucher à celles déjà saisies ; l'API de Sessionize ne les donne pas (#866).
+
+### Corrigé
+
+- **La documentation de l'API (`/api/docs`) s'affiche en production** quand elle y est ouverte : la page restait blanche, ses scripts étaient cherchés à une mauvaise adresse (#864).
+
+### Modifié
+
+- **Sauvegardes de la base de production** chiffrées, copiées chaque nuit sur le Drive partagé du GDG, beta comprise ; procédure dans `docs/mise-en-production.md` (#678).
+
 ## [1.15.4] - 2026-11-18
 
 Les étiquettes de l'écran Aide s'impriment aussi sur rouleau 8 × 5 cm, et chaque information y tient sur une seule ligne. Cette version porte aussi la 1.15.3, jamais déployée seule : les pages masquables des moteurs de recherche.
