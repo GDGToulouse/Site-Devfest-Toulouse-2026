@@ -176,6 +176,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/files/:filename/tags` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files/import-url` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/import/sessionize` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/import/sessionize/emails` | ADMIN |
 | GET | `/api/admin/import/sessionize/:editionId/rooms` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/import/sessionize/:editionId/rooms/:sessionizeId` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/import/sessionize/:editionId/source` | ADMIN |
