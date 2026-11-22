@@ -8,11 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.16.0] - 2026-11-22
 
-_Changements mergés sur `dev` (beta), pas encore en production._
+Les avis du public partent aux speakers **en sachant qui les a déjà reçus** : l'onglet Avis suit l'envoi speaker par speaker, et les adresses manquantes se complètent depuis la fiche du speaker ou d'un coup depuis l'export Excel de Sessionize. La documentation de l'API s'affiche aussi en production, et la base est désormais sauvegardée chaque nuit, chiffrée, hors du serveur.
 
-> **Deux migrations** : l'état d'envoi du récapitulatif des avis, speaker par speaker (#865), et l'identifiant Sessionize des speakers (#866). Sauvegarder la base avant le déploiement : `sudo devfest-backup prod avant-vX.Y.Z`. Aucune nouvelle variable d'environnement. **Avant le premier envoi des avis après la mise en production**, relire le tableau de l'onglet Avis : la migration ne retrouve que le dernier envoi déjà fait, et seulement pour les speakers dont le lien n'était pas verrouillé ; les autres speakers déjà servis apparaissent « À envoyer ».
+> **Deux migrations** : l'état d'envoi du récapitulatif des avis, speaker par speaker (#865), et l'identifiant Sessionize des speakers (#866). La première **supprime la colonne `Edition.feedbackRecapSentAt`** après en avoir tiré l'état des envois. Sauvegarder la base avant le déploiement : `sudo devfest-backup prod avant-v1.16.0`. Aucune nouvelle variable d'environnement. **Avant le premier envoi des avis après la mise en production**, relire le tableau de l'onglet Avis : la migration ne retrouve que le dernier envoi déjà fait, et seulement pour les speakers dont le lien n'était pas verrouillé ; les autres speakers déjà servis apparaissent « À envoyer ».
 
 ### Ajouté
 
