@@ -331,12 +331,27 @@ export async function importSessionize(
   // Reconciled across every edition since #351: someone who already spoke a
   // previous year must be reused, not duplicated under `ada-lovelace-2`.
   const existingSpeakers = await prisma.speaker.findMany({
-    select: { id: true, slug: true, photoUrl: true },
+    select: { id: true, slug: true, photoUrl: true, sessionizeId: true },
   });
   const takenSpeakerSlugs = new Set(existingSpeakers.map((s) => s.slug));
   const speakerSlugToId = new Map(existingSpeakers.map((s) => [s.slug, s.id]));
   const photoUrlBySlug = new Map(existingSpeakers.map((s) => [s.slug, s.photoUrl]));
+  const speakerIdBySessionizeId = new Map(
+    existingSpeakers.filter((s) => s.sessionizeId).map((s) => [s.sessionizeId!, s.id]),
+  );
   const dbIdBySzSpeakerId = new Map<string, number>();
+
+  // The Sessionize id is kept on the speaker (#866), so the import of the
+  // organizers' Excel export finds them. One already held by someone else is
+  // reported, never moved in silence: two people would then share it.
+  function sessionizeIdFor(szId: string, speakerId: number | null, name: string): { sessionizeId?: string } {
+    const holder = speakerIdBySessionizeId.get(szId);
+    if (holder !== undefined && holder !== speakerId) {
+      report.warnings.push(`Identifiant Sessionize de ${name} déjà porté par un autre speaker : non enregistré.`);
+      return {};
+    }
+    return { sessionizeId: szId };
+  }
 
   for (const sz of data.speakers ?? []) {
     const name = sz.fullName?.trim() || `${sz.firstName ?? ""} ${sz.lastName ?? ""}`.trim();
@@ -366,6 +381,7 @@ export async function importSessionize(
           bioFr: sz.bio?.trim() || null,
           photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
+          ...sessionizeIdFor(String(sz.id), existingId, name),
         },
       });
       speakerId = updated.id;
@@ -382,6 +398,7 @@ export async function importSessionize(
           bioFr: sz.bio?.trim() || null,
           photoUrl,
           socialLinks: count > 0 ? JSON.stringify(social) : null,
+          ...sessionizeIdFor(String(sz.id), null, name),
         },
       });
       speakerSlugToId.set(slug, created.id);
@@ -389,6 +406,8 @@ export async function importSessionize(
       dbIdBySzSpeakerId.set(sz.id, created.id);
       report.speakers.created++;
     }
+
+    if (!speakerIdBySessionizeId.has(String(sz.id))) speakerIdBySessionizeId.set(String(sz.id), speakerId);
 
     // The participation starts as a draft even when the person is already
     // published on another edition (#351): being announced for 2024 must not

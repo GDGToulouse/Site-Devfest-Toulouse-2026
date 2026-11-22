@@ -1273,6 +1273,9 @@ model Speaker {
   socialLinks  String?
   // Contact email used to send the modification link (RG-243). Optional.
   contactEmail String?
+  // The speaker's id in Sessionize (#866), set by both Sessionize imports:
+  // finds them again when their name changes. Null for speakers never imported.
+  sessionizeId String? @unique
   // Language we write to this speaker in — "fr" | "en" (#224). Set in the
   // admin, defaults to French so existing rows keep today's behaviour. This is
   // NOT Talk.language: a French speaker may well present in English.
