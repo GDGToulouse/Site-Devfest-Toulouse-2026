@@ -74,6 +74,7 @@ export default function SpeakerEditorPage() {
           bluesky: data.socialLinks?.bluesky || "",
           github: data.socialLinks?.github || "",
           website: data.socialLinks?.website || "",
+          contactEmail: data.contactEmail ?? "",
           locale: data.locale === "en" ? "en" : "fr",
         });
         // Kept for the PUT payload, which still names a participation.
@@ -107,6 +108,7 @@ export default function SpeakerEditorPage() {
       bioFr: form.bioFr,
       bioEn: form.bioEn,
       socialLinks,
+      contactEmail: form.contactEmail.trim(),
       locale: form.locale,
     };
 
@@ -147,6 +149,8 @@ export default function SpeakerEditorPage() {
       // Stays on the page rather than redirecting (#394): the redirect was the
       // only signal, and it looked exactly like Cancel.
       setSaveState({ kind: "ok", text: "Modifications enregistrées." });
+      // The edit-link block below starts from the saved address (#865).
+      setCurrent((saved) => (saved ? { ...saved, contactEmail: payload.contactEmail || null } : saved));
     }
   }
 
@@ -276,6 +280,7 @@ export default function SpeakerEditorPage() {
 
         {!isNew && current && (
           <EditLinkActions
+            key={current.contactEmail ?? ""}
             resource="speakers"
             entityId={current.id}
             initialEmail={current.contactEmail ?? ""}

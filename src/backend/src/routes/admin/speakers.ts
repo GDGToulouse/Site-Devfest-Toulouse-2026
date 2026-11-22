@@ -9,6 +9,7 @@ import { generateEditToken, hashLinkToken } from "../../lib/edit-token.js";
 import { sendEditLinkEmail, normalizeLocale } from "../../lib/edit-link-email.js";
 import { notDeleted, notFound, parkUniqueValue, softDeleteData } from "../../lib/admin-helpers.js";
 import { unsafeUrlRefusal } from "../../lib/sanitize.js";
+import { isEmailAddress } from "../../lib/email-address.js";
 import { SPEAKER_EDITION_STATUSES, type SpeakerEditionStatus } from "../../lib/talk-status.js";
 import {
   EDIT_LINK_STATES,
@@ -384,6 +385,13 @@ export default async function adminSpeakerRoutes(app: FastifyInstance) {
     if (refusal) return reply.code(400).send(refusal);
     if (body.publicationStatus !== undefined && !SPEAKER_EDITION_STATUSES.includes(body.publicationStatus)) {
       return reply.code(400).send({ error: INVALID_PARTICIPATION_STATUS });
+    }
+    // Saved from the speaker's form since #865, without sending anything.
+    if (body.contactEmail !== undefined) {
+      body.contactEmail = body.contactEmail.trim();
+      if (body.contactEmail && !isEmailAddress(body.contactEmail)) {
+        return reply.code(400).send({ error: "invalid_field", message: "Adresse e-mail de contact invalide." });
+      }
     }
     const before = await speakerFootprint([Number(id)]);
 
