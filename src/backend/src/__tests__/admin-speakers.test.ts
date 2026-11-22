@@ -81,6 +81,28 @@ describe("Admin Speakers API", () => {
     await app.close();
   });
 
+  // #865 — the address is saved with the form, nothing sent.
+  it("should save a contact email with the speaker's form, trimmed, and refuse a malformed one", async () => {
+    const app = await buildSpeakersApp();
+    const edition = await getSeededEdition();
+    const created = await app.inject({
+      method: "POST",
+      url: "/api/admin/speakers",
+      payload: { editionId: edition.id, name: `Mary Somerville ${Date.now()}` },
+    });
+    const { id } = created.json();
+    createdSpeakerIds.push(id);
+
+    const saved = await app.inject({ method: "PUT", url: `/api/admin/speakers/${id}`, payload: { contactEmail: "  mary@example.com " } });
+    const refused = await app.inject({ method: "PUT", url: `/api/admin/speakers/${id}`, payload: { contactEmail: "mary@" } });
+    const stored = await prisma.speaker.findUnique({ where: { id } });
+
+    expect(saved.statusCode).toBe(200);
+    expect(refused.statusCode).toBe(400);
+    expect(stored).toMatchObject({ contactEmail: "mary@example.com", editToken: null });
+    await app.close();
+  });
+
   it("GET /api/admin/speakers/:id returns the right speaker, 404 for an unknown id", async () => {
     const app = await buildSpeakersApp();
     const edition = await getSeededEdition();

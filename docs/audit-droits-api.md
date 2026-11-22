@@ -140,6 +140,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/editions/:id/feedback` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback-recap` | ADMIN |
 | POST | `/api/admin/editions/:id/feedback-recap` | ADMIN |
+| POST | `/api/admin/editions/:id/feedback-recap/:speakerId` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | PUT | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
