@@ -10,7 +10,9 @@ import nextConfig from "../../next.config";
 describe("/api/docs relay", () => {
   it("should relay the Swagger page without a trailing slash", async () => {
     const rewrites = await nextConfig.rewrites!();
-    const rules = Array.isArray(rewrites) ? rewrites : [...rewrites.beforeFiles, ...rewrites.afterFiles, ...rewrites.fallback];
+    const rules = Array.isArray(rewrites)
+      ? rewrites
+      : [...(rewrites.beforeFiles ?? []), ...(rewrites.afterFiles ?? []), ...(rewrites.fallback ?? [])];
 
     const docs = rules.find((rule) => rule.source === "/api/docs");
 
