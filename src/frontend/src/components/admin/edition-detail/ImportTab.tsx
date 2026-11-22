@@ -12,6 +12,7 @@ import {
 import ConfirmDialog from "@/components/admin/ConfirmDialog";
 import { formatEventTime } from "@/lib/datetime";
 import SessionizeRoomPairing from "./SessionizeRoomPairing";
+import SessionizeEmailImport from "./SessionizeEmailImport";
 
 interface ImportTabProps {
   editionId: number;
@@ -338,6 +339,9 @@ export default function ImportTab({ editionId }: ImportTabProps) {
       )}
 
       <SessionizeRoomPairing editionId={editionId} refreshKey={importCount} />
+
+      {/* ADMIN only (#866): personal data in bulk. The backend enforces it. */}
+      {isAdmin && <SessionizeEmailImport />}
 
       <ConfirmDialog
         isOpen={isConfirmingDelete}

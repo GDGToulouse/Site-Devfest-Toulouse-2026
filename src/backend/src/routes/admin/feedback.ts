@@ -15,7 +15,7 @@ const ID_PARAMS = { type: "object", required: ["id"], properties: { id: { type: 
 async function findEdition(id: number) {
   return prisma.edition.findFirst({
     where: { id, ...notDeleted },
-    select: { id: true, startDate: true, endDate: true, feedbackTestMode: true, feedbackRecapSentAt: true },
+    select: { id: true, startDate: true, endDate: true, feedbackTestMode: true },
   });
 }
 
@@ -127,9 +127,9 @@ export default async function adminFeedbackRoutes(app: FastifyInstance) {
     return { id: request.params.id, hidden: request.body.hidden };
   });
 
-  // GET /api/admin/editions/:id/feedback-recap — who the recap would reach,
-  // for the confirmation before sending: speakers with at least one real vote,
-  // and those of them with no address to write to.
+  // GET /api/admin/editions/:id/feedback-recap — every speaker the recap is
+  // for (at least one real vote), with their address and where their recap
+  // stands (#865): sent, failed, or still to send.
   app.get<{ Params: { id: number } }>("/editions/:id/feedback-recap", {
     schema: { params: ID_PARAMS },
   }, async (request, reply) => {
@@ -138,19 +138,38 @@ export default async function adminFeedbackRoutes(app: FastifyInstance) {
     const recipients = await recapRecipients(edition.id);
     return {
       phase: feedbackPhase(edition),
-      speakers: recipients.length,
-      withoutEmail: recipients.filter((r) => !r.email).map((r) => r.name),
-      lastSentAt: edition.feedbackRecapSentAt,
+      speakers: recipients.map(({ id, name, email, sentAt, failedAt }) => ({ id, name, email, sentAt, failedAt })),
     };
   });
 
-  // POST /api/admin/editions/:id/feedback-recap — send it, now. Only ever on an
-  // admin's action: nothing goes out by itself (#563).
+  // POST /api/admin/editions/:id/feedback-recap — send it, now, to the
+  // speakers who have not received it yet. Only ever on an admin's action:
+  // nothing goes out by itself (#563).
   app.post<{ Params: { id: number } }>("/editions/:id/feedback-recap", {
     schema: { params: ID_PARAMS },
   }, async (request, reply) => {
     const edition = await findEdition(request.params.id);
     if (!edition) return reply.code(404).send({ error: "Edition not found" });
     return sendFeedbackRecaps(edition.id);
+  });
+
+  // POST /api/admin/editions/:id/feedback-recap/:speakerId — send it to one
+  // speaker, again if need be: a corrected address, a lost email (#865).
+  app.post<{ Params: { id: number; speakerId: number } }>("/editions/:id/feedback-recap/:speakerId", {
+    schema: {
+      params: {
+        type: "object",
+        required: ["id", "speakerId"],
+        properties: { id: { type: "integer", minimum: 1 }, speakerId: { type: "integer", minimum: 1 } },
+      },
+    },
+  }, async (request, reply) => {
+    const edition = await findEdition(request.params.id);
+    if (!edition) return reply.code(404).send({ error: "Edition not found" });
+    const report = await sendFeedbackRecaps(edition.id, request.params.speakerId);
+    if (report.sent.length + report.failed.length + report.withoutEmail.length === 0) {
+      return reply.code(404).send({ error: "Speaker not found", message: "Ce speaker n'a pas d'avis sur cette édition." });
+    }
+    return report;
   });
 }

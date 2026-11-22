@@ -224,6 +224,8 @@ export async function buildServer() {
   // loop for attackers. Gate the UI and spec behind SWAGGER_PUBLIC=true, or a
   // local run. A deployed dev environment (dev-j) is public too and runs
   // without NODE_ENV=production, so the environment's name decides (#658).
+  // The code being public, an environment may open them on purpose: set
+  // SWAGGER_PUBLIC=true in Coolify, which hands it to the container (#864).
   const isLocalRun = !process.env.ENV_NAME || process.env.ENV_NAME === "local";
   const swaggerPublic =
     process.env.SWAGGER_PUBLIC === "true" || (process.env.NODE_ENV !== "production" && isLocalRun);

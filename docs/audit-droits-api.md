@@ -140,6 +140,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | GET | `/api/admin/editions/:id/feedback` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback-recap` | ADMIN |
 | POST | `/api/admin/editions/:id/feedback-recap` | ADMIN |
+| POST | `/api/admin/editions/:id/feedback-recap/:speakerId` | ADMIN |
 | GET | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | PUT | `/api/admin/editions/:id/feedback-test-mode` | ADMIN |
 | GET | `/api/admin/editions/:id/key-figures` | Équipe (ADMIN, EDITOR) |
@@ -175,6 +176,7 @@ Généré par `LOG_LEVEL=silent pnpm exec tsx scripts/route-inventory.ts` (conte
 | PUT | `/api/admin/files/:filename/tags` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/files/import-url` | Équipe (ADMIN, EDITOR) |
 | POST | `/api/admin/import/sessionize` | Équipe (ADMIN, EDITOR) |
+| POST | `/api/admin/import/sessionize/emails` | ADMIN |
 | GET | `/api/admin/import/sessionize/:editionId/rooms` | Équipe (ADMIN, EDITOR) |
 | PUT | `/api/admin/import/sessionize/:editionId/rooms/:sessionizeId` | Équipe (ADMIN, EDITOR) |
 | DELETE | `/api/admin/import/sessionize/:editionId/source` | ADMIN |

@@ -254,37 +254,57 @@ conteneurs.
   est effacé même sur une erreur ;
 - n'écrit que des fichiers lisibles par root (`umask 077`), dans `/root/backups/` ;
 - garde les `BACKUP_KEEP` derniers dumps de chaque environnement (14 par défaut) ;
-- copie chaque dump sur le Google Drive du GDG par rclone, et y supprime ceux de
+- copie chaque dump sur le Drive partagé du GDG par rclone, et y supprime ceux de
   plus de `BACKUP_REMOTE_KEEP_DAYS` jours (90 par défaut).
+
+**En place depuis le 2026-11-22** : sauvegarde de la prod chaque nuit à 2 h 30,
+copie dans le dossier `devfest-backups` du Drive partagé du GDG (remote rclone
+`gdg-drive`). La beta n'est pas sauvegardée.
 
 La clé privée age est elle-même chiffrée par une **phrase de passe**, à ranger
 dans le gestionnaire de mots de passe de l'équipe : sans elle, aucune sauvegarde
 ne se relit. Sa version chiffrée peut rester sur le VPS, pour restaurer sans rien
 y copier.
 
-**Installation, une fois** (le VPS n'a pas de copie du dépôt) :
+**Installation, une fois** (le VPS n'a pas de copie du dépôt). Chaque commande
+tient sur **une ligne** : un bloc collé dans le shell du VPS y perd ses retours à
+la ligne, et le premier `#` y commente tout le reste.
 
-1. Copier le script depuis un poste qui a le dépôt :
-   `scp scripts/backup-prod-db.sh <vps>:/tmp/`, puis sur le VPS
-   `sudo install -m 700 /tmp/backup-prod-db.sh /usr/local/sbin/devfest-backup`.
-2. `sudo apt install age rclone`.
-3. Créer la clé, chiffrée par une phrase de passe (age la demande deux fois), et
-   en extraire la clé publique :
+1. Télécharger le script depuis le dépôt public, vérifier sa première ligne
+   (`#!/bin/sh`), l'installer :
+   `curl -fsSL https://raw.githubusercontent.com/GDGToulouse/Site-Devfest-Toulouse-2026/main/scripts/backup-prod-db.sh -o /tmp/backup-prod-db.sh && head -1 /tmp/backup-prod-db.sh && sudo install -m 700 /tmp/backup-prod-db.sh /usr/local/sbin/devfest-backup && rm /tmp/backup-prod-db.sh`
+2. `sudo apt install -y age rclone`.
+3. Créer la clé, chiffrée par une phrase de passe (age la demande deux fois ;
+   vide, il en génère une et l'affiche une seule fois), et en extraire la clé
+   publique. La clé privée ne touche jamais le disque en clair :
 
-   ```bash
-   sudo mkdir -p -m 700 /root/.config/devfest-backup
-   age-keygen | sudo sh -c 'age -p -o /root/.config/devfest-backup/identity.age'
-   ```
+   `sudo mkdir -p -m 700 /root/.config/devfest-backup && age-keygen 2>/tmp/age-pub.txt | sudo sh -c 'age -p -a -o /root/.config/devfest-backup/identity.age' && grep -o 'age1[0-9a-z]*' /tmp/age-pub.txt | sudo tee /etc/devfest-backup.recipients && rm /tmp/age-pub.txt`
 
-   `age-keygen` affiche la clé publique (`Public key: age1…`) sur la sortie
-   d'erreur : la coller dans `/etc/devfest-backup.recipients`. Garder aussi une
-   copie de `identity.age` hors du VPS (gestionnaire de mots de passe) : si le
-   VPS disparaît, c'est elle qui ouvre les copies du Drive.
-4. Créer le remote rclone vers le Drive du GDG avec `sudo rclone config` (type
-   `drive`, accès `drive.file`, « auto config » : **non**). Le VPS n'a pas de
-   navigateur : rclone donne une commande `rclone authorize "drive" …` à lancer
-   sur un poste qui en a un, connecté au compte Google du GDG, puis à recoller le
-   jeton obtenu.
+   `-a` écrit la clé chiffrée en texte : copier la sortie de
+   `sudo cat /root/.config/devfest-backup/identity.age` dans le gestionnaire de
+   mots de passe de l'équipe, avec la phrase de passe. Si le VPS disparaît, ce
+   sont elles qui ouvrent les copies du Drive.
+4. Créer le remote rclone vers le **Drive partagé** du GDG, scope `drive.file` :
+   rclone ne voit que les fichiers qu'il a créés, jamais le reste du Drive. Ce
+   scope ne permet pas de **lister** les Drives partagés : `rclone config`
+   échoue (403) à la question « Shared Drive ». Créer le remote d'une traite,
+   avec l'identifiant du Drive partagé (son adresse,
+   `drive.google.com/drive/folders/<identifiant>`) :
+   1. Sur un poste avec navigateur (sous Windows `winget install Rclone.Rclone`),
+      connecté au compte Google du GDG :
+      `rclone authorize "drive" "eyJzY29wZSI6ImRyaXZlLmZpbGUifQ"`.
+   2. Le rclone récent du poste rend un bloc encodé (`eyJ…`) que le rclone 1.60
+      d'Ubuntu ne lit pas (il tente alors une autorisation par navigateur sur le
+      VPS, en `127.0.0.1`, qui n'aboutit jamais). La ligne suivante en extrait le
+      jeton, sans l'afficher ni le garder dans l'historique ; coller le bloc à
+      l'invite :
+
+      `read -rs -p 'Jeton rclone : ' BLOB && echo && TOKEN=$(printf '%s' "$BLOB" | base64 -d | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])') && unset BLOB && sudo rclone config create gdg-drive drive scope=drive.file team_drive=<identifiant> token="$TOKEN" --non-interactive >/dev/null && unset TOKEN`
+
+   Le jeton donne accès aux fichiers de rclone sur le Drive : ne le coller nulle
+   part ailleurs. Pour le renouveler (fuite, révocation) : retirer rclone des
+   applications du compte Google, refaire l'étape 1, et la même ligne avec
+   `rclone config update gdg-drive token="$TOKEN"` à la place de `create`.
 5. Écrire `/etc/devfest-backup.conf` :
 
    ```sh
@@ -293,15 +313,16 @@ y copier.
    # BACKUP_REMOTE_KEEP_DAYS=90
    ```
 
-6. Essai : `sudo devfest-backup prod essai`, puis vérifier le fichier dans le
-   dossier du Drive et le relire (§ Rollback, cas 2).
-7. Une sauvegarde chaque nuit, dans `sudo crontab -e` :
+6. Essai, copie sur le Drive, et relecture du dump (la phrase de passe est
+   demandée, l'en-tête `-- PostgreSQL database dump` doit s'afficher) :
 
-   ```cron
-   30 2 * * * /usr/local/sbin/devfest-backup prod >> /var/log/devfest-backup.log 2>&1
-   ```
+   `sudo devfest-backup prod essai && sudo rclone ls gdg-drive:devfest-backups && sudo sh -c 'age -d -i /root/.config/devfest-backup/identity.age "$(ls -1t /root/backups/prod-*.sql.age | head -1)" | head -5'`
+7. Une sauvegarde chaque nuit :
 
-Après une modification du script dans le dépôt, refaire l'étape 1.
+   `( sudo crontab -l 2>/dev/null; echo '30 2 * * * /usr/local/sbin/devfest-backup prod >> /var/log/devfest-backup.log 2>&1' ) | sudo crontab - && sudo crontab -l`
+
+Après une modification du script dans le dépôt, refaire l'étape 1 (une fois le
+script arrivé sur `main`).
 
 ---
 

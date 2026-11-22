@@ -72,9 +72,10 @@ beforeAll(async () => {
   await app.register(adminFeedbackRoutes, { prefix: "/api/admin" });
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   sent.length = 0;
   failFor = null;
+  if (editionId !== undefined) await prisma.speakerFeedbackRecap.deleteMany({ where: { editionId } });
 });
 
 afterAll(async () => {
@@ -86,10 +87,15 @@ afterAll(async () => {
 const mailTo = (address: string) => sent.find((m) => m.to.includes(address));
 
 describe("feedback recap (#567)", () => {
-  it("should preview the speakers with a real vote, and those without an address", async () => {
+  it("should list the speakers with a real vote, their address, and nothing sent yet", async () => {
     const res = await app.inject({ method: "GET", url: `/api/admin/editions/${editionId}/feedback-recap` });
 
-    expect(res.json()).toMatchObject({ speakers: 4, withoutEmail: ["Carl"], lastSentAt: null });
+    expect(res.json().speakers).toEqual([
+      { id: ids.ada, name: "Ada", email: ADA, sentAt: null, failedAt: null },
+      { id: ids.bob, name: "Bob", email: BOB, sentAt: null, failedAt: null },
+      { id: ids.carl, name: "Carl", email: null, sentAt: null, failedAt: null },
+      { id: ids.dora, name: "Dora", email: `dora-${tag}@example.com`, sentAt: null, failedAt: null },
+    ]);
   });
 
   it("should send each speaker their results, negatives and visible messages only", async () => {
@@ -133,10 +139,64 @@ describe("feedback recap (#567)", () => {
     expect((await prisma.speaker.findUnique({ where: { id: ids.bob } }))?.editToken).toBe(before);
   });
 
-  it("should remember when the recap was sent", async () => {
+  it("should remember, speaker by speaker, that the recap was sent (#865)", async () => {
     await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
     const res = await app.inject({ method: "GET", url: `/api/admin/editions/${editionId}/feedback-recap` });
 
-    expect(res.json().lastSentAt).not.toBeNull();
+    const byName = Object.fromEntries(res.json().speakers.map((s: { name: string }) => [s.name, s]));
+    expect(byName.Ada.sentAt).not.toBeNull();
+    expect(byName.Carl.sentAt).toBeNull();
+  });
+
+  it("should not write twice to a speaker already served (#865)", async () => {
+    await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+    sent.length = 0;
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+
+    expect(res.json()).toEqual({ sent: [], withoutEmail: ["Carl"], failed: [] });
+    expect(sent).toEqual([]);
+  });
+
+  it("should keep a failure on the speaker, and send it on the next click (#865)", async () => {
+    failFor = BOB;
+    await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+    const afterFailure = await prisma.speakerFeedbackRecap.findUnique({ where: { editionId_speakerId: { editionId, speakerId: ids.bob } } });
+    failFor = null;
+    sent.length = 0;
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+
+    expect(afterFailure).toMatchObject({ sentAt: null, failedAt: expect.any(Date) });
+    expect(res.json().sent).toEqual(["Bob"]);
+    const afterRetry = await prisma.speakerFeedbackRecap.findUnique({ where: { editionId_speakerId: { editionId, speakerId: ids.bob } } });
+    expect(afterRetry).toMatchObject({ sentAt: expect.any(Date), failedAt: null });
+  });
+
+  it("should send one speaker their recap again, and no one else (#865)", async () => {
+    await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+    sent.length = 0;
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap/${ids.ada}` });
+
+    expect(res.json()).toEqual({ sent: ["Ada"], withoutEmail: [], failed: [] });
+    expect(sent.map((m) => m.to)).toEqual([[ADA]]);
+  });
+
+  it("should send a speaker given an address after the first send (#865)", async () => {
+    await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+    await prisma.speaker.update({ where: { id: ids.carl }, data: { contactEmail: `carl-${tag}@example.com` } });
+    sent.length = 0;
+
+    const res = await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap` });
+    await prisma.speaker.update({ where: { id: ids.carl }, data: { contactEmail: null } });
+
+    expect(res.json().sent).toEqual(["Carl"]);
+  });
+
+  it("should refuse to send to a speaker with no vote on the edition (#865)", async () => {
+    const res = await app.inject({ method: "POST", url: `/api/admin/editions/${editionId}/feedback-recap/${ids.eve}` });
+
+    expect(res.statusCode).toBe(404);
   });
 });
