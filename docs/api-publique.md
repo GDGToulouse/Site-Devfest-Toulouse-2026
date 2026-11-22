@@ -2,7 +2,7 @@
 
 Le backend expose une API REST documentée via OpenAPI/Swagger, consommable par le site, une application mobile, ou tout client externe (partenaires, scripts, intégrations).
 
-**Doc interactive** : `/api/docs` (Swagger UI) et spec brute `/api/docs/json` (OpenAPI 3.0.3), **ouvertes seulement hors production**. Le backend les coupe dès que `NODE_ENV=production`, donc en production et en beta, sauf si `SWAGGER_PUBLIC=true` : elles listent toutes les routes d'administration, ce qui facilite la reconnaissance. En local : `http://localhost:4000/api/docs`.
+**Doc interactive** : `/api/docs` (Swagger UI) et spec brute `/api/docs/json` (OpenAPI 3.0.3). Toujours ouvertes en local (`http://localhost:3000/api/docs`, ou directement sur le backend, `http://localhost:4000/api/docs`). Ailleurs, le backend les coupe tant que `SWAGGER_PUBLIC` ne vaut pas `true` : elles listent toutes les routes d'administration. Le code étant public, un environnement peut les ouvrir exprès : poser `SWAGGER_PUBLIC=true` dans les variables Coolify de l'application, puis redéployer (#864). Le bouton « Try it out » envoie alors de vraies requêtes, avec la session de l'admin connecté.
 
 ---
 
