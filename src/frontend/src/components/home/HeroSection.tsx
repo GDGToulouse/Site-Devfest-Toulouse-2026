@@ -23,9 +23,11 @@ interface HeroSectionProps {
   figures?: KeyFigure[];
   /** The ticket button of the last month (#576): open, or every tier sold out. */
   tickets?: "open" | "soldOut" | "closed" | null;
+  /** The edition is over (#872): look back at it rather than call for more. */
+  pastEdition?: { hasReplays: boolean } | null;
 }
 
-export default function HeroSection({ edition, cfp, locale, figures = [], tickets = null }: HeroSectionProps) {
+export default function HeroSection({ edition, cfp, locale, figures = [], tickets = null, pastEdition = null }: HeroSectionProps) {
   const t = useTranslations("home.hero");
   const tStats = useTranslations("home.stats");
 
@@ -36,11 +38,19 @@ export default function HeroSection({ edition, cfp, locale, figures = [], ticket
       ? `${edition.venueName}, ${edition.venueAddress}`
       : edition?.venueName || null;
 
-  const showSponsorCta = invitesSponsors(edition);
+  // Once the edition is over (#872, RG-533) the hero looks back at it: its
+  // replays, or its talks while the videos are still coming. No call for
+  // talks or sponsors there.
+  const showSponsorCta = !pastEdition && invitesSponsors(edition);
   // The last week and the day itself lead to the programme first (#577); the
   // ticket button follows while seats are left, not on the day.
   const programmeCta = isProgrammePhase(edition) ? (isEventDay(edition) ? t("ctaProgrammeToday") : t("ctaProgramme")) : null;
-  const cfpUrl = getCfpCtaUrl(cfp);
+  const cfpUrl = pastEdition ? null : getCfpCtaUrl(cfp);
+  const recapCta = pastEdition
+    ? pastEdition.hasReplays && edition
+      ? { href: `/replays?year=${edition.year}`, label: t("ctaReplays") }
+      : { href: "/conferences", label: t("ctaTalks") }
+    : null;
 
   // Filigree monogram inside the photo, e.g. "'26" for the 2026 edition.
   const yearMonogram = edition?.year ? `'${String(edition.year).slice(-2)}` : null;
@@ -92,8 +102,16 @@ export default function HeroSection({ edition, cfp, locale, figures = [], ticket
 
           {showsCountdown(edition) && edition?.startDate && <EventCountdown startDate={edition.startDate} />}
 
-          {(programmeCta || tickets || showSponsorCta || cfpUrl) && (
+          {(programmeCta || tickets || showSponsorCta || cfpUrl || recapCta) && (
             <div className="hero-ctas">
+              {recapCta && (
+                <Link
+                  href={recapCta.href}
+                  className="rounded-[12px] border-2 border-bleu bg-bleu px-7 py-3.5 text-lg font-bold text-blanc transition-colors hover:bg-bleu/90"
+                >
+                  {recapCta.label}
+                </Link>
+              )}
               {programmeCta && (
                 <Link
                   href="/programme"

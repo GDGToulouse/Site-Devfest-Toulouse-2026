@@ -12,6 +12,7 @@ import {
   getSponsors,
   getFeaturedSpeakers,
   getEcosystemPartners,
+  getEditionTalks,
 } from "@/lib/api";
 
 import { pageMetadata } from "@/lib/page-metadata";
@@ -27,6 +28,7 @@ import EcosystemSection from "@/components/home/EcosystemSection";
 import SponsorsSection from "@/components/home/SponsorsSection";
 import FeaturedSpeakersSection from "@/components/home/FeaturedSpeakersSection";
 import DayPlanSection from "@/components/home/DayPlanSection";
+import EditionRecapSection, { areReplaysReady } from "@/components/home/EditionRecapSection";
 import { invitesSponsors, isEventDay, isProgrammePhase, isTicketingPhase } from "@/lib/edition-phase";
 
 function buildEventJsonLd(
@@ -155,7 +157,13 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     getEcosystemPartners(),
   ]);
 
-  const articles = await getLatestArticles(4, edition?.id);
+  const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
+  // After the event (#872) the news comes from every edition, so the page
+  // always has some; the talks tell whether enough replays are online.
+  const [articles, pastTalks] = await Promise.all([
+    getLatestArticles(4, isSeeYouNextYear ? undefined : edition?.id),
+    isSeeYouNextYear && edition ? getEditionTalks(edition.year) : Promise.resolve([]),
+  ]);
 
   const isPreparation = edition?.status === "PREPARATION";
   const isAnnouncement = edition?.status === "ANNOUNCEMENT";
@@ -166,7 +174,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
   const isProgramme = isProgrammePhase(edition);
   const isToday = isEventDay(edition);
   const isEventAhead = isAnnouncement || isTicketing || isProgramme;
-  const isSeeYouNextYear = edition?.status === "SEE_YOU_NEXT_YEAR";
+  const hasReplays = areReplaysReady(pastTalks);
   // "Sold out" only when every tier is: a single one still on sale is a ticket.
   const isSoldOut = tiers.length > 0 && tiers.every((tier) => tier.status === "SOLD_OUT");
   // The last month leads with the ticket; the last week offers it after the
@@ -279,7 +287,14 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
     },
   ];
 
+  // After the event (#872): what exists the next morning first — the talks,
+  // the speakers, the replays or the word that they are coming, the archives —
+  // then the aftermovie and the photos once they are in.
   const seeYouNextYearSections: HomeSection[] = [
+    {
+      show: Boolean(edition),
+      render: (surface) => <EditionRecapSection year={edition!.year} hasReplays={hasReplays} surface={surface} />,
+    },
     {
       show: Boolean(edition?.aftermovieUrl),
       render: (surface) => (
@@ -334,8 +349,10 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
         edition={edition}
         cfp={cfp}
         locale={locale}
-        figures={isEventAhead ? figures : []}
+        // After the event the figures are its recap (#872).
+        figures={isEventAhead || isSeeYouNextYear ? figures : []}
         tickets={ticketsCta}
+        pastEdition={isSeeYouNextYear ? { hasReplays } : null}
       />
 
       {/* PREPARATION: teasing + replay from previous edition */}
@@ -355,7 +372,7 @@ export default async function HomePage({ params }: { params: Promise<{ locale: s
       {/* PROGRAMME and EVENT_DAY: the day first (#577). */}
       {isProgramme && renderWithAlternation(programmeSections)}
 
-      {/* SEE_YOU_NEXT_YEAR: bilan + aftermovie + gallery + news */}
+      {/* SEE_YOU_NEXT_YEAR: recap + aftermovie + gallery + news (#872) */}
       {isSeeYouNextYear && renderWithAlternation(seeYouNextYearSections)}
     </>
   );
