@@ -64,7 +64,9 @@ export default function SessionizeEmailImport() {
               setReport(null);
               setError(null);
             }}
-            className="text-sm"
+            // Tailwind's reset strips the native button of its border and
+            // background: styled here, as in the guests' CSV import (#871).
+            className="text-sm text-noir file:mr-3 file:cursor-pointer file:rounded-lg file:border file:border-malachite file:bg-malachite/10 file:px-4 file:py-2 file:font-medium file:text-malachite hover:file:bg-malachite/20"
           />
         </label>
         <button
