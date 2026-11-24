@@ -90,3 +90,33 @@ describe("HeroSection (#576)", () => {
     expect(screen.queryByRole("link", { name: "Devenir sponsor" })).not.toBeInTheDocument();
   });
 });
+
+describe("HeroSection after the event (#872)", () => {
+  function renderPast(hasReplays: boolean) {
+    return render(
+      <NextIntlClientProvider locale="fr" messages={fr}>
+        <HeroSection
+          edition={{ ...EDITION, status: "SEE_YOU_NEXT_YEAR" }}
+          // A call for talks already open for the next year still stays out.
+          cfp={{ isOpen: true, sessionizeUrl: "https://sessionize.com/devfest-toulouse-2027", openDate: null, closeDate: null }}
+          locale="fr"
+          pastEdition={{ hasReplays }}
+        />
+      </NextIntlClientProvider>,
+    );
+  }
+
+  it("should lead to the talks while the replays are still coming, with no call for talks or sponsors", () => {
+    renderPast(false);
+
+    expect(screen.getAllByRole("link").map((a) => [a.textContent, a.getAttribute("href")])).toEqual([
+      ["Voir les conférences", "/conferences"],
+    ]);
+  });
+
+  it("should lead to the edition's replays once enough are online", () => {
+    renderPast(true);
+
+    expect(screen.getByRole("link", { name: "Revoir les talks" })).toHaveAttribute("href", "/replays?year=2026");
+  });
+});

@@ -8,6 +8,20 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
+## [1.17.0] - 2026-11-24
+
+L'accueil a de quoi montrer **dès le lendemain du DevFest** : en mode « Rendez-vous l'année prochaine », il remercie, affiche les chiffres clés de l'édition, renvoie vers ses conférences, ses speakers et les éditions précédentes, et annonce les replays jusqu'à ce que la moitié soient en ligne. L'import des adresses depuis Sessionize retrouve aussi un vrai bouton de choix du fichier.
+
+> Aucune migration. Aucune nouvelle variable d'environnement. **Après le déploiement**, passer l'édition 2026 en « Rendez-vous l'année prochaine » dans l'admin : elle est encore en « Jour J ».
+
+### Ajouté
+
+- **Accueil complet dès le lendemain de l'événement** (mode « Rendez-vous l'année prochaine ») : les chiffres clés de l'édition dans le bandeau, les liens vers ses conférences, ses speakers et les éditions précédentes, « Les replays arrivent bientôt » tant que moins de la moitié des conférences ont leur vidéo, puis « Revoir les talks ». L'aftermovie et la galerie s'ajoutent quand leur lien est saisi, les actualités viennent de toutes les éditions, et le bandeau n'appelle plus au CFP ni aux sponsors (#872).
+
+### Corrigé
+
+- **Import des adresses depuis Sessionize** : le bouton de choix du fichier est visible ; seul un texte « Choisir un fichier » apparaissait (#871).
+
 ## [1.16.0] - 2026-11-22
 
 Les avis du public partent aux speakers **en sachant qui les a déjà reçus** : l'onglet Avis suit l'envoi speaker par speaker, et les adresses manquantes se complètent depuis la fiche du speaker ou d'un coup depuis l'export Excel de Sessionize. La documentation de l'API s'affiche aussi en production, et la base est désormais sauvegardée chaque nuit, chiffrée, hors du serveur.

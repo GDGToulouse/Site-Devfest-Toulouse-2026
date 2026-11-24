@@ -51,7 +51,9 @@
         "today": "Today"
       },
       "ctaProgramme": "Plan my day",
-      "ctaProgrammeToday": "Today’s programme"
+      "ctaProgrammeToday": "Today’s programme",
+      "ctaReplays": "Watch the talks",
+      "ctaTalks": "See the talks"
     },
     "stats": {
       "title": "The largest <tech>tech</tech> conference in the <toulousain>Toulouse</toulousain> area"
@@ -107,6 +109,30 @@
       "venue": {
         "title": "Getting there",
         "text": "Address, public transport and parking to reach the venue."
+      }
+    },
+    "recap": {
+      "title": "Thank you for DevFest {year}!",
+      "nextYear": "See you next year for a new edition. Meanwhile, find everything that was said this year.",
+      "talks": {
+        "title": "The talks",
+        "text": "Every session of the {year} edition."
+      },
+      "speakers": {
+        "title": "The speakers",
+        "text": "Everyone who took the stage in {year}."
+      },
+      "replays": {
+        "title": "Watch the talks",
+        "text": "The videos of the {year} sessions, to watch whenever you like."
+      },
+      "replaysSoon": {
+        "title": "Replays coming soon",
+        "text": "The videos of the {year} sessions are being published."
+      },
+      "editions": {
+        "title": "Past editions",
+        "text": "Every DevFest Toulouse edition since 2016."
       }
     }
   },
