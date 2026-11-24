@@ -51,7 +51,9 @@
         "today": "Aujourd’hui"
       },
       "ctaProgramme": "Préparer mon programme",
-      "ctaProgrammeToday": "Voir le programme du jour"
+      "ctaProgrammeToday": "Voir le programme du jour",
+      "ctaReplays": "Revoir les talks",
+      "ctaTalks": "Voir les conférences"
     },
     "stats": {
       "title": "La plus grande conférence <tech>tech</tech> du bassin <toulousain>Toulousain</toulousain>"
@@ -107,6 +109,30 @@
       "venue": {
         "title": "Venir sur place",
         "text": "Adresse, transports et stationnement pour rejoindre le lieu."
+      }
+    },
+    "recap": {
+      "title": "Merci pour le DevFest {year} !",
+      "nextYear": "Rendez-vous l’année prochaine pour une nouvelle édition. En attendant, retrouvez tout ce qui s’est dit cette année.",
+      "talks": {
+        "title": "Les conférences",
+        "text": "Toutes les sessions de l’édition {year}."
+      },
+      "speakers": {
+        "title": "Les speakers",
+        "text": "Celles et ceux qui ont pris la parole en {year}."
+      },
+      "replays": {
+        "title": "Revoir les talks",
+        "text": "Les vidéos des sessions de {year}, à revoir quand vous voulez."
+      },
+      "replaysSoon": {
+        "title": "Les replays arrivent bientôt",
+        "text": "Les vidéos des sessions de {year} sont en cours de mise en ligne."
+      },
+      "editions": {
+        "title": "Les éditions précédentes",
+        "text": "Toutes les éditions du DevFest Toulouse depuis 2016."
       }
     }
   },
