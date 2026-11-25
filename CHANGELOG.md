@@ -8,11 +8,11 @@ Chaque version correspond à une **mise en production** (tag `vX.Y.Z` + release 
 
 Une ligne par paragraphe et par puce, sans retour à la ligne forcé : la section d'une version est copiée telle quelle dans sa release GitHub, qui rend chaque saut de ligne.
 
-## [Non publié]
+## [1.17.0] - 2026-11-24
 
-_Changements mergés sur `dev` (beta), pas encore en production._
+L'accueil a de quoi montrer **dès le lendemain du DevFest** : en mode « Rendez-vous l'année prochaine », il remercie, affiche les chiffres clés de l'édition, renvoie vers ses conférences, ses speakers et les éditions précédentes, et annonce les replays jusqu'à ce que la moitié soient en ligne. L'import des adresses depuis Sessionize retrouve aussi un vrai bouton de choix du fichier.
 
-> Aucune migration. Aucune nouvelle variable d'environnement.
+> Aucune migration. Aucune nouvelle variable d'environnement. **Après le déploiement**, passer l'édition 2026 en « Rendez-vous l'année prochaine » dans l'admin : elle est encore en « Jour J ».
 
 ### Ajouté
 
